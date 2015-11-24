@@ -1,0 +1,187 @@
+&simulation
+px =7				! number of processors [-]
+imax = 288			! imax can be chosen freely [-]
+jmax = 154			! jmax must be multiple of px [-]
+kmax = 35			! kmax must be multiple of px [-]
+imax_grid=70 103 128 178 208 288	! end indices where dr_grid switches (must be compatable with imax) [-]
+dr_grid=0.8 0.4 0.7 1.0 1.3 1.6	! various dr_grid (must be compatable with imax_grid) [m]
+Rmin =90.			! Radius where cylindrical grid starts [m]
+schuif_x = 150.                 ! Shift in x-coordinate to make (x,y) plume = (0,0) [m]
+dy = 0.4			! width gridcell at (x,y)=(0,0) [m]
+depth = 15.			! Depth [m] (dz=depth/kmax)
+hisfile = ''			! Input file for history points
+restart_dir =''			! Path restart files influding start of filename e.g. '/data/.../flow3d_000000010_'
+/
+
+&times
+t_end = 360.			! End time simulation from (re)start [s]
+t0_output = 60.			! Start time output [s] (default 0)
+dt_output = 60.			! Time interval output [s]
+te_output = 360.		! End time output [s] (default >t_end)
+tstart_rms = 240.		! Start time avg/rms calc [s]
+dt_max = 0.04		! Max timestep [s] 
+time_int = 'RK3'		! Time integration 'RK3'
+CFL = 1.6			! CFL limit [-]
+t0_output_movie = 10.		! Start time for low-storage concentration output usable for movies [s]
+dt_output_movie = 10.		! Time interval for low-storage concentration output usable for movies [s]
+te_output_movie = 450.		! End time for low-storage concentration output usable for movies [s]
+/
+
+&num_scheme
+convection = 'HYB6'		! Numerical scheme for convection term, options: 'CDS2','CDS6','COM4','HYB4','HYB6'
+numdiff = 0.001953125		! Amount of extra diffusion in case of 'CDS6','HYB4','HYB6' ('CDS6' -> 1/60=UPW5, 0=CDS6) 
+diffusion = 'CDS2'		! Numerical scheme for diffusion term, options: 'CDS2','COM4'
+comp_filter_a = 0.495		! Alpha in compact filter (0-0.5), default 0.5 (no filtering) [-]
+comp_filter_n = 0		! Compact filter is applied every comp_filter_n timesteps, default 0 (no filtering) [-]
+CNdiffz = 1			! 1 is implicit CN treatment of diffusion in z-dir 0 is explicit in z-dir (default 0)
+npresIBM = 0			! number of extra pres-correction steps to make IBM objects better impermeable (default 0)
+/
+
+&ambient
+U_b = -1.			! Ambient bc U velocity [m/s] with respect to TSHD motion: negative means TSHD sailing against current (Utotal=U_TSHD-U_b), without TSHD positive is inward velocity
+V_b =.5			! Ambient bc V velocity [m/s] with respect to TSHD motion: positive means current from starboard  
+W_b = 0.0			! Ambient bc W velocity [m/s] (in x,y coordinates, not r,phi)
+bcfile = ''			! Input netcdf file for bc front & 2 sides (U_b,V_b and U_TSHD are still used for orientation ship hull!)
+U_bSEM = -1.			! Ambient bc U velocity [m/s] used for SEM (if not defined then U_b is used)
+V_bSEM =.5			! Ambient bc V velocity [m/s] used for SEM (if not defined then V_b is used)
+rho_b = 1025.			! Ambient density [kg/m3]
+SEM = 0				! 1 = SEM to generate turbulent fluctuations on top of inflow bc, 0 = laminar bc 
+nmax2 = 0			! Number of SEM eddies front inflow 
+nmax1 = 0			! Number of SEM eddies sides inflow
+lm_min = 0.02 			! Minimal Lm SEM eddies [m] (1/10*depth)
+slip_bot = 1			! 1 = no slip bottom, 0 = free slip bottom
+kn = 0.1			! Nikkuradse roughness flow [m]
+interaction_bed = 0		! 0 no erosion/sedimentation, 1 only deposition, 2 deposition & unlimited erosion, 3 deposition & erosion previously deposited material
+periodicx = 0			! 1 periodic in x dir 0 not periodic (default 0)
+periodicy = 0			! 1 periodic in y dir 0 not periodic 2 is free slip lateral boundaries (default 0)
+dpdx = 0.0			! Driving pressure gradient in x dir in case periodic [Pa/m] (default 0)
+dpdy = 0.0			! Driving pressure gradient in y dir in case periodic [Pa/m] (default 0)
+W_ox = 0.			! Vertical velocity at i=imax boundary in case periodicx=2 [m/s] (default 0)
+bc_obst_h = 0.                  ! Do not apply inflow bc at 0-bc_obst_h meters from bed, default 0 [m] (depth should be bc_obst_h extra!)
+obst(1)%x = -500. 50. 50. -500. ! x coordinate 4 corners obstacle
+obst(1)%y = -500. -500. 500. 500. ! y coordinate 4 corners obstacle
+obst(1)%height = 0.5            ! vertical height obstacle
+obst(1)%zbottom = 0.2            ! vertical bottom start height obstacle [m] (optional, default 0)
+U_b3 = -0.47			! Ambient bc U velocity [m/s] in surf_layer with respect to TSHD motion: negative means TSHD sailing against current (Utotal=U_TSHD-U_b), without TSHD positive is inward velocity
+V_b3 = -0.29			! Ambient bc V velocity [m/s] in surf_layer with respect to TSHD motion: positive means current from starboard  
+surf_layer = 0.			! Layer depth [m] from free surface with U_b3,V_b3 ambient current (default 0)
+wallup=0			! 0 wall = below; wall = up (default 0)
+bedlevelfile = ''		! Input netcdf file for bedlevel which are simulated by IBM obstacles (filled with zbed(1:imax,0:jmax*px+1) [m])
+
+Hs=0.7				! Significant waveheigth [m] (using linear wave theory to mimic wave-orbital velocity)
+Tp=5.5				! Wave peak period [s] (using linear wave theory to mimic wave-orbital velocity)
+nx_w=1				! Wave direction normal vector [-] : positive means waves against TSHD (nx_w^2+ny_w^2=1)
+ny_w=0				! Wave direction normal vector [-] : positive means waves from starboard TSHD (nx_w^2+ny_w^2=1)
+U_w = 1.37			! U velocity [m/s] used for waves in fixed x,y coordinate system (positive means with x-dir) [for sim with rotated grid for V_b not zero then U_w=pyth(U_b,V_b) and V_w=0]
+V_w = 0.3			! V velocity [m/s] used for waves in fixed x,y coordinate system (positive means with y-dir) [for sim with rotated grid for V_b not zero then U_w=pyth(U_b,V_b) and V_w=0]
+/
+
+&plume
+W_j = -2.			! Inflow velocity plume [m/s]
+plumetseriesfile='' 		!
+Awjet = 0.			! Azimuthal factor Wjet [-]
+Aujet = 0.			! Azimuthal factor Ujet [-]
+Avjet = 0.			! Azimuthal factor Vjet [-]
+Strouhal = 0.4			! Strouhal number for Azimuthal forcing (St= fD/U=0.3-0.6) [-]
+azi_n = 6			! Azimuthal sine components (2-6) [-]
+kjet = 0			! # cells above plume outflow [-] obsolete when ship is used
+radius_j = 1.			! radius plume [m]
+radius_inner_j = 0.		! inner radius plume where no influx is [m] (default 0.)
+xj = -2. -2. 2. 2.		! x coordinates 4 corners box where plume must be inside (default complete domain)
+yj = -2. -2. 2. 2.		! y coordinates 4 corners box where plume must be inside (default complete domain)
+W_j_powerlaw = 7.		! powerlaw for plume velocity profile (default 7. = 1/7 powerlaw; velocity is corrected to arrive at correct influx of pi*W_j*radius_j^2)
+plume_z_outflow_belowsurf = 6. ! depth flow surface at which plume flows downward, only need to define when different from Draught TSHD [m]
+Sc = 0.7			! Schmidt number used to determine Diff. coeff from viscosity [-]
+slipvel = 0			! 0 = no slip velocity, 1 = hindered settling RiZa, 2 = settling with frac(n)%ws
+outflow_overflow_down = 0       ! 1 = outflow velocity bc at keel TSHD 0 = outflow velocity bc at top overflow pipe (default 0)
+U_j2 = 2.			! Inflow velocity plume horizontal at i=0 [m/s]
+Aujet2 = 0.1			! Azimuthal factor Ujet2 [-]
+Avjet2 = 0.			! Azimuthal factor Vjet2 [-]
+Awjet2 = 0.			! Azimuthal factor Wjet2 [-]
+Strouhal2 = 0.4			! Strouhal number for Azimuthal forcing (St= fD/U=0.3-0.6) [-]
+azi_n2 = 6			! Azimuthal sine components (2-6) [-]
+radius_j2 = 1.			! radius horizontal plume [m]
+zjet2 = 0.5			! vertical position centre of horizontal plume [m]		
+bedplume(1)%x = -500. 50. 50. -500. ! x coordinate 4 corners bedplume [m]
+bedplume(1)%y = -500. -500. 500. 500. ! y coordinate 4 corners bedplume [m]
+bedplume(1)%height = 0.5            ! vertical height bedplume [m]
+bedplume(1)%zbottom= 0.2           ! vertical bottom start height bedplume [m] (optional, default 0)
+bedplume(1)%u = 0.5            	! Initial U velocity inside bedplume [m/s] (if not defined then vertical profile based on U_b is used)
+bedplume(1)%v = 0.5            	! Initial V velocity inside bedplume [m/s] (if not defined then vertical profile based on V_b is used)
+bedplume(1)%w = 0.5            	! Initial W velocity inside bedplume [m/s] (if not defined then W_b is used)
+bedplume(1)%c = 0.1 0.1 0.1    	! Initial volume fractions inside bedplume [-] (length vector must be nfrac large)
+bedplume(1)%forever = 0        	! 1 is bedplume put in place every timestep, 0 is only initial bedplume (default 0)
+bedplume(1)%t0 = 0.        	! bedplume is started after t0 seconds (default 0. s) 
+/
+
+&fractions_in_plume
+fract(1)%ws = 0.001		! Particle settling velocity [m/s] !! positive downwards !!
+fract(1)%c = 0.00234 		! Volume fraction of this particle fraction in source plume [-]
+fract(1)%rho = 2650.		! Particle density [kg/m3]
+fract(1)%dpart = 15.		! Particle diameter [10^-6 m]
+fract(1)%dfloc = 80.		! Floc diameter equal or more than dpart (for sand equal to dpart) [10^-6 m]
+fract(1)%tau_e = 0.15		! Critical shear stress for erosion [N/m2]
+fract(1)%tau_d =  0.1		! Critical shear stress for deposition [N/m2]
+fract(1)%M = 1.e-4		! Erosion rate [kg/sm2] VanRijn proposes 1e-5 - 5e-4 kg/sm2
+fract(1)%kn_sed = 80.		! Nikkuradse roughness for shear stress acting on this sediment fraction (advised as dfloc for mud and 3*d90=6*d50=6*dpart for sand) [10^-6 m]
+fract(1)%zair_ref_belowsurf = 0.		! Optional reference level used to make air_fraction semi-compressible; fract(1)%rho is defined at zair_ref_belowsurf [m]
+/
+
+&LESmodel
+sgs_model='SWALE'		! Smagorinsky, WALE or SIGMA sgs model: 'SSmag','SWALE','SIGMA'
+Cs=0.325			! Constant in sgs model [-]
+Lmix_type=1			! 1=(dx*dy*dz)^1/3 | 2=sqrt((dx^2+dy^2+dz^2)/3)
+nr_HPfilter=1			! Number of times a HPfilter is applied to velocity field in FSmag (>=1, recommended 3)
+damping_drho_dz='none' 	! Damping of eddy viscosity: 'none' (default) or 'MuAn'
+damping_a=10			! 
+damping_b=0.5			! 
+/
+
+&constants
+kappa = 0.41			! Von Karman constant [-]
+gx = 0. 			! Gravity [m/s2] positive to work in positive x-dir
+gy = 0.				! Gravity [m/s2] positive to work in positive y-dir
+gz = 9.81			! Gravity [m/s2] positive to work in negative z-dir
+ekm_mol = 1.e-3			! Moleculair dyn. viscosity [kg/(sm)]
+/
+
+&ship
+U_TSHD   = 0.6			! Forward speed of TSHD [m/s] 
+LOA     = 185.			! Length over all TSHD [m] (if <0 then no ship)
+Lfront  = 31. 			! Length of front bow [m]
+Breadth = 15.			! Breadth of TSHD [m]
+Draught = 6. 			! Draught of TSHD with respect to waterline [m]
+Lback   = 25.			! Length of slope at back to fit propellers [m]
+Hback   = 6.			! Height of slope at back to fit propellers (preferably larger than Dprop) [m]
+xfront = -50. 			! x-coordinate front tip TSHD with respect to position overflow [m] (negative)
+yfront = -5. 			! y-coordinate front tip TSHD with respect to position overflow [m]
+kn_TSHD = 0.05			! Nikkuradse roughness bottom TSHD hull [m]
+nprop = 0			! Number of propellers [1 or 2]
+Dprop = 4.7 			! Diameter of propellers [m]
+xprop = 180.			! x-coordinate of propellers [m] (distance from front TSHD)
+yprop = 10.			! y-distance of propellers from centerline TSHD [m] (only used when nprop=2)
+zprop = 3.65			! z-coordinate of centerline propellers with respect to waterline [m] (must be between 0 and depth)
+Pprop = 6000000.			! Power of propeller [W]
+rudder = 1			! 1 = Rudder behind propeller, 0 = no rudder
+rot_prop = 10.			! Rotation direction of propellers [-] ! positive rpm_prop means right turning while watching from back (with two props both props counter-rotate with starboard prop is right-turning) 
+draghead = 'port'		! Draghead down at 'port','star' or 'both'; default 'none' [-]
+Dsp = 1.5			! Diameter suction pipe (outside diameter) [m]
+xdh = 75.			! Horizontal distance downstream of draghead to end of TSHD front nose [m] 
+softnose = 0                    ! 1 = TSHD nose is streamlined with a slope, 0 = vertical nose
+Hfront = 1.5                    ! Height of slope at front for streamlining (25% of Draught typically is okay)
+/
+
+! Explanation cylindrical grid:             _
+!                                     _       )
+! 	                        _              )
+!			  _                    )
+!                        )                      )
+!                         )                     )
+!             <--- Rmin -->)  o                  )
+!                         )                     )
+!                        )_                     )   
+!			       _               )
+!                                    _         )
+!                                           _ )
+!            |<-- schuif_x -->|
+!         origin           loc plume = x,y=(0,0)   
