@@ -232,7 +232,14 @@
 			! npresIBM=0 -> order 1/1000 Umax in IBM objects (default)
 			! npresIBM=10 -> order 1/100000 Umax in IBM objects
 			call fillps2(dudt,dvdt,dwdt,drdt,time_np,dt)
-			CALL SOLVEpois(p) !,Ru,Rp,DPHI,dz,rank,imax,jmax,kmax,px)
+			  IF (poissolver.eq.2) THEN
+			   CALL SOLVEpois_vg_mumps(p)
+			  ELSEIF (poissolver.eq.3) THEN
+			   CALL SOLVEpois_vg_pardiso(p)	   
+			ELSE
+			   CALL SOLVEpois(p) !,Ru,Rp,DPHI,dz,rank,imax,jmax,kmax,px)
+			  ENDIF
+	  
 			call correc2(dudt,dvdt,dwdt,dt)
 			pold=p+pold    !what is called p here was dp in reality, now p is 
 			call bound_rhoU(dUdt,dVdt,dWdt,drdt,0,time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
