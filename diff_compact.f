@@ -149,10 +149,10 @@ c*****************************************************************
 
 	do i=ib,ie
 	  do k=kb,ke/px
-	    ddy_1jepx(1)=(Vvel_T(i,1,k)-Vvel_T(i,0,k))/(Rp(i)*dphi)
-	    ddy_1jepx(je*px)=(Vvel_T(i,je*px,k)-Vvel_T(i,je*px-1,k))/(Rp(i)*dphi)
+	    ddy_1jepx(1)=(Vvel_T(i,1,k)-Vvel_T(i,0,k))/(Rp(i)*(phivt(1)-phivt(0)))
+	    ddy_1jepx(je*px)=(Vvel_T(i,je*px,k)-Vvel_T(i,je*px-1,k))/(Rp(i)*(phivt(je*px)-phivt(je*px-1)))
 	    do j=2,je*px-1
-	      ddy_1jepx(j)=12./11.*(Vvel_T(i,j,k)-Vvel_T(i,j-1,k))/(Rp(i)*dphi)
+	      ddy_1jepx(j)=12./11.*(Vvel_T(i,j,k)-Vvel_T(i,j-1,k))/(Rp(i)*(phivt(j)-phivt(j-1)))
    	    enddo
             CALL solve_tridiag(Spp_T(i,1:je*px,k),aay_1jepx,bby_1jepx,ccy_1jepx,ddy_1jepx,je*px)
 	  enddo
@@ -169,7 +169,7 @@ c*****************************************************************
 	  do j=jb,je
       divv= ( Ru(i)*Uvel(i,j,k) - Ru(i-1)*Uvel(i-1,j,k) ) / ( Rp(i)*dr(i) )
      +              +
-     2  (       Vvel(i,j,k) -         Vvel(i,j-1,k) ) / ( Rp(i)*dphi )
+     2  (       Vvel(i,j,k) -         Vvel(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
      +              +
      3  (       Wvel(i,j,k) -         Wvel(i,j,k-1) ) / ( dz )   
       divv=2./3.*ekm(i,j,k)*divv
@@ -220,10 +220,10 @@ c*****************************************************************
 
 	do i=0,ie !include i=0
 	  do k=kb,ke/px
-	    ddy_0jepx(0)=(Uvel_T(i,1,k)-Uvel_T(i,0,k))/(Ru(i)*dphi)
-	    ddy_0jepx(je*px)=(Uvel_T(i,je*px+1,k)-Uvel_T(i,je*px,k))/(Ru(i)*dphi)
+	    ddy_0jepx(0)=(Uvel_T(i,1,k)-Uvel_T(i,0,k))/(Ru(i)*(phipt(1)-phipt(0)))
+	    ddy_0jepx(je*px)=(Uvel_T(i,je*px+1,k)-Uvel_T(i,je*px,k))/(Ru(i)*(phipt(je*px+1)-phipt(je*px)))
 	    do j=1,je*px-1
-	      ddy_0jepx(j)=12./11.*(Uvel_T(i,j+1,k)-Uvel_T(i,j,k))/(Ru(i)*dphi)
+	      ddy_0jepx(j)=12./11.*(Uvel_T(i,j+1,k)-Uvel_T(i,j,k))/(Ru(i)*(phipt(j+1)-phipt(j)))
    	    enddo
             CALL solve_tridiag(dudrphi_T,aay_0jepx,bby_0jepx,ccy_0jepx,ddy_0jepx,je*px+1)
 	    Spr_T(i,0:je*px,k)=Spr_T(i,0:je*px,k)+dudrphi_T
@@ -231,10 +231,10 @@ c*****************************************************************
 	enddo	
 	do i=ib,ie
 	  do k=kb,ke/px !should include k=0,but is zero because Wvel(i,j,0)=0, so left out
-	    ddy_0jepx(0)=(Wvel_T(i,1,k)-Wvel_T(i,0,k))/(Rp(i)*dphi)
-	    ddy_0jepx(je*px)=(Wvel_T(i,je*px+1,k)-Wvel_T(i,je*px,k))/(Rp(i)*dphi)
+	    ddy_0jepx(0)=(Wvel_T(i,1,k)-Wvel_T(i,0,k))/(Rp(i)*(phipt(1)-phipt(0)))
+	    ddy_0jepx(je*px)=(Wvel_T(i,je*px+1,k)-Wvel_T(i,je*px,k))/(Rp(i)*(phipt(je*px+1)-phipt(je*px)))
 	    do j=1,je*px-1
-	      ddy_0jepx(j)=12./11.*(Wvel_T(i,j+1,k)-Wvel_T(i,j,k))/(Rp(i)*dphi)
+	      ddy_0jepx(j)=12./11.*(Wvel_T(i,j+1,k)-Wvel_T(i,j,k))/(Rp(i)*(phipt(j+1)-phipt(j)))
    	    enddo
             CALL solve_tridiag(dwdrphi_T,aay_0jepx,bby_0jepx,ccy_0jepx,ddy_0jepx,je*px+1)
 	    Spz_T(i,0:je*px,k)=Spz_T(i,0:je*px,k)+dwdrphi_T
@@ -289,7 +289,7 @@ c*****************************************************************
 
 	end
 
-      subroutine diffu_com4(putout,Sigrr,Sigpr,Sigzr,Sigpp,Ru,Rp,dr,dphi,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
+      subroutine diffu_com4(putout,Sigrr,Sigpr,Sigzr,Sigpp,Ru,Rp,dr,phipt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 
       implicit none
       include 'mpif.h'
@@ -339,7 +339,7 @@ c*****************************************************************
       real     putout(0:i1,0:j1,0:k1),Sigrr(ib:ie,jb:je,kb:ke),
      +         Sigpr(0:ie,0:je,kb:ke),Sigzr(0:ie,1:je,0:ke),
      +         Sigpp(ib:ie,jb:je,kb:ke),
-     +         dr(0:i1),dphi,dz,Ru(0:i1),Rp(0:i1)
+     +         dr(0:i1),phipt(0:je*px+1),dz,Ru(0:i1),Rp(0:i1)
       	integer i,j,k
         integer ileng,ierr,itag,status(MPI_STATUS_SIZE)
 
@@ -401,10 +401,10 @@ c*****************************************************************
 	  do k=kb,ke/px 
 !	    ddy_1jepx(1)=(-Sigpr_T(i,0,k)+2.*Sigpr_T(i,1,k)-Sigpr_T(i,2,k))/(Ru(i)*dphi)
 !	    ddy_1jepx(je*px)=(Sigpr_T(i,je*px,k)-2.*Sigpr_T(i,je*px-1,k)+Sigpr_T(i,je*px-2,k))/(Ru(i)*dphi)
-	    ddy_1jepx(1)=(Sigpr_T(i,1,k)-Sigpr_T(i,0,k))/(Ru(i)*dphi)
-	    ddy_1jepx(je*px)=(Sigpr_T(i,je*px,k)-Sigpr_T(i,je*px-1,k))/(Ru(i)*dphi)
+	    ddy_1jepx(1)=(Sigpr_T(i,1,k)-Sigpr_T(i,0,k))/(Ru(i)*(phipt(1)-phipt(0)))
+	    ddy_1jepx(je*px)=(Sigpr_T(i,je*px,k)-Sigpr_T(i,je*px-1,k))/(Ru(i)*(phipt(je*px+1)-phipt(je*px)))
 	    do j=2,je*px-1
-	      ddy_1jepx(j)=12./11.*(Sigpr_T(i,j,k)-Sigpr_T(i,j-1,k))/(Ru(i)*dphi)
+	      ddy_1jepx(j)=12./11.*(Sigpr_T(i,j,k)-Sigpr_T(i,j-1,k))/(Ru(i)*(phipt(j)-phipt(j-1)))
    	    enddo
             CALL solve_tridiag(dSdphi(1:je*px),aay_1jepx,bby_1jepx,ccy_1jepx,ddy_1jepx,je*px)
 	    putout_T(i,1:je*px,k)=putout_T(i,1:je*px,k)+dSdphi(1:je*px)
@@ -429,7 +429,7 @@ c*****************************************************************
       return
       end
 
-      subroutine diffv_com4(putout,Sigpr,Sigpp,Sigpz,Ru,Rp,dr,dphi,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
+      subroutine diffv_com4(putout,Sigpr,Sigpp,Sigpz,Ru,Rp,dr,phipt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 
       implicit none
 
@@ -480,7 +480,7 @@ c*****************************************************************
       integer  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px
       real     putout(0:i1,0:j1,0:k1),Sigpp(ib:ie,jb:je,kb:ke),
      +         Sigpr(0:ie,0:je,kb:ke),Sigpz(1:ie,0:je,0:ke),
-     +         dr(0:i1),dphi,dz,Ru(0:i1),Rp(0:i1)
+     +         dr(0:i1),phipt(0:je*px+1),dz,Ru(0:i1),Rp(0:i1)
       	integer i,j,k
         integer ileng,ierr,itag,status(MPI_STATUS_SIZE)
 
@@ -532,10 +532,10 @@ c*****************************************************************
 
 	do i=ib,ie
 	  do k=kb,ke/px 
-	    ddy_0jepx(0)=(-25.*Sigpp_T(i,1,k)+26.*Sigpp_T(i,2,k)-Sigpp_T(i,3,k))/(Rp(i)*dphi)
-	    ddy_0jepx(je*px)=(25.*Sigpp_T(i,je*px,k)-26.*Sigpp_T(i,je*px-1,k)+Sigpp_T(i,je*px-2,k))/(Rp(i)*dphi)
+	    ddy_0jepx(0)=(-25.*Sigpp_T(i,1,k)+26.*Sigpp_T(i,2,k)-Sigpp_T(i,3,k))/(Rp(i)*(phipt(1)-phipt(0)))
+	    ddy_0jepx(je*px)=(25.*Sigpp_T(i,je*px,k)-26.*Sigpp_T(i,je*px-1,k)+Sigpp_T(i,je*px-2,k))/(Rp(i)*(phipt(je*px+1)-phipt(je*px)))
 	    do j=1,je*px-1
-	      ddy_0jepx(j)=12./11.*(Sigpp_T(i,j+1,k)-Sigpp_T(i,j,k))/(Rp(i)*dphi)
+	      ddy_0jepx(j)=12./11.*(Sigpp_T(i,j+1,k)-Sigpp_T(i,j,k))/(Rp(i)*(phipt(j+1)-phipt(j)))
    	    enddo
             CALL solve_tridiag(dSdphi(0:je*px),aay_0jepx,bby_0jepx,ccy_0jepx,ddy_0jepx,je*px+1)
 	    putout_T(i,1:je*px,k)=putout_T(i,1:je*px,k)+dSdphi(1:je*px)
@@ -559,7 +559,7 @@ c*****************************************************************
       return
       end
 
-      subroutine diffw_com4(putout,Sigzr,Sigpz,Sigzz,Ru,Rp,dr,dphi,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
+      subroutine diffw_com4(putout,Sigzr,Sigpz,Sigzz,Ru,Rp,dr,phipt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 
       implicit none
 
@@ -568,7 +568,7 @@ c*****************************************************************
       integer  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px
       real     putout(0:i1,0:j1,0:k1),Sigzz(ib:ie,jb:je,kb:ke),
      +         Sigzr(0:ie,1:je,0:ke),Sigpz(1:ie,0:je,0:ke),
-     +         dr(0:i1),dphi,dz,Ru(0:i1),Rp(0:i1)
+     +         dr(0:i1),phipt(0:je*px+1),dz,Ru(0:i1),Rp(0:i1)
       	integer i,j,k
         integer ileng,ierr,itag,status(MPI_STATUS_SIZE)
 
@@ -630,10 +630,10 @@ c*****************************************************************
 	  do k=kb,ke/px 
 !	    ddy_1jepx(1)=(-Sigpz_T(i,0,k)+2.*Sigpz_T(i,1,k)-Sigpz_T(i,2,k))/(Rp(i)*dphi)
 !	    ddy_1jepx(je*px)=(Sigpz_T(i,je*px,k)-2.*Sigpz_T(i,je*px-1,k)+Sigpz_T(i,je*px-2,k))/(Rp(i)*dphi)
-	    ddy_1jepx(1)=(Sigpz_T(i,1,k)-Sigpz_T(i,0,k))/(Rp(i)*dphi)
-	    ddy_1jepx(je*px)=(Sigpz_T(i,je*px,k)-Sigpz_T(i,je*px-1,k))/(Rp(i)*dphi)
+	    ddy_1jepx(1)=(Sigpz_T(i,1,k)-Sigpz_T(i,0,k))/(Rp(i)*(phipt(1)-phipt(0)))
+	    ddy_1jepx(je*px)=(Sigpz_T(i,je*px,k)-Sigpz_T(i,je*px-1,k))/(Rp(i)*(phipt(je*px)-phipt(je*px-1)))
 	    do j=2,je*px-1
-	      ddy_1jepx(j)=12./11.*(Sigpz_T(i,j,k)-Sigpz_T(i,j-1,k))/(Rp(i)*dphi)
+	      ddy_1jepx(j)=12./11.*(Sigpz_T(i,j,k)-Sigpz_T(i,j-1,k))/(Rp(i)*(phipt(j)-phipt(j-1)))
    	    enddo
             CALL solve_tridiag(dSdphi(1:je*px),aay_1jepx,bby_1jepx,ccy_1jepx,ddy_1jepx,je*px)
 	    putout_T(i,1:je*px,k)=putout_T(i,1:je*px,k)+dSdphi(1:je*px)
@@ -712,7 +712,7 @@ c*****************************************************************
       real     putout(0:i1,0:j1,0:k1),Uvel(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
      +         eppo,epmo,epop,epom,drp,dzi,divergentie
-      real theta_U,theta_V,xx,yy,f,fluc,Wjet
+      real xx,yy,f,fluc,Wjet
       real divvR,divvL,CNz
       integer n,t
 
@@ -744,12 +744,12 @@ c
 
       divvL= ( Ru(i)*Uvel(i,j,k) - Ru(i-1)*Uvel(i-1,j,k) ) / ( Rp(i)*dr(i) )
      +              +
-     2  (       Vvel(i,j,k) -         Vvel(i,j-1,k) ) / ( Rp(i)*dphi )
+     2  (       Vvel(i,j,k) -         Vvel(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
      +              +
      3  (       Wvel(i,j,k) -         Wvel(i,j,k-1) ) * dzi  
       divvR= ( Ru(ip)*Uvel(ip,j,k) - Ru(ip-1)*Uvel(ip-1,j,k) ) / ( Rp(ip)*dr(ip) )
      +              +
-     2  (       Vvel(ip,j,k) -         Vvel(ip,j-1,k) ) / ( Rp(ip)*dphi )
+     2  (       Vvel(ip,j,k) -         Vvel(ip,j-1,k) ) / ( Rp(ip)*(phiv(j)-phiv(j-1)) )
      +              +
      3  (       Wvel(ip,j,k) -         Wvel(ip,j,k-1) ) * dzi   
 
@@ -762,12 +762,12 @@ c
      +              +
      2 ( eppo * ( Ru(i) * ( Vvel(ip,j,k)/Rp(ip)  - Vvel(i,j,k)/Rp(i) ) /
      2                    ( Rp(ip) - Rp(i) )
-     2            + (Uvel(i,jp,k)  - Uvel(i,j,k) ) / ( Ru(i) * dphi )
+     2            + (Uvel(i,jp,k)  - Uvel(i,j,k) ) / ( Ru(i) * (phip(jp)-phip(j)) )
      2          )             -
      2   epmo * ( Ru(i) * ( Vvel(ip,jm,k)/Rp(ip) - Vvel(i,jm,k)/Rp(i))/
      2                    (drp )
-     2            + (Uvel(i,j,k)   - Uvel(i,jm,k)) / ( Ru(i) * dphi )
-     2          ) ) / ( Ru(i) * dphi )
+     2            + (Uvel(i,j,k)   - Uvel(i,jm,k)) / ( Ru(i) * (phip(j)-phip(jm)) )
+     2          ) ) / ( Ru(i) * (phiv(j)-phiv(jm)) )
      +              +
      3 ( epop * (   CNz*(Uvel(i,j,kp)  - Uvel(i,j,k) ) * dzi
      3            + (Wvel(ip,j,k)  - Wvel(i,j,k) ) / (Rp(ip) - Rp(i))
@@ -778,7 +778,7 @@ c
      +              -
      4   (ekm(i,j,k) + ekm(ip,j,k)) * ( Uvel(i,j,k) +
      4   (Vvel(ip,j,k) + Vvel(i,j,k) - Vvel(ip,jm,k) - Vvel(i,jm,k)) /
-     4   (2.0 * dphi) )/ ( Ru(i) * Ru(i) )
+     4   (2.0 * (phiv(j)-phiv(jm))) )/ ( Ru(i) * Ru(i) )
             enddo
          enddo
       enddo
@@ -848,7 +848,7 @@ c*****************************************************************
       real     putout(0:i1,0:j1,0:k1),Uvel(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
      +         eppo,empo,eopp,eopm,dzi
-      real theta_U,theta_V,xx,yy,f,fluc,Wjet
+      real xx,yy,f,fluc,Wjet
       integer n,t
 	real divvL,divvR,CNz
 
@@ -880,23 +880,23 @@ c*****************************************************************
 
       divvL= ( Ru(i)*Uvel(i,j,k) - Ru(i-1)*Uvel(i-1,j,k) ) / ( Rp(i)*dr(i) )
      +              +
-     2  (       Vvel(i,j,k) -         Vvel(i,j-1,k) ) / ( Rp(i)*dphi )
+     2  (       Vvel(i,j,k) -         Vvel(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
      +              +
      3  (       Wvel(i,j,k) -         Wvel(i,j,k-1) )  * dzi   
       divvR= ( Ru(i)*Uvel(i,jp,k) - Ru(i-1)*Uvel(i-1,jp,k) ) / ( Rp(i)*dr(i) )
      +              +
-     2  (       Vvel(i,jp,k) -         Vvel(i,jp-1,k) ) / ( Rp(i)*dphi )
+     2  (       Vvel(i,jp,k) -         Vvel(i,jp-1,k) ) / ( Rp(i)*(phiv(jp)-phiv(jp-1)) )
      +              +
      3  (       Wvel(i,jp,k) -         Wvel(i,jp,k-1) ) * dzi 
 
       putout(i,j,k) = putout(i,j,k) +
      1 ( eppo*( Ru(i )*Ru(i )*(Vvel(ip,j,k)/Rp(ip) - Vvel(i,j,k)/Rp(i))/
      1                      ( Rp(ip) - Rp(i) )
-     1        + (Uvel(i,jp,k)  - Uvel(i,j,k) ) / (dphi)
+     1        + (Uvel(i,jp,k)  - Uvel(i,j,k) ) / ((phip(jp)-phip(j)))
      1        ) * Ru(i) -
      1   empo*( Ru(im)*Ru(im)*(Vvel(i,j,k)/Rp(i) - Vvel(im,j,k)/Rp(im))/
      1                      ( Rp(i) - Rp(im) )
-     1        + (Uvel(im,jp,k) - Uvel(im,j,k)) / (dphi)
+     1        + (Uvel(im,jp,k) - Uvel(im,j,k)) / ((phip(jp)-phip(j)))
      1        ) * Ru(im) ) / ( Rp(i) * Rp(i) * dr(i) )
 !     1 ( eppo*( Ru(i )*(Vvel(ip,j,k)/Rp(ip) - Vvel(i,j,k)/Rp(i))/
 !     1                      ( Rp(ip) - Rp(i) )
@@ -908,19 +908,19 @@ c*****************************************************************
 !     1        ) * Ru(im) ) / ( Rp(i) * dr(i) )
      +              +
      2 ( ekm(i,jp,k) * (   (Uvel(i,jp,k) + Uvel(im,jp,k)) / 2.0
-     2                   + (Vvel(i,jp,k) - Vvel(i,j,k)  ) / dphi
+     2                   + (Vvel(i,jp,k) - Vvel(i,j,k)  ) / (phiv(jp)-phiv(j))
      2                   - 1./3.*divvR*Rp(i)
      2                 )             -
      2   ekm(i,j,k)  * (   (Uvel(i,j,k)  + Uvel(im,j,k) ) / 2.0
-     2                   + (Vvel(i,j,k)  - Vvel(i,jm,k) ) / dphi
+     2                   + (Vvel(i,j,k)  - Vvel(i,jm,k) ) / (phiv(j)-phiv(jm))
      2			 - 1./3.*divvL*Rp(i)
-     2                 ) ) / ( 0.5 * Rp(i) * Rp(i) * dphi)
+     2                 ) ) / ( 0.5 * Rp(i) * Rp(i) * (phip(jp)-phip(j)))
      +              +
      3 (   eopp * (  CNz*(Vvel(i,j,kp)  - Vvel(i,j,k) ) * dzi
-     3              +(Wvel(i,jp,k)  - Wvel(i,j,k) ) / (Rp(i)*dphi)
+     3              +(Wvel(i,jp,k)  - Wvel(i,j,k) ) / (Rp(i)*(phip(jp)-phip(j)))
      3            ) -
      3     eopm * (  CNz*(Vvel(i,j,k)   - Vvel(i,j,km)) * dzi
-     3              +(Wvel(i,jp,km) - Wvel(i,j,km)) / (Rp(i)*dphi)
+     3              +(Wvel(i,jp,km) - Wvel(i,j,km)) / (Rp(i)*(phip(jp)-phip(j)))
      3            )  ) * dzi
 
             enddo
@@ -978,7 +978,7 @@ c*****************************************************************
       real     putout(0:i1,0:j1,0:k1),Uvel(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
      +         epop,emop,eopp,eomp
-      real theta_U,theta_V,xx,yy,f,fluc,Wjet,dzi
+      real xx,yy,f,fluc,Wjet,dzi
       integer n,t
 	real divvR,divvL,CNz
 
@@ -1009,12 +1009,12 @@ c*****************************************************************
 
       divvL= ( Ru(i)*Uvel(i,j,k) - Ru(i-1)*Uvel(i-1,j,k) ) / ( Rp(i)*dr(i) )
      +              +
-     2  (       Vvel(i,j,k) -         Vvel(i,j-1,k) ) / ( Rp(i)*dphi )
+     2  (       Vvel(i,j,k) -         Vvel(i,j-1,k) ) / ( Rp(i)*(phiv(j+1)-phiv(j)) )
      +              +
      3  (       Wvel(i,j,k) -         Wvel(i,j,k-1) )   *dzi   
       divvR= ( Ru(i)*Uvel(i,j,kp) - Ru(i-1)*Uvel(i-1,j,kp) ) / ( Rp(i)*dr(i) )
      +              +
-     2  (       Vvel(i,j,kp) -         Vvel(i,j-1,kp) ) / ( Rp(i)*dphi )
+     2  (       Vvel(i,j,kp) -         Vvel(i,j-1,kp) ) / ( Rp(i)*(phiv(j+1)-phiv(j)) )
      +              +
      3  (       Wvel(i,j,kp) -         Wvel(i,j,kp-1) ) *dzi   
 
@@ -1027,11 +1027,11 @@ c*****************************************************************
      1              ) ) / ( Rp(i) * dr(i) )
      +             +
      2 (  eopp * (  (Vvel(i,j,kp)  - Vvel(i,j,k)  ) *dzi
-     2             +(Wvel(i,jp,k)  - Wvel(i,j,k)  ) /( Rp(i) * dphi )
+     2             +(Wvel(i,jp,k)  - Wvel(i,j,k)  ) /( Rp(i) * (phip(jp)-phip(j)) )
      2           ) -
      2    eomp * (  (Vvel(i,jm,kp) - Vvel(i,jm,k) ) *dzi
-     2             +(Wvel(i,j,k)   - Wvel(i,jm,k) )/( Rp(i) * dphi )
-     2           ) ) / ( Rp(i) * dphi )
+     2             +(Wvel(i,j,k)   - Wvel(i,jm,k) )/( Rp(i) * (phip(j)-phip(jm)) )
+     2           ) ) / ( Rp(i) * (phiv(j)-phiv(jm)) )
      +             +
      3 ( ekm(i,j,kp) * (CNz*(Wvel(i,j,kp) - Wvel(i,j,k ))*dzi - 1./3.*divvR ) -
      3   ekm(i,j,k ) * (CNz*(Wvel(i,j,k)  - Wvel(i,j,km))*dzi - 1./3.*divvL )
@@ -1130,7 +1130,7 @@ c
       ip=i+1
       im=i-1
       Rpdr_i=1./(Rp(i)*dr(i))
-      Rpdphi2_i=1./(Rp(i)*dphi)*1./(Rp(i)*dphi)
+      
 c
 c     -------------------------------------------start j-loop
         do 200 j=jb,je
@@ -1153,9 +1153,9 @@ c
      1            (putin2(i,j,k) -putin2(im,j,k)) / (Rp(i) - Rp(im))    )
      1 * Rpdr_i !/ ( Rp(i) * dr(i) )
      +              +
-     2 (    (ekh(i,j,k)+ekh(i,jp,k)) * (putin2(i,jp,k)-putin2(i,j,k) ) -
-     2      (ekh(i,j,k)+ekh(i,jm,k)) * (putin2(i,j,k) -putin2(i,jm,k))  )
-     2 * Rpdphi2_i !/ ( Rp(i) * dphi * Rp(i) * dphi )
+     2 (    (ekh(i,j,k)+ekh(i,jp,k)) * (putin2(i,jp,k)-putin2(i,j,k) )/(Rp(i)*(phip(jp)-phip(j ))) -
+     2      (ekh(i,j,k)+ekh(i,jm,k)) * (putin2(i,j,k) -putin2(i,jm,k))/(Rp(i)*(phip(j )-phip(jm)))  )
+     2 / ( Rp(i) *(phiv(j )-phiv(jm)) )
      +              +
      3 (CNz*(ekh(i,j,k)+ekh(i,j,kp)) * (putin2(i,j,kp)-putin2(i,j,k) ) -
      3  CNz*(ekh(i,j,k)+ekh(i,j,km)) * (putin2(i,j,k) -putin2(i,j,km))  )

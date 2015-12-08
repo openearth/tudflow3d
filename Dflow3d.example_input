@@ -49,6 +49,8 @@ SEM = 0				! 1 = SEM to generate turbulent fluctuations on top of inflow bc, 0 =
 nmax2 = 0			! Number of SEM eddies front inflow 
 nmax1 = 0			! Number of SEM eddies sides inflow
 lm_min = 0.02 			! Minimal Lm SEM eddies [m] (1/10*depth)
+nmax3= 0 			!Number of SEM eddies jet inflow
+lm_min3 = 0.03		! Minimal Lm SEM eddies jet pipe [m] (1/10*radius_j)
 slip_bot = 1			! 1 = no slip bottom, 0 = free slip bottom
 kn = 0.1			! Nikkuradse roughness flow [m]
 interaction_bed = 0		! 0 no erosion/sedimentation, 1 only deposition, 2 deposition & unlimited erosion, 3 deposition & erosion previously deposited material

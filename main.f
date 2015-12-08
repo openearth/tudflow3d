@@ -24,8 +24,9 @@
       implicit none
       include 'mpif.h'
 
-      integer  ib,ie,jb,je,kb,ke,ploc,ierr,istep_output,itag,n,t,istep_output_movie
+      integer  ib,ie,jb,je,kb,ke,ploc,ierr,istep_output,itag,n,t,istep_output_movie,status
       real     cput1,cput2,t_output,t_output_movie
+      real     cput10a,cput10b,cput11a,cput11b
 	  !real     cput1b,cput2b,t_output,t_output_movie,crate
 	  !integer cput1,cput2,cr
       real     bulk ,stress
@@ -43,6 +44,9 @@
       call mpi_init(ierr)
       call mpi_comm_rank (MPI_COMM_WORLD,rank,ierr)
       call mpi_comm_size (MPI_COMM_WORLD,ploc,ierr)
+	  
+	  !write(*,*),'rank,MPI_COMM_WORLD',rank,MPI_COMM_WORLD
+	  
     
       call read_namelist
       call allocate_global_vars
@@ -86,8 +90,28 @@
 	if (bcfile.ne.'') then
 	  call read_bc_from_coarse_sim(bcfile)
 	endif      
-
-
+!	if (poissolver.eq.1) THEN
+!	   CALL SOLVEpois_vg_init
+!	ENDIF
+	if (poissolver.eq.2) THEN
+	   CALL SOLVEpois_vg_init_mumps
+	ENDIF
+      IF (poissolver.eq.3) THEN
+	    CALL SOLVEpois_vg_init_pardiso
+      ENDIF
+!      IF (poissolver.eq.4) THEN
+!	    CALL SOLVEpois_vg_init_AMG
+!		CALL SOLVEpois_vg_AMG
+!      ENDIF
+      IF (poissolver.eq.5) THEN
+        IF (rank.eq.0) THEN
+	      CALL SOLVEpois_vg_init_pardiso3D
+		  ALLOCATE(rhs3(imax,jmax*px,kmax)) ! allocate rhs3 with real size only at rank=0
+		ELSE
+		  ALLOCATE(rhs3(1,1,1)) ! allocate rhs3 with dummy size on other ranks
+        ENDIF
+      ENDIF
+	  
       do n=1,nfrac
 	 call bound_c(cold(n,:,:,:),frac(n)%c,n)
  	 call bound_c(cnew(n,:,:,:),frac(n)%c,n)
@@ -96,21 +120,21 @@
       call state(cold,rold)
       call state(cnew,rnew)
       call state(dcdt,drdt)
-      call bound(Uold,Vold,Wold,rold,0,0.,Ub1old,Vb1old,Wb1old,Ub2old,Vb2old,Wb2old)
-      call bound(Unew,Vnew,Wnew,rnew,0,0.,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new)
-      call bound_rhoU(dUdt,dVdt,dWdt,drdt,slip_bot,0.,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new)
+      call bound(Uold,Vold,Wold,rold,0,0.,Ub1old,Vb1old,Wb1old,Ub2old,Vb2old,Wb2old,Ub3old,Vb3old,Wb3old)
+      call bound(Unew,Vnew,Wnew,rnew,0,0.,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
+      call bound_rhoU(dUdt,dVdt,dWdt,drdt,slip_bot,0.,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
 
 !	call stress_terms(Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
 !	call diffu_com4(wx,Srr,Spr,Szr,Spp,Ru,Rp,dr,dphi,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 
 	IF (time_int.eq.'AB2'.or.time_int.eq.'AB3'.or.time_int.eq.'ABv') THEN
-      call advecu_CDS2(wx,Uold,Vold,Wold,Rold,Ru,Rp,dr,dphi,dz,
+      call advecu_CDS2(wx,Uold,Vold,Wold,Rold,Ru,Rp,dr,phiv,dz,
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
       call diffu_CDS2 (wx,Uold,Vold,Wold,ib,ie,jb,je,kb,ke)
-      call advecv_CDS2(wy,Uold,Vold,Wold,Rold,Ru,Rp,dr,dphi,dz,
+      call advecv_CDS2(wy,Uold,Vold,Wold,Rold,Ru,Rp,dr,phiv,dz,
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
       call diffv_CDS2 (wy,Uold,Vold,Wold,ib,ie,jb,je,kb,ke)
-      call advecw_CDS2(wz,Uold,Vold,Wold,Rold,Ru,Rp,dr,dphi,dz,
+      call advecw_CDS2(wz,Uold,Vold,Wold,Rold,Ru,Rp,dr,phiv,dz,
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
       call diffw_CDS2 (wz,Uold,Vold,Wold,ib,ie,jb,je,kb,ke)
 	wxold=wx
@@ -121,6 +145,8 @@
 	if (Cs>0.or.sgs_model.eq.'MixLe') then
           if (sgs_model.eq.'SSmag') then
             call LES_smagorinsky(Unew,Vnew,Wnew,rnew)
+          elseif (sgs_model.eq.'DSmag') then
+            call LES_DSmag(Unew,Vnew,Wnew,rnew)			
           elseif (sgs_model.eq.'FSmag') then
             call LES_filteredSmagorinsky(Unew,Vnew,Wnew,rnew)
           elseif (sgs_model.eq.'SWALE') then
@@ -152,12 +178,17 @@
 	
 
       do while (time_n.le.t_end)
+	  if (rank.eq.0) then		
+		call cpu_time(cput10a)
+	  endif	  
 	!do istep=1,nstep
 		istep=istep   + 1
 !		call calc_div 
 		if (Cs>0.or.sgs_model.eq.'MixLe' ) then
 		  if (sgs_model.eq.'SSmag') then
 			call LES_smagorinsky(Unew,Vnew,Wnew,rnew)
+          elseif (sgs_model.eq.'DSmag') then
+            call LES_DSmag(Unew,Vnew,Wnew,rnew)						
 		  elseif (sgs_model.eq.'FSmag') then
 			call LES_filteredSmagorinsky(Unew,Vnew,Wnew,rnew)
                   elseif (sgs_model.eq.'SWALE') then
@@ -185,13 +216,13 @@
 		elseif (time_int.eq.'RK3') then
 			call RK3(ib,ie,jb,je,kb,ke)
 		endif
-		call bound_rhoU(dUdt,dVdt,dWdt,drdt,slip_bot,time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new)
+		call bound_rhoU(dUdt,dVdt,dWdt,drdt,slip_bot,time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
 
 		if (comp_filter_n>0) then
 			if (mod(istep,comp_filter_n).eq.0) then
-			  call compact_filter(dUdt,dVdt,dWdt,Ru,Rp,dr,dphi,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,comp_filter_a,
+			  call compact_filter(dUdt,dVdt,dWdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,comp_filter_a,
      &   tmax_inPpunt,i_inPpunt,j_inPpunt,tmax_inUpunt,i_inUpunt,j_inUpunt,tmax_inVpunt,i_inVpunt,j_inVpunt,kjet)
-			  call bound_rhoU(dUdt,dVdt,dWdt,drdt,0,time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new)
+			  call bound_rhoU(dUdt,dVdt,dWdt,drdt,0,time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
 			endif
 		endif
 		
@@ -204,16 +235,52 @@
 			CALL SOLVEpois(p) !,Ru,Rp,DPHI,dz,rank,imax,jmax,kmax,px)
 			call correc2(dudt,dvdt,dwdt,dt)
 			pold=p+pold    !what is called p here was dp in reality, now p is 
-			call bound_rhoU(dUdt,dVdt,dWdt,drdt,0,time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new)
+			call bound_rhoU(dUdt,dVdt,dWdt,drdt,0,time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
 		 ENDDO
 		!ENDIF
 
 		call fillps
-		CALL SOLVEpois(p) !,Ru,Rp,DPHI,dz,rank,imax,jmax,kmax,px)
+	  if (rank.eq.0) then		
+		call cpu_time(cput11a)
+	  endif	  		
+	  
+	    
+!	  IF (poissolver.eq.1) THEN
+!	   CALL SOLVEpois_vg(p)
+	  IF (poissolver.eq.2) THEN
+	   CALL SOLVEpois_vg_mumps(p)
+	  ELSEIF (poissolver.eq.3) THEN
+	   CALL SOLVEpois_vg_pardiso(p)	   
+	  ELSEIF (poissolver.eq.5) THEN
+	  
+	   IF (rank>0) THEN
+        call mpi_send(p,imax*jmax*kmax,MPI_REAL8,0,rank+400,MPI_COMM_WORLD,status,ierr)    !! Gather p for all ranks to rank=0
+	   ENDIF
+	   IF (rank.eq.0) THEN
+	     rhs3(:,1:jmax,:)=p
+	     DO i=1,px-1
+	       call mpi_recv(rhs3(:,i*jmax+1:i*jmax+jmax,:),imax*jmax*kmax,MPI_REAL8,i,i+400,MPI_COMM_WORLD,status,ierr) !Gather p for all ranks to rank=0
+         ENDDO
+	     CALL SOLVEpois_vg_pardiso3D(rhs3)	
+		 p=rhs3(:,1:jmax,:)
+	     DO i=1,px-1
+	       call mpi_send(rhs3(:,i*jmax+1:i*jmax+jmax,:),imax*jmax*kmax,MPI_REAL8,i,i+600,MPI_COMM_WORLD,status,ierr) !! Seed rhs from rank=0 to all ranks
+         ENDDO		 
+	   ELSE
+	     call mpi_recv(p,imax*jmax*kmax,MPI_REAL8,0,rank+600,MPI_COMM_WORLD,status,ierr)    !! Seed rhs from rank=0 to all ranks
+	   ENDIF
+	   
+	  ELSE
+	   CALL SOLVEpois(p) !,Ru,Rp,DPHI,dz,rank,imax,jmax,kmax,px)
+	  ENDIF
+
+	  if (rank.eq.0) then		
+		call cpu_time(cput11b)
+	  endif	  		
 		call correc
 
 !		call bound(Uold,Vold,Wold,Rold,0,time_n,Ub1old,Vb1old,Wb1old,Ub2old,Vb2old,Wb2old)
-		call bound(Unew,Vnew,Wnew,Rnew,0,time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new)
+		call bound(Unew,Vnew,Wnew,Rnew,0,time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
 
 		if (mod(istep,100).eq.0) then
 			call chkdiv
@@ -252,7 +319,11 @@
 		time_nm = time_n
 		time_n = time_np
 		time_np  = time_np  + dt
-
+	  if (rank.eq.0) then		
+		call cpu_time(cput10b)
+		write(*,'(a,i8,a,f6.3,a,f6.3,a,f5.2,a)'),'timestep:',istep,' ,cpu t=',NINT((cput10b-cput10a)*1000.)/1000.,'s, 1x pois=',
+     &   NINT((cput11b-cput11a)*1000.)/1000.,'s = ',NINT(10000.*(cput11b-cput11a)/(cput10b-cput10a))/100.,'%'
+	  endif	  
       enddo
 !	if (time_n.ge.t_output) then
 !	   istep_output=istep_output+1

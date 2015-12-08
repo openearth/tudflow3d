@@ -17,7 +17,7 @@
 !    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-      subroutine advecu_HYB4(putout,Uvel,Vvel,Wvel,RHO,Ru,Rp,dr,dphi,dz,
+      subroutine advecu_HYB4(putout,Uvel,Vvel,Wvel,RHO,Ru,Rp,dr,phiv,dz,
      +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif)
       implicit none
 c
@@ -37,7 +37,7 @@ c
 c          putout            : "empty" (initialised to zero)
 c          Uvel,Vvel,Wvel    : contain velocities at former timestep
 c          Utmp              : contains velocity at oldest timestep
-c          dr,dphi,dz        : grid spacing in r, phi and z-direction
+c          dr,phiv,dz        : grid spacing in r, phi and z-direction
 c          i1,j1,k1          : parameters for array-dimensions
 c          ib,ie,jb,je,kb,ke : range of gridpoints for which the
 c                              advection has to be calculated
@@ -54,7 +54,7 @@ c********************************************************************
       integer  i,j,k,im,ip,jm,jp,km,kp,i1,j1,k1,ib,ie,jb,je,kb,ke
       real     putout(0:i1,0:j1,0:k1),Uvel(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
-     +         dr(0:i1),dphi,dz,Ru(0:i1),Rp(0:i1)
+     +         dr(0:i1),phiv(0:j1),dz,Ru(0:i1),Rp(0:i1)
       real rho(0:i1,0:j1,0:k1),numdif
       real rhoip,rhoim,rhojp,rhojm,rhokp,rhokm
 	real*8 ubb(0:i1,0:k1),ubf(0:i1,0:k1),Uvel2(-1:i1+1,-1:j1+1,-1:k1+1)
@@ -133,7 +133,7 @@ c get stuff from other CPU's
      2 numdif*ABS(vvR)* (3.*(-Uvel(i,j ,k)+Uvel(i,jp,k))-(-Uvel2(i,jm ,k)+Uvel2(i,jpp,k)) ) ) -
      2 (vvL    *        ( Uvel(i,jm,k)+Uvel(i,j ,k))-
      2 numdif*ABS(vvL)* (3.*(-Uvel(i,jm,k)+Uvel(i,j ,k))-(-Uvel2(i,jmm,k)+Uvel2(i,jp ,k))) ) )
-     2  / ( Ru(i) * dphi )
+     2  / ( Ru(i) * (phiv(j)-phiv(jm)) )
      +                         +
      3 ((wwR    *       ( Uvel(i,j,k )+Uvel(i,j,kp))-
      3 numdif*ABS(wwR)* (3.*(-Uvel(i,j,k )+Uvel(i,j,kp))-(-Uvel2(i,j,km )+Uvel2(i,j,kpp))) ) -
@@ -151,7 +151,7 @@ c get stuff from other CPU's
       end
 
 
-      subroutine advecv_HYB4(putout,Uvel,Vvel,Wvel,RHO,Ru,Rp,dr,dphi,dz,
+      subroutine advecv_HYB4(putout,Uvel,Vvel,Wvel,RHO,Ru,Rp,dr,phiv,dz,
      +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif)
       implicit none
 c
@@ -171,7 +171,7 @@ c
 c          putout            : "empty" (initialised to zero)
 c          Uvel,Vvel,Wvel    : contain velocities at former timestep
 c          Vtmp              : contains velocity at oldest timestep
-c          dr,dphi,dz        : grid spacing in r, phi and z-direction
+c          dr,phiv,dz        : grid spacing in r, phi and z-direction
 c          i1,j1,k1          : parameters for array-dimensions
 c          ib,ie,jb,je,kb,ke : range of gridpoints for which the
 c                              advection has to be calculated
@@ -188,7 +188,7 @@ c********************************************************************
       integer  i,j,k,im,ip,jm,jp,km,kp,i1,j1,k1,ib,ie,jb,je,kb,ke
       real     putout(0:i1,0:j1,0:k1),Uvel(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
-     +         dr(0:i1),dphi,dz,Ru(0:i1),Rp(0:i1)
+     +         dr(0:i1),phiv(0:j1),dz,Ru(0:i1),Rp(0:i1)
       real rho(0:i1,0:j1,0:k1),numdif
       real rhoip,rhoim,rhojp,rhojm,rhokp,rhokm
 	real uuR,uuL,vvR,vvL,wwR,wwL
@@ -271,7 +271,7 @@ c get stuff from other CPU's
      2 numdif*ABS(vvR)* (3.*(-Vvel(i,j ,k)+Vvel(i,jp,k))-(-Vvel2(i,jm ,k)+Vvel2(i,jpp,k))) ) -
      2 (vvL    *        ( Vvel(i,jm,k)+Vvel(i,j ,k))-
      2 numdif*ABS(vvL)* (3.*(-Vvel(i,jm,k)+Vvel(i,j ,k))-(-Vvel2(i,jmm,k)+Vvel2(i,jp ,k))) ) )
-     2  / ( Rp(i) * dphi )
+     2  / ( Rp(i) * (phiv(j)-phiv(jm)) )
      +                         +
      3 ((wwR    *       ( Vvel(i,j,k )+Vvel(i,j,kp))-
      3 numdif*ABS(wwR)* (3.*(-Vvel(i,j,k )+Vvel(i,j,kp))-(-Vvel2(i,j,km )+Vvel2(i,j,kpp))) )-
@@ -293,7 +293,7 @@ c get stuff from other CPU's
       return
       end
 
-      subroutine advecw_HYB4(putout,Uvel,Vvel,Wvel,RHO,Ru,Rp,dr,dphi,dz,
+      subroutine advecw_HYB4(putout,Uvel,Vvel,Wvel,RHO,Ru,Rp,dr,phiv,dz,
      +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif)
       implicit none
 c
@@ -313,7 +313,7 @@ c
 c          putout            : "empty" (initialised to zero)
 c          Uvel,Vvel,Wvel    : contain velocities at former timestep
 c          Wtmp              : contains velocity at oldest timestep
-c          dr,dphi,dz        : grid spacing in r, phi and z-direction
+c          dr,phiv,dz        : grid spacing in r, phi and z-direction
 c          i1,j1,k1          : parameters for array-dimensions
 c          ib,ie,jb,je,kb,ke : range of gridpoints for which the
 c                              advection has to be calculated
@@ -330,7 +330,7 @@ c********************************************************************
       integer  i,j,k,im,ip,jm,jp,km,kp,i1,j1,k1,ib,ie,jb,je,kb,ke
       real     putout(0:i1,0:j1,0:k1),Uvel(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
-     +         dr(0:i1),dphi,dz,Ru(0:i1),Rp(0:i1)
+     +         dr(0:i1),phiv(0:j1),dz,Ru(0:i1),Rp(0:i1)
       real rho(0:i1,0:j1,0:k1)
       real rhoip,rhoim,rhojp,rhojm
 	real uuR,uuL,vvR,vvL,wwR,wwL,numdif
@@ -410,7 +410,7 @@ c get stuff from other CPU's
      2 numdif*ABS(vvR)*  (3.*(-Wvel(i,j ,k)+Wvel(i,jp,k))-(-Wvel2(i,jm ,k)+Wvel2(i,jpp,k))) ) -
      2 (vvL    *         ( Wvel(i,jm,k)+Wvel(i, j,k))-
      2 numdif*ABS(vvL)*  (3.*(-Wvel(i,jm,k)+Wvel(i, j,k))-(-Wvel2(i,jmm,k)+Wvel2(i, jp,k))) ) )
-     2  / ( Rp(i) * dphi )
+     2  / ( Rp(i) * (phiv(j)-phiv(jm)) )
      +                         +
      3 ((wwR    *        ( Wvel(i,j,k )+Wvel(i,j,kp))-
      3 numdif*ABS(wwR)*  (3.*(-Wvel(i,j,k )+Wvel(i,j,kp))-(-Wvel2(i,j,km )+Wvel2(i,j,kpp))) ) -

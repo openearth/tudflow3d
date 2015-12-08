@@ -340,7 +340,8 @@
      
        ! When we create netCDF files, variables and dimensions, we get back
        ! an ID for each one.
-       integer :: ncid, varid1,varid2,varid3, varid4, varid5, varid6, varid7, varid8, dimids(NDIMS), dimids2(NDIMS2),dimids3(NDIMS3)
+       integer :: ncid, varid1,varid2,varid3, varid4, varid5, varid6, varid7, varid8, varid9
+	   integer :: dimids(NDIMS), dimids2(NDIMS2),dimids3(NDIMS3)
        integer :: x_dimid, y_dimid, z_dimid, nfrac_dimid, par_dimid
 	integer :: dimids4(NDIMS),varid20
 	character(1024) :: svnversion
@@ -422,7 +423,12 @@
        call check( nf90_def_var(ncid, "P", NF90_REAL, dimids, varid7) )
        call check( nf90_put_att(ncid, varid7, 'units', 'Pa') )
        call check( nf90_put_att(ncid, varid7, 'long_name', 'Pressure') )
-
+	   
+	   if (sgs_model.eq.'DSmag') then
+         call check( nf90_def_var(ncid, "Cs", NF90_REAL, dimids, varid9) )
+         call check( nf90_put_att(ncid, varid9, 'units', '-') )
+         call check( nf90_put_att(ncid, varid9, 'long_name', 'Smagorinsky constant from dynamic Germano-Lillly sgs model') )	   
+       endif
        call check( nf90_def_var(ncid, "time", NF90_REAL, dimids3, varid8) )
        call check( nf90_put_att(ncid, varid8, 'units', 's') )
        call check( nf90_put_att(ncid, varid8, 'long_name', 'Time from start simulation') )
@@ -447,6 +453,11 @@
        call check( nf90_put_var(ncid, varid5, rnew(1:imax,1:jmax,1:kmax)) )
        call check( nf90_put_var(ncid, varid6, ekm(1:imax,1:jmax,1:kmax)) )
        call check( nf90_put_var(ncid, varid7, p(1:imax,1:jmax,1:kmax)+pold(1:imax,1:jmax,1:kmax)) )
+	   !call check( nf90_put_var(ncid, varid7, p(1:imax,1:jmax,1:kmax)) ) !! changed for exact solver output,
+	   if (sgs_model.eq.'DSmag') then
+	     Csgrid=sqrt(Csgrid)
+	     call check( nf90_put_var(ncid, varid9, Csgrid(1:imax,1:jmax,1:kmax)) )
+	   endif
        call check( nf90_put_var(ncid, varid8, tt) )
      
        ! Close the file. This frees up any internal netCDF resources

@@ -17,7 +17,7 @@
 !    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-      subroutine bound(Ubound,Vbound,Wbound,rho,botstress,tt,Ub1in,Vb1in,Wb1in,Ub2in,Vb2in,Wb2in)
+      subroutine bound(Ubound,Vbound,Wbound,rho,botstress,tt,Ub1in,Vb1in,Wb1in,Ub2in,Vb2in,Wb2in,Ub3in,Vb3in,Wb3in)
      
       USE nlist
 
@@ -43,6 +43,7 @@ c
 	integer botstress,n
       real Ub1(0:i1,0:k1),Vb1(0:i1,0:k1),Wb1(0:i1,0:k1),Ub2(0:j1,0:k1),Vb2(0:j1+1,0:k1),Wb2(0:j1,0:k1)
       real,intent(in) :: Ub1in(0:i1,0:k1),Vb1in(0:i1,0:k1),Wb1in(0:i1,0:k1),Ub2in(0:j1,0:k1),Vb2in(0:j1+1,0:k1),Wb2in(0:j1,0:k1)
+	  real,intent(in) :: Ub3in(0:i1,0:j1),Vb3in(0:i1,0:j1),Wb3in(0:i1,0:j1)
 	real x,y,z!,u(1:kmax-2),v(1:kmax-2),w(1:kmax-2),zz(1:kmax-2)
 	real Wbc1,Wbc2!,Ubc1,Vbc1
 	real Ujetbc,Vjetbc,Wjetbc,Ujetbc2,Vjetbc2
@@ -340,7 +341,11 @@ c get stuff from other CPU's
 	  yy=Rp(i)*sin_u(j)
 	  rr=1.-sqrt((xx**2+yy**2)/radius_j**2)
 	  rr=MAX(rr,0.)
- 	Wbound(i,j,kmax)=jetcorr*Wjet*rr**(1./W_j_powerlaw)+Awjet/REAL(azi_n)*Wjet*fluc 
+	  if (outflow_overflow_down.eq.1) then
+		Wbound(i,j,kmax)=jetcorr*Wjet*rr**(1./W_j_powerlaw)+Awjet/REAL(azi_n)*Wjet*fluc !no turb SEM fluc
+	  else
+		Wbound(i,j,kmax)=jetcorr*Wjet*rr**(1./W_j_powerlaw)+Awjet/REAL(azi_n)*Wjet*fluc+Wb3in(i,j) !including turb SEM fluc
+	  endif
 ! 	Wbound(i,j,k1)=jetcorr*Wjet*rr**(1./W_j_powerlaw)+Awjet/REAL(azi_n)*Wjet*fluc 
        enddo
        do t=1,tmax_inUpunt
@@ -352,9 +357,13 @@ c get stuff from other CPU's
  	enddo
 	Ujetbc=Aujet/azi_n*Wjet*fluc
 	Vjetbc=Avjet/azi_n*Wjet*fluc
-	Ujetbc2=Ujetbc*cos(azi_angle_u(i,j))-Vjetbc*sin(azi_angle_u(i,j))
-	Vjetbc2=Ujetbc*sin(azi_angle_u(i,j))+Vjetbc*cos(azi_angle_u(i,j))
-
+	if (outflow_overflow_down.eq.1) then
+		Ujetbc2=Ujetbc*cos(azi_angle_u(i,j))-Vjetbc*sin(azi_angle_u(i,j)) !no turb SEM fluc
+		Vjetbc2=Ujetbc*sin(azi_angle_u(i,j))+Vjetbc*cos(azi_angle_u(i,j))
+	else
+		Ujetbc2=Ujetbc*cos(azi_angle_u(i,j))-Vjetbc*sin(azi_angle_u(i,j))+Ub3in(i,j) !including turb SEM fluc
+		Vjetbc2=Ujetbc*sin(azi_angle_u(i,j))+Vjetbc*cos(azi_angle_u(i,j))+Vb3in(i,j)
+	endif
   	Ubound(i,j,k1)=2.*(Ujetbc2*cos_u(j)+Vjetbc2*sin_u(j))-Ubound(i,j,kmax) !(Aujet/6.*Wjet*fluc)	
        enddo
        do t=1,tmax_inVpunt
@@ -366,9 +375,13 @@ c get stuff from other CPU's
  	enddo
 	Ujetbc=Aujet/azi_n*Wjet*fluc
 	Vjetbc=Avjet/azi_n*Wjet*fluc
-	Ujetbc2=Ujetbc*cos(azi_angle_v(i,j))-Vjetbc*sin(azi_angle_v(i,j))
-	Vjetbc2=Ujetbc*sin(azi_angle_v(i,j))+Vjetbc*cos(azi_angle_v(i,j))
-
+	if (outflow_overflow_down.eq.1) then
+		Ujetbc2=Ujetbc*cos(azi_angle_v(i,j))-Vjetbc*sin(azi_angle_v(i,j)) !no turb SEM fluc
+		Vjetbc2=Ujetbc*sin(azi_angle_v(i,j))+Vjetbc*cos(azi_angle_v(i,j))
+	else
+		Ujetbc2=Ujetbc*cos(azi_angle_v(i,j))-Vjetbc*sin(azi_angle_v(i,j))+Ub3in(i,j) !including turb SEM fluc
+		Vjetbc2=Ujetbc*sin(azi_angle_v(i,j))+Vjetbc*cos(azi_angle_v(i,j))+Vb3in(i,j) !including turb SEM fluc
+	endif
   	Vbound(i,j,k1)=2.*(Ujetbc2*sin_v(j)+Vjetbc2*cos_v(j))-Vbound(i,j,kmax) !(Aujet/6.*Wjet*fluc)
        enddo
 
@@ -436,7 +449,7 @@ c get stuff from other CPU's
 
       end
 
-      subroutine bound_incljet(Ubound,Vbound,Wbound,rho,botstress,tt,Ub1in,Vb1in,Wb1in,Ub2in,Vb2in,Wb2in)
+      subroutine bound_incljet(Ubound,Vbound,Wbound,rho,botstress,tt,Ub1in,Vb1in,Wb1in,Ub2in,Vb2in,Wb2in,Ub3in,Vb3in,Wb3in)
      
       USE nlist
 
@@ -463,6 +476,7 @@ c
 	integer botstress,n,jp
       real Ub1(0:i1,0:k1),Vb1(0:i1,0:k1),Wb1(0:i1,0:k1),Ub2(0:j1,0:k1),Vb2(0:j1+1,0:k1),Wb2(0:j1,0:k1)
       real,intent(in):: Ub1in(0:i1,0:k1),Vb1in(0:i1,0:k1),Wb1in(0:i1,0:k1),Ub2in(0:j1,0:k1),Vb2in(0:j1+1,0:k1),Wb2in(0:j1,0:k1)
+	  real,intent(in) :: Ub3in(0:i1,0:j1),Vb3in(0:i1,0:j1),Wb3in(0:i1,0:j1)
 	real x,y,z
 	real Wbc1,Wbc2
 	real Ujetbc,Vjetbc,Wjetbc,Ujetbc2,Vjetbc2
@@ -857,13 +871,13 @@ c get stuff from other CPU's
 	 	  Wbound(i,j,k)=Wbound2(i,j,k)	
 	 	enddo
 	 	do k=kmax-kjet+1,kmax
-	 	  Wbound(i,j,k)=(jetcorr*rr**(1./W_j_powerlaw)+Awjet/REAL(azi_n)*fluc)*Wjet
+	 	  Wbound(i,j,k)=(jetcorr*rr**(1./W_j_powerlaw)+Awjet/REAL(azi_n)*fluc)*Wjet+Wb3in(i,j)
 	  	enddo
 	else
 	 	do k=kmax-kjet,kmax
 	 	  Wbound(i,j,k)=Wbound2(i,j,k) !Wjet+Awjet/REAL(azi_n)*Wjet*fluc
 	 	enddo
-	 	Wbound(i,j,kmax)=(jetcorr*rr**(1./W_j_powerlaw)+Awjet/REAL(azi_n)*fluc)*Wjet
+	 	Wbound(i,j,kmax)=(jetcorr*rr**(1./W_j_powerlaw)+Awjet/REAL(azi_n)*fluc)*Wjet+Wb3in(i,j)
 	! 	Wbound(i,j,k1)=jetcorr*Wjet*rr**(1./W_j_powerlaw)+Awjet/REAL(azi_n)*Wjet*fluc 
 	endif
        enddo
@@ -876,8 +890,8 @@ c get stuff from other CPU's
  	enddo
 	Ujetbc=Aujet/azi_n*Wjet*fluc
 	Vjetbc=Avjet/azi_n*Wjet*fluc
-	Ujetbc2=Ujetbc*cos(azi_angle_u(i,j))-Vjetbc*sin(azi_angle_u(i,j))
-	Vjetbc2=Ujetbc*sin(azi_angle_u(i,j))+Vjetbc*cos(azi_angle_u(i,j))
+	Ujetbc2=Ujetbc*cos(azi_angle_u(i,j))-Vjetbc*sin(azi_angle_u(i,j))+Ub3in(i,j)
+	Vjetbc2=Ujetbc*sin(azi_angle_u(i,j))+Vjetbc*cos(azi_angle_u(i,j))+Vb3in(i,j)
 	if (outflow_overflow_down.eq.1) then
 		do k=kmax-kjet,kmax-kjet+1
 		  Ubound(i,j,k)=Ubound2(i,j,k)
@@ -902,8 +916,8 @@ c get stuff from other CPU's
  	enddo
 	Ujetbc=Aujet/azi_n*Wjet*fluc
 	Vjetbc=Avjet/azi_n*Wjet*fluc
-	Ujetbc2=Ujetbc*cos(azi_angle_v(i,j))-Vjetbc*sin(azi_angle_v(i,j))
-	Vjetbc2=Ujetbc*sin(azi_angle_v(i,j))+Vjetbc*cos(azi_angle_v(i,j))
+	Ujetbc2=Ujetbc*cos(azi_angle_v(i,j))-Vjetbc*sin(azi_angle_v(i,j))+Ub3in(i,j)
+	Vjetbc2=Ujetbc*sin(azi_angle_v(i,j))+Vjetbc*cos(azi_angle_v(i,j))+Vb3in(i,j)
 	if (outflow_overflow_down.eq.1) then
 		do k=kmax-kjet,kmax-kjet+1
 		  Vbound(i,j,k)=Vbound2(i,j,k)
@@ -1009,7 +1023,7 @@ c get stuff from other CPU's
 
       end
 
-      subroutine bound_rhoU(Ubound,Vbound,Wbound,rho,botstress,tt,Ub1in,Vb1in,Wb1in,Ub2in,Vb2in,Wb2in)
+      subroutine bound_rhoU(Ubound,Vbound,Wbound,rho,botstress,tt,Ub1in,Vb1in,Wb1in,Ub2in,Vb2in,Wb2in,Ub3in,Vb3in,Wb3in)
 
       USE nlist
 
@@ -1035,6 +1049,7 @@ c
 	real ust_U_b,ust_V_b,Chezy,fluc,f,tt,z0_U,z0_V,phi,z,x,y
       real Ub1(0:i1,0:k1),Vb1(0:i1,0:k1),Wb1(0:i1,0:k1),Ub2(0:j1,0:k1),Vb2(0:j1+1,0:k1),Wb2(0:j1,0:k1)
       real,intent(in):: Ub1in(0:i1,0:k1),Vb1in(0:i1,0:k1),Wb1in(0:i1,0:k1),Ub2in(0:j1,0:k1),Vb2in(0:j1+1,0:k1),Wb2in(0:j1,0:k1)
+	  real,intent(in) :: Ub3in(0:i1,0:j1),Vb3in(0:i1,0:j1),Wb3in(0:i1,0:j1)
 	real Wbc1,Wbc2
 	real Ujetbc,Vjetbc,Wjetbc,Ujetbc2,Vjetbc2
 	real rr,interpseries
@@ -1537,13 +1552,13 @@ c get stuff from other CPU's
  		  Wbound(i,j,k)=Wbound2(i,j,k) !Wjet*0.5*(rho(i,j,k)+rho(i,j,k+1))+Awjet/6.*Wjet*0.5*(rho(i,j,k)+rho(i,j,k+1))*fluc
  		enddo
  		do k=kmax-kjet+1,kmax
- 		  Wbound(i,j,k)=(jetcorr*rr**(1./W_j_powerlaw)+fluc*Awjet/REAL(azi_n))*Wjet*0.5*(rho(i,j,k)+rho(i,j,k+1))
+ 		  Wbound(i,j,k)=((jetcorr*rr**(1./W_j_powerlaw)+fluc*Awjet/REAL(azi_n))*Wjet+Wb3in(i,j))*0.5*(rho(i,j,k)+rho(i,j,k+1))
  		enddo
 	else
  		do k=kmax-kjet,kmax
  		  Wbound(i,j,k)=Wbound2(i,j,k) !Wjet*0.5*(rho(i,j,k)+rho(i,j,k+1))+Awjet/6.*Wjet*0.5*(rho(i,j,k)+rho(i,j,k+1))*fluc
  		enddo
-	 	Wbound(i,j,kmax)=(jetcorr*rr**(1./W_j_powerlaw)+fluc*Awjet/REAL(azi_n))*Wjet*0.5*(rho(i,j,kmax)+rho(i,j,k1))
+	 	Wbound(i,j,kmax)=((jetcorr*rr**(1./W_j_powerlaw)+fluc*Awjet/REAL(azi_n))*Wjet+Wb3in(i,j))*0.5*(rho(i,j,kmax)+rho(i,j,k1))
 	endif
        enddo
 
@@ -1556,8 +1571,8 @@ c get stuff from other CPU's
  	enddo
 	Ujetbc=Aujet/azi_n*Wjet*fluc
 	Vjetbc=Avjet/azi_n*Wjet*fluc
-	Ujetbc2=Ujetbc*cos(azi_angle_u(i,j))-Vjetbc*sin(azi_angle_u(i,j))
-	Vjetbc2=Ujetbc*sin(azi_angle_u(i,j))+Vjetbc*cos(azi_angle_u(i,j))
+	Ujetbc2=Ujetbc*cos(azi_angle_u(i,j))-Vjetbc*sin(azi_angle_u(i,j))+Ub3in(i,j)
+	Vjetbc2=Ujetbc*sin(azi_angle_u(i,j))+Vjetbc*cos(azi_angle_u(i,j))+Vb3in(i,j)
 	if (outflow_overflow_down.eq.1) then
 		do k=kmax-kjet,kmax-kjet+1
 		  Ubound(i,j,k)=Ubound2(i,j,k)
@@ -1581,8 +1596,8 @@ c get stuff from other CPU's
  	enddo
 	Ujetbc=Aujet/azi_n*Wjet*fluc
 	Vjetbc=Avjet/azi_n*Wjet*fluc
-	Ujetbc2=Ujetbc*cos(azi_angle_v(i,j))-Vjetbc*sin(azi_angle_v(i,j))
-	Vjetbc2=Ujetbc*sin(azi_angle_v(i,j))+Vjetbc*cos(azi_angle_v(i,j))
+	Ujetbc2=Ujetbc*cos(azi_angle_v(i,j))-Vjetbc*sin(azi_angle_v(i,j))+Ub3in(i,j)
+	Vjetbc2=Ujetbc*sin(azi_angle_v(i,j))+Vjetbc*cos(azi_angle_v(i,j))+Vb3in(i,j)
 	jp=min(j+1,j1)	!this error is no issue as Vbound(j1) is not used
 	if (outflow_overflow_down.eq.1) then
 		do k=kmax-kjet,kmax-kjet+1

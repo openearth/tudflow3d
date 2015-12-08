@@ -52,7 +52,7 @@
       do k=1,kmax
          do j=1,jmax
             do i=1,imax
-            df = Rp(i)*dphi
+            df = Rp(i)*(phiv(j)-phiv(j-1))
       	    df2 = df * df
             dr2 = dr(i) * dr(i)
             kcoeff = ekm(i,j,k) /rnew(i,j,k)
@@ -154,7 +154,7 @@
 	div1 =
      1  ( Ru(i)*dUdt(i,j,k) - Ru(i-1)*dUdt(i-1,j,k) ) / ( Rp(i)*dr(i) )
      +              +
-     2  (       dVdt(i,j,k) -         dVdt(i,j-1,k) ) / ( Rp(i)*dphi )
+     2  (       dVdt(i,j,k) -         dVdt(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
      +              +
      3  (       dWdt(i,j,k) -         dWdt(i,j,k-1) ) / ( dz )
 !     +              +  (3.*drdt(i,j,k)-4.*rnew(i,j,k)+rold(i,j,k))/(2.*dt)
@@ -162,7 +162,7 @@
 
 	    div2= ( Ru(i)*Unew(i,j,k) - Ru(i-1)*Unew(i-1,j,k) ) / ( Rp(i)*dr(i) )
      +              +
-     2  (       Vnew(i,j,k) -         Vnew(i,j-1,k) ) / ( Rp(i)*dphi )
+     2  (       Vnew(i,j,k) -         Vnew(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
      +              +
      3  (       Wnew(i,j,k) -         Wnew(i,j,k-1) ) / ( dz )  
 

@@ -76,7 +76,7 @@
 		write(*,*) '#                                                #'
 	CASE(009)
 		write(*,*) '# namelist &simulation                           #'			
-		write(*,*) '# dy is not defined                              #'			
+		write(*,*) '# dy or dy_grid is not defined                   #'			
 		write(*,*) '#                                                #'
 	CASE(010)
 		write(*,*) '# namelist &simulation                           #'			
@@ -90,6 +90,9 @@
 		write(*,*) '# namelist &simulation                           #'			
 		write(*,*) '# kmax is not a multiple of px                   #'			
 		write(*,*) '# adjust kmax and/or px                          #'
+	CASE(013)
+		write(*,*) '# namelist &simulation                           #'			
+		write(*,*) '# sym_grid_y is not equal to 0 or 1              #'			
 	CASE(030)
 		write(*,*) '# namelist &times                                #'			
 		write(*,*) '# t_end is not defined                           #'			
@@ -240,7 +243,7 @@
 	CASE(082)
 		write(*,*) '# namelist &LESmodel                             #'			
 		write(*,*) '# sgs_model is not defined                       #'	
-		write(*,*) '# choose ''SSmag'',or ''FSmag'',or''SWALE'',or''Sigma'',or''MixLe''  #'	
+		write(*,*) '# choose ''SSmag'',or ''DSmag'',or ''FSmag'',or''SWALE'',or''Sigma'',or''MixLe''  #'	
 		write(*,*) '# for Standard, Filtered Smagorinsky, WALE,      #'
 		write(*,*) '# Sigma, Mixing Length model                     #'
 	CASE(083)
@@ -446,13 +449,14 @@
 		write(*,*) '# npresIBM must be >0                            #'
 	CASE(501)
 		write(*,*) '# namelist &simulation                           #'			
-		write(*,*) '# imax_grid is not increasing monotonously       #'	
+		write(*,*) '# imax_grid or jmax_grid is not increasing monotonously       #'	
 	CASE(502)
 		write(*,*) '# namelist &simulation                           #'			
-		write(*,*) '# not enough or negative dr_grid are defined     #'	
+		write(*,*) '# not enough or negative dr_grid or dy_grid are defined     #'	
 	CASE(503)
 		write(*,*) '# namelist &simulation                           #'			
-		write(*,*) '# last imax_grid is not equal to imax            #'	
+		write(*,*) '# last imax_grid is not equal to imax, or        #'	
+		write(*,*) '# last jmax_grid is not equal to jmax or half jmax with sym_grid_y=1           #'	
 	CASE(504)
 		write(*,*) '# namelist &LESmodel                             #'			
 		write(*,*) '# Lmix_type is not 1 or 2                        #'	
@@ -482,6 +486,12 @@
 		write(*,*) '# namelist &ambient                              #'			
 		write(*,*) '# input V_w must be defined if Hs>0              #'					
 		write(*,*) '# please note that unlike V_b, V_w is defined in earth fixed x,y coordinate system !    #'		
+	CASE(620)
+		write(*,*) '# namelist &ambient                              #'			
+		write(*,*) '# nmax3 is not defined                           #'			
+	CASE(621)
+		write(*,*) '# namelist &ambient                              #'			
+		write(*,*) '# lm_min3 is not defined                         #'					
 	CASE(1001)
 		write(*,*) '# namelist &timeseries                           #'			
 		write(*,*) '# file cannot be found                           #'	

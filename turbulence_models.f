@@ -17,7 +17,7 @@
 !    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-	subroutine compact_filter(Uvel,Vvel,Wvel,Ru,Rp,dr,dphi,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,a,
+	subroutine compact_filter(Uvel,Vvel,Wvel,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,a,
      &   tmax_inPpunt,i_inPpunt,j_inPpunt,tmax_inUpunt,i_inUpunt,j_inUpunt,tmax_inVpunt,i_inVpunt,j_inVpunt,kjet)
 	implicit none
 
@@ -25,7 +25,7 @@
 
 	real Uvel(0:i1,0:j1,0:k1),Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1)
       integer  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px
-	real dr(0:i1),dphi,dz,Ru(0:i1),Rp(0:i1),a
+	real dr(0:i1),phiv(0:j1),dz,Ru(0:i1),Rp(0:i1),a
       	integer i,j,k
         integer ileng,ierr,itag,status(MPI_STATUS_SIZE)
 
@@ -318,7 +318,7 @@
       integer n,t,tel,kt
       real ebb(0:i1,0:k1)
       real ebf(0:i1,0:k1)
-      real Lm2,Rudphi_i,Rumdphi_i,Rpdphi_i,dRpp_i,dRp_i,divergentie
+      real Lm2,dRpp_i,dRp_i,divergentie
       real     Uvel(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),rr(0:i1,0:j1,0:k1)
 
@@ -331,32 +331,29 @@
 
 	dzi=1./dz
 	do i=1,imax
-	  Rudphi_i=1./(Ru(i)*dphi)
-	  Rumdphi_i=1./(Ru(i-1)*dphi)
-	  Rpdphi_i=1./(Rp(i)*dphi)
-	  Lm2=Lmix(i)*Lmix(i)
 	  dRpp_i=1./(Rp(i+1)-Rp(i))
 	  dRp_i=1./(Rp(i)-Rp(i-1))
 	  
 	  
 	  do j=1,jmax
+       Lm2=Lmix2(i,j)*Cs*Cs
 	     do k=1,kmax
 
 				shear = 2.0*(
      1			((Uvel(i,j,k)-Uvel(i-1,j,k))/dr(i))*((Uvel(i,j,k)-Uvel(i-1,j,k))/dr(i)) + 
-     1			((Vvel(i,j,k)-Vvel(i,j-1,k))/(Rp(i)*dphi) + 0.5*(Uvel(i,j,k)+Uvel(i-1,j,k))/Rp(i))*
-     1			((Vvel(i,j,k)-Vvel(i,j-1,k))/(Rp(i)*dphi) + 0.5*(Uvel(i,j,k)+Uvel(i-1,j,k))/Rp(i)) +	
+     1			((Vvel(i,j,k)-Vvel(i,j-1,k))/(Rp(i)*(phiv(j)-phiv(j-1))) + 0.5*(Uvel(i,j,k)+Uvel(i-1,j,k))/Rp(i))*
+     1			((Vvel(i,j,k)-Vvel(i,j-1,k))/(Rp(i)*(phiv(j)-phiv(j-1))) + 0.5*(Uvel(i,j,k)+Uvel(i-1,j,k))/Rp(i)) +	
      1			((Wvel(i,j,k)-Wvel(i,j,k-1))*dzi)*((Wvel(i,j,k)-Wvel(i,j,k-1))*dzi) )
      
      
 				shear = shear + 0.25*(
-	1			((Uvel(i  ,j+1,k  )-Uvel(i  ,j  ,k  ))*Rudphi_i +
+	1			((Uvel(i  ,j+1,k  )-Uvel(i  ,j  ,k  ))/(Ru(i)*(phip(j+1)-phip(j))) +
      2			( Vvel(i+1,j  ,k  )/Rp(i+1)-Vvel(i  ,j  ,k  )/Rp(i))*dRpp_i*Ru(i) )**2 +
-	1			((Uvel(i  ,j  ,k  )-Uvel(i  ,j-1,k  ))*Rudphi_i +
+	1			((Uvel(i  ,j  ,k  )-Uvel(i  ,j-1,k  ))/(Ru(i)*(phip(j)-phip(j-1))) +
      2			( Vvel(i+1,j-1,k  )/Rp(i+1)-Vvel(i  ,j-1,k  )/Rp(i))*dRpp_i*Ru(i) )**2 +
-	1			((Uvel(i-1,j+1,k  )-Uvel(i-1,j  ,k  ))*Rumdphi_i +
+	1			((Uvel(i-1,j+1,k  )-Uvel(i-1,j  ,k  ))/(Ru(i-1)*(phip(j+1)-phip(j))) +
      2			( Vvel(i  ,j  ,k  )/Rp(i)-Vvel(i-1,j  ,k  )/Rp(i-1))*dRp_i*Ru(i-1) )**2 +
-	1			((Uvel(i-1,j  ,k  )-Uvel(i-1,j-1,k  ))*Rumdphi_i +
+	1			((Uvel(i-1,j  ,k  )-Uvel(i-1,j-1,k  ))/(Ru(i-1)*(phip(j)-phip(j-1))) +
      2			( Vvel(i  ,j-1,k  )/Rp(i)-Vvel(i-1,j-1,k  )/Rp(i-1))*dRp_i*Ru(i-1) )**2
      e				)
 
@@ -370,30 +367,30 @@
 	1			((Uvel(i-1,j  ,k  )-Uvel(i-1,j  ,k-1))*dzi +
      2			( Wvel(i  ,j  ,k-1)-Wvel(i-1,j  ,k-1))*dRp_i)**2 
      e				)
-
+	 
 				shear = shear + 0.25*(
 	1			((Vvel(i  ,j  ,k+1)-Vvel(i  ,j  ,k  ))*dzi +
-     2			( Wvel(i  ,j+1,k  )-Wvel(i  ,j  ,k  ))*Rpdphi_i)**2 +
+     2			( Wvel(i  ,j+1,k  )-Wvel(i  ,j  ,k  ))/(Rp(i)*(phip(j+1)-phip(j))) )**2 +
 	1			((Vvel(i  ,j  ,k  )-Vvel(i  ,j  ,k-1))*dzi +
-     2			( Wvel(i  ,j+1,k-1)-Wvel(i  ,j  ,k-1))*Rpdphi_i)**2 +
+     2			( Wvel(i  ,j+1,k-1)-Wvel(i  ,j  ,k-1))/(Rp(i)*(phip(j+1)-phip(j))) )**2 +
 	1			((Vvel(i  ,j-1,k+1)-Vvel(i  ,j-1,k  ))*dzi +
-     2			( Wvel(i  ,j  ,k  )-Wvel(i  ,j-1,k  ))*Rpdphi_i)**2 +
+     2			( Wvel(i  ,j  ,k  )-Wvel(i  ,j-1,k  ))/(Rp(i)*(phip(j)-phip(j-1))) )**2 +
 	1			((Vvel(i  ,j-1,k  )-Vvel(i  ,j-1,k-1))*dzi +
-     2			( Wvel(i  ,j  ,k-1)-Wvel(i  ,j-1,k-1))*Rpdphi_i)**2 
+     2			( Wvel(i  ,j  ,k-1)-Wvel(i  ,j-1,k-1))/(Rp(i)*(phip(j)-phip(j-1))) )**2 
      e				)
 
 !! 
       divergentie= 2./3.*(( Ru(i)*Uvel(i,j,k) - Ru(i-1)*Uvel(i-1,j,k) ) / ( Rp(i)*dr(i) )
      +              +
-     2  (       Vvel(i,j,k) -         Vvel(i,j-1,k) ) / ( Rp(i)*dphi )
+     2  (       Vvel(i,j,k) -         Vvel(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
      +              +
      3  (       Wvel(i,j,k) -         Wvel(i,j,k-1) ) / ( dz ))   
-
+       
 		shear = shear 
-     +                +1.5*divergentie*divergentie
-     +                -divergentie*2.*((Uvel(i,j,k)-Uvel(i-1,j,k))/dr(i))
-     +                -divergentie*2.*((Vvel(i,j,k)-Vvel(i,j-1,k))/(Rp(i)*dphi) + 0.5*(Uvel(i,j,k)+Uvel(i-1,j,k))/Rp(i))
-     +                -divergentie*2.*((Wvel(i,j,k)-Wvel(i,j,k-1))*dzi)
+     +             +1.5*divergentie*divergentie
+     +             -divergentie*2.*((Uvel(i,j,k)-Uvel(i-1,j,k))/dr(i))
+     +             -divergentie*2.*((Vvel(i,j,k)-Vvel(i,j-1,k))/(Rp(i)*(phiv(j)-phiv(j-1)))+0.5*(Uvel(i,j,k)+Uvel(i-1,j,k))/Rp(i))
+     +             -divergentie*2.*((Wvel(i,j,k)-Wvel(i,j,k-1))*dzi)
 
 				
 				ekm(i,j,k) = rr(i,j,k) * Lm2 * sqrt(shear) ! Smagorinsky
@@ -577,7 +574,7 @@ c*************************************************************
       integer n,t,tel,kt
       real ebb(0:i1,0:k1)
       real ebf(0:i1,0:k1)
-      real Lm2,Rudphi_i,Rumdphi_i,Rpdphi_i,dRpp_i,dRp_i,divergentie
+      real Lm2,dRpp_i,dRp_i,divergentie
       real     Uvel(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),rr(0:i1,0:j1,0:k1)
 
@@ -601,32 +598,29 @@ c*************************************************************
 
 	dzi=1./dz
 	do i=1,imax
-	  Rudphi_i=1./(Ru(i)*dphi)
-	  Rumdphi_i=1./(Ru(i-1)*dphi)
-	  Rpdphi_i=1./(Rp(i)*dphi)
-	  Lm2=Lmix(i)*Lmix(i)
 	  dRpp_i=1./(Rp(i+1)-Rp(i))
 	  dRp_i=1./(Rp(i)-Rp(i-1))
 	  
 	  
 	  do j=1,jmax
+       Lm2=Lmix2(i,j)*Cs*Cs		  
 	     do k=1,kmax
 
 				shear = 2.0*(
      1			((Uvel(i,j,k)-Uvel(i-1,j,k))/dr(i))*((Uvel(i,j,k)-Uvel(i-1,j,k))/dr(i)) + 
-     1			((Vvel(i,j,k)-Vvel(i,j-1,k))/(Rp(i)*dphi) + 0.5*(Uvel(i,j,k)+Uvel(i-1,j,k))/Rp(i))*
-     1			((Vvel(i,j,k)-Vvel(i,j-1,k))/(Rp(i)*dphi) + 0.5*(Uvel(i,j,k)+Uvel(i-1,j,k))/Rp(i)) +	
+     1			((Vvel(i,j,k)-Vvel(i,j-1,k))/(Rp(i)*(phiv(j)-phiv(j-1))) + 0.5*(Uvel(i,j,k)+Uvel(i-1,j,k))/Rp(i))*
+     1			((Vvel(i,j,k)-Vvel(i,j-1,k))/(Rp(i)*(phiv(j)-phiv(j-1))) + 0.5*(Uvel(i,j,k)+Uvel(i-1,j,k))/Rp(i)) +	
      1			((Wvel(i,j,k)-Wvel(i,j,k-1))*dzi)*((Wvel(i,j,k)-Wvel(i,j,k-1))*dzi) )
      
      
 				shear = shear + 0.25*(
-	1			((Uvel(i  ,j+1,k  )-Uvel(i  ,j  ,k  ))*Rudphi_i +
+	1			((Uvel(i  ,j+1,k  )-Uvel(i  ,j  ,k  ))/(Ru(i)*(phip(j+1)-phip(j))) +
      2			( Vvel(i+1,j  ,k  )/Rp(i+1)-Vvel(i  ,j  ,k  )/Rp(i))*dRpp_i*Ru(i) )**2 +
-	1			((Uvel(i  ,j  ,k  )-Uvel(i  ,j-1,k  ))*Rudphi_i +
+	1			((Uvel(i  ,j  ,k  )-Uvel(i  ,j-1,k  ))/(Ru(i)*(phip(j)-phip(j-1))) +
      2			( Vvel(i+1,j-1,k  )/Rp(i+1)-Vvel(i  ,j-1,k  )/Rp(i))*dRpp_i*Ru(i) )**2 +
-	1			((Uvel(i-1,j+1,k  )-Uvel(i-1,j  ,k  ))*Rumdphi_i +
+	1			((Uvel(i-1,j+1,k  )-Uvel(i-1,j  ,k  ))/(Ru(i-1)*(phip(j+1)-phip(j))) +
      2			( Vvel(i  ,j  ,k  )/Rp(i)-Vvel(i-1,j  ,k  )/Rp(i-1))*dRp_i*Ru(i-1) )**2 +
-	1			((Uvel(i-1,j  ,k  )-Uvel(i-1,j-1,k  ))*Rumdphi_i +
+	1			((Uvel(i-1,j  ,k  )-Uvel(i-1,j-1,k  ))/(Ru(i-1)*(phip(j)-phip(j-1))) +
      2			( Vvel(i  ,j-1,k  )/Rp(i)-Vvel(i-1,j-1,k  )/Rp(i-1))*dRp_i*Ru(i-1) )**2
      e				)
 
@@ -643,27 +637,28 @@ c*************************************************************
 
 				shear = shear + 0.25*(
 	1			((Vvel(i  ,j  ,k+1)-Vvel(i  ,j  ,k  ))*dzi +
-     2			( Wvel(i  ,j+1,k  )-Wvel(i  ,j  ,k  ))*Rpdphi_i)**2 +
+     2			( Wvel(i  ,j+1,k  )-Wvel(i  ,j  ,k  ))/(Rp(i)*(phip(j+1)-phip(j))) )**2 +
 	1			((Vvel(i  ,j  ,k  )-Vvel(i  ,j  ,k-1))*dzi +
-     2			( Wvel(i  ,j+1,k-1)-Wvel(i  ,j  ,k-1))*Rpdphi_i)**2 +
+     2			( Wvel(i  ,j+1,k-1)-Wvel(i  ,j  ,k-1))/(Rp(i)*(phip(j+1)-phip(j))) )**2 +
 	1			((Vvel(i  ,j-1,k+1)-Vvel(i  ,j-1,k  ))*dzi +
-     2			( Wvel(i  ,j  ,k  )-Wvel(i  ,j-1,k  ))*Rpdphi_i)**2 +
+     2			( Wvel(i  ,j  ,k  )-Wvel(i  ,j-1,k  ))/(Rp(i)*(phip(j)-phip(j-1))) )**2 +
 	1			((Vvel(i  ,j-1,k  )-Vvel(i  ,j-1,k-1))*dzi +
-     2			( Wvel(i  ,j  ,k-1)-Wvel(i  ,j-1,k-1))*Rpdphi_i)**2 
+     2			( Wvel(i  ,j  ,k-1)-Wvel(i  ,j-1,k-1))/(Rp(i)*(phip(j)-phip(j-1))) )**2 
      e				)
 
 !! 
       divergentie= 2./3.*(( Ru(i)*Uvel(i,j,k) - Ru(i-1)*Uvel(i-1,j,k) ) / ( Rp(i)*dr(i) )
      +              +
-     2  (       Vvel(i,j,k) -         Vvel(i,j-1,k) ) / ( Rp(i)*dphi )
+     2  (       Vvel(i,j,k) -         Vvel(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
      +              +
      3  (       Wvel(i,j,k) -         Wvel(i,j,k-1) ) / ( dz ))   
 
+	 
 		shear = shear 
-     +                +1.5*divergentie*divergentie
-     +                -divergentie*2.*((Uvel(i,j,k)-Uvel(i-1,j,k))/dr(i))
-     +                -divergentie*2.*((Vvel(i,j,k)-Vvel(i,j-1,k))/(Rp(i)*dphi) + 0.5*(Uvel(i,j,k)+Uvel(i-1,j,k))/Rp(i))
-     +                -divergentie*2.*((Wvel(i,j,k)-Wvel(i,j,k-1))*dzi)
+     +             +1.5*divergentie*divergentie
+     +             -divergentie*2.*((Uvel(i,j,k)-Uvel(i-1,j,k))/dr(i))
+     +             -divergentie*2.*((Vvel(i,j,k)-Vvel(i,j-1,k))/(Rp(i)*(phiv(j)-phiv(j-1)))+0.5*(Uvel(i,j,k)+Uvel(i-1,j,k))/Rp(i))
+     +             -divergentie*2.*((Wvel(i,j,k)-Wvel(i,j,k-1))*dzi)	 
 
 		dudz = ((Uvel(i  ,j  ,k+1)-Uvel(i  ,j  ,k  ))*dzi +
      &		        (Uvel(i  ,j  ,k  )-Uvel(i  ,j  ,k-1))*dzi +
@@ -865,7 +860,7 @@ c*************************************************************
       integer n,t,tel
       real ebb(0:i1,0:k1)
       real ebf(0:i1,0:k1)
-      real Lm2,Rudphi_i,Rumdphi_i,Rpdphi_i,dRpp_i,dRp_i,divergentie
+      real Lm2,dRpp_i,dRp_i,divergentie
       real     Uvel(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),rr(0:i1,0:j1,0:k1)
 
@@ -887,24 +882,21 @@ c*************************************************************
 
 	dzi=1./dz
 	do i=1,imax
-	  Rudphi_i=1./(Ru(i)*dphi)
-	  Rumdphi_i=1./(Ru(i-1)*dphi)
-	  Rpdphi_i=1./(Rp(i)*dphi)
-	  Lm2=Lmix(i)*Lmix(i)
 	  dRpp_i=1./(Rp(i+1)-Rp(i))
 	  dRp_i=1./(Rp(i)-Rp(i-1))
 	  
 	  
 	  do j=1,jmax
+       Lm2=Lmix2(i,j)*Cs*Cs		  
 	     do k=1,kmax
 		dudx = (Uvel(i,j,k)-Uvel(i-1,j,k))/dr(i) 
-		dvdy = (Vvel(i,j,k)-Vvel(i,j-1,k))*Rpdphi_i + 0.5*(Uvel(i,j,k)+Uvel(i-1,j,k))/Rp(i)
+		dvdy = (Vvel(i,j,k)-Vvel(i,j-1,k))/(Rp(i)*(phiv(j)-phiv(j-1))) + 0.5*(Uvel(i,j,k)+Uvel(i-1,j,k))/Rp(i)
 		dwdz = (Wvel(i,j,k)-Wvel(i,j,k-1))*dzi
-
-		dudy = ((Uvel(i  ,j+1,k  )-Uvel(i  ,j  ,k  ))*Rudphi_i + 
-     &		        (Uvel(i  ,j  ,k  )-Uvel(i  ,j-1,k  ))*Rudphi_i +
-     &		        (Uvel(i-1,j+1,k  )-Uvel(i-1,j  ,k  ))*Rumdphi_i +
-     &		        (Uvel(i-1,j  ,k  )-Uvel(i-1,j-1,k  ))*Rumdphi_i ) * 0.25
+      
+		dudy = ((Uvel(i  ,j+1,k  )-Uvel(i  ,j  ,k  ))/(Ru(i)*(phip(j+1)-phip(j))) + 
+     &		        (Uvel(i  ,j  ,k  )-Uvel(i  ,j-1,k  ))/(Ru(i)*(phip(j)-phip(j-1))) +
+     &		        (Uvel(i-1,j+1,k  )-Uvel(i-1,j  ,k  ))/(Ru(i-1)*(phip(j+1)-phip(j))) +
+     &		        (Uvel(i-1,j  ,k  )-Uvel(i-1,j-1,k  ))/(Ru(i-1)*(phip(j)-phip(j-1))) ) * 0.25
 		dudz = ((Uvel(i  ,j  ,k+1)-Uvel(i  ,j  ,k  ))*dzi +
      &		        (Uvel(i  ,j  ,k  )-Uvel(i  ,j  ,k-1))*dzi +
      &		        (Uvel(i-1,j  ,k+1)-Uvel(i-1,j  ,k  ))*dzi +
@@ -921,10 +913,10 @@ c*************************************************************
      &		       ( Wvel(i+1,j  ,k-1)-Wvel(i  ,j  ,k-1))*dRpp_i +
      &		       ( Wvel(i  ,j  ,k  )-Wvel(i-1,j  ,k  ))*dRp_i +
      &		       ( Wvel(i  ,j  ,k-1)-Wvel(i-1,j  ,k-1))*dRp_i ) * 0.25
-		dwdy =(( Wvel(i  ,j+1,k  )-Wvel(i  ,j  ,k  ))*Rpdphi_i +
-     &		       ( Wvel(i  ,j+1,k-1)-Wvel(i  ,j  ,k-1))*Rpdphi_i +
-     &		       ( Wvel(i  ,j  ,k  )-Wvel(i  ,j-1,k  ))*Rpdphi_i +
-     &		       ( Wvel(i  ,j  ,k-1)-Wvel(i  ,j-1,k-1))*Rpdphi_i ) * 0.25
+		dwdy =(( Wvel(i  ,j+1,k  )-Wvel(i  ,j  ,k  ))/(Rp(i)*(phip(j+1)-phip(j))) +
+     &		       ( Wvel(i  ,j+1,k-1)-Wvel(i  ,j  ,k-1))/(Rp(i)*(phip(j+1)-phip(j))) +
+     &		       ( Wvel(i  ,j  ,k  )-Wvel(i  ,j-1,k  ))/(Rp(i)*(phip(j)-phip(j-1))) +
+     &		       ( Wvel(i  ,j  ,k-1)-Wvel(i  ,j-1,k-1))/(Rp(i)*(phip(j)-phip(j-1))) ) * 0.25
 
 		divergentie = 1./3.*(dudx**2+dvdy**2+dwdz**2)
 		Sd11 =     (dudx*dudx + dudy*dvdx + dudz*dwdx) - divergentie 
@@ -1060,7 +1052,7 @@ c*************************************************************
       integer n,t,tel
       real ebb(0:i1,0:k1)
       real ebf(0:i1,0:k1)
-      real Lm2,Rudphi_i,Rumdphi_i,Rpdphi_i,dRpp_i,dRp_i,divergentie
+      real Lm2,dRpp_i,dRp_i,divergentie
       real     Uvel(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),rr(0:i1,0:j1,0:k1)
 
@@ -1075,24 +1067,21 @@ c*************************************************************
 
 	dzi=1./dz
 	do i=1,imax
-	  Rudphi_i=1./(Ru(i)*dphi)
-	  Rumdphi_i=1./(Ru(i-1)*dphi)
-	  Rpdphi_i=1./(Rp(i)*dphi)
-	  Lm2=Lmix(i)*Lmix(i)
 	  dRpp_i=1./(Rp(i+1)-Rp(i))
 	  dRp_i=1./(Rp(i)-Rp(i-1))
 	  
 	  
 	  do j=1,jmax
+       Lm2=Lmix2(i,j)*Cs*Cs		  
 	     do k=1,kmax
 		dudx = (Uvel(i,j,k)-Uvel(i-1,j,k))/dr(i) 
-		dvdy = (Vvel(i,j,k)-Vvel(i,j-1,k))*Rpdphi_i + 0.5*(Uvel(i,j,k)+Uvel(i-1,j,k))/Rp(i)
+		dvdy = (Vvel(i,j,k)-Vvel(i,j-1,k))/(Rp(i)*(phiv(j)-phiv(j-1))) + 0.5*(Uvel(i,j,k)+Uvel(i-1,j,k))/Rp(i)
 		dwdz = (Wvel(i,j,k)-Wvel(i,j,k-1))*dzi
-
-		dudy = ((Uvel(i  ,j+1,k  )-Uvel(i  ,j  ,k  ))*Rudphi_i + 
-     &		        (Uvel(i  ,j  ,k  )-Uvel(i  ,j-1,k  ))*Rudphi_i +
-     &		        (Uvel(i-1,j+1,k  )-Uvel(i-1,j  ,k  ))*Rumdphi_i +
-     &		        (Uvel(i-1,j  ,k  )-Uvel(i-1,j-1,k  ))*Rumdphi_i ) * 0.25
+      
+		dudy = ((Uvel(i  ,j+1,k  )-Uvel(i  ,j  ,k  ))/(Ru(i)*(phip(j+1)-phip(j))) + 
+     &		        (Uvel(i  ,j  ,k  )-Uvel(i  ,j-1,k  ))/(Ru(i)*(phip(j)-phip(j-1))) +
+     &		        (Uvel(i-1,j+1,k  )-Uvel(i-1,j  ,k  ))/(Ru(i-1)*(phip(j+1)-phip(j))) +
+     &		        (Uvel(i-1,j  ,k  )-Uvel(i-1,j-1,k  ))/(Ru(i-1)*(phip(j)-phip(j-1))) ) * 0.25
 		dudz = ((Uvel(i  ,j  ,k+1)-Uvel(i  ,j  ,k  ))*dzi +
      &		        (Uvel(i  ,j  ,k  )-Uvel(i  ,j  ,k-1))*dzi +
      &		        (Uvel(i-1,j  ,k+1)-Uvel(i-1,j  ,k  ))*dzi +
@@ -1109,10 +1098,10 @@ c*************************************************************
      &		       ( Wvel(i+1,j  ,k-1)-Wvel(i  ,j  ,k-1))*dRpp_i +
      &		       ( Wvel(i  ,j  ,k  )-Wvel(i-1,j  ,k  ))*dRp_i +
      &		       ( Wvel(i  ,j  ,k-1)-Wvel(i-1,j  ,k-1))*dRp_i ) * 0.25
-		dwdy =(( Wvel(i  ,j+1,k  )-Wvel(i  ,j  ,k  ))*Rpdphi_i +
-     &		       ( Wvel(i  ,j+1,k-1)-Wvel(i  ,j  ,k-1))*Rpdphi_i +
-     &		       ( Wvel(i  ,j  ,k  )-Wvel(i  ,j-1,k  ))*Rpdphi_i +
-     &		       ( Wvel(i  ,j  ,k-1)-Wvel(i  ,j-1,k-1))*Rpdphi_i ) * 0.25
+		dwdy =(( Wvel(i  ,j+1,k  )-Wvel(i  ,j  ,k  ))/(Rp(i)*(phip(j+1)-phip(j))) +
+     &		       ( Wvel(i  ,j+1,k-1)-Wvel(i  ,j  ,k-1))/(Rp(i)*(phip(j+1)-phip(j))) +
+     &		       ( Wvel(i  ,j  ,k  )-Wvel(i  ,j-1,k  ))/(Rp(i)*(phip(j)-phip(j-1))) +
+     &		       ( Wvel(i  ,j  ,k-1)-Wvel(i  ,j-1,k-1))/(Rp(i)*(phip(j)-phip(j-1))) ) * 0.25
 
 
 		! Sigma model from Nicoud et al. (2011) Using singular values to build a sgs model, Phys. Fluids 23
@@ -1276,7 +1265,515 @@ c*************************************************************
 
       end
 
+      subroutine LES_DSmag(Uvel,Vvel,Wvel,rr)
+      USE nlist
+      implicit none
+      !include 'mpif.h'
+	real SijSij,SdijSdij
+      real xx,yy,f,dzi,uu,vv,absU,ust,z0,yplus
+      integer n,t,tel
+      real ebb(0:i1,0:k1)
+      real ebf(0:i1,0:k1)
+      real Lm2,dRpp_i,dRp_i,divergentie
+      real     Uvel(0:i1,0:j1,0:k1),
+     +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),rr(0:i1,0:j1,0:k1)
 
+	real ekm2(0:i1,0:j1,0:k1)
+	real dudx,dudy,dudz
+	real dvdx,dvdy,dvdz
+	real dwdx,dwdy,dwdz
+	real MuAn_factor,drdz,Ri 
+	real Sabs(0:i1,0:j1,0:k1)
+	real Sd11(0:i1,0:j1,0:k1),Sd12(0:i1,0:j1,0:k1),Sd13(0:i1,0:j1,0:k1)
+	real Sd22(0:i1,0:j1,0:k1),Sd23(0:i1,0:j1,0:k1),Sd33(0:i1,0:j1,0:k1)
+	real u1(0:i1,0:j1,0:k1),u2(0:i1,0:j1,0:k1),u3(0:i1,0:j1,0:k1)
+	real Sd11b(0:i1,0:k1),Sd12b(0:i1,0:k1),Sd13b(0:i1,0:k1)
+	real Sd22b(0:i1,0:k1),Sd23b(0:i1,0:k1),Sd33b(0:i1,0:k1)
+	real Sd11f(0:i1,0:k1),Sd12f(0:i1,0:k1),Sd13f(0:i1,0:k1)
+	real Sd22f(0:i1,0:k1),Sd23f(0:i1,0:k1),Sd33f(0:i1,0:k1)
+	real Sabsf(0:i1,0:k1),Sabsb(0:i1,0:k1)
+	real u1f(0:i1,0:k1),u2f(0:i1,0:k1),u3f(0:i1,0:k1)
+	real u1b(0:i1,0:k1),u2b(0:i1,0:k1),u3b(0:i1,0:k1)
+	real u1u1a,u1u2a,u1u3a,u2u2a,u2u3a,u3u3a,u1a,u2a,u3a
+	real Sabsa,Sd11a,Sd12a,Sd13a,Sd22a,Sd23a,Sd33a
+	real SabsSd11a,SabsSd12a,SabsSd13a,SabsSd22a,SabsSd23a,SabsSd33a,inv27,Cd
+	real L11,L12,L13,L22,L23,L33
+	real M11,M12,M13,M22,M23,M33
+	integer ii,jj,kk
+	
+
+	inv27=1./27.
+	MuAn_factor=0.
+	if (damping_drho_dz.eq.'MuAn') then
+	  MuAn_factor=1.
+	endif
+
+	SijSij = 0.
+	ekm=0.
+
+	dzi=1./dz
+	do i=1,imax
+	  dRpp_i=1./(Rp(i+1)-Rp(i))
+	  dRp_i=1./(Rp(i)-Rp(i-1))
+	  do j=1,jmax
+	     do k=1,kmax
+		dudx = (Uvel(i,j,k)-Uvel(i-1,j,k))/dr(i) 
+		dvdy = (Vvel(i,j,k)-Vvel(i,j-1,k))/(Rp(i)*(phiv(j)-phiv(j-1))) + 0.5*(Uvel(i,j,k)+Uvel(i-1,j,k))/Rp(i)
+		dwdz = (Wvel(i,j,k)-Wvel(i,j,k-1))*dzi
+      
+		dudy = ((Uvel(i  ,j+1,k  )-Uvel(i  ,j  ,k  ))/(Ru(i)*(phip(j+1)-phip(j))) + 
+     &		        (Uvel(i  ,j  ,k  )-Uvel(i  ,j-1,k  ))/(Ru(i)*(phip(j)-phip(j-1))) +
+     &		        (Uvel(i-1,j+1,k  )-Uvel(i-1,j  ,k  ))/(Ru(i-1)*(phip(j+1)-phip(j))) +
+     &		        (Uvel(i-1,j  ,k  )-Uvel(i-1,j-1,k  ))/(Ru(i-1)*(phip(j)-phip(j-1))) ) * 0.25
+		dudz = ((Uvel(i  ,j  ,k+1)-Uvel(i  ,j  ,k  ))*dzi +
+     &		        (Uvel(i  ,j  ,k  )-Uvel(i  ,j  ,k-1))*dzi +
+     &		        (Uvel(i-1,j  ,k+1)-Uvel(i-1,j  ,k  ))*dzi +
+     &		        (Uvel(i-1,j  ,k  )-Uvel(i-1,j  ,k-1))*dzi ) * 0.25
+		dvdx =(( Vvel(i+1,j  ,k  )/Rp(i+1)-Vvel(i  ,j  ,k  )/Rp(i))*dRpp_i*Ru(i) +
+     &		       ( Vvel(i+1,j-1,k  )/Rp(i+1)-Vvel(i  ,j-1,k  )/Rp(i))*dRpp_i*Ru(i) + 
+     &		       ( Vvel(i  ,j  ,k  )/Rp(i)-Vvel(i-1,j  ,k  )/Rp(i-1))*dRp_i*Ru(i-1)  +
+     &		       ( Vvel(i  ,j-1,k  )/Rp(i)-Vvel(i-1,j-1,k  )/Rp(i-1))*dRp_i*Ru(i-1) ) * 0.25
+		dvdz = ((Vvel(i  ,j  ,k+1)-Vvel(i  ,j  ,k  ))*dzi +
+     &		        (Vvel(i  ,j  ,k  )-Vvel(i  ,j  ,k-1))*dzi +
+     &		        (Vvel(i  ,j-1,k+1)-Vvel(i  ,j-1,k  ))*dzi +
+     &		        (Vvel(i  ,j-1,k  )-Vvel(i  ,j-1,k-1))*dzi ) * 0.25
+		dwdx =(( Wvel(i+1,j  ,k  )-Wvel(i  ,j  ,k  ))*dRpp_i + 
+     &		       ( Wvel(i+1,j  ,k-1)-Wvel(i  ,j  ,k-1))*dRpp_i +
+     &		       ( Wvel(i  ,j  ,k  )-Wvel(i-1,j  ,k  ))*dRp_i +
+     &		       ( Wvel(i  ,j  ,k-1)-Wvel(i-1,j  ,k-1))*dRp_i ) * 0.25
+		dwdy =(( Wvel(i  ,j+1,k  )-Wvel(i  ,j  ,k  ))/(Rp(i)*(phip(j+1)-phip(j))) +
+     &		       ( Wvel(i  ,j+1,k-1)-Wvel(i  ,j  ,k-1))/(Rp(i)*(phip(j+1)-phip(j))) +
+     &		       ( Wvel(i  ,j  ,k  )-Wvel(i  ,j-1,k  ))/(Rp(i)*(phip(j)-phip(j-1))) +
+     &		       ( Wvel(i  ,j  ,k-1)-Wvel(i  ,j-1,k-1))/(Rp(i)*(phip(j)-phip(j-1))) ) * 0.25
+
+		Sd11(i,j,k) =     (dudx )
+		Sd22(i,j,k) =     (dvdy )
+		Sd33(i,j,k) =     (dwdz )
+		Sd12(i,j,k) = 0.5*(dvdx+dudy)
+		Sd13(i,j,k) = 0.5*(dudz+dwdx)
+		Sd23(i,j,k) = 0.5*(dvdz+dwdy)
+
+		SijSij = Sd11(i,j,k)*Sd11(i,j,k) + Sd22(i,j,k)*Sd22(i,j,k) + Sd33(i,j,k)*Sd33(i,j,k) 
+     &		+ 2.*Sd12(i,j,k)*Sd12(i,j,k) + 2.*Sd13(i,j,k)*Sd13(i,j,k) + 2.*Sd23(i,j,k)*Sd23(i,j,k)
+		Sabs(i,j,k)=sqrt(2.*SijSij)
+		
+		u1 (i,j,k) = 0.5*(Uvel(i-1,j,k)+Uvel(i,j,k))
+		u2 (i,j,k) = 0.5*(Vvel(i,j-1,k)+Vvel(i,j,k))
+		u3 (i,j,k) = 0.5*(Wvel(i,j,k-1)+Wvel(i,j,k))
+     	    enddo			
+	  enddo
+	enddo
+	
+
+!!      Boundary conditions Neumann
+        call shiftf(Sd11,Sd11f) 
+        call shiftb(Sd11,Sd11b) 
+        call shiftf(Sd12,Sd12f) 
+        call shiftb(Sd12,Sd12b) 		
+        call shiftf(Sd13,Sd13f) 
+        call shiftb(Sd13,Sd13b)
+        call shiftf(Sd22,Sd22f) 
+        call shiftb(Sd22,Sd22b) 
+        call shiftf(Sd23,Sd23f) 
+        call shiftb(Sd23,Sd23b) 		
+        call shiftf(Sd33,Sd33f) 
+        call shiftb(Sd33,Sd33b) 
+        call shiftf(Sabs,Sabsf) 
+        call shiftb(Sabs,Sabsb) 		
+        call shiftf(u1,u1f) 
+        call shiftb(u1,u1b) 		
+        call shiftf(u2,u2f) 
+        call shiftb(u2,u2b) 		
+        call shiftf(u3,u3f) 
+        call shiftb(u3,u3b) 
+		if (periodicy.eq.0.or.periodicy.eq.2) then
+		if (rank.eq.0) then ! boundaries in j-direction
+		        do k=1,kmax
+		           do i=1,imax
+		           Sd11(i,0,k) = Sd11(i,1,k) 
+				   Sd12(i,0,k) = Sd12(i,1,k) 
+				   Sd13(i,0,k) = Sd13(i,1,k) 
+				   Sd22(i,0,k) = Sd22(i,1,k) 
+				   Sd23(i,0,k) = Sd23(i,1,k) 
+				   Sd33(i,0,k) = Sd33(i,1,k) 
+				   Sabs(i,0,k) = Sabs(i,1,k) 
+				   u1  (i,0,k) =   u1(i,1,k) 
+				   u2  (i,0,k) =   u2(i,1,k) 
+				   u3  (i,0,k) =   u3(i,1,k) 
+				   
+		           Sd11(i,j1,k) = Sd11b(i,k) 
+				   Sd12(i,j1,k) = Sd12b(i,k) 
+				   Sd13(i,j1,k) = Sd13b(i,k) 
+				   Sd22(i,j1,k) = Sd22b(i,k) 
+				   Sd23(i,j1,k) = Sd23b(i,k) 
+				   Sd33(i,j1,k) = Sd33b(i,k) 
+				   Sabs(i,j1,k) = Sabsb(i,k) 
+				   u1  (i,j1,k) =   u1b(i,k) 
+				   u2  (i,j1,k) =   u2b(i,k) 
+				   u3  (i,j1,k) =   u3b(i,k)				   
+ 
+		           enddo
+		        enddo
+		elseif (rank.eq.px-1) then
+		        do k=1,kmax
+		           do i=1,imax
+		           Sd11(i,0,k) = Sd11f(i,k) 
+				   Sd12(i,0,k) = Sd12f(i,k) 
+				   Sd13(i,0,k) = Sd13f(i,k) 
+				   Sd22(i,0,k) = Sd22f(i,k) 
+				   Sd23(i,0,k) = Sd23f(i,k) 
+				   Sd33(i,0,k) = Sd33f(i,k) 
+				   Sabs(i,0,k) = Sabsf(i,k) 
+				   u1  (i,0,k) =   u1f(i,k) 
+				   u2  (i,0,k) =   u2f(i,k) 
+				   u3  (i,0,k) =   u3f(i,k)
+
+		           Sd11(i,j1,k) = Sd11(i,jmax,k) 
+				   Sd12(i,j1,k) = Sd12(i,jmax,k) 
+				   Sd13(i,j1,k) = Sd13(i,jmax,k) 
+				   Sd22(i,j1,k) = Sd22(i,jmax,k) 
+				   Sd23(i,j1,k) = Sd23(i,jmax,k) 
+				   Sd33(i,j1,k) = Sd33(i,jmax,k) 
+				   Sabs(i,j1,k) = Sabs(i,jmax,k) 
+				   u1  (i,j1,k) =   u1(i,jmax,k) 
+				   u2  (i,j1,k) =   u2(i,jmax,k) 
+				   u3  (i,j1,k) =   u3(i,jmax,k)
+
+		           enddo
+		        enddo   
+		else
+		        do k=1,kmax
+		           do i=1,imax
+		           Sd11(i,0,k) = Sd11f(i,k) 
+				   Sd12(i,0,k) = Sd12f(i,k) 
+				   Sd13(i,0,k) = Sd13f(i,k) 
+				   Sd22(i,0,k) = Sd22f(i,k) 
+				   Sd23(i,0,k) = Sd23f(i,k) 
+				   Sd33(i,0,k) = Sd33f(i,k) 
+				   Sabs(i,0,k) = Sabsf(i,k) 
+				   u1  (i,0,k) =   u1f(i,k) 
+				   u2  (i,0,k) =   u2f(i,k) 
+				   u3  (i,0,k) =   u3f(i,k)
+
+		           Sd11(i,j1,k) = Sd11b(i,k) 
+				   Sd12(i,j1,k) = Sd12b(i,k) 
+				   Sd13(i,j1,k) = Sd13b(i,k) 
+				   Sd22(i,j1,k) = Sd22b(i,k) 
+				   Sd23(i,j1,k) = Sd23b(i,k) 
+				   Sd33(i,j1,k) = Sd33b(i,k) 
+				   Sabs(i,j1,k) = Sabsb(i,k) 
+				   u1  (i,j1,k) =   u1b(i,k) 
+				   u2  (i,j1,k) =   u2b(i,k) 
+				   u3  (i,j1,k) =   u3b(i,k)				   
+		           enddo
+		        enddo
+		endif
+	else
+	        do k=1,kmax
+	           do i=1,imax
+		           Sd11(i,0,k) = Sd11f(i,k) 
+				   Sd12(i,0,k) = Sd12f(i,k) 
+				   Sd13(i,0,k) = Sd13f(i,k) 
+				   Sd22(i,0,k) = Sd22f(i,k) 
+				   Sd23(i,0,k) = Sd23f(i,k) 
+				   Sd33(i,0,k) = Sd33f(i,k) 
+				   Sabs(i,0,k) = Sabsf(i,k) 
+				   u1  (i,0,k) =   u1f(i,k) 
+				   u2  (i,0,k) =   u2f(i,k) 
+				   u3  (i,0,k) =   u3f(i,k)			   
+			   
+		           Sd11(i,j1,k) = Sd11b(i,k) 
+				   Sd12(i,j1,k) = Sd12b(i,k) 
+				   Sd13(i,j1,k) = Sd13b(i,k) 
+				   Sd22(i,j1,k) = Sd22b(i,k) 
+				   Sd23(i,j1,k) = Sd23b(i,k) 
+				   Sd33(i,j1,k) = Sd33b(i,k) 
+				   Sabs(i,j1,k) = Sabsb(i,k) 
+				   u1  (i,j1,k) =   u1b(i,k) 
+				   u2  (i,j1,k) =   u2b(i,k) 
+				   u3  (i,j1,k) =   u3b(i,k) 
+	           enddo
+	        enddo
+	endif
+	if (periodicx.eq.0) then
+		do k=1,kmax ! boundaries in i-direction
+		        do j=0,j1
+		           Sd11(0,j,k) = Sd11(1,j,k) 
+				   Sd12(0,j,k) = Sd12(1,j,k) 
+				   Sd13(0,j,k) = Sd13(1,j,k) 
+				   Sd22(0,j,k) = Sd22(1,j,k) 
+				   Sd23(0,j,k) = Sd23(1,j,k) 
+				   Sd33(0,j,k) = Sd33(1,j,k) 
+				   Sabs(0,j,k) = Sabs(1,j,k) 
+				   u1  (0,j,k) =   u1(1,j,k) 
+				   u2  (0,j,k) =   u2(1,j,k) 
+				   u3  (0,j,k) =   u3(1,j,k)						
+						
+		           Sd11(i1,j,k) = Sd11(imax,j,k) 
+				   Sd12(i1,j,k) = Sd12(imax,j,k) 
+				   Sd13(i1,j,k) = Sd13(imax,j,k) 
+				   Sd22(i1,j,k) = Sd22(imax,j,k) 
+				   Sd23(i1,j,k) = Sd23(imax,j,k) 
+				   Sd33(i1,j,k) = Sd33(imax,j,k) 
+				   Sabs(i1,j,k) = Sabs(imax,j,k) 
+				   u1  (i1,j,k) =   u1(imax,j,k) 
+				   u2  (i1,j,k) =   u2(imax,j,k) 
+				   u3  (i1,j,k) =   u3(imax,j,k)						
+		        enddo
+		enddo
+	else
+		do k=1,kmax ! boundaries in i-direction
+		        do j=0,j1
+		           Sd11(0,j,k) = Sd11(imax,j,k) 
+				   Sd12(0,j,k) = Sd12(imax,j,k) 
+				   Sd13(0,j,k) = Sd13(imax,j,k) 
+				   Sd22(0,j,k) = Sd22(imax,j,k) 
+				   Sd23(0,j,k) = Sd23(imax,j,k) 
+				   Sd33(0,j,k) = Sd33(imax,j,k) 
+				   Sabs(0,j,k) = Sabs(imax,j,k) 
+				   u1  (0,j,k) =   u1(imax,j,k) 
+				   u2  (0,j,k) =   u2(imax,j,k) 
+				   u3  (0,j,k) =   u3(imax,j,k)						
+						
+		           Sd11(i1,j,k) = Sd11(1,j,k) 
+				   Sd12(i1,j,k) = Sd12(1,j,k) 
+				   Sd13(i1,j,k) = Sd13(1,j,k) 
+				   Sd22(i1,j,k) = Sd22(1,j,k) 
+				   Sd23(i1,j,k) = Sd23(1,j,k) 
+				   Sd33(i1,j,k) = Sd33(1,j,k) 
+				   Sabs(i1,j,k) = Sabs(1,j,k) 
+				   u1  (i1,j,k) =   u1(1,j,k) 
+				   u2  (i1,j,k) =   u2(1,j,k) 
+				   u3  (i1,j,k) =   u3(1,j,k)						
+		        enddo
+		enddo
+	endif
+        do i=0,i1 ! boundaries in k-direction
+                do j=0,j1
+		           Sd11(i,j,0) = Sd11(i,j,1) 
+				   Sd12(i,j,0) = Sd12(i,j,1) 
+				   Sd13(i,j,0) = Sd13(i,j,1) 
+				   Sd22(i,j,0) = Sd22(i,j,1) 
+				   Sd23(i,j,0) = Sd23(i,j,1) 
+				   Sd33(i,j,0) = Sd33(i,j,1) 
+				   Sabs(i,j,0) = Sabs(i,j,1) 
+				   u1  (i,j,0) =   u1(i,j,1) 
+				   u2  (i,j,0) =   u2(i,j,1) 
+				   u3  (i,j,0) =   u3(i,j,1)
+				   
+		           Sd11(i,j,k1) = Sd11(i,j,kmax) 
+				   Sd12(i,j,k1) = Sd12(i,j,kmax) 
+				   Sd13(i,j,k1) = Sd13(i,j,kmax) 
+				   Sd22(i,j,k1) = Sd22(i,j,kmax) 
+				   Sd23(i,j,k1) = Sd23(i,j,kmax) 
+				   Sd33(i,j,k1) = Sd33(i,j,kmax) 
+				   Sabs(i,j,k1) = Sabs(i,j,kmax) 
+				   u1  (i,j,k1) =   u1(i,j,kmax) 
+				   u2  (i,j,k1) =   u2(i,j,kmax) 
+				   u3  (i,j,k1) =   u3(i,j,kmax)						
+                enddo
+        enddo
+
+		
+		
+
+	do i=1,imax
+	  dRpp_i=1./(Rp(i+1)-Rp(i))
+	  dRp_i=1./(Rp(i)-Rp(i-1))
+	  do j=1,jmax
+	     do k=1,kmax
+			u1u1a=0.
+		    u1u2a=0.
+		    u1u3a=0.
+		    u2u2a=0.
+		    u2u3a=0.
+		    u3u3a=0.
+		    u1a  =0.
+		    u2a  =0.
+		    u3a  =0.
+		    Sabsa=0.
+		    Sd11a=0.
+		    Sd12a=0.
+		    Sd13a=0.
+		    Sd22a=0.
+		    Sd23a=0.
+		    Sd33a=0.
+			SabsSd11a=0.
+			SabsSd12a=0.
+			SabsSd13a=0.
+			SabsSd22a=0.
+			SabsSd23a=0.
+		    SabsSd33a=0.	 
+		 
+		   do ii=i-1,i+1
+		     do jj=j-1,j+1
+			   do kk=k-1,k+1
+			     u1u1a=u1u1a+u1(ii,jj,kk)*u1(ii,jj,kk)
+				 u1u2a=u1u2a+u1(ii,jj,kk)*u2(ii,jj,kk)
+				 u1u3a=u1u3a+u1(ii,jj,kk)*u3(ii,jj,kk)
+				 u2u2a=u2u2a+u2(ii,jj,kk)*u2(ii,jj,kk)
+				 u2u3a=u2u3a+u2(ii,jj,kk)*u3(ii,jj,kk)
+				 u3u3a=u3u3a+u3(ii,jj,kk)*u3(ii,jj,kk)
+				 u1a  =u1a  +u1(ii,jj,kk)
+				 u2a  =u2a  +u2(ii,jj,kk)
+				 u3a  =u3a  +u3(ii,jj,kk)
+				 Sabsa=Sabsa+Sabs(ii,jj,kk)
+				 Sd11a=Sd11a+Sd11(ii,jj,kk)
+				 Sd12a=Sd12a+Sd12(ii,jj,kk)
+				 Sd13a=Sd13a+Sd13(ii,jj,kk)
+				 Sd22a=Sd22a+Sd22(ii,jj,kk)
+				 Sd23a=Sd23a+Sd23(ii,jj,kk)
+				 Sd33a=Sd33a+Sd33(ii,jj,kk)
+				 
+				 SabsSd11a=SabsSd11a+Sabs(ii,jj,kk)*Sd11(ii,jj,kk)
+				 SabsSd12a=SabsSd12a+Sabs(ii,jj,kk)*Sd12(ii,jj,kk)
+				 SabsSd13a=SabsSd13a+Sabs(ii,jj,kk)*Sd13(ii,jj,kk)
+				 SabsSd22a=SabsSd22a+Sabs(ii,jj,kk)*Sd22(ii,jj,kk)
+				 SabsSd23a=SabsSd23a+Sabs(ii,jj,kk)*Sd23(ii,jj,kk)
+				 SabsSd33a=SabsSd33a+Sabs(ii,jj,kk)*Sd33(ii,jj,kk)
+		       enddo
+		     enddo
+		   enddo
+		   	u1u1a=u1u1a*inv27
+		    u1u2a=u1u2a*inv27
+		    u1u3a=u1u3a*inv27
+		    u2u2a=u2u2a*inv27
+		    u2u3a=u2u3a*inv27
+		    u3u3a=u3u3a*inv27
+		    u1a  =u1a  *inv27
+		    u2a  =u2a  *inv27
+		    u3a  =u3a  *inv27
+		    Sabsa=Sabsa*inv27
+		    Sd11a=Sd11a*inv27
+		    Sd12a=Sd12a*inv27
+		    Sd13a=Sd13a*inv27
+		    Sd22a=Sd22a*inv27
+		    Sd23a=Sd23a*inv27
+		    Sd33a=Sd33a*inv27
+			SabsSd11a=SabsSd11a*inv27
+			SabsSd12a=SabsSd12a*inv27
+			SabsSd13a=SabsSd13a*inv27
+			SabsSd22a=SabsSd22a*inv27
+			SabsSd23a=SabsSd23a*inv27
+		    SabsSd33a=SabsSd33a*inv27
+			
+			L11 = u1u1a - u1a*u1a
+			L12 = u1u2a - u1a*u2a
+			L13 = u1u3a - u1a*u3a
+			L22 = u2u2a - u2a*u2a
+			L23 = u2u3a - u2a*u3a
+			L33 = u3u3a - u3a*u3a
+			M11 = 2.*Lmix2(i,j)*SabsSd11a - 2.*Lmix2hat(i,j)*Sabsa*Sd11a
+			M12 = 2.*Lmix2(i,j)*SabsSd12a - 2.*Lmix2hat(i,j)*Sabsa*Sd12a
+			M13 = 2.*Lmix2(i,j)*SabsSd13a - 2.*Lmix2hat(i,j)*Sabsa*Sd13a
+			M22 = 2.*Lmix2(i,j)*SabsSd22a - 2.*Lmix2hat(i,j)*Sabsa*Sd22a
+			M23 = 2.*Lmix2(i,j)*SabsSd23a - 2.*Lmix2hat(i,j)*Sabsa*Sd23a
+			M33 = 2.*Lmix2(i,j)*SabsSd33a - 2.*Lmix2hat(i,j)*Sabsa*Sd33a
+			
+!			Cd = L11*M11/(M11*M11+1.e-12)+L22*M22/(M22*M22+1.e-12)+L33*M33/(M33*M33+1.e-12)+
+!     &           2.*L12*M12/(M12*M12+1.e-12)+2.*L13*M13/(M13*M13+1.e-12)+2.*L23*M23/(M23*M23+1.e-12)
+			Cd = L11*M11+L22*M22+L33*M33+2.*L12*M12+2.*L13*M13+2.*L23*M23 /
+     &          (M11*M11+M22*M22+M33*M33+2.*M12*M12+2.*M13*M13+2.*M23*M23+1.e-12)
+			Cd=MAX(0.,Cd)
+			Cd=MIN(0.0529,Cd) !clip Cs=sqrt(Cd) between 0 and 0.23
+			Csgrid(i,j,k)=Cd
+
+		   ekm(i,j,k) = rr(i,j,k) * Lmix2(i,j) * Cd * Sabs(i,j,k)
+		   
+   	     enddo			
+	  enddo
+	enddo
+	
+	
+!!      Boundary conditions Neumann
+        call shiftf(ekm,ebf) 
+        call shiftb(ekm,ebb) 
+	if (periodicy.eq.0.or.periodicy.eq.2) then
+		if (rank.eq.0) then ! boundaries in j-direction
+		        do k=1,kmax
+		           do i=1,imax
+		           ekm(i,0,k) = ekm(i,1,k) 
+		           ekm(i,j1,k)= ebb(i,k) 
+		           enddo
+		        enddo
+		elseif (rank.eq.px-1) then
+		        do k=1,kmax
+		           do i=1,imax
+		           ekm(i,0,k) = ebf(i,k)
+		           ekm(i,j1,k)= ekm(i,jmax,k) 
+		           enddo
+		        enddo   
+		else
+		        do k=1,kmax
+		           do i=1,imax
+		           ekm(i,0,k) = ebf(i,k)
+		           ekm(i,j1,k) =ebb(i,k) 
+		           enddo
+		        enddo
+		endif
+	else
+	        do k=1,kmax
+	           do i=1,imax
+	           ekm(i,0,k) = ebf(i,k)
+	           ekm(i,j1,k) =ebb(i,k) 
+	           enddo
+	        enddo
+	endif
+	if (periodicx.eq.0) then
+		do k=1,kmax ! boundaries in i-direction
+		        do j=0,j1
+		                ekm(0,j,k) = ekm(1,j,k)
+		                ekm(i1,j,k) = ekm(imax,j,k)
+		        enddo
+		enddo
+	else
+		do k=1,kmax ! boundaries in i-direction
+		        do j=0,j1
+		                ekm(0,j,k) = ekm(imax,j,k)
+		                ekm(i1,j,k) = ekm(1,j,k)
+		        enddo
+		enddo
+	endif
+        do i=0,i1 ! boundaries in k-direction
+                do j=0,j1
+                        ekm(i,j,0) = ekm(i,j,1)
+                        ekm(i,j,k1) = ekm(i,j,kmax)
+                enddo
+        enddo
+
+
+        ekm=ekm+ekm_mol
+	ekm2=ekm
+        IF (LOA>0.) THEN ! ship:
+          do t=1,tmax_inPpuntTSHD
+            i=i_inPpuntTSHD(t)
+            j=j_inPpuntTSHD(t)
+            k=k_inPpuntTSHD(t)
+            ekm(i,j,k)=0.
+          enddo
+	ELSEIF (kjet>0) THEN
+          ekm(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
+	ENDIF
+
+        do k=kmax-kjet+1,k1 ! laat ekm in buisje ongemoeid
+            do t=1,tmax_inPpunt
+              i=i_inPpunt(t)
+              j=j_inPpunt(t)
+              ekm(i,j,k)=ekm2(i,j,k)
+            enddo
+        enddo
+
+        Diffcof=ekm/Sc/rr
+        do k=kmax-kjet+1,k1 ! maak Diffcof rand buisje nul
+          do t=1,tmax_inPpuntrand
+            i=i_inPpuntrand(t)
+            j=j_inPpuntrand(t)
+            Diffcof(i,j,k)=0.
+          enddo
+        enddo
+
+      end
+	  
 
 
 
@@ -1291,7 +1788,7 @@ c*************************************************************
       integer n,t,tel
       real ebb(0:i1,0:k1)
       real ebf(0:i1,0:k1)
-      real Lm2,Rudphi_i,Rumdphi_i,Rpdphi_i,dRpp_i,dRp_i,divergentie
+      real Lm2,dRpp_i,dRp_i,divergentie
       real     Uvel(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),rr(0:i1,0:j1,0:k1)
 	real ekm2(0:i1,0:j1,0:k1)
@@ -1481,34 +1978,32 @@ c get stuff from other CPU's
 
 	dzi=1./dz
 	do i=1,imax
-	  Rudphi_i=1./(Ru(i)*dphi)
-	  Rumdphi_i=1./(Ru(i-1)*dphi)
-	  Rpdphi_i=1./(Rp(i)*dphi)
-	  Lm2=Lmix(i)*Lmix(i)
 	  dRpp_i=1./(Rp(i+1)-Rp(i))
 	  dRp_i=1./(Rp(i)-Rp(i-1))
 	  
 	  
 	  do j=1,jmax
+       Lm2=Lmix2(i,j)*Cs*Cs		  
 	     do k=1,kmax
-				shear = 2.0*(
 		!!	2S11S11+2S22S22+2S33S33	
+				shear = 2.0*(
      1			((Uvel(i,j,k)-Uvel(i-1,j,k))/dr(i))*((Uvel(i,j,k)-Uvel(i-1,j,k))/dr(i)) + 
-     1			((Vvel(i,j,k)-Vvel(i,j-1,k))/(Rp(i)*dphi) + 0.5*(Uvel(i,j,k)+Uvel(i-1,j,k))/Rp(i))*
-     1			((Vvel(i,j,k)-Vvel(i,j-1,k))/(Rp(i)*dphi) + 0.5*(Uvel(i,j,k)+Uvel(i-1,j,k))/Rp(i)) +	
+     1			((Vvel(i,j,k)-Vvel(i,j-1,k))/(Rp(i)*(phiv(j)-phiv(j-1))) + 0.5*(Uvel(i,j,k)+Uvel(i-1,j,k))/Rp(i))*
+     1			((Vvel(i,j,k)-Vvel(i,j-1,k))/(Rp(i)*(phiv(j)-phiv(j-1))) + 0.5*(Uvel(i,j,k)+Uvel(i-1,j,k))/Rp(i)) +	
      1			((Wvel(i,j,k)-Wvel(i,j,k-1))*dzi)*((Wvel(i,j,k)-Wvel(i,j,k-1))*dzi) )
      
      		!!	S12S12+S21S21=0.25*(4*S12S12)**2
 				shear = shear + 0.25*(
-	1			((Uvel(i  ,j+1,k  )-Uvel(i  ,j  ,k  ))*Rudphi_i +
+	1			((Uvel(i  ,j+1,k  )-Uvel(i  ,j  ,k  ))/(Ru(i)*(phip(j+1)-phip(j))) +
      2			( Vvel(i+1,j  ,k  )/Rp(i+1)-Vvel(i  ,j  ,k  )/Rp(i))*dRpp_i*Ru(i) )**2 +
-	1			((Uvel(i  ,j  ,k  )-Uvel(i  ,j-1,k  ))*Rudphi_i +
+	1			((Uvel(i  ,j  ,k  )-Uvel(i  ,j-1,k  ))/(Ru(i)*(phip(j)-phip(j-1))) +
      2			( Vvel(i+1,j-1,k  )/Rp(i+1)-Vvel(i  ,j-1,k  )/Rp(i))*dRpp_i*Ru(i) )**2 +
-	1			((Uvel(i-1,j+1,k  )-Uvel(i-1,j  ,k  ))*Rumdphi_i +
+	1			((Uvel(i-1,j+1,k  )-Uvel(i-1,j  ,k  ))/(Ru(i-1)*(phip(j+1)-phip(j))) +
      2			( Vvel(i  ,j  ,k  )/Rp(i)-Vvel(i-1,j  ,k  )/Rp(i-1))*dRp_i*Ru(i-1) )**2 +
-	1			((Uvel(i-1,j  ,k  )-Uvel(i-1,j-1,k  ))*Rumdphi_i +
+	1			((Uvel(i-1,j  ,k  )-Uvel(i-1,j-1,k  ))/(Ru(i-1)*(phip(j)-phip(j-1))) +
      2			( Vvel(i  ,j-1,k  )/Rp(i)-Vvel(i-1,j-1,k  )/Rp(i-1))*dRp_i*Ru(i-1) )**2
      e				)
+	 
      		!!	S13S13+S31S31=0.25*(4*S31S31)**2
 				shear = shear + 0.25*(
 	1			((Uvel(i  ,j  ,k+1)-Uvel(i  ,j  ,k  ))*dzi +
@@ -1523,27 +2018,27 @@ c get stuff from other CPU's
      		!!	S23S23+S32S32=0.25*(4*S23S23)**2
 				shear = shear + 0.25*(
 	1			((Vvel(i  ,j  ,k+1)-Vvel(i  ,j  ,k  ))*dzi +
-     2			( Wvel(i  ,j+1,k  )-Wvel(i  ,j  ,k  ))*Rpdphi_i)**2 +
+     2			( Wvel(i  ,j+1,k  )-Wvel(i  ,j  ,k  ))/(Rp(i)*(phip(j+1)-phip(j))) )**2 +
 	1			((Vvel(i  ,j  ,k  )-Vvel(i  ,j  ,k-1))*dzi +
-     2			( Wvel(i  ,j+1,k-1)-Wvel(i  ,j  ,k-1))*Rpdphi_i)**2 +
+     2			( Wvel(i  ,j+1,k-1)-Wvel(i  ,j  ,k-1))/(Rp(i)*(phip(j+1)-phip(j))) )**2 +
 	1			((Vvel(i  ,j-1,k+1)-Vvel(i  ,j-1,k  ))*dzi +
-     2			( Wvel(i  ,j  ,k  )-Wvel(i  ,j-1,k  ))*Rpdphi_i)**2 +
+     2			( Wvel(i  ,j  ,k  )-Wvel(i  ,j-1,k  ))/(Rp(i)*(phip(j)-phip(j-1))) )**2 +
 	1			((Vvel(i  ,j-1,k  )-Vvel(i  ,j-1,k-1))*dzi +
-     2			( Wvel(i  ,j  ,k-1)-Wvel(i  ,j-1,k-1))*Rpdphi_i)**2 
+     2			( Wvel(i  ,j  ,k-1)-Wvel(i  ,j-1,k-1))/(Rp(i)*(phip(j)-phip(j-1))) )**2 
      e				)
 
 !! 
       divergentie= 2./3.*(( Ru(i)*Uvel(i,j,k) - Ru(i-1)*Uvel(i-1,j,k) ) / ( Rp(i)*dr(i) )
      +              +
-     2  (       Vvel(i,j,k) -         Vvel(i,j-1,k) ) / ( Rp(i)*dphi )
+     2  (       Vvel(i,j,k) -         Vvel(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
      +              +
      3  (       Wvel(i,j,k) -         Wvel(i,j,k-1) ) / ( dz ))   
 
 		shear = shear 
-     +                +1.5*divergentie*divergentie
-     +                -divergentie*2.*((Uvel(i,j,k)-Uvel(i-1,j,k))/dr(i))
-     +                -divergentie*2.*((Vvel(i,j,k)-Vvel(i,j-1,k))/(Rp(i)*dphi) + 0.5*(Uvel(i,j,k)+Uvel(i-1,j,k))/Rp(i))
-     +                -divergentie*2.*((Wvel(i,j,k)-Wvel(i,j,k-1))*dzi)
+     +          +1.5*divergentie*divergentie
+     +          -divergentie*2.*((Uvel(i,j,k)-Uvel(i-1,j,k))/dr(i))
+     +          -divergentie*2.*((Vvel(i,j,k)-Vvel(i,j-1,k))/(Rp(i)*(phiv(j)-phiv(j-1))) + 0.5*(Uvel(i,j,k)+Uvel(i-1,j,k))/Rp(i))
+     +          -divergentie*2.*((Wvel(i,j,k)-Wvel(i,j,k-1))*dzi)
 
 				
 				ekm(i,j,k) = rr(i,j,k) * Lm2 * sqrt(shear) ! Smagorinsky
@@ -1635,8 +2130,8 @@ c get stuff from other CPU's
 !       parameter (modes=150)
 !       real Ub1new(0:i1,0:k1),Vb1new(0:i1,0:k1),Wb1new(0:i1,0:k1),Ub2new(0:j1,0:k1),Vb2new(0:j1+1,0:k1),Wb2new(0:j1,0:k1)
 !       real Ub1old(0:i1,0:k1),Vb1old(0:i1,0:k1),Wb1old(0:i1,0:k1),Ub2old(0:j1,0:k1),Vb2old(0:j1+1,0:k1),Wb2old(0:j1,0:k1)
-      integer ii,tt
-      real fun,uu,vv,ww,fac1,fac2,x,y,z,yymin,yymax,Vbox1,Vbox2,boxside_x,boxside_y,phi
+      integer ii,tt,t
+      real fun,uu,vv,ww,fac1,fac2,fac3,x,y,z,yymin,yymax,Vbox1,Vbox2,Vbox3,boxside_x,boxside_y,phi,uuu,vvv,www
  	
       Ub1old=Ub1new
       Vb1old=Vb1new
@@ -1644,6 +2139,9 @@ c get stuff from other CPU's
       Ub2old=Ub2new
       Vb2old=Vb2new
       Wb2old=Wb2new 
+	  Ub3old=Ub3new
+	  Vb3old=Vb3new
+	  Wb3old=Wb3new
 !       fac=1./sqrt(REAL(nmax))*sqrt(1.5)*1.5
 ! 	  yymin=Rp(0)*sin((-0.5*jmax*px)*dphi)-boxsize
 ! 	  yymax=Rp(0)*sin((0.5*px*jmax)*dphi)+boxsize
@@ -1651,12 +2149,12 @@ c get stuff from other CPU's
 
 
       if (nmax2.gt.0) then
-	  	yymin=Rp(0)*sin((-0.5*jmax*px)*dphi)-0.22*(depth-bc_obst_h) !boxsize
-	  	yymax=Rp(0)*sin((0.5*px*jmax)*dphi)+0.22*(depth-bc_obst_h) !boxsize
+	  	yymin=Rp(0)*sin_vt(0)-0.22*(depth-bc_obst_h) !boxsize
+	  	yymax=Rp(0)*sin_vt(jmax*px)+0.22*(depth-bc_obst_h) !boxsize
       		Vbox2=1.2*(depth-bc_obst_h)*(yymax-yymin)*(depth-bc_obst_h)
       		fac2=1./sqrt(REAL(nmax2))*sqrt(1.5)*1.5
 
-		phi=MAX(0.5*px*jmax*dphi,0.01/180.*pi) ! minimal 0.01 degrees
+		phi=MAX(phivt(jmax*px),0.01/180.*pi) ! minimal 0.01 degrees
 		boxside_x=0.6*(depth-bc_obst_h)+0.22*(depth-bc_obst_h)/tan(phi) !Lx_max=0.6 (depth-bc_obst_h), Ly_max=0.22 (depth-bc_obst_h)
 		boxside_y=2*0.22*(depth-bc_obst_h)+(Rp(imax)-Rp(0))*sin(phi)
 		Vbox1=2.*boxside_x*boxside_y*(depth-bc_obst_h)
@@ -1699,14 +2197,14 @@ c get stuff from other CPU's
 
 
       if(nmax1.gt.0) then
-	phi=MAX(0.5*px*jmax*dphi,0.01/180.*pi) ! minimal 0.01 degrees
+	phi=MAX(phivt(jmax*px),0.01/180.*pi) ! minimal 0.01 degrees
 	boxside_x=0.6*(depth-bc_obst_h)+0.22*(depth-bc_obst_h)/tan(phi) !Lx_max=0.6 (depth-bc_obst_h), Ly_max=0.22 (depth-bc_obst_h)
 	boxside_y=2*0.22*(depth-bc_obst_h)+(Rp(imax)-Rp(0))*sin(phi)
         Vbox1=2.*boxside_x*boxside_y*(depth-bc_obst_h)
         fac1=1./sqrt(REAL(nmax1))*sqrt(1.5)*1.5
 
-  	yymin=Rp(0)*sin((-0.5*jmax*px)*dphi)-0.22*(depth-bc_obst_h) !boxsize
-  	yymax=Rp(0)*sin((0.5*px*jmax)*dphi)+0.22*(depth-bc_obst_h) !boxsize
+  	yymin=Rp(0)*sin_vt(0)-0.22*(depth-bc_obst_h) !boxsize
+  	yymax=Rp(0)*sin_vt(jmax*px)+0.22*(depth-bc_obst_h) !boxsize
 	Vbox2=1.2*(depth-bc_obst_h)*(yymax-yymin)*(depth-bc_obst_h)
 	fac2=1./sqrt(REAL(nmax2))*sqrt(1.5)*1.5
 		
@@ -1776,6 +2274,59 @@ c get stuff from other CPU's
 	 	enddo
 	       endif
 	endif
+	
+
+      if (nmax3.gt.0) then
+      	Vbox3=pi*radius_j*radius_j*radius_j !(pi*R^2*boxside_z); boxside_z=2*0.5*radius_j
+      	fac3=1./sqrt(REAL(nmax3))*sqrt(1.5)*1.5
+
+      !! jet inflow boundary
+	  if (outflow_overflow_down.eq.1) then
+	    z=depth-kjet*dz
+	  else
+	    z=depth
+	  endif	  
+		do t=1,tmax_inPpunt
+			i=i_inPpunt(t)
+			j=j_inPpunt(t)
+			x=Rp(i)*cos_u(j)-schuif_x
+			y=Rp(i)*sin_u(j)
+			uu=0.
+			vv=0.
+			ww=0.
+			
+			do ii=1,llmax3(i,j)
+		      tt=llist3(i,j,ii)
+			  !if (ABS(thetaSEM3(tt)-azi_angle_p(i,j))<0.125*pi) then
+			  
+		      fun=sqrt(Vbox3/(lmrSEM3(tt)*lmrSEM3(tt)*lmzSEM3(tt)))*(1.-MIN(ABS(x-xSEM3(tt))/lmrSEM3(tt),1.))
+     & 			*(1.-MIN(ABS(y-ySEM3(tt))/lmrSEM3(tt),1.))*(1.-MIN(ABS(z-zSEM3(tt))/lmzSEM3(tt),1.))
+	 			!epsSEM3(1,tt) = pipe flow direction 		z
+				!epsSEM3(2,tt) = wall-distance direction	r
+				!epsSEM3(3,tt) = lateral direction 			theta
+	 
+			  uu=uu+epsSEM3(2,tt)*fun*fac3*cos(thetaSEM3(tt))-epsSEM3(3,tt)*fun*fac3*sin(thetaSEM3(tt)) 	!TUDflow3d uu direction 		x
+			  vv=vv+epsSEM3(2,tt)*fun*fac3*sin(thetaSEM3(tt))+epsSEM3(3,tt)*fun*fac3*cos(thetaSEM3(tt)) 	!TUDflow3d vv direction			y
+			  ww=ww+epsSEM3(1,tt)*fun*fac3 																	!TUDflow3d ww direction 		
+			  !endif
+			enddo
+			uuu = ww 													!= pipe flow direction 		z
+			vvv = uu*cos(azi_angle_p(i,j))+vv*sin(azi_angle_p(i,j))		!= wall-distance direction	r
+			www =-uu*sin(azi_angle_p(i,j))+vv*cos(azi_angle_p(i,j))		!= lateral direction 		theta
+			
+		    uu= uuu*AA3(1,1,i,j)+vvv*AA3(1,2,i,j)+www*AA3(1,3,i,j) 		!= pipe flow direction 		z (aa(1,1) positief? om x,y,z te laten kloppen met z,r,theta) --> aa(1,1) was negatief, 7-12-15 11:45
+		    vv= uuu*AA3(2,1,i,j)+vvv*AA3(2,2,i,j)+www*AA3(2,3,i,j) 		!= wall-distance direction	r (aa(2,1) positief? om tau (wz'ur') te laten kloppen --> aa(2,1) was negatief, 7-12-15 11:45
+		    ww= uuu*AA3(3,1,i,j)+vvv*AA3(3,2,i,j)+www*AA3(3,3,i,j) 		!= lateral direction 		theta
+			
+			Wb3new(i,j)=-uu													!TUDflow3d ww direction 		z (negatief om w dir te laten kloppen)
+			Ub3new(i,j)=vv*cos(azi_angle_p(i,j))-ww*sin(azi_angle_p(i,j))	!TUDflow3d uu direction 		x
+			Vb3new(i,j)=vv*sin(azi_angle_p(i,j))+ww*cos(azi_angle_p(i,j))	!TUDflow3d vv direction			y
+		enddo
+      endif
+
+	  
+	
+	
       end
 
 
@@ -1786,12 +2337,12 @@ c get stuff from other CPU's
 !       include 'common.txt'
       include 'mpif.h'
 
-      integer m,n,ierr,clock,ii
+      integer m,n,ierr,clock,ii,t
       INTEGER, DIMENSION(:), ALLOCATABLE :: seed
       real yy(nmax2),xx(nmax2),y,z
       real z0,xxmin,xxmax,yymin,yymax,zzmin,zzmax,x0,y0,phi,ust,fac,phi2
       character*60 fmatname
-      real boxside_x
+      real boxside_x,ttmin,ttmax,jetcorr,x,rr,rrmin,rrmax,ust3,dxx,dyy
 
 	CALL SYSTEM_CLOCK(COUNT=clock)
 	CALL RANDOM_SEED(size = n)
@@ -1815,7 +2366,7 @@ c get stuff from other CPU's
 	  phi=atan2(V_bSEM,(U_TSHD-U_bSEM))
 	endif
 
-
+	!! SEM2 is at x-inflow boundary:
 	if (rank.eq.1) then ! 2nd processor can generate SEM2
 	  call random_number(zSEM2) ! uniform distribution 0,1
 	  call random_number(ySEM2) ! uniform distribution 0,1
@@ -1827,10 +2378,10 @@ c get stuff from other CPU's
 	  zzmin=z0+1.e-6
 	  zzmax=(depth-bc_obst_h)
 	  zSEM2=(zzmax-zzmin)*zSEM2+zzmin
-	  yymin=Rp(0)*sin((-0.5*jmax*px)*dphi)-0.22*(depth-bc_obst_h) !boxsize
-	  yymax=Rp(0)*sin((0.5*px*jmax)*dphi)+0.22*(depth-bc_obst_h) !boxsize
+	  yymin=Rp(0)*sin_vt(0)-0.22*(depth-bc_obst_h) !boxsize
+	  yymax=Rp(0)*sin_vt(jmax*px)+0.22*(depth-bc_obst_h) !boxsize
 	  ySEM2=(yymax-yymin)*ySEM2+yymin
-	  xxmin=Rp(0)*cos(0.5*jmax*px*dphi)-schuif_x-0.6*(depth-bc_obst_h) !boxsize
+	  xxmin=Rp(0)*cos_vt(jmax*px)-schuif_x-0.6*(depth-bc_obst_h) !boxsize
 	  xxmax=Rp(0)-schuif_x+0.6*(depth-bc_obst_h) !boxsize
 	  xSEM2=(xxmax-xxmin)*xSEM2+xxmin
 	  fac=kappa*(depth-bc_obst_h)
@@ -1868,6 +2419,7 @@ c get stuff from other CPU's
 	  enddo
 	enddo
 
+	!! SEM1 is at two lateral boundaries y:
  	if (rank.eq.0) then       !! boundary at j=0
  	  call random_number(zSEM1) ! uniform distribution 0,1
  	  call random_number(xSEM1) ! uniform distribution 0,1
@@ -1880,7 +2432,7 @@ c get stuff from other CPU's
  	  zzmax=(depth-bc_obst_h)
  	  zSEM1=(zzmax-zzmin)*zSEM1+zzmin
 	
-	  phi2=MAX(0.5*px*jmax*dphi,0.01/180.*pi) ! minimal 0.01 degrees (phi2 is positive...)
+	  phi2=MAX(phivt(jmax*px),0.01/180.*pi) ! minimal 0.01 degrees (phi2 is positive...)
 	  yymin=Rp(0)*sin(phi2)-0.22*(depth-bc_obst_h)
 	  yymax=Rp(imax)*sin(phi2)+0.22*(depth-bc_obst_h)
 	  ySEM1=-(yymax-yymin)*ySEM1-yymin  !! boundary at j=0, so y is negative!!
@@ -1927,7 +2479,7 @@ c get stuff from other CPU's
  	  zzmax=(depth-bc_obst_h)
  	  zSEM1=(zzmax-zzmin)*zSEM1+zzmin
 	
-	  phi2=MAX(0.5*px*jmax*dphi,0.01/180.*pi) ! minimal 0.01 degrees (phi2 is positive...)
+	  phi2=MAX(phivt(jmax*px),0.01/180.*pi) ! minimal 0.01 degrees (phi2 is positive...)
 	  yymin=Rp(0)*sin(phi2)-0.22*(depth-bc_obst_h)
 	  yymax=Rp(imax)*sin(phi2)+0.22*(depth-bc_obst_h)
 	  ySEM1=(yymax-yymin)*ySEM1+yymin  !! boundary at j=jmax, so y is positive !!
@@ -1962,6 +2514,87 @@ c get stuff from other CPU's
  	  enddo
  	endif
 
+	!! SEM3 is pipe inflow:
+	if (rank.eq.1) then ! 2nd processor can generate SEM3
+	  call random_number(zSEM3) ! uniform distribution 0,1
+	  call random_number(rSEM3) ! uniform distribution 0,1
+	  call random_number(thetaSEM3) ! uniform distribution 0,1
+	  call random_number(epsSEM3) ! uniform distribution 0,1
+	  epsSEM3=anint(epsSEM3)
+	  epsSEM3=epsSEM3*2.-1. ! +1 or -1
+
+	  if (outflow_overflow_down.eq.1) then
+	    zzmin=depth-kjet*dz-radius_j*0.5
+	    zzmax=depth-kjet*dz+radius_j*0.5
+	  else
+	    zzmin=depth-radius_j*0.5
+	    zzmax=depth+radius_j*0.5
+	  endif
+	  zSEM3=(zzmax-zzmin)*zSEM3+zzmin !boxsize
+	  rrmin=0. !boxsize
+	  rrmax=0.99*radius_j !boxsize
+	  rSEM3=(rrmax-rrmin)*sqrt(rSEM3)+rrmin !sqrt to get distribution of SEM points corresponding to area in round pipe
+	  ttmin=0. !boxsize
+	  ttmax=2.*pi !boxsize
+	  thetaSEM3=(ttmax-ttmin)*thetaSEM3+ttmin
+	  xSEM3=rSEM3*cos(thetaSEM3)
+	  ySEM3=rSEM3*sin(thetaSEM3)
+	  
+	  jetcorr=pi/(2.*pi*(1/(1./W_j_powerlaw+1)-1./(1./W_j_powerlaw+2.))) !=1.22449 for W_j_powerlaw=7
+	  do i=1,nmax3
+	      wSEM3(i)=(jetcorr*rSEM3(i)**(1./W_j_powerlaw))*W_j  
+	      lmzSEM3(i)=0.5*radius_j*wSEM3(i)/W_j
+	      lmzSEM3(i)=max(lm_min3,lmzSEM3(i))
+	      lmrSEM3(i)=kappa*(radius_j-rSEM3(i))
+	      lmrSEM3(i)=max(lm_min3,lmrSEM3(i))
+	  enddo
+	endif
+	call mpi_bcast(rSEM3,nmax3,MPI_REAL8,1,MPI_COMM_WORLD,ierr)
+	call mpi_bcast(thetaSEM3,nmax3,MPI_REAL8,1,MPI_COMM_WORLD,ierr)
+	call mpi_bcast(xSEM3,nmax3,MPI_REAL8,1,MPI_COMM_WORLD,ierr)
+	call mpi_bcast(ySEM3,nmax3,MPI_REAL8,1,MPI_COMM_WORLD,ierr)
+	call mpi_bcast(zSEM3,nmax3,MPI_REAL8,1,MPI_COMM_WORLD,ierr)
+	call mpi_bcast(wSEM3,nmax3,MPI_REAL8,1,MPI_COMM_WORLD,ierr)
+	call mpi_bcast(epsSEM3,3*nmax3,MPI_REAL8,1,MPI_COMM_WORLD,ierr)
+	call mpi_bcast(lmrSEM3,nmax3,MPI_REAL8,1,MPI_COMM_WORLD,ierr)
+	call mpi_bcast(lmzSEM3,nmax3,MPI_REAL8,1,MPI_COMM_WORLD,ierr)
+
+	
+!!	make linked list on every node for SEM3:
+	llmax3=0
+! 	do i=0,i1
+!	  do j=0,j1
+       do t=1,tmax_inPpunt
+		i=i_inPpunt(t)
+		j=j_inPpunt(t)
+	    x=Rp(i)*cos_u(j)-schuif_x
+	    y=Rp(i)*sin_u(j)
+	    do ii=1,nmax3
+		  dxx=xSEM3(ii)-x
+		  dyy=ySEM3(ii)-y
+		  rr=sqrt(dxx*dxx+dyy*dyy)
+	      if(rr/lmrSEM3(ii).lt.sqrt(2.)) then !lmx=lmy=lmr-->sqrt(lmx^2+lmy^2)=sqrt(2*lmr^2)
+		    llmax3(i,j)=llmax3(i,j)+1
+		    llist3(i,j,llmax3(i,j))=ii
+	      endif
+	    enddo
+	  enddo
+!	enddo
+
+		!! create Cholesky decomposition of Re stress tensor
+	AA3=0.
+	ust3 = ABS(W_j)/14.73 !ratio ust Wbulk is 14.73 of Eggels DNS data set
+       do t=1,tmax_inPpunt
+		i=i_inPpunt(t)
+		j=j_inPpunt(t)
+	    x=Rp(i)*cos_u(j)-schuif_x
+	    y=Rp(i)*sin_u(j)
+		rr=sqrt(x*x+y*y)
+        call Chol_tensor_from_DNSpipe_Ret360(rr/(2.*radius_j),AA3(:,:,i,j))
+		!call Chol_tensor_from_DNS_Ret395(1.-rr/radius_j,AA3(:,:,i,j)) !testje
+        AA3(:,:,i,j)=AA3(:,:,i,j)*ust3 ! scale back with ust
+	   enddo
+			
 
 	!! create Cholesky decomposition of Re stress tensor
 	if (LOA<0.and.kjet>0) then
@@ -1995,6 +2628,9 @@ c get stuff from other CPU's
 	 endif
 	enddo
 	endif
+	
+
+
 
 	end
 
@@ -2015,8 +2651,10 @@ c get stuff from other CPU's
       integer jminSEM,jmaxSEM,kminSEM,kmaxSEM,iii,tel,ii
       real phiSEM,dphiSEM,y,z,zzmin,zzmax,lmSEM2old(1:nmax2),ySEM2old(1:nmax2),zSEM2old(1:nmax2),xSEM2old(1:nmax2)
       real lmxSEM2old(1:nmax2),lmySEM2old(1:nmax2),lmzSEM2old(1:nmax2)
-      integer ind(nmax2),iimax
+      integer ind(nmax2),iimax,ind3(nmax3),t
       real boxside_x
+	  real jetcorr,rrmin,rrmax,ttmin,ttmax,x,dxx,dyy,lmrSEM3old(1:nmax3),xSEM3old(1:nmax3),ySEM3old(1:nmax3),rr
+	  integer imaxSEM3,iminSEM3
       
 
       CALL SYSTEM_CLOCK(COUNT=clock)
@@ -2043,7 +2681,7 @@ c get stuff from other CPU's
 	  phi=atan2(V_bSEM,(U_TSHD-U_bSEM))
 	endif
 
-      phi2=MAX(0.5*px*jmax*dphi,0.01/180.*pi) ! minimal 0.01 degrees (phi2 is positive...)
+      phi2=MAX(phivt(jmax*px),0.01/180.*pi) ! minimal 0.01 degrees (phi2 is positive...)
       boxside_x=0.6*(depth-bc_obst_h)+0.22*(depth-bc_obst_h)/tan(phi2) !Lx_max=0.6 (depth-bc_obst_h), Ly_max=0.22 (depth-bc_obst_h)	
       zzmin=z0+1.e-6
       zzmax=(depth-bc_obst_h)
@@ -2183,15 +2821,14 @@ c get stuff from other CPU's
       move=0
       iimax=0
 !! 	grens op i=0
-      xxmin=Rp(0)*cos(0.5*jmax*px*dphi)-schuif_x-0.6*(depth-bc_obst_h) !boxsize
+      xxmin=Rp(0)*cos_vt(jmax*px)-schuif_x-0.6*(depth-bc_obst_h) !boxsize
       xxmax=Rp(0)-schuif_x+ 0.6*(depth-bc_obst_h) !boxsize
       zzmin=z0+1.e-6
       zzmax=(depth-bc_obst_h)
-      yymin=Rp(0)*sin((-0.5*jmax*px)*dphi)-0.22*(depth-bc_obst_h) !boxsize
-      yymax=Rp(0)*sin((0.5*px*jmax)*dphi)+0.22*(depth-bc_obst_h) !boxsize	    
+      yymin=Rp(0)*sin_vt(0) -0.22*(depth-bc_obst_h) !boxsize
+      yymax=Rp(0)*sin_vt(jmax*px)+0.22*(depth-bc_obst_h) !boxsize	    
 
 
-!       lmSEM2old=lmSEM2
       lmxSEM2old=lmxSEM2
       lmySEM2old=lmySEM2
       lmzSEM2old=lmzSEM2
@@ -2311,6 +2948,131 @@ c get stuff from other CPU's
 	enddo
       endif
 
+	  ! SEM3 for pipe turbulent inflow:
+      move=0
+      iimax=0
+	  if (outflow_overflow_down.eq.1) then
+	    zzmin=depth-kjet*dz-radius_j*0.5		!boxsize
+	    zzmax=depth-kjet*dz+radius_j*0.5		!boxsize
+	  else
+	    zzmin=depth-radius_j*0.5				!boxsize
+	    zzmax=depth+radius_j*0.5				!boxsize
+	  endif
+	  rrmin=0. !boxsize
+	  rrmax=0.99*radius_j !boxsize
+	  ttmin=0. !boxsize
+	  ttmax=2.*pi !boxsize
+
+      lmrSEM3old=lmrSEM3
+      xSEM3old=xSEM3
+      ySEM3old=ySEM3
+      do i=1,nmax3
+	zSEM3(i)=zSEM3(i)+wSEM3(i)*dt 	!wSEM3 is negative
+	if (zSEM3(i)<zzmin)  then  		!place SEM point back to inflow, randomize rr,theta,eps
+	  move=1
+	      jetcorr=pi/(2.*pi*(1/(1./W_j_powerlaw+1)-1./(1./W_j_powerlaw+2.))) !=1.22449 for W_j_powerlaw=7
+	  if (rank.eq.1) then
+	    iimax=iimax+1
+	    ind3(iimax)=i
+	    zSEM3(i)=zzmax
+	    call random_number(yy)
+	    rSEM3(i)=(rrmax-rrmin)*sqrt(yy)+rrmin !correct rsem3 with sqrt for circular area pi*r^2
+	    call random_number(zz)
+	    thetaSEM3(i)=(ttmax-ttmin)*zz+ttmin
+	    call random_number(eps)
+	    eps=anint(eps)
+	    do j=1,3
+	      epsSEM3(i,j)=eps(j)*2.-1. ! +1 or -1	
+	    enddo	
+	    wSEM3(i)=(jetcorr*rSEM3(i)**(1./W_j_powerlaw))*W_j  
+		xSEM3(i)=rSEM3(i)*cos(thetaSEM3(i))
+		ySEM3(i)=rSEM3(i)*sin(thetaSEM3(i))
+	    lmzSEM3(i)=0.5*radius_j*wSEM3(i)/W_j
+	    lmzSEM3(i)=max(lm_min3,lmzSEM3(i))
+	    lmrSEM3(i)=kappa*(radius_j-rSEM3(i))
+	    lmrSEM3(i)=max(lm_min3,lmrSEM3(i))
+	  endif
+	endif
+      enddo	 
+      if (move.eq.1) then
+	call mpi_bcast(iimax,1,MPI_INTEGER,1,MPI_COMM_WORLD,ierr)
+	call mpi_bcast(ind3(1:iimax),iimax,MPI_INTEGER,1,MPI_COMM_WORLD,ierr)
+	! remove old location moved items from linked list on every node for SEM3:
+	
+!	do i=0,i1
+!	  x=MIN(Rp(i)*cos_u(0),Rp(i)*cos_u(j1))
+!	  if (x<radius_j) then
+!	    imaxSEM3=i
+!	  endif
+!	enddo
+!	do i=i1,0,-1
+!	  x=MAX(Rp(i)*cos_u(0),Rp(i)*cos_u(j1))
+!	  if (x>-radius_j) then
+!	    iminSEM3=i
+!	  endif
+!	enddo
+!	imaxSEM3=MIN(imaxSEM3,imax)
+!	iminSEM3=MAX(iminSEM3,0)
+	  
+	  
+      do t=1,tmax_inPpunt
+ 	   i=i_inPpunt(t)
+ 	   j=j_inPpunt(t)	  
+	   do iii=1,iimax !remove from old linked list:
+	    ii=ind3(iii)
+	  !do i=iminSEM3,imaxSEM3
+	   ! do j=0,j1 
+	      x=Rp(i)*cos_u(j)-schuif_x
+	      y=Rp(i)*sin_u(j)
+		  dxx=xSEM3old(ii)-x
+		  dyy=ySEM3old(ii)-y
+		  rr=sqrt(dxx*dxx+dyy*dyy)
+	      if(rr/lmrSEM3old(ii).lt.sqrt(2.)) then
+		do tel=1,llmax3(i,j)
+		  if(llist3(i,j,tel).eq.ii) then
+		    llist3(i,j,tel)=llist3(i,j,llmax3(i,j))
+		    llmax3(i,j)=llmax3(i,j)-1
+		  endif
+		enddo
+	      endif
+	    enddo
+	  enddo
+	!enddo
+
+	call mpi_bcast(xSEM3,nmax3,MPI_REAL8,1,MPI_COMM_WORLD,ierr)
+	call mpi_bcast(ySEM3,nmax3,MPI_REAL8,1,MPI_COMM_WORLD,ierr)
+	call mpi_bcast(zSEM3,nmax3,MPI_REAL8,1,MPI_COMM_WORLD,ierr)
+	call mpi_bcast(rSEM3,nmax3,MPI_REAL8,1,MPI_COMM_WORLD,ierr)
+	call mpi_bcast(wSEM3,nmax3,MPI_REAL8,1,MPI_COMM_WORLD,ierr)
+	call mpi_bcast(epsSEM3,3*nmax3,MPI_REAL8,1,MPI_COMM_WORLD,ierr)
+	call mpi_bcast(lmrSEM3,nmax3,MPI_REAL8,1,MPI_COMM_WORLD,ierr)
+	call mpi_bcast(lmzSEM3,nmax3,MPI_REAL8,1,MPI_COMM_WORLD,ierr)
+	call mpi_bcast(thetaSEM3,nmax3,MPI_REAL8,1,MPI_COMM_WORLD,ierr)
+
+	! add new location moved items in linked list on every node for SEM3:
+      do t=1,tmax_inPpunt
+ 	   i=i_inPpunt(t)
+ 	   j=j_inPpunt(t)	
+	   do iii=1,iimax
+	    ii=ind3(iii)
+
+!	  do i=iminSEM3,imaxSEM3
+!	    do j=0,j1 !jminSEM,jmaxSEM
+	      x=Rp(i)*cos_u(j)-schuif_x
+	      y=Rp(i)*sin_u(j)
+		  dxx=xSEM3(ii)-x
+		  dyy=ySEM3(ii)-y
+		  rr=sqrt(dxx*dxx+dyy*dyy)
+	      if(rr/lmrSEM3(ii).lt.sqrt(2.)) then
+		llmax3(i,j)=llmax3(i,j)+1
+		llist3(i,j,llmax3(i,j))=ii
+	      endif
+	    enddo
+	  enddo
+!	enddo
+      endif
+	  
+	  
 !       if (rank.eq.1) then
 ! 	write(*,*)'rank,ind(3),ii',rank,ind(3),ii
 !       endif
@@ -2437,7 +3199,7 @@ c get stuff from other CPU's
 	R32=(1.-factor)*R32dns(i-1)+factor*R32dns(i)
       else
 	R11=R11dns(1)
-    	R22=R22dns(1)
+	R22=R22dns(1)
 	R33=R33dns(1)
 	R21=R21dns(1)
 	R31=R31dns(1)
@@ -2453,3 +3215,142 @@ c get stuff from other CPU's
       A(3,3)=		sqrt(R33-A(3,1)**2-A(3,2)**2)
 
       end
+
+	  
+      subroutine Chol_tensor_from_DNSpipe_Ret360(y,A)
+!       subroutine Chol_tensor_from_DNSpipe_Ret360(y,A)
+! 	note in this subroutine dir 1,2,3 is flow dir, dist pipe wall, theta dir; 
+!   coordinate system NOT the same as r,phi,z in Dflow3D and also not same as directions in original data from Eggels
+! 	input:
+! 	y	distance from pipe centre divided by pipe diameter (-)
+! 	output Cholesky decomposition tensor A(i,j) from target Re stress tensor from DNS with Ret=395:
+! 	u_i =		sum_j Aij*ufluc_j
+! 	Aij		3x3 tensor constructed from Reynolds stress tensor from DNS with Ret=360
+! 	DNS Data from:
+!   Eggels, J.G.M. (1994)
+!   Direct and large eddy simulation of turbulent flow in a
+!   cylindrical pipe geometry.
+!   Thesis Delft University of Technology, The Netherlands.
+
+
+      implicit none
+	
+      real ydns(97),R11dns(96),R22dns(96),R33dns(96),R21dns(96)!,R31dns(96),R32dns(96)
+      real y,R11,R22,R33,R21,R31,R32,A(3,3)
+      real factor,ydns1
+      integer i
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  
+      ydns(:)=(/
+     &  0.00521,0.01042,0.01562,0.02083,0.02604,0.03125,0.03646,0.04167,0.04687,0.05208,0.05729,0.06250,0.06771
+     & ,0.07292,0.07812,0.08333,0.08854,0.09375,0.09896,0.10417,0.10937,0.11458,0.11979,0.12500,0.13021,0.13542
+     & ,0.14062,0.14583,0.15104,0.15625,0.16146,0.16667,0.17187,0.17708,0.18229,0.18750,0.19271,0.19792,0.20312
+     & ,0.20833,0.21354,0.21875,0.22396,0.22917,0.23437,0.23958,0.24479,0.25000,0.25521,0.26042,0.26562,0.27083
+     & ,0.27604,0.28125,0.28646,0.29167,0.29687,0.30208,0.30729,0.31250,0.31771,0.32292,0.32812,0.33333,0.33854
+     & ,0.34375,0.34896,0.35417,0.35937,0.36458,0.36979,0.37500,0.38021,0.38542,0.39062,0.39583,0.40104,0.40625
+     & ,0.41146,0.41667,0.42187,0.42708,0.43229,0.43750,0.44271,0.44792,0.45312,0.45833,0.46354,0.46875,0.47396
+     & ,0.47917,0.48437,0.48958,0.49479,0.50000	  
+     & ,9999./) ! last value added to keep loop from running infinitely
+
+	 
+      R22dns(:)=(/
+     &  0.65696960E+00,0.65674967E+00,0.65675163E+00,0.65693845E+00,0.65728511E+00,0.65777279E+00,0.65839019E+00,0.65913375E+00
+     & ,0.66000301E+00,0.66099427E+00,0.66209854E+00,0.66330512E+00,0.66460812E+00,0.66601089E+00,0.66752558E+00,0.66916843E+00
+     & ,0.67095279E+00,0.67288363E+00,0.67495745E+00,0.67716775E+00,0.67951205E+00,0.68199397E+00,0.68461971E+00,0.68739421E+00
+     & ,0.69032067E+00,0.69340196E+00,0.69664159E+00,0.70004441E+00,0.70361704E+00,0.70736715E+00,0.71130004E+00,0.71541449E+00
+     & ,0.71970036E+00,0.72413861E+00,0.72870205E+00,0.73335570E+00,0.73806116E+00,0.74278777E+00,0.74752333E+00,0.75227230E+00
+     & ,0.75704165E+00,0.76182762E+00,0.76661135E+00,0.77136231E+00,0.77604766E+00,0.78064186E+00,0.78512734E+00,0.78948921E+00
+     & ,0.79371532E+00,0.79779713E+00,0.80172753E+00,0.80550290E+00,0.80911893E+00,0.81256503E+00,0.81582734E+00,0.81888626E+00
+     & ,0.82171319E+00,0.82427348E+00,0.82652723E+00,0.82843507E+00,0.82996616E+00,0.83109070E+00,0.83175542E+00,0.83188503E+00
+     & ,0.83140620E+00,0.83025851E+00,0.82838332E+00,0.82570473E+00,0.82211615E+00,0.81749413E+00,0.81172285E+00,0.80467650E+00
+     & ,0.79618746E+00,0.78607583E+00,0.77418924E+00,0.76038846E+00,0.74451876E+00,0.72641461E+00,0.70588999E+00,0.68272167E+00
+     & ,0.65669821E+00,0.62769164E+00,0.59563307E+00,0.56046402E+00,0.52217067E+00,0.48079913E+00,0.43641015E+00,0.38902032E+00
+     & ,0.33870813E+00,0.28575067E+00,0.23063827E+00,0.17420910E+00,0.11803593E+00,0.65292377E-01,0.22213584E-01,0.00000000E+00/)
+       R33dns(:)=(/   
+     &  0.65668121E+00,0.65645994E+00,0.65615290E+00,0.65595676E+00,0.65593446E+00,0.65611233E+00,0.65653741E+00
+     & ,0.65729258E+00,0.65845997E+00,0.66008038E+00,0.66215499E+00,0.66468555E+00,0.66770729E+00,0.67127676E+00
+     & ,0.67542967E+00,0.68014011E+00,0.68529640E+00,0.69072700E+00,0.69627985E+00,0.70189328E+00,0.70759976E+00
+     & ,0.71346049E+00,0.71949636E+00,0.72567145E+00,0.73191628E+00,0.73815741E+00,0.74433904E+00,0.75044364E+00
+     & ,0.75651071E+00,0.76262839E+00,0.76889644E+00,0.77538103E+00,0.78207978E+00,0.78892916E+00,0.79584833E+00
+     & ,0.80276293E+00,0.80962327E+00,0.81643929E+00,0.82325216E+00,0.83004265E+00,0.83672098E+00,0.84321953E+00
+     & ,0.84956832E+00,0.85588679E+00,0.86231535E+00,0.86895012E+00,0.87582232E+00,0.88291925E+00,0.89020632E+00
+     & ,0.89762401E+00,0.90510857E+00,0.91264367E+00,0.92025290E+00,0.92796230E+00,0.93578134E+00,0.94369468E+00
+     & ,0.95165194E+00,0.95955054E+00,0.96722769E+00,0.97447724E+00,0.98112822E+00,0.98709025E+00,0.99236317E+00
+     & ,0.99703524E+00,0.10012742E+01,0.10053388E+01,0.10094472E+01,0.10135130E+01,0.10172245E+01,0.10204203E+01
+     & ,0.10229987E+01,0.10247201E+01,0.10254050E+01,0.10250498E+01,0.10237076E+01,0.10214116E+01,0.10182076E+01
+     & ,0.10142013E+01,0.10095292E+01,0.10043490E+01,0.99880103E+00,0.99285330E+00,0.98613298E+00,0.97803683E+00
+     & ,0.96767019E+00,0.95374091E+00,0.93469845E+00,0.90903603E+00,0.87532843E+00,0.83200554E+00,0.77726332E+00
+     & ,0.70884429E+00,0.62319722E+00,0.51294130E+00,0.36382153E+00,0.15418553E+00/)
+       R11dns(:)=(/
+     &  0.87701815E+00,0.87756261E+00,0.87816642E+00,0.87900180E+00,0.88034581E+00,0.88253969E+00,0.88584657E+00
+     & ,0.89037783E+00,0.89609783E+00,0.90287597E+00,0.91052699E+00,0.91882578E+00,0.92753165E+00,0.93644584E+00
+     & ,0.94546166E+00,0.95455252E+00,0.96370129E+00,0.97285384E+00,0.98197185E+00,0.99110495E+00,0.10003617E+01
+     & ,0.10098275E+01,0.10195556E+01,0.10296293E+01,0.10401754E+01,0.10513046E+01,0.10630548E+01,0.10753979E+01
+     & ,0.10882868E+01,0.11016608E+01,0.11153986E+01,0.11293218E+01,0.11432620E+01,0.11571068E+01,0.11708003E+01
+     & ,0.11843238E+01,0.11976764E+01,0.12108619E+01,0.12238840E+01,0.12367582E+01,0.12495322E+01,0.12622998E+01
+     & ,0.12751838E+01,0.12883096E+01,0.13017831E+01,0.13156668E+01,0.13299725E+01,0.13446841E+01,0.13598114E+01
+     & ,0.13754119E+01,0.13915395E+01,0.14081934E+01,0.14252671E+01,0.14425999E+01,0.14600546E+01,0.14775316E+01
+     & ,0.14950336E+01,0.15127206E+01,0.15308556E+01,0.15497002E+01,0.15694251E+01,0.15899982E+01,0.16113755E+01
+     & ,0.16338113E+01,0.16576508E+01,0.16830232E+01,0.17098825E+01,0.17382589E+01,0.17682967E+01,0.18001645E+01
+     & ,0.18340476E+01,0.18701001E+01,0.19084262E+01,0.19491487E+01,0.19923856E+01,0.20383802E+01,0.20875652E+01
+     & ,0.21401369E+01,0.21959627E+01,0.22550538E+01,0.23173724E+01,0.23824796E+01,0.24496004E+01,0.25174581E+01
+     & ,0.25838529E+01,0.26451829E+01,0.26959678E+01,0.27283731E+01,0.27313651E+01,0.26895206E+01,0.25818897E+01
+     & ,0.23818383E+01,0.20599874E+01,0.15956533E+01,0.10011787E+01,0.33778823E+00/)
+       R21dns(:)=(/
+     & 0.10330874E-01,0.19813098E-01,0.29162083E-01,0.38577214E-01,0.48096410E-01,0.57749996E-01,0.67547743E-01,
+     & 0.77473255E-01,0.87490334E-01,0.97555372E-01,0.10762496E+00,0.11766027E+00,0.12763429E+00,0.13753916E+00,
+     & 0.14738353E+00,0.15717828E+00,0.16692333E+00,0.17661236E+00,0.18625351E+00,0.19587814E+00,0.20552397E+00,
+     & 0.21521680E+00,0.22497123E+00,0.23479711E+00,0.24469318E+00,0.25463570E+00,0.26458483E+00,0.27451046E+00,
+     & 0.28440845E+00,0.29428708E+00,0.30414782E+00,0.31398913E+00,0.32381554E+00,0.33363018E+00,0.34342732E+00,
+     & 0.35319654E+00,0.36292560E+00,0.37259729E+00,0.38218884E+00,0.39168197E+00,0.40108075E+00,0.41042088E+00,
+     & 0.41976287E+00,0.42917617E+00,0.43871868E+00,0.44842328E+00,0.45829811E+00,0.46833601E+00,0.47852844E+00,
+     & 0.48886276E+00,0.49929819E+00,0.50974141E+00,0.52005184E+00,0.53010879E+00,0.53986193E+00,0.54931675E+00,
+     & 0.55853130E+00,0.56761092E+00,0.57663781E+00,0.58563161E+00,0.59455885E+00,0.60335345E+00,0.61199336E+00,
+     & 0.62051039E+00,0.62890636E+00,0.63716885E+00,0.64531513E+00,0.65336553E+00,0.66124973E+00,0.66883321E+00,
+     & 0.67606081E+00,0.68289644E+00,0.68926115E+00,0.69510901E+00,0.70035441E+00,0.70478139E+00,0.70812682E+00,
+     & 0.71006679E+00,0.71024705E+00,0.70838271E+00,0.70405604E+00,0.69654663E+00,0.68498679E+00,0.66841951E+00,
+     & 0.64564223E+00,0.61507283E+00,0.57477714E+00,0.52269328E+00,0.45716030E+00,0.37774381E+00,0.28656029E+00,
+     & 0.19007247E+00,0.10081534E+00,0.35596700E-01,0.49877913E-02,0.00000000E+00/)	   
+
+	 
+      i=1
+      do while (y.gt.ydns(i))
+	i=i+1
+      enddo
+	if (i>96) then
+	  write(*,*)'Error y>1 in Re_stress_tensor',i,ydns(i),y
+	  stop
+	endif
+
+      if (i>1) then
+	  factor=(y-ydns(i-1))/(ydns(i)-ydns(i-1))
+	  R11=(1.-factor)*R11dns(i-1)+factor*R11dns(i)	
+	  R22=(1.-factor)*R22dns(i-1)+factor*R22dns(i)	
+	  R33=(1.-factor)*R33dns(i-1)+factor*R33dns(i)	
+	  R21=(1.-factor)*R21dns(i-1)+factor*R21dns(i)	
+	  R31=0. !(1.-factor)*R31dns(i-1)+factor*R31dns(i) ! not available
+	  R32=0. !(1.-factor)*R32dns(i-1)+factor*R32dns(i) ! not available
+      else
+	  R11=R11dns(1)
+      R22=R22dns(1)
+	  R33=R33dns(1)
+	  R21=R21dns(1)
+	  R31=0. !R31dns(1)
+	  R32=0. !R32dns(1)
+      endif
+	  R11=R11*R11 !Eggels saved u'/u_tau instead of R11=u'u'/(u_tau*u_tau)
+	  R22=R22*R22
+	  R33=R33*R33
+      
+      A=0.
+      A(1,1)=		sqrt(R11)
+      A(2,1)=		R21/A(1,1)
+      A(3,1)=		R31/A(1,1)
+      A(2,2)=		sqrt(R22-A(2,1)*A(2,1))
+      A(3,2)=		(R32-A(2,1)*A(3,1))/A(2,2)
+      A(3,3)=		sqrt(R33-A(3,1)**2-A(3,2)**2)
+
+      end
+
+

@@ -25,10 +25,11 @@
 !       include 'common.txt'
       real  delta(imax),Yplus,X,Rmax,dx,xx,yy,theta_V,theta_U,phi,maxh_obst
       integer ngridsteps,begin,n,ii
+	  real dphi_shft,schuifphi,phiv2t(0:jmax*px+1)
 c******************************************************************
       pi   = 4.0 * atan(1.0)
 	
-	dphi = atan(dy/schuif_x)
+	!dphi = atan(dy/schuif_x)
 	IF (LOA>0.) THEN ! ship:
 	      dz   = depth     / kmax
 	ELSE ! flat plate:
@@ -73,19 +74,26 @@ c******************************************************************
 	ENDDO
 	DO n=1,ngridsteps
 	  IF(dr_grid(n)<0.) CALL writeerror(502)
+	  IF(lim_r_grid(n)<0) lim_r_grid(n)=dr_grid(n)
+	  IF(fac_r_grid(n)<0) fac_r_grid(n)=1.	  
 	ENDDO
 	IF(imax_grid(ngridsteps).ne.imax) CALL writeerror(503)
 
 	begin=1
 	DO n=1,ngridsteps
 	  dx=dr_grid(n)
+	  dx=dx/fac_r_grid(n) !to make first grid cell desired dx
 	  DO i = begin , imax_grid(n) ! build up grid with user defined dr_grid
+	    dx=dx*fac_r_grid(n)
+        if (fac_r_grid(n)<1.) then
+            dx=max(dx,lim_r_grid(n))
+        elseif (fac_r_grid(n)>1.) then
+            dx=min(dx,lim_r_grid(n))
+        endif		
 		Ru(i)= Ru(i-1) + dx
 	  ENDDO	
 	  begin = imax_grid(n)+1
 	ENDDO
-
-
       do i = 1 , imax
          Rp(i) = ( Ru(i) + Ru(i-1) ) / 2.0
          dr(i) = ( Ru(i) - Ru(i-1) )
@@ -95,16 +103,104 @@ c******************************************************************
       Rp(i1) = Ru(imax) + dr(i1) / 2.0
       dr(0)  = dr(1)
       Rp(0)  = Ru(0) - dr(0) / 2.0
+	  
+	  
+	phivt(0)=0.
+	ngridsteps=0
+	DO WHILE (jmax_grid(ngridsteps+1).NE.0)
+	  ngridsteps=ngridsteps+1
+	END DO
+	IF (ngridsteps.eq.1.and.jmax_grid(1).eq.1) THEN
+	  jmax_grid(1)=jmax*px
+	  dy_grid(1)=dy
+	ENDIF
+	!! Checks on input imax_grid:
+	DO n=2,ngridsteps
+	  IF(jmax_grid(n)<jmax_grid(n-1)) CALL writeerror(501)
+	ENDDO
+	DO n=1,ngridsteps
+	  IF(dy_grid(n)<0.) CALL writeerror(502)
+	  IF(lim_y_grid(n)<0) lim_y_grid(n)=dy_grid(n)
+	  IF(fac_y_grid(n)<0) fac_y_grid(n)=1.	  
+	ENDDO
 
+	IF (sym_grid_y.eq.1) THEN
+	  IF(jmax*px-2*jmax_grid(ngridsteps).ne.0.and.jmax*px-2*jmax_grid(ngridsteps).ne.1) CALL writeerror(503)
+	ELSE
+	  IF(jmax_grid(ngridsteps).ne.jmax*px) CALL writeerror(503)
+	ENDIF
+	IF (ngridsteps.eq.1.and.fac_y_grid(1).eq.1.) THEN
+	   poissolver=0 !0=FFT pressure-poisson solver
+	ELSE
+	   poissolver=3 !3=PARDISO pressure-poisson solver
+	ENDIF
+	begin=1
+	DO n=1,ngridsteps
+	  dx=dy_grid(n)
+	  dx=dx/fac_y_grid(n) !to make first grid cell desired dx
+	  DO j = begin , jmax_grid(n) ! build up grid with user defined dr_grid
+	    dx=dx*fac_y_grid(n)
+        if (fac_y_grid(n)<1.) then
+            dx=max(dx,lim_y_grid(n))
+        elseif (fac_y_grid(n)>1.) then
+            dx=min(dx,lim_y_grid(n))
+        endif		
+		phivt(j)= phivt(j-1) + atan(dx/schuif_x)
+	  ENDDO	
+	  begin = jmax_grid(n)+1
+	ENDDO
+	
+	n=ngridsteps
+	IF (sym_grid_y.eq.1) THEN
+		IF (MOD(jmax*px,2).eq.0) THEN !even
+			DO i=0,jmax_grid(n)-1
+				phiv2t(i)=-phivt(jmax_grid(n)-i)
+				phiv2t(i+jmax_grid(n)+1)=phivt(i+1)
+			ENDDO
+			phiv2t(jmax_grid(n))=phivt(0) !center
+		ELSE !odd
+			dphi_shft=0.5*(phivt(1)-phivt(0))
+			DO i=0,jmax_grid(n)-1
+				phiv2t(i)=-phivt(jmax_grid(n)-i)-dphi_shft;
+				phiv2t(i+jmax_grid(n)+2)=phivt(i+1)+dphi_shft;
+			ENDDO
+			phiv2t(jmax_grid(n))=phivt(0)-dphi_shft    !center
+			phiv2t(jmax_grid(n)+1)=phivt(0)+dphi_shft  !center
+		ENDIF
+		phivt=phiv2t
+	ENDIF
+
+	DO j = 1 , jmax*px
+		phipt((j)) = ( phivt(j) + phivt(j-1) ) / 2.0
+		dphi2t((j)) = ( phivt(j) - phivt(j-1) )
+	ENDDO
+	dphi2t(jmax*px+1) = dphi2t(jmax*px)
+	phivt(jmax*px+1) = phivt(jmax*px) + dphi2t(jmax*px+1)
+	phipt(jmax*px+1) = phivt(jmax*px) + dphi2t(jmax*px+1) / 2.0
+	dphi2t(0)  = dphi2t(1)
+	phipt(0)  = phivt(0) - dphi2t(0) / 2.0
+
+
+	schuifphi=(phipt(jmax*px+1)+phipt(0))/2.
+	phivt=phivt-schuifphi
+	phipt=phipt-schuifphi
+	phiv(0:j1)=phivt(0+rank*jmax:j1+rank*jmax)
+	phip(0:j1)=phipt(0+rank*jmax:j1+rank*jmax)
+	dphi2(0:j1)=dphi2t(0+rank*jmax:j1+rank*jmax)
+	
       IF (Lmix_type.eq.1) THEN
 	do i=1,imax
-	  Lmix(i) = (Rp(i)*dphi*dr(i)*dz)**(1./3.)
-	  Lmix(i) = Lmix(i)*Cs
+	 do j=1,jmax
+	  Lmix2(i,j) = (Rp(i)*dphi2(j)*dr(i)*dz)**(2./3.)
+	  Lmix2hat(i,j) = (Rp(i)*(dphi2(j-1)+dphi2(j)+dphi2(j+1))*(dr(i-1)+dr(i)+dr(i+1))*3.*dz)**(2./3.)
+	 enddo
 	enddo
       ELSEIF (Lmix_type.eq.2) THEN
 	do i=1,imax
-           Lmix(i) = sqrt( ( (Rp(i)*dphi)**2 +(dr(i))**2 + dz**2  ) / 3.0 )
-	  Lmix(i) = Lmix(i)*Cs
+	 do j=1,jmax	
+           Lmix2(i,j) = ( ( (Rp(i)*dphi2(j))**2 +(dr(i))**2 + dz**2  ) / 3.0 )
+		   Lmix2hat(i,j) = ( ( (Rp(i)*(dphi2(j-1)+dphi2(j)+dphi2(j+1)))**2 +(dr(i-1)+dr(i)+dr(i+1))**2 + (3.*dz)**2  ) / 3.0 )
+	 enddo
 	enddo
       ELSE
 	CALL writeerror(504)
@@ -114,8 +210,8 @@ c******************************************************************
 
       do i=0,i1
 	do j=0,j1
-	  theta_U = ( j +(rank*jmax)-0.5*jmax*px-0.5)*dphi
-	  theta_V = ( j +(rank*jmax)-0.5*jmax*px)*dphi
+	  theta_U = phip(j) !( j +(rank*jmax)-0.5*jmax*px-0.5)*dphi
+	  theta_V = phiv(j) !( j +(rank*jmax)-0.5*jmax*px)*dphi
 	  cos_u(j) = cos(theta_U)
 	  cos_v(j) = cos(theta_V)
 	  sin_u(j) = sin(theta_U)	
@@ -130,7 +226,16 @@ c******************************************************************
 	  yy=Rp(i)*sin(theta_V)
 	  azi_angle_v(i,j) = atan2(yy,xx)
 	enddo
-      enddo
+	enddo
+      
+	do j=0,jmax*px+1
+	  theta_U = phipt(j) 
+	  theta_V = phivt(j) 
+	  cos_ut(j) = cos(theta_U)
+	  cos_vt(j) = cos(theta_V)
+	  sin_ut(j) = sin(theta_U)	
+	  sin_vt(j) = sin(theta_V)
+	enddo	  
 	!! wave influence parameters:
 	Lw=gz*Tp**2/(2.*pi) ! start with deep water wave length
 	do k=1,20
@@ -147,8 +252,9 @@ c******************************************************************
 	kx_w=kabs_w*nx_w*cos(phi)+kabs_w*ny_w*sin(phi)   !nx_w pos in TSHD dir, ny_w pos waves from starboard (is negative y-dir!)
 	ky_w=-kabs_w*ny_w*cos(phi)+kabs_w*nx_w*sin(phi) 
 	do i=1,imax
-	  vol_U(i)=(Rp(i+1)-Rp(i))*dphi*Ru(i)*dz 
-	  vol_V(i)=(Ru(i)-Ru(i-1))*dphi*Rp(i)*dz 
+	  do j=1,jmax*px
+	    vol_V(i,j)=(Ru(i)-Ru(i-1))*(phivt(j)-phivt(j-1))*Rp(i)*dz 
+	  enddo
 	enddo
       end
 
@@ -615,8 +721,8 @@ C ...  Locals
       do i=0,i1  
 	in=.false.
         do j=jmax*px+1,0,-1 ! first search in all partitions
-	  xx=Rp(i)*cos((j-0.5*jmax*px-0.5)*dphi)-schuif_x
-	  yy=Rp(i)*sin((j-0.5*jmax*px-0.5)*dphi)
+	  xx=Rp(i)*cos_ut(j)-schuif_x
+	  yy=Rp(i)*sin_ut(j)
 	  if ((xx*xx+yy*yy).le.r_orifice2.and.(xx*xx+yy*yy).gt.radius_inner_j**2 ) then
 	   CALL PNPOLY (xx,yy, xj(1:4), yj(1:4), 4, inout ) ! only grid inside xj,yj box is jet (xj,yj default is complete domain)
 	   if (inout.eq.1) then
@@ -769,7 +875,7 @@ C ...  Locals
 	in=.false.
         do j=jmax*px+1,0,-1
 	  zz=k*dz-0.5*dz-zjet2 !Rp(i)*cos_u(j)-schuif_x
-	  yy=Rp(0)*sin((j-0.5*jmax*px-0.5)*dphi)
+	  yy=Rp(0)*sin_ut(j)
 	  if ((zz*zz+yy*yy).le.r_orifice2) then
 	    tel1=tel1+1
 	    k_inPpunt2_dummy(tel1)=k ! Ppunt is U
@@ -852,7 +958,7 @@ C ...  Locals
 	REAL xprop2(2),yprop2(2),xprop3(2),yprop3(2),phi,uprop0
 	INTEGER i_min(2),j_min(2),n,tel1,t
 	REAL Ua,YYY,Ax,Aphi,fbx,fbphi,fbx2,fby,fby2,fbz,km
-	REAL sum_profile,tel,dzz,dyy,dxi_min,dyprop2_min(2)
+	REAL sum_profile,tel,dzz,dyy,dxi_min !,dyprop2_min(2)
 !	REAL*4 Ppropx_dummy(0:i1,0:px*jmax+1,0:k1)
 !	REAL*4 Ppropy_dummy(0:i1,0:px*jmax+1,0:k1)
 !	REAL*4 Ppropz_dummy(0:i1,0:px*jmax+1,0:k1)
@@ -909,8 +1015,8 @@ C ...  Locals
                 dxi_min=100000.*dz
 		do i=1,imax
 		  do j=1,jmax*px
- 		    xx=Ru(i)*cos((j-0.5*jmax*px-0.5)*dphi)-schuif_x
-		    yy=Ru(i)*sin((j-0.5*jmax*px-0.5)*dphi)
+ 		    xx=Ru(i)*cos_ut(j)-schuif_x
+		    yy=Ru(i)*sin_ut(j)
 		    dxi=sqrt((xx-xprop2(n))**2+(yy-yprop2(n))**2)
 		    IF (dxi<dxi_min) THEN
 		        dxi_min=dxi
@@ -924,24 +1030,24 @@ C ...  Locals
 	!! search for indices nearest to y-hart of prop:
 
 	      do n=1,nprop
-		dyprop2_min(n)=Ru(i_min(n)+2)*dphi !minimum distance to find hart prop is dy
+		!dyprop2_min(n)=Ru(i_min(n)+2)*dphi !minimum distance to find hart prop is dy
 		do j=1,jmax*px
-		  yy=Ru(i_min(n))*sin((j-0.5*jmax*px-0.5)*dphi)
+		  yy=Ru(i_min(n))*sin_ut(j)
 		  dyy=ABS(yy-yprop2(n))
-		  dyprop2_min(n)=MIN(dyprop2_min(n),dyy)
+		  !dyprop2_min(n)=MIN(dyprop2_min(n),dyy)
 	        enddo
 	      enddo
 
 	      do n=1,nprop
 		do j=1,jmax*px
 			do k=1,kmax
-			  yy=Rp(i_min(n))*sin((j-0.5*jmax*px-0.5)*dphi)
+			  yy=Rp(i_min(n))*sin_ut(j)
 			  zz=k*dz-0.5*dz-(depth-zprop)
 			  dzz=zz
 			  dyy=yy-yprop2(n)
 			  if ((dzz*dzz+dyy*dyy).le.(Dprop/2.)**2) then
 			    YYY    = sqrt(dzz*dzz+dyy*dyy)/(Dprop/2.)
-			    Ax    = Pprop/(pi/4.*Dprop**2*uprop0*vol_V(i_min(n))/(Ru(i_min(n))*dphi*dz))
+			    Ax    = Pprop/(pi/4.*Dprop**2*uprop0*vol_V(i_min(n),j)/(Ru(i_min(n))*(phivt(j)-phivt(j-1))*dz))
      &                              /REAL(nprop)!*(uprop0+Ua)/uprop0
 			    fbx2   = 3./4.*Ax 
 			    if (n.eq.1) then
@@ -971,11 +1077,11 @@ C ...  Locals
 			    fbx   =  fbx2 * cos(phi) - fby2 * sin(phi)
 			    fby   =  fbx2 * sin(phi) + fby2 * cos(phi)
 			
-			   Ppropx_dummy(i_min(n),j  ,k)=cos((j-0.5*jmax*px-0.5)*dphi)*fbx+sin((j-0.5*jmax*px-0.5)*dphi)*fby	
+			   Ppropx_dummy(i_min(n),j  ,k)=cos_ut(j)*fbx+sin_ut(j)*fby	
 			   Ppropy_dummy(i_min(n),j  ,k)=Ppropy_dummy(i_min(n),j  ,k)
-     & -0.5*sin((j-0.5*jmax*px)*dphi)*fbx+0.5*cos((j-0.5*jmax*px)*dphi)*fby
+     & -0.5*sin_vt(j)*fbx+0.5*cos_vt(j)*fby
 			   Ppropy_dummy(i_min(n),j-1,k)=Ppropy_dummy(i_min(n),j-1,k)
-     & -0.5*sin((j-0.5*jmax*px-1)*dphi)*fbx+0.5*cos((j-0.5*jmax*px-1)*dphi)*fby
+     & -0.5*sin_vt(j-1)*fbx+0.5*cos_vt(j-1)*fby
 			   Ppropz_dummy(i_min(n),j,k  )=Ppropz_dummy(i_min(n),j,k)+0.5*fbz
 			   Ppropz_dummy(i_min(n),j,k-1)=Ppropz_dummy(i_min(n),j,k-1)+0.5*fbz
 			  endif
@@ -1065,7 +1171,7 @@ C ...  Locals
 	REAL xprop2(2),yprop2(2),phi,uprop0
 	INTEGER i_min(2),j_min(2),n,tel1,t
 	REAL Ua,YYY,Ax,Aphi,fbx,fbphi,fbx2,fby,fby2,fbz,km
-	REAL sum_profile,tel,dzz,dyy,dxi_min,dyprop2_min(2)
+	REAL sum_profile,tel,dzz,dyy,dxi_min !,dyprop2_min(2)
 !	REAL*4 Ppropx_dummy(0:i1,0:px*jmax+1,0:k1)
 !	REAL*4 Ppropy_dummy(0:i1,0:px*jmax+1,0:k1)
 !	REAL*4 Ppropz_dummy(0:i1,0:px*jmax+1,0:k1)
@@ -1134,24 +1240,24 @@ C ...  Locals
 	!! search for indices nearest to y-hart of prop:
 
 	      do n=1,nprop
-		dyprop2_min(n)=Ru(i_min(n)+2)*dphi !minimum distance to find hart prop is dy
+		!dyprop2_min(n)=Ru(i_min(n)+2)*dphi !minimum distance to find hart prop is dy
 		do j=1,jmax*px
-		  yy=Ru(i_min(n))*sin((j-0.5*jmax*px-0.5)*dphi)
+		  yy=Ru(i_min(n))*sin_ut(j)
 		  dyy=ABS(yy-yprop2(n))
-		  dyprop2_min(n)=MIN(dyprop2_min(n),dyy)
+		  !dyprop2_min(n)=MIN(dyprop2_min(n),dyy)
 	        enddo
 	      enddo
 
 	      do n=1,nprop
 		do j=1,jmax*px
 			do k=1,kmax
-			  yy=Rp(i_min(n))*sin((j-0.5*jmax*px-0.5)*dphi)
+			  yy=Rp(i_min(n))*sin_ut(j)
 			  zz=k*dz-0.5*dz-(depth-zprop)
 			  dzz=zz
 			  dyy=yy-yprop2(n)
 			  if ((dzz*dzz+dyy*dyy).le.(Dprop/2.)**2) then
 			    YYY    = sqrt(dzz*dzz+dyy*dyy)/(Dprop/2.)
-			    Ax    = Pprop/(pi/4.*Dprop**2*uprop0*vol_V(i_min(n))/(Ru(i_min(n))*dphi*dz))
+			    Ax    = Pprop/(pi/4.*Dprop**2*uprop0*vol_V(i_min(n),j)/(Ru(i_min(n))*(phivt(j)-phivt(j-1))*dz))
      &                              /REAL(nprop)!*(uprop0+Ua)/uprop0
 			    fbx2   = 3./4.*Ax 
 			    if (n.eq.1) then
@@ -1176,11 +1282,11 @@ C ...  Locals
 			    fbx   =  fbx2 * cos(phi) - fby2 * sin(phi)
 			    fby   =  fbx2 * sin(phi) + fby2 * cos(phi)
 			
-			   Ppropx_dummy(i_min(n),j  ,k)=cos((j-0.5*jmax*px-0.5)*dphi)*fbx+sin((j-0.5*jmax*px-0.5)*dphi)*fby	
+			   Ppropx_dummy(i_min(n),j  ,k)=cos_ut(j)*fbx+sin_ut(j)*fby	
 			   Ppropy_dummy(i_min(n),j  ,k)=Ppropy_dummy(i_min(n),j  ,k)
-     & -0.5*sin((j-0.5*jmax*px)*dphi)*fbx+0.5*cos((j-0.5*jmax*px)*dphi)*fby
+     & -0.5*sin_vt(j)*fbx+0.5*cos_vt(j)*fby
 			   Ppropy_dummy(i_min(n),j-1,k)=Ppropy_dummy(i_min(n),j-1,k)
-     & -0.5*sin((j-0.5*jmax*px-1)*dphi)*fbx+0.5*cos((j-0.5*jmax*px-1)*dphi)*fby
+     & -0.5*sin_vt(j-1)*fbx+0.5*cos_vt(j-1)*fby
 			   Ppropz_dummy(i_min(n),j,k  )=Ppropz_dummy(i_min(n),j,k)+0.5*fbz
 			   Ppropz_dummy(i_min(n),j,k-1)=Ppropz_dummy(i_min(n),j,k-1)+0.5*fbz
 			  endif
@@ -1391,8 +1497,8 @@ C ...  Locals
        do i=0,i1  
 	in=.false.
         do j=jmax*px+1,0,-1       ! global search in j dir, search on rho-loc, when rho-loc is in then also V left right are in (made zero) 
-	  xx=Rp(i)*cos((j-0.5*jmax*px-0.5)*dphi)-schuif_x
-	  yy=Rp(i)*sin((j-0.5*jmax*px-0.5)*dphi)
+	  xx=Rp(i)*cos_ut(j)-schuif_x
+	  yy=Rp(i)*sin_ut(j)
  	  zz=MIN(k*dz,depth) !k1 would lead to zz>depth
 	  if (softnose.eq.1) then !make nose shorter gradually
 		adj_ment=(1.+MAX(MIN(depth-DRAUGHT-zz,0.)/(Hfront),-1.)) !grows linear from 0. at Hfront to 1 at keel TSHD 
@@ -1609,8 +1715,8 @@ C ...  Locals
        do i=0,i1  
 	in=.false.
         do j=jmax*px+1,0,-1         ! search in j dir, search on rho-loc, when rho-loc is in then also V left right are in (made zero) 
-	  xx=Rp(i)*cos((j-0.5*jmax*px-0.5)*dphi)-schuif_x
-	  yy=Rp(i)*sin((j-0.5*jmax*px-0.5)*dphi)
+	  xx=Rp(i)*cos_ut(j)-schuif_x
+	  yy=Rp(i)*sin_ut(j)
 	  IF (k.le.FLOOR(Dsp/dz)) THEN ! draghead:
 	xTSHD2(1)=xdh-0.5*Dsp-REAL(k)/REAL(k1)*(xdh-Lfront-xfront)
 	xTSHD2(2)=xdh+0.5*Dsp-REAL(k)/REAL(k1)*(xdh-Lfront-xfront)
@@ -1798,8 +1904,8 @@ C ...  Locals
        do i=0,i1  
 	in=.false.
         do j=jmax*px+1,0,-1       ! global search in j dir, search on rho-loc, when rho-loc is in then also V left right are in (made zero) 
-	  xx=Rp(i)*cos((j-0.5*jmax*px-0.5)*dphi)-schuif_x
-	  yy=Rp(i)*sin((j-0.5*jmax*px-0.5)*dphi)
+	  xx=Rp(i)*cos_ut(j)-schuif_x
+	  yy=Rp(i)*sin_ut(j)
 	  IF (k.le.FLOOR(Dsp/dz)) THEN ! draghead:
 	xTSHD2(1)=xdh-0.5*Dsp-REAL(k)/REAL(k1)*(xdh-Lfront-xfront)
 	xTSHD2(2)=xdh+0.5*Dsp-REAL(k)/REAL(k1)*(xdh-Lfront-xfront)
@@ -2020,8 +2126,8 @@ C ...  Locals
 	       do i=0,i1  
 		in=.false.
 		do k=0,k1 ! one extra in vertical direction for W  
-		  xx=Rp(i)*cos((j-0.5*jmax*px-0.5)*dphi)-schuif_x
-		  yy=Rp(i)*sin((j-0.5*jmax*px-0.5)*dphi)
+		  xx=Rp(i)*cos_ut(j)-schuif_x
+		  yy=Rp(i)*sin_ut(j)
 		  IF (k.le.FLOOR(ob(n)%height/dz)) THEN ! obstacle:
 			xTSHD(1:4)=ob(n)%x*cos(phi)-ob(n)%y*sin(phi)
 			yTSHD(1:4)=ob(n)%x*sin(phi)+ob(n)%y*cos(phi)
@@ -2045,8 +2151,8 @@ C ...  Locals
        do i=0,i1  
 	in=.false.
         do j=jmax*px+1,0,-1       ! global search in j dir, search on rho-loc, when rho-loc is in then also V left right are in (made zero) 
-	  xx=Rp(i)*cos((j-0.5*jmax*px-0.5)*dphi)-schuif_x
-	  yy=Rp(i)*sin((j-0.5*jmax*px-0.5)*dphi)
+	  xx=Rp(i)*cos_ut(j)-schuif_x
+	  yy=Rp(i)*sin_ut(j)
 
 !	  IF (k.le.FLOOR(ob(n)%height/dz)) THEN ! obstacle:
 	  IF ((k.ge.CEILING(ob(n)%zbottom/dz)).and.(k.le.FLOOR(ob(n)%height/dz)).and.(FLOOR(ob(n)%height/dz).eq.kbed2(i,j))) THEN ! obstacle:

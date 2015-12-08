@@ -23,7 +23,7 @@
       IMPLICIT NONE
       SAVE
       
-      INTEGER i,j,k,imax,jmax,kmax,i1,j1,k1,px,rank,kjet,nmax1,nmax2,istep,CNdiffz,npresIBM,counter
+      INTEGER i,j,k,imax,jmax,kmax,i1,j1,k1,px,rank,kjet,nmax1,nmax2,nmax3,istep,CNdiffz,npresIBM,counter
       INTEGER Lmix_type,slip_bot,SEM,azi_n,outflow_overflow_down,azi_n2
       REAL ekm_mol,nu_mol,pi,kappa,gx,gy,gz,Cs,Sc
       REAL dt,time_nm,time_n,time_np,t_end,t0_output,dt_output,te_output,dt_max,tstart_rms,CFL,dt_ini
@@ -31,16 +31,16 @@
       REAL U_b,V_b,W_b,rho_b,W_j,Awjet,Aujet,Avjet,Strouhal,radius_j,kn,W_ox,U_bSEM,V_bSEM,U_w,V_w
       REAL U_j2,Awjet2,Aujet2,Avjet2,Strouhal2,radius_j2,zjet2
       REAL xj(4),yj(4),radius_inner_j,W_j_powerlaw,plume_z_outflow_belowsurf
-      REAL dphi,dy,dz,schuif_x,depth,lm_min,Rmin,bc_obst_h
-      REAL dr_grid(1:100)
-      INTEGER imax_grid(1:100)
+      REAL dy,dz,schuif_x,depth,lm_min,lm_min3,Rmin,bc_obst_h
+      REAL dr_grid(1:100),dy_grid(1:100),fac_y_grid(1:100),lim_y_grid(1:100),fac_r_grid(1:100),lim_r_grid(1:100)
+      INTEGER imax_grid(1:100),jmax_grid(1:100),sym_grid_y
       INTEGER tmax_inPpunt,tmax_inUpunt,tmax_inVpunt,tmax_inPpuntrand
       INTEGER tmax_inPpuntTSHD,tmax_inUpuntTSHD,tmax_inVpuntTSHD,tmax_inWpuntTSHD
       INTEGER tmax_inUpunt_tauTSHD,tmax_inVpunt_tauTSHD,tmax_inVpunt_rudder
       INTEGER tmax_inWpunt2,tmax_inVpunt2,tmax_inPpunt2,tmax_inWpunt_suction
       INTEGER nfrac,slipvel,interaction_bed,nobst,kbed_bc,nbedplume
       CHARACTER*256 hisfile,restart_dir,inpfile,plumetseriesfile,bcfile,plumetseriesfile2,bedlevelfile
-      CHARACTER*3 time_int
+      CHARACTER*3 time_int,advec_conc
       CHARACTER*5 sgs_model
       CHARACTER*4 damping_drho_dz
       REAL damping_a1,damping_b1,damping_a2,damping_b2
@@ -54,6 +54,9 @@
       INTEGER periodicx,periodicy,wallup
       REAL U_b3,V_b3,surf_layer
       INTEGER ksurf_bc,kmaxTSHD_ind,nair
+      INTEGER poissolver,nm1
+      INTEGER iparm(64)
+      
 
       CHARACTER*4 convection,diffusion
       REAL numdiff,comp_filter_a
@@ -85,27 +88,36 @@
       INTEGER*2, DIMENSION(:),ALLOCATABLE :: i_inVpunt_rudder,j_inVpunt_rudder,k_inVpunt_rudder
       INTEGER*2, DIMENSION(:),ALLOCATABLE :: i_inWpunt_suction,j_inWpunt_suction,k_inWpunt_suction
       REAL, DIMENSION(:),ALLOCATABLE :: Ubot_TSHD,Vbot_TSHD
+      INTEGER*8, DIMENSION(:),ALLOCATABLE :: pt,pt3
 
-      INTEGER*2, DIMENSION(:,:,:),ALLOCATABLE :: llist1,llist2
-      INTEGER*2, DIMENSION(:,:),ALLOCATABLE :: llmax1,llmax2,kbed,kbedt,kbed2
+      INTEGER*2, DIMENSION(:,:,:),ALLOCATABLE :: llist1,llist2,llist3
+      INTEGER*2, DIMENSION(:,:),ALLOCATABLE :: llmax1,llmax2,llmax3,kbed,kbedt,kbed2
       INTEGER, DIMENSION(:,:),ALLOCATABLE :: Xkk,Tii
       INTEGER, DIMENSION(:),ALLOCATABLE :: Xii,Tkk,nfrac_air
-      REAL, DIMENSION(:),ALLOCATABLE :: cos_u,cos_v,sin_u,sin_v
-      REAL, DIMENSION(:),ALLOCATABLE :: Ru,Rp,dr,Lmix,vol_U,vol_V
+      REAL, DIMENSION(:),ALLOCATABLE :: cos_u,cos_v,sin_u,sin_v,cos_ut,sin_ut,cos_vt,sin_vt
+      REAL, DIMENSION(:),ALLOCATABLE :: Ru,Rp,dr,phivt,phipt,dphi2t,phiv,phip,dphi2
       REAL*8, DIMENSION(:),ALLOCATABLE :: xSEM1,ySEM1,zSEM1,uSEM1
       REAL*8, DIMENSION(:),ALLOCATABLE :: lmxSEM1,lmySEM1,lmzSEM1
       REAL*8, DIMENSION(:),ALLOCATABLE :: xSEM2,ySEM2,zSEM2,uSEM2 
-      REAL*8, DIMENSION(:,:),ALLOCATABLE :: epsSEM1,epsSEM2
+      REAL*8, DIMENSION(:,:),ALLOCATABLE :: epsSEM1,epsSEM2,epsSEM3,Lmix2,Lmix2hat,vol_V
       REAL*8, DIMENSION(:),ALLOCATABLE :: lmxSEM2,lmySEM2,lmzSEM2
+	  REAL*8, DIMENSION(:),ALLOCATABLE :: rSEM3,thetaSEM3,zSEM3,wSEM3,xSEM3,ySEM3
+	  REAL, DIMENSION(:,:,:,:),ALLOCATABLE :: AA3
+      REAL*8, DIMENSION(:),ALLOCATABLE :: lmrSEM3,lmzSEM3
       REAL, DIMENSION(:,:),ALLOCATABLE :: azi_angle_p,azi_angle_u,azi_angle_v,zbed,Ubc1,Vbc1,Ubc2,Vbc2,rhocorr_air_z
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: ekm,AA,Diffcof
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: Uold,Vold,Wold,Rold
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: Unew,Vnew,Wnew,Rnew
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: dUdt,dVdt,dWdt,drdt
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: Srr,Spr,Szr,Spp,Spz,Szz
-	REAL, DIMENSION(:,:,:),ALLOCATABLE :: Ppropx_dummy,Ppropy_dummy,Ppropz_dummy
-
+      REAL, DIMENSION(:,:,:),ALLOCATABLE :: Ppropx_dummy,Ppropy_dummy,Ppropz_dummy
+      INTEGER, DIMENSION(:),ALLOCATABLE, TARGET :: jco,iro,beg,di,di2
       REAL Hs,Tp,Lw,nx_w,ny_w,kabs_w,kx_w,ky_w,om_w
+      REAL, DIMENSION(:),ALLOCATABLE :: LUB,LHS2 
+      REAL, DIMENSION(:,:),ALLOCATABLE, TARGET :: lhs,LUBs
+      INTEGER, DIMENSION(:),ALLOCATABLE, TARGET :: jco3,iro3,beg3,di3 
+      REAL, DIMENSION(:),ALLOCATABLE, TARGET :: lhs3
+      REAL, DIMENSION(:,:,:),ALLOCATABLE :: rhs3
 
  !     REAL, DIMENSION(:,:,:),ALLOCATABLE :: Uf,Vf,Wf
 
@@ -113,12 +125,12 @@
 !       REAL, DIMENSION(:,:,:),ALLOCATABLE :: Uavg,Vavg,Wavg,Cavg,Ravg
 !       REAL, DIMENSION(:,:,:),ALLOCATABLE :: Urms,Vrms,Wrms,Crms,Rrms
 !       REAL, DIMENSION(:,:,:),ALLOCATABLE :: sigU2,sigV2,sigW2,sigC2,sigR2
-      REAL, DIMENSION(:,:,:),ALLOCATABLE :: p,pold
+      REAL, DIMENSION(:,:,:),ALLOCATABLE :: p,pold,Csgrid
       
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: wx,wy,wz,wxold,wyold,wzold,Ppropx,Ppropy,Ppropz
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: wxolder,wyolder,wzolder
-      REAL, DIMENSION(:,:),ALLOCATABLE :: Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new
-      REAL, DIMENSION(:,:),ALLOCATABLE :: Ub1old,Vb1old,Wb1old,Ub2old,Vb2old,Wb2old
+      REAL, DIMENSION(:,:),ALLOCATABLE :: Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new
+      REAL, DIMENSION(:,:),ALLOCATABLE :: Ub1old,Vb1old,Wb1old,Ub2old,Vb2old,Wb2old,Ub3old,Vb3old,Wb3old
       REAL, DIMENSION(:,:),ALLOCATABLE :: Ubcoarse1,Vbcoarse1,Wbcoarse1,Ubcoarse2,Vbcoarse2,Wbcoarse2
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: Cbcoarse1,Cbcoarse2
 
@@ -162,10 +174,11 @@
 ! 	TYPE(gridtype), DIMENSION(1) :: grid
 
 	NAMELIST /simulation/px,imax,jmax,kmax,imax_grid,dr_grid,Rmin,schuif_x,dy,depth,hisfile,restart_dir
+     & ,lim_r_grid,fac_r_grid,jmax_grid,lim_y_grid,fac_y_grid,sym_grid_y,dy_grid
 	NAMELIST /times/t_end,t0_output,dt_output,te_output,tstart_rms,dt_max,dt_ini,time_int,CFL,
      & t0_output_movie,dt_output_movie,te_output_movie
-	NAMELIST /num_scheme/convection,numdiff,diffusion,comp_filter_a,comp_filter_n,CNdiffz,npresIBM
-	NAMELIST /ambient/U_b,V_b,W_b,bcfile,rho_b,SEM,nmax2,nmax1,lm_min,slip_bot,kn,interaction_bed,periodicx,periodicy,
+	NAMELIST /num_scheme/convection,numdiff,diffusion,comp_filter_a,comp_filter_n,CNdiffz,npresIBM,advec_conc
+	NAMELIST /ambient/U_b,V_b,W_b,bcfile,rho_b,SEM,nmax2,nmax1,nmax3,lm_min,lm_min3,slip_bot,kn,interaction_bed,periodicx,periodicy,
      & dpdx,dpdy,W_ox,Hs,Tp,nx_w,ny_w,obst,bc_obst_h,U_b3,V_b3,surf_layer,wallup,bedlevelfile,U_bSEM,V_bSEM,U_w,V_w
 	NAMELIST /plume/W_j,plumetseriesfile,Awjet,Aujet,Avjet,Strouhal,azi_n,kjet,radius_j,Sc,slipvel,outflow_overflow_down,
      & U_j2,plumetseriesfile2,Awjet2,Aujet2,Avjet2,Strouhal2,azi_n2,radius_j2,zjet2,bedplume,radius_inner_j,xj,yj,W_j_powerlaw,
@@ -183,7 +196,16 @@
 	jmax = -999
 	kmax = -999
 	imax_grid=0
-	dr_grid=0.
+	fac_r_grid=-999.
+	lim_r_grid=-999.
+	dr_grid=0.		
+	fac_y_grid=-999.
+	lim_y_grid=-999.
+	jmax_grid=0
+	jmax_grid(1)=1
+	dy_grid=0.
+	sym_grid_y=0
+
 	Rmin = -999.
 	schuif_x = -999.
 	dy = -999.
@@ -211,6 +233,7 @@
 	comp_filter_n = 0
 	CNdiffz = 0
 	npresIBM = 0
+	advec_conc='TVD' !nerdoption, default is 'TVD' alpha-cfl dependent scheme, can also be 'VLE' (TVD Van Leer) or 'NVD' (alpha-cfl dependent scheme via NVD manner)
 	!! ambient:
 	U_b = -999.
 	V_b = -999.
@@ -222,7 +245,9 @@
 	V_bSEM = -999.
 	nmax2 = -999
 	nmax1 = -999
+	nmax3 = -999
 	lm_min = -999.
+	lm_min3 = -999.
 	slip_bot = -999
 	kn = -999.
 	interaction_bed=-999
@@ -371,10 +396,11 @@
 	IF (dr_grid(1).eq.0.) CALL writeerror(6)
 	IF (Rmin<0.) CALL writeerror(7)
 	IF (schuif_x<0.) CALL writeerror(8)
-	IF (dy<0.) CALL writeerror(9)
+	IF (dy<0.and.dy_grid(1).eq.0.) CALL writeerror(9)
 	IF (depth<0.) CALL writeerror(10)
 	IF (mod(jmax,px).ne.0) CALL writeerror(11)
 	IF (mod(kmax,px).ne.0) CALL writeerror(12)
+	IF (sym_grid_y.ne.0.and.sym_grid_y.ne.1) CALL writeerror(13)
 	jmax=jmax/px
 	READ (UNIT=1,NML=times,IOSTAT=ios)
 	!! check input times  
@@ -429,7 +455,9 @@
 	IF (SEM<0) CALL writeerror(44)
 	IF (nmax2<0) CALL writeerror(45)
 	IF (nmax1<0) CALL writeerror(46)
+	IF (nmax3<0) CALL writeerror(620)
 	IF (lm_min<0.) CALL writeerror(47)
+	IF (lm_min3<0) CALL writeerror(621)
 	IF (slip_bot<0) CALL writeerror(48)
 	IF (kn<0.) CALL writeerror(49)
 	IF (interaction_bed<0) CALL writeerror(50)
@@ -633,7 +661,7 @@
 	READ (UNIT=1,NML=LESmodel,IOSTAT=ios)
 	!! check input LESmodel
 	IF (sgs_model.ne.'SSmag'.and.sgs_model.ne.'FSmag'.and.sgs_model.ne.'SWALE'.and.
-     &  sgs_model.ne.'Sigma'.and.sgs_model.ne.'MixLe') CALL writeerror(82)
+     &  sgs_model.ne.'Sigma'.and.sgs_model.ne.'MixLe'.and.sgs_model.ne.'DSmag') CALL writeerror(82)
 	IF (Cs<0.) CALL writeerror(80)
 	IF (Lmix_type<0) CALL writeerror(81)
 	IF (nr_HPfilter<0) CALL writeerror(83)
@@ -756,12 +784,22 @@
 	ALLOCATE(cos_v(0:j1))
 	ALLOCATE(sin_u(0:j1))
 	ALLOCATE(sin_v(0:j1))
+	ALLOCATE(cos_ut(0:jmax*px+1))
+	ALLOCATE(sin_ut(0:jmax*px+1))
+	ALLOCATE(cos_vt(0:jmax*px+1))
+	ALLOCATE(sin_vt(0:jmax*px+1))	
 	ALLOCATE(Ru(0:i1))
 	ALLOCATE(Rp(0:i1))	
 	ALLOCATE(dr(0:i1))
-	ALLOCATE(Lmix(1:imax))
-	ALLOCATE(vol_U(1:imax))
-	ALLOCATE(vol_V(1:imax))
+	ALLOCATE(phivt(0:jmax*px+1))
+	ALLOCATE(phipt(0:jmax*px+1))
+	ALLOCATE(dphi2t(0:jmax*px+1))
+	ALLOCATE(phiv(0:j1))
+	ALLOCATE(phip(0:j1))
+	ALLOCATE(dphi2(0:j1))	
+	ALLOCATE(Lmix2(1:imax,1:jmax))
+	ALLOCATE(Lmix2hat(1:imax,1:jmax))
+	ALLOCATE(vol_V(1:imax,1:jmax*px))
 	ALLOCATE(kbed(0:i1,0:j1))
 	ALLOCATE(kbed2(0:i1,0:px*jmax+1))
 	ALLOCATE(kbedt(0:i1,0:j1))
@@ -792,6 +830,18 @@
 	ALLOCATE(lmxSEM2(nmax2))
 	ALLOCATE(lmySEM2(nmax2))
 	ALLOCATE(lmzSEM2(nmax2))
+	ALLOCATE(llist3(0:i1,0:j1,1:1000))
+	ALLOCATE(AA3(3,3,0:i1,0:j1))
+	ALLOCATE(llmax3(0:i1,0:j1))
+	ALLOCATE(rSEM3(nmax3))
+	ALLOCATE(thetaSEM3(nmax3))
+	ALLOCATE(zSEM3(nmax3))
+	ALLOCATE(xSEM3(nmax3))
+	ALLOCATE(ySEM3(nmax3))
+	ALLOCATE(epsSEM3(3,nmax3))
+	ALLOCATE(wSEM3(nmax3))
+	ALLOCATE(lmrSEM3(nmax3))
+	ALLOCATE(lmzSEM3(nmax3))	
 	ENDIF
 
 	ALLOCATE(azi_angle_p(0:i1,0:j1))
@@ -868,6 +918,7 @@
 ! 	ALLOCATE(sigR2(0:i1,0:j1,0:k1))
 	ALLOCATE(p(1:imax,1:jmax,1:kmax))
 	ALLOCATE(pold(1:imax,1:jmax,1:kmax))
+	ALLOCATE(Csgrid(1:imax,1:jmax,1:kmax))
 	p=0.
 	pold=0.
 	IF (time_int.eq.'AB2'.or.time_int.eq.'AB3'.or.time_int.eq.'ABv') THEN
@@ -898,6 +949,12 @@
 	ALLOCATE(Ub2old(0:j1,0:k1))
 	ALLOCATE(Vb2old(0:j1+1,0:k1))
 	ALLOCATE(Wb2old(0:j1,0:k1))    
+	ALLOCATE(Ub3new(0:i1,0:j1))	
+	ALLOCATE(Vb3new(0:i1,0:j1))	
+	ALLOCATE(Wb3new(0:i1,0:j1))	
+	ALLOCATE(Ub3old(0:i1,0:j1))	
+	ALLOCATE(Vb3old(0:i1,0:j1))	
+	ALLOCATE(Wb3old(0:i1,0:j1))	
 	ALLOCATE(Ubcoarse1(1:imax,1:kmax))
 	ALLOCATE(Vbcoarse1(1:imax,1:kmax))
 	ALLOCATE(Wbcoarse1(1:imax,1:kmax))
@@ -924,6 +981,17 @@
 	ALLOCATE(Tkk(1:jmax*px))
 	ALLOCATE(Xkk(kmax,jmax))
 	ALLOCATE(Tii(jmax*px,kmax/px))
+	nm1=imax*jmax*px*5-2*imax-2*jmax*px !imax*jmax*px*3-1*imax-1*jmax*px !
+	ALLOCATE(jco(nm1)) !col nr CSR 
+	ALLOCATE(iro(nm1)) !row nr CSR 
+	ALLOCATE(di(imax*jmax*px)) !diag nr CSR
+	ALLOCATE(di2(imax*jmax*px+1)) !diag nr CSR
+	ALLOCATE(beg(imax*jmax*px+1)) !begin new line CSR
+	ALLOCATE(LUB(0:nm1)) !LU of LHS
+	ALLOCATE(LUBs(0:nm1,kmax/px)) !save LU of LHS
+	ALLOCATE(LHS2(nm1)) !LHS
+	ALLOCATE(lhs(nm1,kmax/px)) !LHS
+
 
 ! 	ALLOCATE(UT(0:i1,0:j1,0:k1))
 ! 	ALLOCATE(UP(0:i1,0:k1))
@@ -941,7 +1009,13 @@
 	Ub2old=0.
 	Vb2old=0.
 	Wb2old=0.
-
+	Ub3old=0.
+	Vb3old=0.
+	Wb3old=0.
+	Ub3new=0.
+	Vb3new=0.
+	Wb3new=0.	
+	
 	tmax_inUpuntTSHD=0
 	tmax_inVpuntTSHD=0
 	tmax_inPpuntTSHD=0

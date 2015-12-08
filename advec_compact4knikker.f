@@ -18,7 +18,7 @@
 
 
 
-      subroutine advecu_COM4(putout,Uvel,Vvel,Wvel,RHO,Ru,Rp,dr,dphi,dz,
+      subroutine advecu_COM4(putout,Uvel,Vvel,Wvel,RHO,Ru,Rp,dr,phivt,dz,
      +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 
       implicit none
@@ -41,7 +41,7 @@ c
 c          putout            : "empty" (initialised to zero)
 c          Uvel,Vvel,Wvel    : contain velocities at former timestep
 c          Utmp              : contains velocity at oldest timestep
-c          dr,dphi,dz        : grid spacing in r, phi and z-direction
+c          dr,phiv,dz        : grid spacing in r, phi and z-direction
 c          i1,j1,k1          : parameters for array-dimensions
 c          ib,ie,jb,je,kb,ke : range of gridpoints for which the
 c                              advection has to be calculated
@@ -59,7 +59,7 @@ c********************************************************************
       integer  rank,px
       real     putout(0:i1,0:j1,0:k1),Uvel(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
-     +         dr(0:i1),dphi,dz,Ru(0:i1),Rp(0:i1)
+     +         dr(0:i1),phivt(0:je*px+1),dz,Ru(0:i1),Rp(0:i1)
       real rho(0:i1,0:j1,0:k1),uu(0:i1,0:j1,0:k1)
 
       real rhoip,rhoim,rhojp,rhojm,rhokp,rhokm
@@ -270,10 +270,10 @@ c********************************************************************
 
 		ruv_I_T(0:je*px)=ru_I_T(0:je*px)*v_I_T(i,0:je*px,k)
 
-		ddy_1jepx(1)=(-ruv_I_T(0)+2.*ruv_I_T(1)-ruv_I_T(2))/(Ru(i)*dphi) 
-		ddy_1jepx(je*px)=(ruv_I_T(je*px)-2.*ruv_I_T(je*px-1)+ruv_I_T(je*px-2))/(Ru(i)*dphi)
+		ddy_1jepx(1)=(-ruv_I_T(0)+2.*ruv_I_T(1)-ruv_I_T(2))/(Ru(i)*(phivt(1)-phivt(0)))  !no idea wether indices of phivt are correct, LdW 17-11-2015
+		ddy_1jepx(je*px)=(ruv_I_T(je*px)-2.*ruv_I_T(je*px-1)+ruv_I_T(je*px-2))/(Ru(i)*(phivt(je*px)-phivt(je*px-1)))
 		do j=2,je*px-1 
-			ddy_1jepx(j)=const_12_11*(ruv_I_T(j)-ruv_I_T(j-1))/(Ru(i)*dphi)
+			ddy_1jepx(j)=const_12_11*(ruv_I_T(j)-ruv_I_T(j-1))/(Ru(i)*(phivt(j)-phivt(j-1)))
 		enddo
                CALL solve_tridiag(dfy_T(1:je*px),aay_1jepx,bby_1jepx,ccy_1jepx,ddy_1jepx,je*px)   !dfy on Uvel(i,j,k) location -> 1:je*px
                putout_T(i,1:je*px,k)=-dfy_T(1:je*px)
@@ -302,7 +302,7 @@ c********************************************************************
       return
       end
 
-      subroutine advecv_COM4(putout,Uvel,Vvel,Wvel,RHO,Ru,Rp,dr,dphi,dz,
+      subroutine advecv_COM4(putout,Uvel,Vvel,Wvel,RHO,Ru,Rp,dr,phivt,dz,
      +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
       implicit none
       include 'mpif.h'
@@ -323,7 +323,7 @@ c
 c          putout            : "empty" (initialised to zero)
 c          Uvel,Vvel,Wvel    : contain velocities at former timestep
 c          Vtmp              : contains velocity at oldest timestep
-c          dr,dphi,dz        : grid spacing in r, phi and z-direction
+c          dr,phivt,dz        : grid spacing in r, phi and z-direction
 c          i1,j1,k1          : parameters for array-dimensions
 c          ib,ie,jb,je,kb,ke : range of gridpoints for which the
 c                              advection has to be calculated
@@ -341,7 +341,7 @@ c********************************************************************
       integer  rank,px
       real     putout(0:i1,0:j1,0:k1),Uvel(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
-     +         dr(0:i1),dphi,dz,Ru(0:i1),Rp(0:i1)
+     +         dr(0:i1),phivt(0:je*px+1),dz,Ru(0:i1),Rp(0:i1)
       real rho(0:i1,0:j1,0:k1)
       real rhoip,rhoim,rhojp,rhojm,rhokp,rhokm
 
@@ -522,12 +522,13 @@ c********************************************************************
 		rvv_T(1:je*px)=rvv_T(1:je*px)*rvv_T(1:je*px)*rho_T(i,1:je*px,k)
 !		ddy_0jepx(0)=0.
 !		ddy_0jepx(je*px)=0.
-!		ddy_0jepx(0)=(-25.*rvv_T(1)+26.*rvv_T(2)-rvv_T(3))/(Rp(i)*dphi)
-!		ddy_0jepx(je*px)=(+25.*rvv_T(je*px)-26.*rvv_T(je*px-1)+rvv_T(je*px-2))/(Rp(i)*dphi)
-		ddy_0jepx(0)=8./3.*(-v_T(i,0,k)**2*0.5*(rho_T(i,0,k)+rho_T(i,1,k))+rvv_T(2))/(Rp(i)*dphi)
-		ddy_0jepx(je*px)=8./3.*(v_T(i,je*px,k)**2*0.5*(rho_T(i,je*px,k)+rho_T(i,je*px+1,k))-rvv_T(je*px-1))/(Rp(i)*dphi)
+!		ddy_0jepx(0)=(-25.*rvv_T(1)+26.*rvv_T(2)-rvv_T(3))/(Rp(i)*(phivt(1)-phivt(0)))
+!		ddy_0jepx(je*px)=(+25.*rvv_T(je*px)-26.*rvv_T(je*px-1)+rvv_T(je*px-2))/(Rp(i)*(phivt(j)-phivt(jm)))
+		ddy_0jepx(0)=8./3.*(-v_T(i,0,k)**2*0.5*(rho_T(i,0,k)+rho_T(i,1,k))+rvv_T(2))/(Rp(i)*(phivt(1)-phivt(0))) !no idea wether phivt indices are correct, LdW 17/11/2015
+		ddy_0jepx(je*px)=8./3.*(v_T(i,je*px,k)**2*0.5*(rho_T(i,je*px,k)+rho_T(i,je*px+1,k))-rvv_T(je*px-1))
+     & /(Rp(i)*(phivt(je*px)-phivt(je*px-1)))
 		do j=1,je*px-1
-			ddy_0jepx(j)=const_12_11*(rvv_T(j+1)-rvv_T(j))/(Rp(i)*dphi)
+			ddy_0jepx(j)=const_12_11*(rvv_T(j+1)-rvv_T(j))/(Rp(i)*(phivt(j+1)-phivt(j)))
 		enddo
 		CALL solve_tridiag(dfy_T(i,0:je*px,k),aay_0jepx,bby_0jepx,ccy_0jepx,ddy_0jepx,je*px+1)   ! dfy on Uvel(i,j,k) location	-> 1:je*px
 	  enddo
@@ -644,7 +645,7 @@ c********************************************************************
        return
       end
 
-      subroutine advecw_COM4(putout,Uvel,Vvel,Wvel,RHO,Ru,Rp,dr,dphi,dz,
+      subroutine advecw_COM4(putout,Uvel,Vvel,Wvel,RHO,Ru,Rp,dr,phivt,dz,
      +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
       implicit none
 
@@ -666,7 +667,7 @@ c
 c          putout            : "empty" (initialised to zero)
 c          Uvel,Vvel,Wvel    : contain velocities at former timestep
 c          Wtmp              : contains velocity at oldest timestep
-c          dr,dphi,dz        : grid spacing in r, phi and z-direction
+c          dr,phivt,dz        : grid spacing in r, phi and z-direction
 c          i1,j1,k1          : parameters for array-dimensions
 c          ib,ie,jb,je,kb,ke : range of gridpoints for which the
 c                              advection has to be calculated
@@ -684,7 +685,7 @@ c********************************************************************
       integer  rank,px
       real     putout(0:i1,0:j1,0:k1),Uvel(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
-     +         dr(0:i1),dphi,dz,Ru(0:i1),Rp(0:i1)
+     +         dr(0:i1),phivt(0:je*px+1),dz,Ru(0:i1),Rp(0:i1)
       real rho(0:i1,0:j1,0:k1)
       real rhoip,rhoim,rhojp,rhojm
 
@@ -854,10 +855,10 @@ c********************************************************************
 
 		rwv_II_T(0:je*px)=rw_II_T(0:je*px)*v_II_T(i,0:je*px,k)
 		!! diff_y drwv/(rdphi) 
-		ddy_1jepx(1)=(-rwv_II_T(0)+2.*rwv_II_T(1)-rwv_II_T(2))/(Rp(i)*dphi)
-		ddy_1jepx(je*px)=(rwv_II_T(je*px)-2.*rwv_II_T(je*px-1)+rwv_II_T(je*px-2))/(Rp(i)*dphi)
+		ddy_1jepx(1)=(-rwv_II_T(0)+2.*rwv_II_T(1)-rwv_II_T(2))/(Rp(i)*(phivt(1)-phivt(0)))  !no idea wether indices of phivt are correct, LdW 17-11-2015
+		ddy_1jepx(je*px)=(rwv_II_T(je*px)-2.*rwv_II_T(je*px-1)+rwv_II_T(je*px-2))/(Rp(i)*(phivt(je*px)-phivt(je*px-1)))
  		do j=2,je*px-1
-			ddy_1jepx(j)=const_12_11*(rwv_II_T(j)-rwv_II_T(j-1))/(Rp(i)*dphi)
+			ddy_1jepx(j)=const_12_11*(rwv_II_T(j)-rwv_II_T(j-1))/(Rp(i)*(phivt(j)-phivt(j-1)))
 		enddo
 		CALL solve_tridiag(dfy_T(i,1:je*px,k),aay_1jepx,bby_1jepx,ccy_1jepx,ddy_1jepx,je*px)	! diff_y  -> W-loc -> 1:je*px
 	  enddo

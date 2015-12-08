@@ -1,2 +1,1 @@
-      svnversion = '12158'
-      svnurl = ''
+      svnversion = '1M'
