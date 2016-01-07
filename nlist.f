@@ -87,7 +87,7 @@
       INTEGER*2, DIMENSION(:),ALLOCATABLE :: i_inVpunt_tauTSHD,j_inVpunt_tauTSHD,k_inVpunt_tauTSHD
       INTEGER*2, DIMENSION(:),ALLOCATABLE :: i_inVpunt_rudder,j_inVpunt_rudder,k_inVpunt_rudder
       INTEGER*2, DIMENSION(:),ALLOCATABLE :: i_inWpunt_suction,j_inWpunt_suction,k_inWpunt_suction
-      REAL, DIMENSION(:),ALLOCATABLE :: Ubot_TSHD,Vbot_TSHD
+      REAL, DIMENSION(:),ALLOCATABLE :: Ubot_TSHD,Vbot_TSHD,facIBMu,facIBMv,facIBMw
       INTEGER*8, DIMENSION(:),ALLOCATABLE :: pt,pt3
 
       INTEGER*2, DIMENSION(:,:,:),ALLOCATABLE :: llist1,llist2,llist3

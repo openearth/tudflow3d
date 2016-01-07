@@ -43,8 +43,8 @@ c******************************************************************
 	   maxh_obst=MAX(maxh_obst,ob(n)%height)
 	ENDDO
 	kmaxTSHD_ind=kmax+2 !FLOOR(Draught/dz)+CEILING(maxh_obst/dz)+3 
-	kmaxTSHD_ind=MIN(kmax+2,kmaxTSHD_ind) !used to conservatively allocate dummy_ind TSHD hull
-	kmaxTSHD_ind=2*kmaxTSHD_ind
+!	kmaxTSHD_ind=MIN(kmax+2,kmaxTSHD_ind) !used to conservatively allocate dummy_ind TSHD hull
+!	kmaxTSHD_ind=2*kmaxTSHD_ind
 
         ii=(i1+1)*(j1+1)*(kmaxTSHD_ind)
         ALLOCATE(i_inPpuntTSHD(ii))
@@ -59,7 +59,9 @@ c******************************************************************
         ALLOCATE(i_inWpuntTSHD(ii))
         ALLOCATE(j_inWpuntTSHD(ii))
         ALLOCATE(k_inWpuntTSHD(ii))
-
+        ALLOCATE(facIBMu(ii))
+		ALLOCATE(facIBMv(ii))
+		ALLOCATE(facIBMw(ii))
 	
 	Ru(0)=Rmin
 
@@ -325,18 +327,18 @@ c******************************************************************
 !		ENDIF
 
 	else !periodic in x direction:
-!	CALL SYSTEM_CLOCK(COUNT=clock)
-!	CALL RANDOM_SEED(size = n)
-!	ALLOCATE(seed(n))
-!	CALL SYSTEM_CLOCK(COUNT=clock)
-!	seed = clock + 37 * (/ (i - 1, i = 1, n) /)
-!	CALL RANDOM_SEED(PUT = seed)
+	CALL SYSTEM_CLOCK(COUNT=clock)
+	CALL RANDOM_SEED(size = n)
+	ALLOCATE(seed(n))
+	CALL SYSTEM_CLOCK(COUNT=clock)
+	seed = clock + 37 * (/ (i - 1, i = 1, n) /)
+	CALL RANDOM_SEED(PUT = seed)
 		do n=1,4
 		  do k=0,k1
 		    do j=0,j1
 		    call random_number(ampli)
 		      do i=0,i1
-			Unew(i,j,k)=Unew(i,j,k)+ampli/2.*sin(2.*pi*Ru(i)/(0.5*(depth-bc_obst_h)*REAL(n)))
+			Vnew(i,j,k)=Vnew(i,j,k)+ampli/2.*sin(2.*pi*Ru(i)/(0.5*(depth-bc_obst_h)*REAL(n)))
 			Wnew(i,j,k)=Wnew(i,j,k)+ampli/2.*cos(2.*pi*Ru(i)/(0.5*(depth-bc_obst_h)*REAL(n)))
 		      enddo
 		    enddo
@@ -364,8 +366,12 @@ c******************************************************************
 !		call random_number(Unew) ! uniform distribution 0,1
 !		call random_number(Vnew) ! uniform distribution 0,1
 !		call random_number(Wnew) ! uniform distribution 0,1		
-		Unew=Unew*sqrt(dpdx*(depth-bc_obst_h)/rho_b)*40. !scale with 20u_tau		
-		Vnew=0. !Vnew*sqrt(dpdx*(depth-bc_obst_h)/rho_b)*20. !scale with 20u_tau		
+		Vnew=Vnew*sqrt(dpdx*(depth-bc_obst_h)/rho_b)*4. !scale with 20u_tau		
+		if (LOA>0.) then ! apply U_b as bc also for periodic sims, so to keep random fluctuations alive
+			Unew=-U_b 
+		else
+			Unew=U_b
+		endif
 		Wnew=Wnew*sqrt(dpdx*(depth-bc_obst_h)/rho_b)*4. !scale with 20u_tau
 		Uold=Unew
 		Vold=Vnew
@@ -1366,7 +1372,7 @@ C ...  Locals
 	INTEGER*2 i_inVpunt_tauTSHD_dummy((i1+1)*(j1+1)*px)
 	INTEGER*2 k_inPpuntTSHD_dummy((i1+1)*(j1+1)*px*kmaxTSHD_ind),k_inVpuntTSHD_dummy((i1+1)*(j1+1)*px*kmaxTSHD_ind)
 	INTEGER*2 k_inVpunt_tauTSHD_dummy((i1+1)*(j1+1)*px),kbed3(0:i1,0:j1)
-	REAL adj_ment,zbed3(1:imax,0:j1)
+	REAL adj_ment,zbed3(0:i1,0:j1),zbed4(0:i1+1,0:j1+1),cbb(0:i1),zbedcell,zbotcell
 
 	tmax_inUpuntTSHD=0
 	tmax_inVpuntTSHD=0
@@ -2303,10 +2309,9 @@ C ...  Locals
 	ENDDO
 
 	
+	if (.false.) then ! true = 0th order IBM staircase manner, false = 1st order IBM scaling with volume grid cell inside object
 	if (bedlevelfile.ne.'') then
 
-	! read ubcoarse2 (0:j1,1:kmax) -> in matlab index 0 does not exist, so netcdffile ubc2(1:j1+1,1:kmax)
-	! ubc2 consists inflow for all px domains!
        	status2 = nf90_open(bedlevelfile, nf90_NoWrite, ncid) 
 	IF (status2/= nf90_noerr) THEN
 		write(*,*),'bedlevelfile =',bedlevelfile
@@ -2426,6 +2431,184 @@ C ...  Locals
 		enddo
 	       enddo
 	endif
+	else ! 1st order IBM with facIBM scaling with percentage volume of grid cell captured in immersed object
+	if (bedlevelfile.ne.'') then
+
+       	status2 = nf90_open(bedlevelfile, nf90_NoWrite, ncid) 
+	IF (status2/= nf90_noerr) THEN
+		write(*,*),'bedlevelfile =',bedlevelfile
+		CALL writeerror(606)
+	ENDIF
+	call check( nf90_inq_varid(ncid, "zbed",rhVarid) )
+	call check( nf90_get_var(ncid,rhVarid,zbed3(1:imax,0:j1),start=(/1,rank*jmax+1/),count=(/imax,jmax+2/)) )
+	call check( nf90_close(ncid) )
+	
+	! bedlevel file obstacles have no i=0 or i=i1 in zbed3, but do have j=0 and j=j1
+	kbed3=0
+	!! search for zbed and kbed on each proc (j=0,j1): (used for deposition and bc in solver [adjusted for ob(n)%zbottom])
+	      do j=0,j1 
+	       do i=0,imax  !including i1 strangely gives crash (13/4/15) !1,imax !0,i1
+				kbed3(i,j)=FLOOR(zbed3(i,j)/dz)
+				kbed3(i,j)=MAX(0,kbed3(i,j))
+				kbed3(i,j)=MIN(k1,kbed3(i,j))
+				zbed(i,j)=MAX(zbed(i,j),zbed3(i,j)) !zero without obstacle, otherwise max of all obstacles at i,j  
+		enddo
+	       enddo
+		facIBMu=0. !initialise all facIBM zero because for all ibm cells velocity must be zero
+		facIBMv=0.
+		facIBMw=0.
+c get stuff from other CPU's
+
+	zbed4(0:i1,0:j1)=zbed(0:i1,0:j1)	  
+	!call shiftf_l2(zbed4,cbf) 
+	call shiftb_l2(zbed4,cbb) 
+	if (periodicy.eq.0.or.periodicy.eq.2) then
+		if (rank.eq.0) then ! boundaries in j-direction
+		   do i=1,imax
+		   !zbed4(i,-1) = zbed4(i,1) !cbf(i,k)
+		   zbed4(i,j1) =cbb(i) 
+		   enddo
+		elseif (rank.eq.px-1) then
+		   do i=1,imax
+		   !zbed4(i,-1) = cbf(i)
+		   zbed4(i,j1+1) =zbed4(i,jmax) !cbb(i,k) 
+		   enddo
+		else
+		   do i=1,imax
+		   !zbed4(i,-1) = cbf(i)
+		   zbed4(i,j1+1) =cbb(i) 
+		   enddo
+		endif
+	else
+	   do i=1,imax
+		   !zbed4(i,-1) = cbf(i)
+		   zbed4(i,j1+1) =cbb(i) 
+	   enddo
+	endif
+	if (periodicx.eq.1) then
+		zbed4(i1,0:j1)=zbed4(1,0:j1)
+		zbed4(i1+1,0:j1)=zbed4(2,0:j1)
+	else
+		zbed4(i1,0:j1)=zbed4(imax,0:j1)
+		zbed4(i1+1,0:j1)=zbed4(i1,0:j1)
+	endif
+	
+		
+      !! Search for P,V:
+      tel1=tmax_inPpuntTSHD
+      tel2=tmax_inVpuntTSHD
+      do k=0,k1
+       do i=0,i1  
+	in=.false.
+        do j=j1,0,-1       
+	  IF (k-1.le.kbed3(i,j).and.kbed3(i,j).gt.kbed(i,j)) THEN ! new obstacle:
+		inout=1
+	  ELSE 
+	 	inout=0
+	  ENDIF
+	  if (inout.eq.1) then
+	      tel1=tel1+1
+	      i_inPpuntTSHD(tel1)=i ! Ppunt
+	      j_inPpuntTSHD(tel1)=j
+  	      k_inPpuntTSHD(tel1)=k
+      	      tel2=tel2+1
+	      i_inVpuntTSHD(tel2)=i ! Vpunt
+	      j_inVpuntTSHD(tel2)=j
+	      k_inVpuntTSHD(tel2)=k
+		  zbotcell=(k-1)*dz
+		  zbedcell=0.5*(zbed4(i,j)+zbed4(i,j+1))
+		  facIBMv(tel2)=1.-max(min((zbedcell-zbotcell)/dz,1.),0.)
+	    in=.true.
+	  endif
+	enddo
+!	add one Vpunt extra because staggered:
+	if (in.and.j_inVpuntTSHD_dummy(tel2)>0) then !always if a jet-point is found an extra Vpunt must be included
+	  tel2=tel2+1
+	  i_inVpuntTSHD(tel2)=i_inVpuntTSHD(tel2-1)
+	  j_inVpuntTSHD(tel2)=j_inVpuntTSHD(tel2-1)-1
+	  k_inVpuntTSHD(tel2)=k_inVpuntTSHD(tel2-1)
+		  zbotcell=(k-1)*dz
+		  zbedcell=0.5*(zbed4(i,j-1)+zbed4(i,j))
+		  facIBMv(tel2)=1.-max(min((zbedcell-zbotcell)/dz,1.),0.)
+	endif
+       enddo
+      enddo
+      tmax_inPpuntTSHD=tel1
+      tmax_inVpuntTSHD=tel2
+
+      !! Search for W:
+      tel1=tmax_inWpuntTSHD
+      do j=0,j1 
+       do i=0,i1  
+	in=.false.
+        do k=0,k1 ! one extra in vertical direction for W  
+	  IF (k-1.le.kbed3(i,j).and.kbed3(i,j).gt.kbed(i,j)) THEN ! new obstacle:
+		inout=1
+	  ELSE 
+	 	inout=0
+	  ENDIF
+	  if (inout.eq.1) then
+	      tel1=tel1+1
+	      i_inWpuntTSHD(tel1)=i ! Wpunt
+	      j_inWpuntTSHD(tel1)=j
+  	      k_inWpuntTSHD(tel1)=k
+		  zbotcell=(k-1)*dz+0.5*dz
+		  zbedcell=zbed4(i,j)
+		  facIBMw(tel1)=1.-max(min((zbedcell-zbotcell)/dz,1.),0.)
+		  
+	      in=.true.
+!	      kbed(i,j)=MAX(kbed(i,j),FLOOR(ob(n)%height/dz)) !zero without obstacle, otherwise max of all obstacles at i,j
+!	      zbed(i,j)=MAX(zbed(i,j),ob(n)%height) !zero without obstacle, otherwise max of all obstacles at i,j  
+	  endif
+	enddo
+       enddo
+      enddo
+      tmax_inWpuntTSHD=tel1
+
+      !! Search for U: (search in i-dir)
+      tel2=tmax_inUpuntTSHD
+      do k=0,k1
+       do j=0,j1
+	in=.false.
+        do i=i1,0,-1 
+	  IF (k-1.le.kbed3(i,j).and.kbed3(i,j).gt.kbed(i,j)) THEN ! new obstacle:
+		inout=1
+	  ELSE 
+	 	inout=0
+	  ENDIF
+	  if (inout.eq.1) then
+	    	tel2=tel2+1
+		i_inUpuntTSHD(tel2)=i  ! Upunt is U
+		j_inUpuntTSHD(tel2)=j
+		k_inUpuntTSHD(tel2)=k
+		  zbotcell=(k-1)*dz
+		  zbedcell=0.5*(zbed4(i,j)+zbed4(i+1,j))
+		  facIBMu(tel2)=1.-max(min((zbedcell-zbotcell)/dz,1.),0.)		
+                in=.true.
+	  endif
+	enddo
+!	add one Upunt extra because staggered:
+	if (in.and.i_inUpuntTSHD(tel2)>0) then !always if a TSHD-point is found an extra Upunt must included
+	  tel2=tel2+1
+	  i_inUpuntTSHD(tel2)=i_inUpuntTSHD(tel2-1)-1
+	  j_inUpuntTSHD(tel2)=j_inUpuntTSHD(tel2-1)
+	  k_inUpuntTSHD(tel2)=k_inUpuntTSHD(tel2-1)
+		  zbotcell=(k-1)*dz
+		  zbedcell=0.5*(zbed4(i-1,j)+zbed4(i,j))
+		  facIBMu(tel2)=1.-max(min((zbedcell-zbotcell)/dz,1.),0.)			  
+	endif
+       enddo
+      enddo
+      tmax_inUpuntTSHD=tel2
+
+		!! update kbed on each proc (j=0,j1) with kbed3 (used for deposition and bc in solver [adjusted for ob(n)%zbottom])
+	      do j=0,j1 
+	       do i=0,imax !including i1 strangely gives crash (13/4/15) !1,imax !0,i1
+	          kbed(i,j)=MAX(kbed(i,j),kbed3(i,j)) !zero without obstacle, otherwise max of all obstacles at i,j  
+		enddo
+	       enddo
+	endif
+	endif	
 	
       end
 

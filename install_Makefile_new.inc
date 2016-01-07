@@ -76,7 +76,9 @@ SCALAP = /usr/local/intel/compiler11_official/11.1/072/mkl/lib/em64t/libmkl_blas
 MPI_ROOT = /usr/local/mpich2/1.4.1p1
 LIBPAR = $(SCALAP) -L${MPI_ROOT}/lib -lmpich -lpthread -lrt -i-static
 INCPAR = -I/usr/local/mpich2/1.4.1p1/include/
-
+#MPI_ROOT ==/usr/local/openmpi-1.10.1
+#LIBPAR = $(SCALAP) -L${MPI_ROOT}/lib -lpthread -lrt -i-static
+#INCPAR = -I/usr/local/openmpi-1.10.1/include
 
 INCSEQ = -I$(topdir)/libseq
 LIBSEQ  =  -L$(topdir)/libseq -lmpiseq

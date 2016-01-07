@@ -805,19 +805,19 @@ c get stuff from other CPU's
  	    i=i_inWpuntTSHD(t)
  	    j=j_inWpuntTSHD(t)		
  	    k=k_inWpuntTSHD(t)		
-	    Wbound(i,j,k)=0.
+	    Wbound(i,j,k)=facIBMw(t)*Wbound(i,j,k) !0.
 	  enddo
 	  do t=1,tmax_inUpuntTSHD
  	    i=i_inUpuntTSHD(t)
  	    j=j_inUpuntTSHD(t)		
  	    k=k_inUpuntTSHD(t)		
-	    Ubound(i,j,k)=0.
+	    Ubound(i,j,k)=facIBMu(t)*Ubound(i,j,k) !0.
 	  enddo
 	  do t=1,tmax_inVpuntTSHD
  	    i=i_inVpuntTSHD(t)
  	    j=j_inVpuntTSHD(t)		
  	    k=k_inVpuntTSHD(t)		
-	    Vbound(i,j,k)=0.
+	    Vbound(i,j,k)=facIBMv(t)*Vbound(i,j,k) !0.
 	  enddo
 	  do t=1,tmax_inVpunt_rudder ! apply rudder 
  	    i=i_inVpunt_rudder(t)
@@ -1463,19 +1463,19 @@ c get stuff from other CPU's
  	    i=i_inWpuntTSHD(t)
  	    j=j_inWpuntTSHD(t)		
  	    k=k_inWpuntTSHD(t)		
-	    Wbound(i,j,k)=0.
+	    Wbound(i,j,k)=facIBMw(t)*Wbound(i,j,k) !0.
 	  enddo
 	  do t=1,tmax_inUpuntTSHD
  	    i=i_inUpuntTSHD(t)
  	    j=j_inUpuntTSHD(t)		
  	    k=k_inUpuntTSHD(t)		
-	    Ubound(i,j,k)=0.
+	    Ubound(i,j,k)=facIBMu(t)*Ubound(i,j,k) !0.
 	  enddo
 	  do t=1,tmax_inVpuntTSHD
  	    i=i_inVpuntTSHD(t)
  	    j=j_inVpuntTSHD(t)		
  	    k=k_inVpuntTSHD(t)		
-	    Vbound(i,j,k)=0.
+	    Vbound(i,j,k)=facIBMv(t)*Vbound(i,j,k) !0.
 	  enddo
 	  do i=0,i1 ! prescribe UTSHD in obstacle:
 	    do j=0,j1

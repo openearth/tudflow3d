@@ -321,15 +321,17 @@
 			if (mod(istep,10) .eq.0) then   
 				write(*,'(a,f10.4,a,f10.4,a,f8.2,a)') ' # Time: ',time_np,' s. of ',t_end,' s ',100.*time_np/t_end,' %   #'
 				WRITE(*,'(a,i10.0,a,f9.6,a)') ' # Timestep: ',istep, ' dt : ',dt,' s,           #' 			
+				call cpu_time(cput10b)
+		write(*,'(a,f6.3,a,f6.3,a,f5.2,a)'),' # CPU t=',NINT((cput10b-cput10a)*1000.)/1000.,'s, 1x pois=',
+     &   NINT((cput11b-cput11a)*1000.)/1000.,'s = ',NINT(10000.*(cput11b-cput11a)/(cput10b-cput10a))/100.,
+     &'%          #'				
 			endif
 		endif
 		time_nm = time_n
 		time_n = time_np
 		time_np  = time_np  + dt
 	  if (rank.eq.0) then		
-		call cpu_time(cput10b)
-		write(*,'(a,i8,a,f6.3,a,f6.3,a,f5.2,a)'),'timestep:',istep,' ,cpu t=',NINT((cput10b-cput10a)*1000.)/1000.,'s, 1x pois=',
-     &   NINT((cput11b-cput11a)*1000.)/1000.,'s = ',NINT(10000.*(cput11b-cput11a)/(cput10b-cput10a))/100.,'%'
+
 	  endif	  
       enddo
 !	if (time_n.ge.t_output) then
