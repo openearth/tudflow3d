@@ -935,6 +935,10 @@
 		ALLOCATE(ccold(nfrac,0:i1,0:j1,0:k1))
 		ALLOCATE(ccbot(nfrac,0:i1,0:j1))
 		ALLOCATE(ccoldbot(nfrac,0:i1,0:j1))
+		
+		wxolder=0.
+		wyolder=0.
+		wzolder=0.
 	ENDIF
 
 	ALLOCATE(Ub1new(0:i1,0:k1))

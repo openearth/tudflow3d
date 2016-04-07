@@ -591,18 +591,16 @@ c
       implicit none
 !       include 'param.txt'
 !       include 'common.txt'
-      integer  ib,ie,jb,je,kb,ke,n,t
+      integer  ib,ie,jb,je,kb,ke,n,t,kpp,kp,km
       real     doldc(nfrac,0:i1,0:j1,0:k1),dnewc(nfrac,0:i1,0:j1,0:k1)
       real     dold(0:i1,0:j1,0:k1),dnew(0:i1,0:j1,0:k1)
-      real     wsed(nfrac,0:i1,0:j1,0:k1),wfluid(0:i1,0:j1,0:k1),W_km_sum(0:i1,0:j1,0:k1)
+      real     wsed(nfrac,0:i1,0:j1,0:k1),wfluid(0:i1,0:j1,0:k1),W_km_sum(0:i1,0:j1,0:k1),c_sum(0:i1,0:j1,0:k1)
 	real*8 pplus(imax,kmax)
 	real fAB3_1,fAB3_2,fAB3_3,fAB3_4,facAB3_1,facAB3_2,facAB3_3,facAB3_4
 	real dist,timeAB_desired(1:4)
-	
-
-!	real     Diffcof(0:i1,0:j1,0:k1)
-
-!	Diffcof=ekm/Sc/Rnew 
+	real dnewcbot(nfrac,0:i1,0:j1)	
+	real aaa(0:k1),bbb(0:k1),ccc(0:k1),ekm_min,ekm_plus,rhss(0:k1)
+	real utr(0:i1,0:j1,0:k1),vtr(0:i1,0:j1,0:k1),wtr(0:i1,0:j1,0:k1)	
 
 c********************************************************************
 c     CALCULATE coefficients for AB3 interpolation with variable dt
@@ -617,10 +615,14 @@ c********************************************************************
 		timeAB_desired(i)=time_n-(i-1)*dt
 	enddo
 
-	if (istep.lt.5) then
-	   facAB3_1=1.
-	   facAB3_2=0.
-	   facAB3_3=0.
+	if (istep.lt.5) then !start with standard AB3
+!	   facAB3_1=1.
+!	   facAB3_2=0.
+!	   facAB3_3=0.
+!	   facAB3_4=0.
+	   facAB3_1=23./12.
+	   facAB3_2=-4./3.
+	   facAB3_3=5./12.
 	   facAB3_4=0.
 	else
 
@@ -654,11 +656,11 @@ c********************************************************************
 		facAB3_3=facAB3_3+fAB3_3*5./12.
 		facAB3_4=fAB3_4*5./12.
 
-
-!		write(*,*) 'rank,istep,f1,f2,f3,f4',rank,istep,facAB3_1,facAB3_2,facAB3_3,facAB3_4
 	endif
 
 
+	dcdt = 0.
+	Wfluid = 0.
 c********************************************************************
 c     CALCULATE slipvelocity
 c********************************************************************
@@ -691,30 +693,87 @@ c********************************************************************
 c********************************************************************
 c     CALCULATE advection, diffusion Concentration
 c********************************************************************
-	  do n=1,nfrac
-	      call advecc_TVD2(dnewc(n,:,:,:),cnew(n,:,:,:),Unew,Vnew,Wsed(n,:,:,:),rnew,Ru,Rp,dr,phiv,phipt,dz,
-     +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)
-	      call diffc_CDS2 (dnewc(n,:,:,:),Cnew(n,:,:,:),Diffcof,
-     +            ib,ie,jb,je,kb,ke)
-
-!		dcdt(n,:,:,:) =cnew(n,:,:,:) + dt*(1.5*dnewc(n,:,:,:)-0.5*cc(n,:,:,:)) !AB2
-		dcdt(n,:,:,:) =cnew(n,:,:,:) + dt*dnewc(n,:,:,:)                       !EE1
-		call bound_c(dcdt(n,:,:,:),frac(n)%c,n) ! bc for intermediate dcdt
-		cc(n,:,:,:)=dnewc(n,:,:,:)
-	  enddo
-
 !	  do n=1,nfrac
-!	      call advecc_TVD(dnewc(n,:,:,:),cnew(n,:,:,:),Unew,Vnew,Wsed(n,:,:,:),rnew,Ru,Rp,dr,phiv,dz,
-!     +            i1,j1,k1,ib,ie,jb,je,kb,ke)
-!	      call diffc (dnewc(n,:,:,:),Cnew(n,:,:,:),Diffcof,
+!	      call advecc_TVD2(dnewc(n,:,:,:),cnew(n,:,:,:),Unew,Vnew,Wsed(n,:,:,:),rnew,Ru,Rp,dr,phiv,phipt,dz,
+!     +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)
+!	      call diffc_CDS2 (dnewc(n,:,:,:),Cnew(n,:,:,:),Diffcof,
 !     +            ib,ie,jb,je,kb,ke)
 
-!		dcdt(n,:,:,:) =cnew(n,:,:,:) + dt*(23./12.*dnewc(n,:,:,:)-4./3.*cc(n,:,:,:)+5./12.*ccold(n,:,:,:)) !AB3
+!!		dcdt(n,:,:,:) =cnew(n,:,:,:) + dt*(1.5*dnewc(n,:,:,:)-0.5*cc(n,:,:,:)) !AB2
+!		dcdt(n,:,:,:) =cnew(n,:,:,:) + dt*dnewc(n,:,:,:)                       !EE1
 !		call bound_c(dcdt(n,:,:,:),frac(n)%c,n) ! bc for intermediate dcdt
-!		ccold(n,:,:,:)=cc(n,:,:,:)
 !		cc(n,:,:,:)=dnewc(n,:,:,:)
 !	  enddo
 
+	  do n=1,nfrac
+	      utr=Unew
+	      vtr=Vnew
+	      wtr=Wsed(n,:,:,:)
+	      call make_UtransC_zeroIBM(utr,vtr,wtr)
+		  if (advec_conc.eq.'NVD') then
+	      call advecc_NVD(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
+     +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)	 
+          elseif (advec_conc.eq.'VLE') then	 
+	      call advecc_TVD2(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
+     +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)
+		  else
+	      call advecc_TVD2(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
+     +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)	 
+          endif
+		
+	      call diffc_CDS2 (dnewc(n,:,:,:),Cnew(n,:,:,:),Diffcof,
+     +            ib,ie,jb,je,kb,ke)
+		dcdt(n,:,:,:) =cnew(n,:,:,:) + dt*(dnewc(n,:,:,:)) !update in time with EE1 for TVD
+	      	  if (interaction_bed>0) then
+		    !! advec concentration in bed with velocity TSHD:
+	      	    call adveccbot_TVD(dnewcbot(n,:,:),cnewbot(n,:,:),Ubot_TSHD,Vbot_TSHD,Ru,Rp,dr,phiv,phipt,dz,
+     +            	i1,j1,ib,ie,jb,je,dt,rank,px,periodicx,periodicy)
+		    dcdtbot(n,:,:)= cnewbot(n,:,:) + dt*dnewcbot(n,:,:) ! time update
+	      	  endif
+           IF (CNdiffz.eq.1) THEN !CN semi implicit treatment diff-z:
+	     call bound_c(dcdt(n,:,:,:),frac(n)%c,n) ! bc after erosion_deposition 
+	     do k=k1,k1 !-kjet,k1
+	       do t=1,tmax_inPpunt
+	         i=i_inPpunt(t)
+	         j=j_inPpunt(t)
+	         dcdt(n,i,j,k) = dcdt(n,i,j,kmax) ! No diffusion over vertical inflow boundary, this line is needed for exact influx
+	       enddo
+	     enddo
+             do j=1,jmax
+               do i=1,imax
+                 do k=0,k1
+	           km=MAX(0,k-1)
+	           kp=MIN(k1,k+1)
+	           kpp=MIN(k1,k+2)
+	           ekm_min=0.5*(Diffcof(i,j,km)+Diffcof(i,j,k))
+	           ekm_plus=0.5*(Diffcof(i,j,kp)+Diffcof(i,j,k))
+	           aaa(k)=-0.5*ekm_min*dt/dz**2
+	           bbb(k)=1.+0.5*(ekm_min+ekm_plus)*dt/dz**2
+	           ccc(k)=-0.5*ekm_plus*dt/dz**2
+                 enddo
+		 aaa(0)=0.
+		 aaa(k1)=0.
+		 ccc(0)=0.
+		 ccc(k1)=0.
+		 bbb(0)=1.
+		 bbb(k1)=1.
+	         rhss=dcdt(n,i,j,0:k1)
+	         CALL solve_tridiag(dcdt(n,i,j,0:k1),aaa,bbb,ccc,rhss,k1+1) 
+               enddo
+             enddo
+	   ENDIF
+          enddo
+      	  if (interaction_bed>0) then
+	    call slipvelocity(cnew,wnew,wsed,rnew,0,0,wfluid,dt,dz) !driftflux_force must be calculated with settling velocity at k=0
+	    CALL erosion_deposition(dcdt,dcdtbot,unew,vnew,wnew,rnew,cnew,cnewbot,dt,dz) !first two vars are adjusted
+	    !! for kn1: erosion_deposition must be after advecc_TVD and after dcdt update, because cnew and dcdt are two separate vars
+	    do n=1,nfrac 
+	        call bound_cbot(dcdtbot(n,:,:))
+	    enddo
+      	  endif
+	    do n=1,nfrac 
+		call bound_c(dcdt(n,:,:,:),frac(n)%c,n) ! bc after erosion_deposition 
+	    enddo
 	  call state(dcdt,drdt) ! determine drdt with intermediate dcdt
 	endif
 
@@ -750,13 +809,11 @@ c********************************************************************
             do i=1,imax
 	    dnew(i,j,k)=dnew(i,j,k)-(gx*cos_u(j)+gy*sin_u(j))*(0.5*(rnew(i,j,k)+rnew(i+1,j,k))-rho_b)
      1     +Ppropx(i,j,k) 
-
             dUdt(i,j,k)=Unew(i,j,k)*0.5*(rnew(i,j,k)+rnew(i+1,j,k))+
      1     dt*(     facAB3_1*dnew(i,j,k)+
      1              facAB3_2*wx(i,j,k)+
      1              facAB3_3*wxold(i,j,k)+
      1              facAB3_4*wxolder(i,j,k))
-!     1     -(gx*cos_u(j)+gy*sin_u(j))*dt*(0.75*(rnew(i,j,k)+rnew(i+1,j,k))-0.25*(rold(i,j,k)+rold(i+1,j,k))-rho_b)  
               wxolder(i,j,k) = wxold(i,j,k)
               wxold(i,j,k)   = wx(i,j,k)
               wx(i,j,k)      = dnew(i,j,k)
@@ -797,7 +854,6 @@ c********************************************************************
      1               facAB3_2*wy(i,j,k)+
      1               facAB3_3*wyold(i,j,k)+
      1               facAB3_4*wyolder(i,j,k))
-!     1     -(-gx*sin_v(j)+gy*cos_v(j))*dt*(0.75*(rnew(i,j,k)+rnew(i,j+1,k))-0.25*(rold(i,j,k)+rold(i,j+1,k))-rho_b)
              wyolder(i,j,k) = wyold(i,j,k)
              wyold(i,j,k)   = wy(i,j,k)
              wy(i,j,k)      = dnew(i,j,k)
@@ -826,20 +882,19 @@ c********************************************************************
 	elseif(diffusion.eq.'COM4') then
       call diffw_com4(dnew,Szr,Spz,Szz,Ru,Rp,dr,phipt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	endif
-
-	if (slipvel.eq.1.or.slipvel.eq.2) then
-	 if (interaction_bed.gt.0) then
-	  call slipvelocity(cnew,wnew,wsed,rnew,0,0,wfluid,dt,dz) !driftflux_force must be calculated with settling velocity at k=0
-	! should correct Wsed(n,:,:,0) with (1.-tau/frac(n)%tau_d), but this correction almost always is zero, for now leave it like this
-	 endif
+	if ((slipvel.eq.1.or.slipvel.eq.2).and.nfrac>0) then
 	 W_km_sum=0.
+	 c_sum=0.
 	 do n=1,nfrac
-	  W_km_sum=W_km_sum+wsed(n,:,:,:)-Wnew
+	  W_km_sum=W_km_sum+cnew(n,:,:,:)*frac(n)%rho*(wsed(n,:,:,:)-Wnew)
+	  c_sum=c_sum+cnew(n,:,:,:)
 	 enddo 
-	 W_km_sum=W_km_sum+Wfluid !Wfluid is difference with Ucfd 
+	 W_km_sum=W_km_sum+(1.-c_sum)*rho_b*Wfluid !Wfluid is difference with Ucfd 
+	 W_km_sum=W_km_sum/rnew
 	 call advecw_driftfluxCDS2(dnew,0.,0.,W_km_sum,
      &   rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke)
 	endif
+	
 
       do k=1,kmax
          do j=1,jmax
@@ -859,7 +914,78 @@ c********************************************************************
          enddo
       enddo
 
+      IF (CNdiffz.eq.1) THEN !CN semi implicit treatment diff-z:
+      call bound_rhoU(dUdt,dVdt,dWdt,dRdt,0,time_np,Ub1new,Vb1new,
+     & Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
+       do j=1,jmax
+         do i=1,imax
+            do k=0,k1
+	    km=MAX(0,k-1)
+	    kp=MIN(k1,k+1)
+	    kpp=MIN(k1,k+2)
+	    ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i+1,j,k)+ekm(i+1,j,km))
+	    ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i+1,j,k)+ekm(i+1,j,kp))
+	    aaa(k)=-0.5*ekm_min*dt/dz**2/(0.5*(drdt(i,j,km)+drdt(i+1,j,km)))
+	    bbb(k)=1.+0.5*(ekm_min+ekm_plus)*dt/dz**2/(0.5*(drdt(i,j,k)+drdt(i+1,j,k)))
+	    ccc(k)=-0.5*ekm_plus*dt/dz**2/(0.5*(drdt(i,j,kp)+drdt(i+1,j,kp)))
+            enddo
+	    aaa(0)=0.
+	    aaa(k1)=0.
+	    ccc(0)=0.
+	    ccc(k1)=0.
+	    bbb(0)=1.
+	    bbb(k1)=1.
+	    rhss=dUdt(i,j,0:k1)
+	    CALL solve_tridiag(dUdt(i,j,0:k1),aaa,bbb,ccc,rhss,k1+1) 
+         enddo
+      enddo
+       do j=1,jmax
+         do i=1,imax
+            do k=0,k1
+	    km=MAX(0,k-1)
+	    kp=MIN(k1,k+1)
+	    kpp=MIN(k1,k+2)
+	    ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i,j+1,k)+ekm(i,j+1,km))
+	    ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i,j+1,k)+ekm(i,j+1,kp))
+	    aaa(k)=-0.5*ekm_min*dt/dz**2/(0.5*(drdt(i,j,km)+drdt(i,j+1,km)))
+	    bbb(k)=1.+0.5*(ekm_min+ekm_plus)*dt/dz**2/(0.5*(drdt(i,j,k)+drdt(i,j+1,k)))
+	    ccc(k)=-0.5*ekm_plus*dt/dz**2/(0.5*(drdt(i,j,kp)+drdt(i,j+1,kp)))
+            enddo
+	    aaa(0)=0.
+	    aaa(k1)=0.
+	    ccc(0)=0.
+	    ccc(k1)=0.
+	    bbb(0)=1.
+	    bbb(k1)=1.
+	    rhss=dVdt(i,j,0:k1)
+	    CALL solve_tridiag(dVdt(i,j,0:k1),aaa,bbb,ccc,rhss,k1+1) 
+         enddo
+      enddo
 
+       do j=1,jmax
+         do i=1,imax
+            do k=0,k1
+	    km=MAX(0,k-1)
+	    kp=MIN(k1,k+1)
+	    kpp=MIN(k1,k+2)
+	    ekm_min=ekm(i,j,k)
+	    ekm_plus=ekm(i,j,kp)
+	    aaa(k)=-0.5*ekm_min*dt/dz**2/(0.5*(drdt(i,j,km)+drdt(i+1,j,k)))
+	    bbb(k)=1.+0.5*(ekm_min+ekm_plus)*dt/dz**2/(0.5*(drdt(i,j,k)+drdt(i+1,j,kp)))
+	    ccc(k)=-0.5*ekm_plus*dt/dz**2/(0.5*(drdt(i,j,kp)+drdt(i+1,j,kpp)))
+            enddo
+	    aaa(0)=0.
+	    aaa(k1)=0.
+	    ccc(0)=0.
+	    ccc(k1)=0.
+	    bbb(0)=1.
+	    bbb(k1)=1.
+	    rhss=dWdt(i,j,0:k1)
+	    CALL solve_tridiag(dWdt(i,j,0:k1),aaa,bbb,ccc,rhss,k1+1) 
+         enddo
+       enddo
+       ENDIF
+	  
 	pold=p+pold    !what is called p here was dp in reality, now p is 
       call pshiftb(pold,pplus) !,rank,imax,jmax,kmax,px)
 c********************************************************************

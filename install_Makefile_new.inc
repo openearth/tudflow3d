@@ -26,7 +26,7 @@ LPORD    = -L$(LPORDDIR) -lpord
 
 # <<< Eddy: hier staan dus beide libs: parmetis en metis
 #===================================================================================
-LMETISDIR = /usr/local/parmetis-3.2.0
+LMETISDIR = /usr/local/metis/parmetis-3.2.0
 IMETIS    = -I$(LMETISDIR)/include
 # <<< Eddy lib bijgevoegd
 # <<< Eddy omdat blijkbaar ook libmetis nodig is, heb ik die uit 

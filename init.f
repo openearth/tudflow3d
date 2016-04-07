@@ -2309,7 +2309,7 @@ C ...  Locals
 	ENDDO
 
 	
-	if (.false.) then ! true = 0th order IBM staircase manner, false = 1st order IBM scaling with volume grid cell inside object
+	if (.true.) then ! true = 0th order IBM staircase manner, false = 1st order IBM scaling with volume grid cell inside object
 	if (bedlevelfile.ne.'') then
 
        	status2 = nf90_open(bedlevelfile, nf90_NoWrite, ncid) 
@@ -2443,6 +2443,8 @@ C ...  Locals
 	call check( nf90_get_var(ncid,rhVarid,zbed3(1:imax,0:j1),start=(/1,rank*jmax+1/),count=(/imax,jmax+2/)) )
 	call check( nf90_close(ncid) )
 	
+	!write(*,*),'rank,zbed3(1,0:j1)',rank,zbed3(1,0:j1)
+	
 	! bedlevel file obstacles have no i=0 or i=i1 in zbed3, but do have j=0 and j=j1
 	kbed3=0
 	!! search for zbed and kbed on each proc (j=0,j1): (used for deposition and bc in solver [adjusted for ob(n)%zbottom])
@@ -2461,12 +2463,12 @@ c get stuff from other CPU's
 
 	zbed4(0:i1,0:j1)=zbed(0:i1,0:j1)	  
 	!call shiftf_l2(zbed4,cbf) 
-	call shiftb_l2(zbed4,cbb) 
+	call shiftb_l2(zbed4(0:i1,0:j1),cbb) 
 	if (periodicy.eq.0.or.periodicy.eq.2) then
 		if (rank.eq.0) then ! boundaries in j-direction
 		   do i=1,imax
 		   !zbed4(i,-1) = zbed4(i,1) !cbf(i,k)
-		   zbed4(i,j1) =cbb(i) 
+		   zbed4(i,j1+1) =cbb(i) 
 		   enddo
 		elseif (rank.eq.px-1) then
 		   do i=1,imax
@@ -2486,22 +2488,24 @@ c get stuff from other CPU's
 	   enddo
 	endif
 	if (periodicx.eq.1) then
+		zbed4(0,0:j1)=zbed4(imax,0:j1)
 		zbed4(i1,0:j1)=zbed4(1,0:j1)
 		zbed4(i1+1,0:j1)=zbed4(2,0:j1)
 	else
+		zbed4(0,0:j1)=zbed4(1,0:j1)
 		zbed4(i1,0:j1)=zbed4(imax,0:j1)
 		zbed4(i1+1,0:j1)=zbed4(i1,0:j1)
 	endif
+	!write(*,*),'rank,zbed4(0:i1+1,0:j1)',rank,zbed4(0:i1+1,0:j1)
 	
 		
-      !! Search for P,V:
+      !! Search for P:
       tel1=tmax_inPpuntTSHD
-      tel2=tmax_inVpuntTSHD
       do k=0,k1
        do i=0,i1  
 	in=.false.
         do j=j1,0,-1       
-	  IF (k-1.le.kbed3(i,j).and.kbed3(i,j).gt.kbed(i,j)) THEN ! new obstacle:
+	  IF (k.le.kbed3(i,j).and.kbed3(i,j).gt.kbed(i,j)) THEN ! new obstacle:
 		inout=1
 	  ELSE 
 	 	inout=0
@@ -2511,26 +2515,46 @@ c get stuff from other CPU's
 	      i_inPpuntTSHD(tel1)=i ! Ppunt
 	      j_inPpuntTSHD(tel1)=j
   	      k_inPpuntTSHD(tel1)=k
+	    in=.true.
+	  endif
+	enddo
+       enddo
+      enddo	
+	
+      !! Search for V:
+      tel2=tmax_inVpuntTSHD
+      do k=0,k1
+       do i=0,i1  
+	in=.false.
+        do j=j1,0,-1       
+	  IF (k-3.le.kbed3(i,j).and.kbed3(i,j).gt.kbed(i,j)) THEN ! new obstacle:
+		inout=1
+	  ELSE 
+	 	inout=0
+	  ENDIF
+	  if (inout.eq.1) then
       	      tel2=tel2+1
 	      i_inVpuntTSHD(tel2)=i ! Vpunt
 	      j_inVpuntTSHD(tel2)=j
 	      k_inVpuntTSHD(tel2)=k
-		  zbotcell=(k-1)*dz
+		  zbotcell=(k-1)*dz+0.5*dz
 		  zbedcell=0.5*(zbed4(i,j)+zbed4(i,j+1))
-		  facIBMv(tel2)=1.-max(min((zbedcell-zbotcell)/dz,1.),0.)
+		  facIBMv(tel2)=max(min((zbotcell-zbedcell)/dz,1.),0.)
 	    in=.true.
 	  endif
 	enddo
-!	add one Vpunt extra because staggered:
-	if (in.and.j_inVpuntTSHD_dummy(tel2)>0) then !always if a jet-point is found an extra Vpunt must be included
-	  tel2=tel2+1
-	  i_inVpuntTSHD(tel2)=i_inVpuntTSHD(tel2-1)
-	  j_inVpuntTSHD(tel2)=j_inVpuntTSHD(tel2-1)-1
-	  k_inVpuntTSHD(tel2)=k_inVpuntTSHD(tel2-1)
-		  zbotcell=(k-1)*dz
-		  zbedcell=0.5*(zbed4(i,j-1)+zbed4(i,j))
-		  facIBMv(tel2)=1.-max(min((zbedcell-zbotcell)/dz,1.),0.)
-	endif
+
+	
+!	add one Vpunt extra because staggered: !not needed because each individual point is being checked with 1st or 2nd order ibm
+!	if (in.and.j_inVpuntTSHD_dummy(tel2)>0) then !always if a jet-point is found an extra Vpunt must be included
+!	  tel2=tel2+1
+!	  i_inVpuntTSHD(tel2)=i_inVpuntTSHD(tel2-1)
+!	  j_inVpuntTSHD(tel2)=j_inVpuntTSHD(tel2-1)-1
+!	  k_inVpuntTSHD(tel2)=k_inVpuntTSHD(tel2-1)
+!		  zbotcell=(k-1)*dz+0.5*dz
+!		  zbedcell=0.5*(zbed4(i,j-1)+zbed4(i,j))
+!		  facIBMv(tel2)=max(min((zbotcell-zbedcell)/dz,1.),0.)
+!	endif
        enddo
       enddo
       tmax_inPpuntTSHD=tel1
@@ -2542,7 +2566,7 @@ c get stuff from other CPU's
        do i=0,i1  
 	in=.false.
         do k=0,k1 ! one extra in vertical direction for W  
-	  IF (k-1.le.kbed3(i,j).and.kbed3(i,j).gt.kbed(i,j)) THEN ! new obstacle:
+	  IF (k-3.le.kbed3(i,j).and.kbed3(i,j).gt.kbed(i,j)) THEN ! new obstacle:
 		inout=1
 	  ELSE 
 	 	inout=0
@@ -2552,9 +2576,11 @@ c get stuff from other CPU's
 	      i_inWpuntTSHD(tel1)=i ! Wpunt
 	      j_inWpuntTSHD(tel1)=j
   	      k_inWpuntTSHD(tel1)=k
-		  zbotcell=(k-1)*dz+0.5*dz
+		  zbotcell=k*dz
 		  zbedcell=zbed4(i,j)
-		  facIBMw(tel1)=1.-max(min((zbedcell-zbotcell)/dz,1.),0.)
+		  facIBMw(tel1)=max(min((zbotcell-zbedcell)/dz,1.),0.)
+		  
+		!  write(*,*),'i,j,k,zbed4(i,j),zbotcell,facIBMw(tel1)',i,j,k,zbed4(i,j),zbotcell,facIBMw(tel1)
 		  
 	      in=.true.
 !	      kbed(i,j)=MAX(kbed(i,j),FLOOR(ob(n)%height/dz)) !zero without obstacle, otherwise max of all obstacles at i,j
@@ -2571,36 +2597,40 @@ c get stuff from other CPU's
        do j=0,j1
 	in=.false.
         do i=i1,0,-1 
-	  IF (k-1.le.kbed3(i,j).and.kbed3(i,j).gt.kbed(i,j)) THEN ! new obstacle:
+	  IF (k-3.le.kbed3(i,j).and.kbed3(i,j).gt.kbed(i,j)) THEN ! new obstacle:
 		inout=1
 	  ELSE 
 	 	inout=0
+		
 	  ENDIF
 	  if (inout.eq.1) then
 	    	tel2=tel2+1
 		i_inUpuntTSHD(tel2)=i  ! Upunt is U
 		j_inUpuntTSHD(tel2)=j
 		k_inUpuntTSHD(tel2)=k
-		  zbotcell=(k-1)*dz
+		  zbotcell=(k-1)*dz+0.5*dz
 		  zbedcell=0.5*(zbed4(i,j)+zbed4(i+1,j))
-		  facIBMu(tel2)=1.-max(min((zbedcell-zbotcell)/dz,1.),0.)		
+		  facIBMu(tel2)=max(min((zbotcell-zbedcell)/dz,1.),0.)		
                 in=.true.
+			!	write(*,*),'i,j,k,zbedcell,zbotcell,facIBMu(tel2)',i,j,k,zbedcell,zbotcell,facIBMu(tel2)
 	  endif
 	enddo
-!	add one Upunt extra because staggered:
-	if (in.and.i_inUpuntTSHD(tel2)>0) then !always if a TSHD-point is found an extra Upunt must included
-	  tel2=tel2+1
-	  i_inUpuntTSHD(tel2)=i_inUpuntTSHD(tel2-1)-1
-	  j_inUpuntTSHD(tel2)=j_inUpuntTSHD(tel2-1)
-	  k_inUpuntTSHD(tel2)=k_inUpuntTSHD(tel2-1)
-		  zbotcell=(k-1)*dz
-		  zbedcell=0.5*(zbed4(i-1,j)+zbed4(i,j))
-		  facIBMu(tel2)=1.-max(min((zbedcell-zbotcell)/dz,1.),0.)			  
-	endif
+!	add one Upunt extra because staggered: ! not needed with 1st or 2nd order ibm, then each individual point is checked
+!	if (in.and.i_inUpuntTSHD(tel2)>0) then !always if a TSHD-point is found an extra Upunt must included
+!	  tel2=tel2+1
+!	  i_inUpuntTSHD(tel2)=i_inUpuntTSHD(tel2-1)-1
+!	  j_inUpuntTSHD(tel2)=j_inUpuntTSHD(tel2-1)
+!	  k_inUpuntTSHD(tel2)=k_inUpuntTSHD(tel2-1)
+!		  zbotcell=(k-1)*dz+0.5*dz
+!		  zbedcell=0.5*(zbed4(i_inUpuntTSHD(tel2), j_inUpuntTSHD(tel2))+zbed4( i_inUpuntTSHD(tel2)+1, j_inUpuntTSHD(tel2)))
+!		  facIBMu(tel2)=max(min((zbotcell-zbedcell)/dz,1.),0.)			  
+!		  write(*,*),'i,j,k,zbedcell,zbotcell,facIBMu(tel2)', i_inUpuntTSHD(tel2), j_inUpuntTSHD(tel2),k,zbedcell,zbotcell,facIBMu(tel2)
+!	endif
        enddo
       enddo
       tmax_inUpuntTSHD=tel2
-
+	  
+	
 		!! update kbed on each proc (j=0,j1) with kbed3 (used for deposition and bc in solver [adjusted for ob(n)%zbottom])
 	      do j=0,j1 
 	       do i=0,imax !including i1 strangely gives crash (13/4/15) !1,imax !0,i1

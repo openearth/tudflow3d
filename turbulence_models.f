@@ -504,16 +504,6 @@ c*************************************************************
         enddo
         ekm=ekm+ekm_mol
 	ekm2=ekm
-        IF (LOA>0.) THEN ! ship:
-          do t=1,tmax_inPpuntTSHD
-            i=i_inPpuntTSHD(t)
-            j=j_inPpuntTSHD(t)
-            k=k_inPpuntTSHD(t)
-            ekm(i,j,k)=0.
-          enddo
-	ELSEIF(kjet>0) THEN
-          ekm(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
-	ENDIF
 
 	if (LOA>0.and.kn_TSHD>0.) then
 	  do t=1,tmax_inUpunt_tauTSHD
@@ -561,6 +551,19 @@ c*************************************************************
             Diffcof(i,j,k)=0.
           enddo
         enddo
+        IF (LOA>0.) THEN ! ship:
+          do t=1,tmax_inPpuntTSHD
+            i=i_inPpuntTSHD(t)
+            j=j_inPpuntTSHD(t)
+            k=k_inPpuntTSHD(t)
+            !ekm(i,j,k)=0.
+			Diffcof(i,j,k)=0. 
+          enddo
+		ELSEIF(kjet>0) THEN
+          !ekm(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
+		  Diffcof(0:i1,0:j1,kmax-kjet+1:k1)=0.
+		ENDIF
+	
       end
 
       subroutine LES_mixinglengthdamped(Uvel,Vvel,Wvel,rr)
@@ -799,11 +802,11 @@ c*************************************************************
             i=i_inPpuntTSHD(t)
             j=j_inPpuntTSHD(t)
             k=k_inPpuntTSHD(t)
-            ekm(i,j,k)=0.
+            !ekm(i,j,k)=0.
 	    Diffcof(i,j,k)=0.
           enddo
 	ELSEIF(kjet>0) THEN
-          ekm(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
+          !ekm(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
           Diffcof(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
 	ENDIF
 
@@ -1014,16 +1017,6 @@ c*************************************************************
 
         ekm=ekm+ekm_mol
 	ekm2=ekm
-        IF (LOA>0.) THEN ! ship:
-          do t=1,tmax_inPpuntTSHD
-            i=i_inPpuntTSHD(t)
-            j=j_inPpuntTSHD(t)
-            k=k_inPpuntTSHD(t)
-            ekm(i,j,k)=0.
-          enddo
-	ELSEIF (kjet>0) THEN
-          ekm(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
-	ENDIF
 
         do k=kmax-kjet+1,k1 ! laat ekm in buisje ongemoeid
             do t=1,tmax_inPpunt
@@ -1033,7 +1026,7 @@ c*************************************************************
             enddo
         enddo
 
-        Diffcof=ekm/Sc/rr
+		Diffcof=ekm/Sc/rr        
         do k=kmax-kjet+1,k1 ! maak Diffcof rand buisje nul
           do t=1,tmax_inPpuntrand
             i=i_inPpuntrand(t)
@@ -1041,6 +1034,18 @@ c*************************************************************
             Diffcof(i,j,k)=0.
           enddo
         enddo
+        IF (LOA>0.) THEN ! ship:
+          do t=1,tmax_inPpuntTSHD
+            i=i_inPpuntTSHD(t)
+            j=j_inPpuntTSHD(t)
+            k=k_inPpuntTSHD(t)
+            !ekm(i,j,k)=0.
+			Diffcof(i,j,k)=0. 
+          enddo
+	ELSEIF (kjet>0) THEN
+          !ekm(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
+		  Diffcof(0:i1,0:j1,kmax-kjet+1:k1)=0.
+	ENDIF		
 
       end
 
@@ -1235,16 +1240,6 @@ c*************************************************************
 
         ekm=ekm+ekm_mol
 	ekm2=ekm
-        IF (LOA>0.) THEN ! ship:
-          do t=1,tmax_inPpuntTSHD
-            i=i_inPpuntTSHD(t)
-            j=j_inPpuntTSHD(t)
-            k=k_inPpuntTSHD(t)
-            ekm(i,j,k)=0.
-          enddo
-	ELSEIF (kjet>0) THEN
-          ekm(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
-	ENDIF
 
         do k=kmax-kjet+1,k1 ! laat ekm in buisje ongemoeid
             do t=1,tmax_inPpunt
@@ -1262,6 +1257,19 @@ c*************************************************************
             Diffcof(i,j,k)=0.
           enddo
         enddo
+        IF (LOA>0.) THEN ! ship:
+          do t=1,tmax_inPpuntTSHD
+            i=i_inPpuntTSHD(t)
+            j=j_inPpuntTSHD(t)
+            k=k_inPpuntTSHD(t)
+            !ekm(i,j,k)=0.
+			Diffcof(i,j,k)=0. 
+          enddo
+		ELSEIF (kjet>0) THEN
+			  !ekm(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
+			  Diffcof(0:i1,0:j1,kmax-kjet+1:k1)=0.
+		ENDIF
+	
 
       end
 
@@ -1744,16 +1752,6 @@ c*************************************************************
 
         ekm=ekm+ekm_mol
 	ekm2=ekm
-        IF (LOA>0.) THEN ! ship:
-          do t=1,tmax_inPpuntTSHD
-            i=i_inPpuntTSHD(t)
-            j=j_inPpuntTSHD(t)
-            k=k_inPpuntTSHD(t)
-            ekm(i,j,k)=0.
-          enddo
-	ELSEIF (kjet>0) THEN
-          ekm(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
-	ENDIF
 
         do k=kmax-kjet+1,k1 ! laat ekm in buisje ongemoeid
             do t=1,tmax_inPpunt
@@ -1771,6 +1769,18 @@ c*************************************************************
             Diffcof(i,j,k)=0.
           enddo
         enddo
+        IF (LOA>0.) THEN ! ship:
+          do t=1,tmax_inPpuntTSHD
+            i=i_inPpuntTSHD(t)
+            j=j_inPpuntTSHD(t)
+            k=k_inPpuntTSHD(t)
+            !ekm(i,j,k)=0.
+			Diffcof(i,j,k)=0.
+          enddo
+		ELSEIF (kjet>0) THEN
+			  !ekm(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
+			  Diffcof(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
+		ENDIF		
 
       end
 	  
@@ -2086,16 +2096,6 @@ c get stuff from other CPU's
 
         ekm=ekm+ekm_mol
 	ekm2=ekm
-        IF (LOA>0.) THEN ! ship:
-          do t=1,tmax_inPpuntTSHD
-            i=i_inPpuntTSHD(t)
-            j=j_inPpuntTSHD(t)
-            k=k_inPpuntTSHD(t)
-            ekm(i,j,k)=0.
-          enddo
-	ELSEIF (kjet>0) THEN
-          ekm(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
-	ENDIF
 
         do k=kmax-kjet+1,k1 ! laat ekm in buisje ongemoeid
             do t=1,tmax_inPpunt
@@ -2113,6 +2113,18 @@ c get stuff from other CPU's
             Diffcof(i,j,k)=0.
           enddo
         enddo
+        IF (LOA>0.) THEN ! ship:
+          do t=1,tmax_inPpuntTSHD
+            i=i_inPpuntTSHD(t)
+            j=j_inPpuntTSHD(t)
+            k=k_inPpuntTSHD(t)
+            !ekm(i,j,k)=0.
+			Diffcof(i,j,k)=0. 
+          enddo
+		ELSEIF (kjet>0) THEN
+			  !ekm(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
+			  Diffcof(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
+		ENDIF		
 
       end
 
