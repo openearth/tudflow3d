@@ -3269,9 +3269,9 @@ C.. All other variables
         INTEGER idum(1)
         REAL*8 ddum(1)
 
-      real      ar(imax),br(imax),cr(imax)
+      real      ar(imax),br(imax),cr(imax),aar(imax),ccr(imax)
       real      zrt(kmax),yrt(px*jmax)
-      real      aphi(jmax*px),bphi(jmax*px),cphi(jmax*px)
+      real      aphi(jmax*px),bphi(jmax*px),cphi(jmax*px),aaphi(jmax*px),ccphi(jmax*px)
       real      time1,time0
       integer   tel,tel2,tel3,tel4,ind
       real      dzi
@@ -3289,11 +3289,17 @@ C.. All other variables
 	    br(i)=-ar(i)-cr(i)
       end do
 ! DON'T SWITCH ON:		br(imax)=br(imax)+cr(imax) !! p(imax+1)= p(imax); dpdn=0
-		br(imax)=br(imax)-cr(imax) !! p(imax+1)=-p(imax); p=0 at full bc; don't do this, make p=0 at one location at outflow bc
-		br(1)=br(1)+ar(1) !dpdn=0
-		cr(imax)=0. !no interaction
-		ar(1)=0. !no interaction	  
-!       if (periodicx.eq.0) then !--> periodic need to be added later
+		aar(1:imax)=ar(1:imax)
+		ccr(1:imax)=cr(1:imax)
+		if (periodicx.eq.0) then
+			br(imax)=br(imax)-cr(imax) !! p(imax+1)=-p(imax); p=0 at full bc; don't do this, make p=0 at one location at outflow bc
+			br(1)=br(1)+ar(1) !dpdn=0
+			cr(imax)=0. !no interaction
+			ar(1)=0. !no interaction	
+		else ! periodicx=1
+			cr(imax)=0. !no interaction
+			ar(1)=0. !no interaction				
+		endif		
 	  
 !  tridiagonal system in phi-direction
       do j=1,jmax*px
@@ -3301,12 +3307,17 @@ C.. All other variables
         cphi(j)=1. / ( (phipt(j+1)-phipt(j  ))*(phivt(j  )-phivt(j-1)) )
         bphi(j)=-aphi(j)-cphi(j)
       enddo
-      bphi(jmax*px)=bphi(jmax*px)+cphi(jmax*px) !dpdn=0
-      bphi(1)=bphi(1)+aphi(1) !dpdn=0
-      cphi(jmax*px)=0. !no interaction
-      aphi(1)=0. !no interaction
-	!!! to be added: periodic boundaries in j-dir for variable grid in j-dir
-	
+	  aaphi(1:jmax*px)=aphi(1:jmax*px)
+	  ccphi(1:jmax*px)=cphi(1:jmax*px)
+	  if (periodicy.eq.0.or.periodicy.eq.2) then
+		bphi(jmax*px)=bphi(jmax*px)+cphi(jmax*px) !dpdn=0
+		bphi(1)=bphi(1)+aphi(1) !dpdn=0
+		cphi(jmax*px)=0. !no interaction
+		aphi(1)=0. !no interaction
+	  else ! periodicy=1 
+		cphi(jmax*px)=0. !no interaction
+		aphi(1)=0. !no interaction	  
+	  endif ! periodicy=1 
 	
       !  K --> direction      (zrt)
       dzi = 1./dz
@@ -3325,12 +3336,24 @@ C.. All other variables
         do i=1,imax
          ind=(j-1)*imax+i !diagonal location
          tel3=tel3+1
+         if (periodicy.eq.1.and.(ind-(jmax*px-1)*imax).gt.0.and.ccphi(j).gt.0.) then
+            tel=tel+1
+            lhs(tel,k)=ccphi(j)*1./(Rp(i)**2) !(jmax*px-1)*imax left from diagonal
+            jco(tel)=ind-(jmax*px-1)*imax
+            iro(tel)=tel3
+         endif		 
          if ((ind-imax).gt.0.and.aphi(j).gt.0.) then
             tel=tel+1
             lhs(tel,k)=aphi(j)*1./(Rp(i)**2) !imax left from diagonal
             jco(tel)=ind-imax
             iro(tel)=tel3
          endif
+         if (periodicx.eq.1.and.i.eq.imax.and.(ind+1-imax).gt.0.and.ccr(i).gt.0.) then
+            tel=tel+1
+            lhs(tel,k)=ccr(i) !imax minus one left from diagonal
+            jco(tel)=ind+1-imax
+            iro(tel)=tel3
+         endif		 
          if ((ind-1).gt.0.and.ar(i).gt.0.) then
             tel=tel+1
             lhs(tel,k)=ar(i) !one left from diagonal
@@ -3338,7 +3361,7 @@ C.. All other variables
             iro(tel)=tel3
          endif
          tel=tel+1
-         lhs(tel,k)=(br(i)+bphi(j)*1./(Rp(i)**2)+zrt(knd)) ! diagonal entry
+         lhs(tel,k)=(br(i)+bphi(j)*1./(Rp(i)**2)+zrt(knd)) ! diagonal entry for x,y,z component (z is from fft)
          jco(tel)=ind
 		 tel4=tel4+1
 		 di(tel4)=tel
@@ -3349,12 +3372,24 @@ C.. All other variables
             jco(tel)=ind+1
             iro(tel)=tel3
          endif
+         if (periodicx.eq.1.and.i.eq.1.and.(ind-1+imax).le.imax*jmax*px.and.aar(i).gt.0.) then
+            tel=tel+1
+            lhs(tel,k)=aar(i) !imax minus one right from diagonal
+            jco(tel)=ind-1+imax
+            iro(tel)=tel3
+         endif
          if ((ind+imax).le.imax*jmax*px.and.cphi(j).gt.0.) then
             tel=tel+1
             lhs(tel,k)=cphi(j)*1./(Rp(i)**2) !imax right from diagonal
             jco(tel)=ind+imax
             iro(tel)=tel3
          endif
+         if (periodicy.eq.1.and.(ind+(jmax*px-1)*imax).le.imax*jmax*px.and.aaphi(j).gt.0.) then
+            tel=tel+1
+            lhs(tel,k)=aaphi(j)*1./(Rp(i)**2) !(jmax*px-1)*imax right from diagonal
+            jco(tel)=ind+(jmax*px-1)*imax
+            iro(tel)=tel3
+         endif		 		 
          tel2=tel2+1
          beg(tel2)=tel+1
         enddo
@@ -3367,9 +3402,28 @@ C.. Fill all arrays containing matrix data.
         nrhs =1
 		maxfct=1
 		mnum = 1
-		nnz = imax*jmax*px*5-2*imax-2*jmax*px !imax*jmax*px*3-1*imax-1*jmax*px
-		!nnz = imax*jmax*px*3-1*imax-1*jmax*px
-		
+		if (periodicx.eq.1.and.periodicy.eq.1) then
+			nnz = imax*jmax*px*5
+!			if (rank.eq.0) then
+!				lhs(1,1)=(1.+bphi(1)*1./(Rp(1)**2)+zrt(1))
+!				lhs(2,1)=0. !only diagonal entry for first cell must be non-zero to enforce p=0 at one grid point in mesh
+!				lhs(3,1)=0. ! make 4 off-diags zero
+!				lhs(4,1)=0.						
+!				lhs(5,1)=0.			
+!			endif
+		elseif (periodicx.eq.1) then
+			nnz = imax*jmax*px*5-2*imax
+!			if (rank.eq.0) then
+!				lhs(1,1)=(1.+bphi(1)*1./(Rp(1)**2)+zrt(1))
+!				lhs(2,1)=0. !only diagonal entry for first cell must be non-zero to enforce p=0 at one grid point in mesh
+!				lhs(3,1)=0. ! make 3 off-diags zero
+!				lhs(4,1)=0.
+!			endif
+		elseif (periodicy.eq.1) then
+			nnz = imax*jmax*px*5-2*jmax*px 
+		else
+			nnz = imax*jmax*px*5-2*imax-2*jmax*px !imax*jmax*px*3-1*imax-1*jmax*px
+		endif
 
 	 
       CALL mkl_set_num_threads(1) 
@@ -3481,8 +3535,22 @@ C.. Fill all arrays containing matrix data.
         nrhs =1
 		maxfct=1
 		mnum = 1
-		nnz = imax*jmax*px*5-2*imax-2*jmax*px !imax*jmax*px*3-1*imax-1*jmax*px
-		!nnz = imax*jmax*px*3-1*imax-1*jmax*px
+		if (periodicx.eq.1.and.periodicy.eq.1) then
+			nnz = imax*jmax*px*5
+!			if (rank.eq.0) then !enforce zero pressure in one grid cell
+!			  rhs(1,1,1)=0.
+!			endif
+		elseif (periodicx.eq.1) then
+			nnz = imax*jmax*px*5-2*imax
+!			if (rank.eq.0) then !enforce zero pressure in one grid cell
+!			  rhs(1,1,1)=0.
+!			endif			
+		elseif (periodicy.eq.1) then
+			nnz = imax*jmax*px*5-2*jmax*px 
+		else
+			nnz = imax*jmax*px*5-2*imax-2*jmax*px !imax*jmax*px*3-1*imax-1*jmax*px
+		endif
+
 		
 	 
 	
@@ -3979,10 +4047,10 @@ c   generate tridiagonal systems
 !	  endif
 	  c(imax)=0.
 	  a(1)=0.
-	else 
- 	  if (rank==0) then
-	    bbbb(imax,1,1)=b(imax)-c(imax)     !! p(imax+1)=-p(imax) --> bc p=0 at 1 loc in mesh 
-	  endif
+	else !! 3 lines below commented 8-6-2016 because not needed with periodicx boundaries
+! 	  if (rank==0) then
+!	    bbbb(imax,1,1)=b(imax)-c(imax)     !! p(imax+1)=-p(imax) --> bc p=0 at 1 loc in mesh 
+!	  endif
 	endif
 
       do i=1,imax

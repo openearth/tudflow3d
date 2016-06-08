@@ -136,6 +136,9 @@ c******************************************************************
 	ELSE
 	   poissolver=3 !3=PARDISO pressure-poisson solver
 	ENDIF
+	
+	write(*,*) 'poissolver=', poissolver
+	
 	begin=1
 	DO n=1,ngridsteps
 	  dx=dy_grid(n)
@@ -327,12 +330,12 @@ c******************************************************************
 !		ENDIF
 
 	else !periodic in x direction:
-	CALL SYSTEM_CLOCK(COUNT=clock)
-	CALL RANDOM_SEED(size = n)
-	ALLOCATE(seed(n))
-	CALL SYSTEM_CLOCK(COUNT=clock)
-	seed = clock + 37 * (/ (i - 1, i = 1, n) /)
-	CALL RANDOM_SEED(PUT = seed)
+!	CALL SYSTEM_CLOCK(COUNT=clock)
+!	CALL RANDOM_SEED(size = n)
+!	ALLOCATE(seed(n))
+!	CALL SYSTEM_CLOCK(COUNT=clock)
+!	seed = clock + 37 * (/ (i - 1, i = 1, n) /)
+!	CALL RANDOM_SEED(PUT = seed)
 		do n=1,4
 		  do k=0,k1
 		    do j=0,j1
@@ -962,7 +965,7 @@ C ...  Locals
 
 	REAL xx,yy,zz,dxi,dxip
 	REAL xprop2(2),yprop2(2),xprop3(2),yprop3(2),phi,uprop0
-	INTEGER i_min(2),j_min(2),n,tel1,t
+	INTEGER i_min(2),j_min(2),n,tel1,t,nprop2
 	REAL Ua,YYY,Ax,Aphi,fbx,fbphi,fbx2,fby,fby2,fbz,km
 	REAL sum_profile,tel,dzz,dyy,dxi_min !,dyprop2_min(2)
 !	REAL*4 Ppropx_dummy(0:i1,0:px*jmax+1,0:k1)
@@ -1017,6 +1020,7 @@ C ...  Locals
 
 	tel1=0
 
+		nprop2=0
 	    do n=1,nprop
                 dxi_min=100000.*dz
 		do i=1,imax
@@ -1024,10 +1028,11 @@ C ...  Locals
  		    xx=Ru(i)*cos_ut(j)-schuif_x
 		    yy=Ru(i)*sin_ut(j)
 		    dxi=sqrt((xx-xprop2(n))**2+(yy-yprop2(n))**2)
-		    IF (dxi<dxi_min) THEN
+		    IF (dxi<dxi_min.and.dxi<3.*sqrt(dr(i)**2+(Rp(i)*dphi2t(j))**2)) THEN
 		        dxi_min=dxi
 			i_min(n)=i
 			j_min(n)=j
+			nprop2=nprop2+1
 		    ENDIF
 		  enddo
 		enddo
@@ -1035,7 +1040,7 @@ C ...  Locals
 
 	!! search for indices nearest to y-hart of prop:
 
-	      do n=1,nprop
+	      do n=1,nprop2
 		!dyprop2_min(n)=Ru(i_min(n)+2)*dphi !minimum distance to find hart prop is dy
 		do j=1,jmax*px
 		  yy=Ru(i_min(n))*sin_ut(j)
@@ -1044,7 +1049,7 @@ C ...  Locals
 	        enddo
 	      enddo
 
-	      do n=1,nprop
+	      do n=1,nprop2
 		do j=1,jmax*px
 			do k=1,kmax
 			  yy=Rp(i_min(n))*sin_ut(j)

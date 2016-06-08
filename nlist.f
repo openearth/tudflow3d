@@ -985,7 +985,7 @@
 	ALLOCATE(Tkk(1:jmax*px))
 	ALLOCATE(Xkk(kmax,jmax))
 	ALLOCATE(Tii(jmax*px,kmax/px))
-	nm1=imax*jmax*px*5-2*imax-2*jmax*px !imax*jmax*px*3-1*imax-1*jmax*px !
+	nm1=imax*jmax*px*5 !allocate for full matrix periodicx and periodicy   !imax*jmax*px*5-2*imax-2*jmax*px 
 	ALLOCATE(jco(nm1)) !col nr CSR 
 	ALLOCATE(iro(nm1)) !row nr CSR 
 	ALLOCATE(di(imax*jmax*px)) !diag nr CSR
