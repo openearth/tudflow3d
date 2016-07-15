@@ -40,7 +40,7 @@
       INTEGER tmax_inWpunt2,tmax_inVpunt2,tmax_inPpunt2,tmax_inWpunt_suction
       INTEGER nfrac,slipvel,interaction_bed,nobst,kbed_bc,nbedplume
       CHARACTER*256 hisfile,restart_dir,inpfile,plumetseriesfile,bcfile,plumetseriesfile2,bedlevelfile
-      CHARACTER*3 time_int,advec_conc
+      CHARACTER*3 time_int,advec_conc,cutter
       CHARACTER*5 sgs_model
       CHARACTER*4 damping_drho_dz
       REAL damping_a1,damping_b1,damping_a2,damping_b2
@@ -144,14 +144,14 @@
 	    REAL ::	x(4),y(4),height,zbottom
 	end type bed_obstacles
 	type bed_plumes
-	    REAL ::	x(4),y(4),height,u,v,w,c(100),t0,zbottom !c(100) matches with size frac_init
+	    REAL ::	x(4),y(4),height,u,v,w,c(100),t0,zbottom,Q,sedflux(100),volncells !c(100) matches with size frac_init
 	    INTEGER :: forever
 	end type bed_plumes
 	TYPE(fractions), DIMENSION(:), ALLOCATABLE :: frac
 	TYPE(bed_obstacles), DIMENSION(:), ALLOCATABLE :: ob
 	TYPE(bed_obstacles), DIMENSION(1000) :: obst !temporary array to read namelist with unknown size
 	TYPE(bed_plumes), DIMENSION(:), ALLOCATABLE :: bp
-	TYPE(bed_plumes), DIMENSION(25) :: bedplume !temporary array to read namelist with unknown size
+	TYPE(bed_plumes), DIMENSION(100) :: bedplume !temporary array to read namelist with unknown size
       
 !       REAL*8, DIMENSION(:,:,:),ALLOCATABLE :: UT
 !       REAL*8, DIMENSION(:,:),ALLOCATABLE :: UP,UTMP
@@ -187,7 +187,7 @@
 	NAMELIST /constants/kappa,gx,gy,gz,ekm_mol
 	NAMELIST /fractions_in_plume/fract
 	NAMELIST /ship/U_TSHD,LOA,Lfront,Breadth,Draught,Lback,Hback,xfront,yfront,kn_TSHD,nprop,Dprop,xprop,yprop,zprop,
-     &   Pprop,rudder,rot_prop,draghead,Dsp,xdh,perc_dh_suction,softnose,Hfront
+     &   Pprop,rudder,rot_prop,draghead,Dsp,xdh,perc_dh_suction,softnose,Hfront,cutter
 
 	!! initialise:
 	!! simulation:
@@ -315,9 +315,12 @@
 	bedplume(:)%w = -99999. 
 	bedplume(:)%forever = 0
 	bedplume(:)%t0 = 0.
+	bedplume(:)%Q = 0.
+	bedplume(:)%volncells = 0.
 	bedplume(:)%zbottom = -99999.
 	DO i=1,100
 		bedplume(:)%c(i) = 0.
+		bedplume(:)%sedflux(i) = 0. 
 	ENDDO
 	plume_z_outflow_belowsurf=-999.
 	!! Fractions_in_plume
@@ -377,6 +380,7 @@
 	perc_dh_suction=0.
 	softnose=0
 	Hfront=-999.
+	cutter='not'
 
 	CALL GETARG(1,inpfile)
 	OPEN(1,FILE=inpfile,IOSTAT=ios,ACTION='read')
@@ -626,6 +630,9 @@
 	  bp(n)%forever=bedplume(n)%forever
 	  bp(n)%t0=bedplume(n)%t0
 	  bp(n)%zbottom=bedplume(n)%zbottom
+	  bp(n)%Q=bedplume(n)%Q
+	  bp(n)%sedflux=bedplume(n)%sedflux
+	  bp(n)%volncells = bedplume(n)%volncells
 	  DO i=1,4
 	    IF (bp(n)%x(i).eq.-99999.or.bp(n)%y(i).eq.-99999) THEN
 		write(*,*),' Bedplume:',n
@@ -637,10 +644,17 @@
 	    CALL writeerror(270)
 	  ENDIF
 	  DO i=1,nfrac
-	    IF (bp(n)%c(i)<0.) THEN
+	    IF (bp(n)%c(i)<0.or.bp(n)%sedflux(i)<0.) THEN
 	      write(*,*),' Bedplume:',n
 	      write(*,*),' Sediment fraction:',i
 	      CALL writeerror(271)
+	    ENDIF
+	  ENDDO
+	  DO i=1,nfrac
+	    IF (bp(n)%c(i)>0.and.bp(n)%sedflux(i)>0.) THEN
+	      write(*,*),' Bedplume:',n
+	      write(*,*),' Sediment fraction:',i
+	      CALL writeerror(277)
 	    ENDIF
 	  ENDDO
 	  IF (bp(n)%forever.ne.0.and.bp(n)%forever.ne.1) THEN

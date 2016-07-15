@@ -1,1 +1,1 @@
-      svnversion = '1:5M'
+      svnversion = '1:6M'

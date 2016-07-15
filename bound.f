@@ -1805,7 +1805,7 @@ c get stuff from other CPU's
 	end
 
 
-      subroutine bound_c(Cbound,cjet,n)
+      subroutine bound_c(Cbound,cjet,n,ddtt)
       
       USE nlist
 
@@ -1821,7 +1821,7 @@ c
       real ubb(0:i1,0:k1),val,theta,rbc,xx,yy,r_orifice2,rjet,theta_U,theta_V
       real cbf(0:i1,0:k1)
       real cbb(0:i1,0:k1)
-	real xTSHD(4),yTSHD(4),phi
+	real xTSHD(4),yTSHD(4),phi,ddtt
 c
 c
 c*************************************************************
@@ -1974,10 +1974,9 @@ c get stuff from other CPU's
 	else
 	  phi=atan2(V_b,(U_TSHD-U_b))
 	endif
-      !! Search for P,V:
       do k=0,k1
        do i=0,i1  
-         do j=j1,0,-1       ! bedplume loop is only initial condition: do not bother to have U,V,W initial staggering perfect 
+         do j=j1,0,-1       
 	  xx=Rp(i)*cos_u(j)-schuif_x
 	  yy=Rp(i)*sin_u(j)
 	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
@@ -1988,19 +1987,24 @@ c get stuff from other CPU's
 	 	inout=0
 	  ENDIF
 	  if (inout.eq.1) then
-		Cbound(i,j,k)=bp(n2)%c(n)
+	    if (bp(n2)%c(n)>0.) then
+		  Cbound(i,j,k)=bp(n2)%c(n)
+		else
+		  Cbound(i,j,k)=(Cbound(i,j,k)+bp(n2)%sedflux(n)*ddtt/bp(n2)%volncells/frac(n)%rho)
+     &  /(1.-MIN(0.,bp(n2)%Q)*ddtt/bp(n2)%volncells) !when Q negative, remove sediment from cell as well   IMPLICIT 
+		endif
 		! rho is calculated in state called after fkdat
 	   endif
 	  enddo
 	 enddo
 	enddo
 	  ! remove sediment from obstacles/TSHD after placement of bedplume:
-	  do t=1,tmax_inPpuntTSHD ! when no TSHD then this loop is skipped
- 	    k=k_inPpuntTSHD(t)		
-	    i=i_inPpuntTSHD(t)
-            j=j_inPpuntTSHD(t)
-            Cbound(i,j,k)=0.  ! remove sediment from hull
-	  enddo
+!	  do t=1,tmax_inPpuntTSHD ! when no TSHD then this loop is skipped
+!	    k=k_inPpuntTSHD(t)		
+!	    i=i_inPpuntTSHD(t)
+!            j=j_inPpuntTSHD(t)
+!            Cbound(i,j,k)=0.  ! remove sediment from hull
+!	  enddo
 	ENDIF
 	ENDDO ! bedplume loop
 
@@ -2022,6 +2026,7 @@ c get stuff from other CPU's
       do t=1,tmax_inPpunt
 	i=i_inPpunt(t)
 	j=j_inPpunt(t)
+	write(*,*),'rank,i,j',rank,i,j
 	do k=k1-kjet-2,k1
 	  Cbound(i,j,k)=Cbound2(i,j,k)
 	enddo

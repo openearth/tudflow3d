@@ -338,7 +338,7 @@
 		write(*,*) '# bedplume%height should be positive             #'
 	CASE(271)
 		write(*,*) '# namelist &plume                                #'			
-		write(*,*) '# bedplume%c(1:nfrac) should be positive         #'
+		write(*,*) '# bedplume%c(1:nfrac), bedplume%sedflux(1:nfrac) should be positive         #'
 	CASE(272)
 		write(*,*) '# namelist &plume                                #'			
 		write(*,*) '# bedplume%forever should be 0 or 1              #'
@@ -354,6 +354,9 @@
 	CASE(276)
 		write(*,*) '# namelist &plume                                #'			
 		write(*,*) '# W_j_powerlaw must be >0 (default 7 for 1/7 powerlaw)  #'	
+	CASE(277)
+		write(*,*) '# namelist &plume                                #'			
+		write(*,*) '# bedplume%c(1:nfrac), bedplume%sedflux(1:nfrac) cannot both be defined   #'		
 	CASE(301)
 		write(*,*) '# namelist &ship                                 #'			
 		write(*,*) '# please prescribe U_TSHD                        #'	

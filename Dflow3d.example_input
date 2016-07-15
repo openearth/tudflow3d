@@ -107,13 +107,15 @@ zjet2 = 0.5			! vertical position centre of horizontal plume [m]
 bedplume(1)%x = -500. 50. 50. -500. ! x coordinate 4 corners bedplume [m]
 bedplume(1)%y = -500. -500. 500. 500. ! y coordinate 4 corners bedplume [m]
 bedplume(1)%height = 0.5            ! vertical height bedplume [m]
-bedplume(1)%zbottom= 0.2           ! vertical bottom start height bedplume [m] (optional, default 0)
-bedplume(1)%u = 0.5            	! Initial U velocity inside bedplume [m/s] (if not defined then vertical profile based on U_b is used)
-bedplume(1)%v = 0.5            	! Initial V velocity inside bedplume [m/s] (if not defined then vertical profile based on V_b is used)
-bedplume(1)%w = 0.5            	! Initial W velocity inside bedplume [m/s] (if not defined then W_b is used)
-bedplume(1)%c = 0.1 0.1 0.1    	! Initial volume fractions inside bedplume [-] (length vector must be nfrac large)
-bedplume(1)%forever = 0        	! 1 is bedplume put in place every timestep, 0 is only initial bedplume (default 0)
-bedplume(1)%t0 = 0.        	! bedplume is started after t0 seconds (default 0. s) 
+bedplume(1)%zbottom= 0.2           	! vertical bottom start height bedplume [m] (optional, default 0)
+bedplume(1)%u = 0.5            		! Initial U velocity inside bedplume [m/s] (if not defined then vertical profile based on U_b is used)
+bedplume(1)%v = 0.5            		! Initial V velocity inside bedplume [m/s] (if not defined then vertical profile based on V_b is used)
+bedplume(1)%w = 0.5            		! Initial W velocity inside bedplume [m/s] (if not defined then W_b is used)
+bedplume(1)%c = 0.1 0.1 0.1    		! Initial volume fractions inside bedplume [-] (length vector must be nfrac large)
+bedplume(1)%forever = 0        		! 1 is bedplume put in place every timestep, 0 is only initial bedplume (default 0)
+bedplume(1)%t0 = 0.        			! bedplume is started after t0 seconds (default 0. s) 
+bedplume(1)%Q = 2.5 				! Fluid flux [m3/s] (divided evenly over all cells within bedplume) 
+bedplume(1)%sedflux = 6.625 59.625  ! Sediment flux [kg/s] (divided evenly over all cells within bedplume)
 /
 
 &fractions_in_plume

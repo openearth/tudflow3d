@@ -113,9 +113,9 @@
       ENDIF
 	  
       do n=1,nfrac
-	 call bound_c(cold(n,:,:,:),frac(n)%c,n)
- 	 call bound_c(cnew(n,:,:,:),frac(n)%c,n)
- 	 call bound_c(dcdt(n,:,:,:),frac(n)%c,n)
+	 call bound_c(cold(n,:,:,:),frac(n)%c,n,0.)
+ 	 call bound_c(cnew(n,:,:,:),frac(n)%c,n,0.)
+ 	 call bound_c(dcdt(n,:,:,:),frac(n)%c,n,0.)
       enddo 
       call state(cold,rold)
       call state(cnew,rnew)

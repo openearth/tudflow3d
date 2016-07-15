@@ -91,7 +91,7 @@ c********************************************************************
      +            ib,ie,jb,je,kb,ke)
 
 		dcdt(n,:,:,:) =cnew(n,:,:,:) + dt*(1.5*dnewc(n,:,:,:)-0.5*cc(n,:,:,:)) !Adams-Bashford
-		call bound_c(dcdt(n,:,:,:),frac(n)%c,n) ! bc for intermediate dcdt
+		call bound_c(dcdt(n,:,:,:),frac(n)%c,n,dt) ! bc for intermediate dcdt AB2
 		cc(n,:,:,:)=dnewc(n,:,:,:)
 	  enddo
 
@@ -370,7 +370,7 @@ c********************************************************************
 	    enddo
       	  endif
 	    do n=1,nfrac 
-		call bound_c(dcdt(n,:,:,:),frac(n)%c,n) ! bc after erosion_deposition 
+		call bound_c(dcdt(n,:,:,:),frac(n)%c,n,dt) ! bc after erosion_deposition AB3
 	    enddo
 	call state(dcdt,drdt) ! determine drdt with intermediate dcdt
 	endif
@@ -731,7 +731,7 @@ c********************************************************************
 		    dcdtbot(n,:,:)= cnewbot(n,:,:) + dt*dnewcbot(n,:,:) ! time update
 	      	  endif
            IF (CNdiffz.eq.1) THEN !CN semi implicit treatment diff-z:
-	     call bound_c(dcdt(n,:,:,:),frac(n)%c,n) ! bc after erosion_deposition 
+	     call bound_c(dcdt(n,:,:,:),frac(n)%c,n,0.) ! bc start CN-diffz ABv
 	     do k=k1,k1 !-kjet,k1
 	       do t=1,tmax_inPpunt
 	         i=i_inPpunt(t)
@@ -766,13 +766,13 @@ c********************************************************************
       	  if (interaction_bed>0) then
 	    call slipvelocity(cnew,wnew,wsed,rnew,0,0,wfluid,dt,dz) !driftflux_force must be calculated with settling velocity at k=0
 	    CALL erosion_deposition(dcdt,dcdtbot,unew,vnew,wnew,rnew,cnew,cnewbot,dt,dz) !first two vars are adjusted
-	    !! for kn1: erosion_deposition must be after advecc_TVD and after dcdt update, because cnew and dcdt are two separate vars
+	    !! erosion_deposition must be after advecc_TVD and after dcdt update, because cnew and dcdt are two separate vars
 	    do n=1,nfrac 
 	        call bound_cbot(dcdtbot(n,:,:))
 	    enddo
       	  endif
 	    do n=1,nfrac 
-		call bound_c(dcdt(n,:,:,:),frac(n)%c,n) ! bc after erosion_deposition 
+		call bound_c(dcdt(n,:,:,:),frac(n)%c,n,dt) ! bc after erosion_deposition ABv
 	    enddo
 	  call state(dcdt,drdt) ! determine drdt with intermediate dcdt
 	endif
@@ -1239,7 +1239,7 @@ c********************************************************************
 		    dcdt1bot(n,:,:)= cnewbot(n,:,:) + cn1*dt*k1cbot(n,:,:) ! pred1
 	      	  endif
            IF (CNdiffz.eq.1) THEN !CN semi implicit treatment diff-z:
-	     call bound_c(dcdt(n,:,:,:),frac(n)%c,n) ! bc after erosion_deposition 
+	     call bound_c(dcdt(n,:,:,:),frac(n)%c,n,0.) ! bc start CN-diffz k1 RK3
 	     do k=k1,k1 !-kjet,k1
 	       do t=1,tmax_inPpunt
 	         i=i_inPpunt(t)
@@ -1269,7 +1269,7 @@ c********************************************************************
 	         CALL solve_tridiag(dcdt(n,i,j,0:k1),aaa,bbb,ccc,rhss,k1+1) 
                enddo
              enddo
-	   ENDIF
+	   ENDIF !endif semi-implicit CN
           enddo
       	  if (interaction_bed>0) then
 	    call slipvelocity(cnew,wnew,wsed,rnew,0,0,wfluid,cn1*dt,dz) !driftflux_force must be calculated with settling velocity at k=0
@@ -1280,7 +1280,7 @@ c********************************************************************
 	    enddo
       	  endif
 	    do n=1,nfrac 
-		call bound_c(dcdt(n,:,:,:),frac(n)%c,n) ! bc after erosion_deposition 
+		call bound_c(dcdt(n,:,:,:),frac(n)%c,n,cn1*dt) ! bc after erosion_deposition k1 RK3
 	    enddo
 	endif
 
@@ -1673,8 +1673,9 @@ c********************************************************************
 	  do n=1,nfrac
 		dcdt(n,:,:,:) =dcdt(n,:,:,:) + cn2*dt*k2c(n,:,:,:) !pred2
 !		dcdt(n,:,:,:) =cnew(n,:,:,:) + a31*dt*k1c(n,:,:,:) + a32*dt*k2c(n,:,:,:) !pred2
-		call bound_c(dcdt(n,:,:,:),frac(n)%c,n) ! bc for intermediate pred1
+!		call bound_c(dcdt(n,:,:,:),frac(n)%c,n,0.) ! switched off 6-7-16 RK3 k2 because bound_c after dep-ero
            IF (CNdiffz.eq.1) THEN !CN semi implicit treatment diff-z:
+			call bound_c(dcdt(n,:,:,:),frac(n)%c,n,0.) ! bc start CN-diffz k2 RK3 
 	     do k=k1,k1 !-kjet,k1
 	       do t=1,tmax_inPpunt
 	         i=i_inPpunt(t)
@@ -1704,17 +1705,20 @@ c********************************************************************
 	         CALL solve_tridiag(dcdt(n,i,j,0:k1),aaa,bbb,ccc,rhss,k1+1) 
                enddo
              enddo
-	     call bound_c(dcdt(n,:,:,:),frac(n)%c,n) ! bc after CN-diffz 
+	     !call bound_c(dcdt(n,:,:,:),frac(n)%c,n) ! bc after CN-diffz switched off 6-7-16 
 	   ENDIF
 	  enddo
 	  if (interaction_bed>0) then
-	    call slipvelocity(dcdt,dwdt,wsed,drdt,0,0,wfluid,cn2*dt,dz) !get wfluid and wsed at k=0 for driftflux_force 
+	    call slipvelocity(dcdt2,dwdt,wsed,drdt,0,0,wfluid,cn2*dt,dz) !get wfluid and wsed at k=0 for driftflux_force 
 	    CALL erosion_deposition(dcdt,dcdt2bot,dudt,dvdt,dwdt,drdt,dcdt2,dcdt1bot,cn2*dt,dz) !first two vars are adjusted 
  	    !! for kn2: variable dcdt2 made
 	    do n=1,nfrac
 		call bound_cbot(dcdt2bot(n,:,:))
 	    enddo
 	  endif
+	    do n=1,nfrac 
+			call bound_c(dcdt(n,:,:,:),frac(n)%c,n,cn2*dt) ! bc after erosion_deposition k2 RK3
+	    enddo	  
 	endif
 
 	if (diffusion.eq.'COM4') then
@@ -2119,8 +2123,9 @@ c********************************************************************
 		dcdt(n,:,:,:) =dcdt(n,:,:,:) + cn3*dt*k3c(n,:,:,:) !n+1
 !		CALL air_bubbles_free_surface ! added air_bubbles_free_surface here, just before bc are applied
 !		9-10:2012: air_bubbles_free_surface not called because wsed is calculated on top row now, so air is dissappearing anyway
-		call bound_c(dcdt(n,:,:,:),frac(n)%c,n) ! bc 
+!		call bound_c(dcdt(n,:,:,:),frac(n)%c,n,0.) ! switched off 6-7-16 RK3 k3 because bound_c after dep-ero
            IF (CNdiffz.eq.1) THEN !CN semi implicit treatment diff-z:
+		   call bound_c(dcdt(n,:,:,:),frac(n)%c,n,0.) ! start CN-diffz k3 RK3 
 	     do k=k1,k1 !-kjet,k1
 	       do t=1,tmax_inPpunt
 	         i=i_inPpunt(t)
@@ -2150,11 +2155,11 @@ c********************************************************************
 	         CALL solve_tridiag(dcdt(n,i,j,0:k1),aaa,bbb,ccc,rhss,k1+1) 
                enddo
              enddo
-	     call bound_c(dcdt(n,:,:,:),frac(n)%c,n) ! bc after CN-diffz 
+	      
 	   ENDIF
 	  enddo
 	  if (interaction_bed>0) then
-	    call slipvelocity(dcdt,dwdt,wsed,drdt,0,0,wfluid,cn3*dt,dz) !get wfluid and wsed at k=0 for driftflux_force 
+	    call slipvelocity(dcdt2,dwdt,wsed,drdt,0,0,wfluid,cn3*dt,dz) !get wfluid and wsed at k=0 for driftflux_force 
 	    CALL erosion_deposition(dcdt,dcdtbot,dudt,dvdt,dwdt,drdt,dcdt2,dcdt2bot,cn3*dt,dz) !first two vars are adjusted
 		    !! for kn3: extra var dcdt2 is used
 	    ! should correct dwdt(n,:,:,0) with (1.-tau/frac(n)%tau_d), but this correction almost always is zero, for now leave
@@ -2162,6 +2167,9 @@ c********************************************************************
 		call bound_cbot(dcdtbot(n,:,:))
 	    enddo
 	  endif
+	    do n=1,nfrac 
+		call bound_c(dcdt(n,:,:,:),frac(n)%c,n,cn3*dt) ! bc after erosion_deposition k3 RK3
+	    enddo	  
 	endif
 
 	if (diffusion.eq.'COM4') then
@@ -2482,7 +2490,7 @@ c********************************************************************
 	      call diffc_CDS2 (dnewc(n,:,:,:),Cnew(n,:,:,:),Diffcof,
      +            ib,ie,jb,je,kb,ke)
 		dcdt(n,:,:,:) =cnew(n,:,:,:) + dt*(dnewc(n,:,:,:)) !euler_expl
-		call bound_c(dcdt(n,:,:,:),frac(n)%c,n) ! bc for intermediate dcdt
+		call bound_c(dcdt(n,:,:,:),frac(n)%c,n,dt) ! bc for intermediate dcdt EE1
 	  enddo
 	  call state(dcdt,drdt) ! determine drdt
 	endif
@@ -2660,8 +2668,10 @@ c********************************************************************
       USE nlist
       implicit none
 
-	real xx,yy,r_orifice2,twodtdt
+	real xx,yy,r_orifice2,twodtdt,Qsource
 	integer t
+	real xTSHD(1:4),yTSHD(1:4),phi
+	integer inout,n2
 c
 !       include 'param.txt'
 !       include 'common.txt'
@@ -2690,6 +2700,47 @@ c
           enddo
         enddo
       enddo
+	  
+
+	DO n2=1,nbedplume
+	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.bp(n2)%Q.ne.0.)) THEN
+	! rotation ship for ambient side current
+	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
+	  phi=atan2(V_b,1.e-12)
+	else
+	  phi=atan2(V_b,(U_TSHD-U_b))
+	endif
+      do k=1,kmax
+       do i=1,imax  
+         do j=jmax,1,-1 
+	  xx=Rp(i)*cos_u(j)-schuif_x
+	  yy=Rp(i)*sin_u(j)
+	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
+		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
+		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
+		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+	  ELSE 
+	 	inout=0
+	  ENDIF
+	  if (inout.eq.1) then
+		  p(i,j,k)=p(i,j,k)-bp(n2)%Q*drdt(i,j,k)/bp(n2)%volncells/dt !bp(n2)%Q positive means influx (and has to be negative in this loop)
+	   endif
+	  enddo
+	 enddo
+	enddo
+	ENDIF
+	ENDDO ! bedplume loop
+
+	
+!		if (rank.eq.5) then
+!		  Qsource = 0.0694  !2.5 !positive is suction
+!		  do i=71,106
+!		    do j=1,2
+!			    k=5
+!				p(i,j,k)=p(i,j,k)+drdt(i,j,k)*Qsource/vol_V(i,j)/dt
+!			enddo
+!		  enddo
+!		endif
       return
       end
 
@@ -2697,9 +2748,11 @@ c
       USE nlist
       implicit none
 
-	real xx,yy,r_orifice2,twodtdt
+	real xx,yy,r_orifice2,twodtdt,Qsource
 	real tt,ddtt,uu(0:i1,0:j1,0:k1),vv(0:i1,0:j1,0:k1),ww(0:i1,0:j1,0:k1),rr(0:i1,0:j1,0:k1)
 	integer t
+	real xTSHD(1:4),yTSHD(1:4),phi
+	integer inout,n2	
 c
 !       include 'param.txt'
 !       include 'common.txt'
@@ -2728,6 +2781,47 @@ c
           enddo
         enddo
       enddo
+
+	DO n2=1,nbedplume
+	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.bp(n2)%Q.ne.0.)) THEN
+	! rotation ship for ambient side current
+	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
+	  phi=atan2(V_b,1.e-12)
+	else
+	  phi=atan2(V_b,(U_TSHD-U_b))
+	endif
+      do k=1,kmax
+       do i=1,imax  
+         do j=jmax,1,-1      
+	  xx=Rp(i)*cos_u(j)-schuif_x
+	  yy=Rp(i)*sin_u(j)
+	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
+		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
+		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
+		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+	  ELSE 
+	 	inout=0
+	  ENDIF
+	  if (inout.eq.1) then
+		  p(i,j,k)=p(i,j,k)-bp(n2)%Q*rr(i,j,k)/bp(n2)%volncells/ddtt !bp(n2)%Q positive means influx (and has to be negative in this loop)
+	   endif
+	  enddo
+	 enddo
+	enddo
+	ENDIF
+	ENDDO ! bedplume loop
+	
+	  
+!		if (rank.eq.5) then
+!		  Qsource = 0.0694 !positive is suction
+!		  do i=71,106
+!		    do j=1,2
+!			    k=5
+!				p(i,j,k)=p(i,j,k)+rr(i,j,k)*Qsource/vol_V(i,j)/dt
+!			enddo
+!		  enddo
+!		endif	  
+ 
       return
       end
 

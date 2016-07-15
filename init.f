@@ -511,8 +511,33 @@ c******************************************************************
 	  enddo
 	 enddo
 	enddo
-
 	ENDDO ! bedplume loop
+	
+	DO n=1,nbedplume
+	  bp(n)%volncells=0.
+      do k=0,k1
+       do i=0,i1  
+         do j=jmax*px+1,0,-1       ! bedplume loop is only initial condition: do not bother to have U,V,W initial staggering perfect 
+	  xx=Rp(i)*cos_ut(j)-schuif_x !global xx over different processors
+	  yy=Rp(i)*sin_ut(j)          !global yy over different processors
+	  IF (k.le.FLOOR(bp(n)%height/dz).and.k.ge.CEILING(bp(n)%zbottom/dz)) THEN ! obstacle: 
+		xTSHD(1:4)=bp(n)%x*cos(phi)-bp(n)%y*sin(phi)
+		yTSHD(1:4)=bp(n)%x*sin(phi)+bp(n)%y*cos(phi)
+		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+	  ELSE 
+	 	inout=0
+	  ENDIF
+	  if (inout.eq.1) then
+	   bp(n)%volncells=bp(n)%volncells+vol_V(i,j)
+	   endif
+	  enddo
+	 enddo
+	enddo	  
+	 if (bp(n)%volncells.le.0.) then
+	   write(*,*),'WARNING, no cells found for bedplume number: ',n,bp(n)%volncells,rank
+	   write(*,*),'In case a sedflux or Q has been defined the code will crash because of division by a zero volncells'
+	 endif
+	ENDDO ! bedplume loop	
 
 	ENDIF
 
@@ -1048,7 +1073,64 @@ C ...  Locals
 		  !dyprop2_min(n)=MIN(dyprop2_min(n),dyy)
 	        enddo
 	      enddo
+		IF (cutter.eq.'yes') THEN
+	      do n=1,nprop2
+		do i=1,imax
+		do j=1,jmax*px
+			do k=1,kmax
+			  xx=Ru(i)*cos_ut(j)-schuif_x
+			  yy=Rp(i)*sin_ut(j)
+			  zz=k*dz-0.5*dz-(depth-zprop)
+			  dzz=zz
+			  dyy=yy-yprop2(n)
+			  if ((dzz*dzz+dyy*dyy).le.(Dprop/2.)**2.and.xx.ge.xprop2(n)-Dprop/2.and.xx.le.xprop2(n)+Dprop/2.) then
+			    YYY    = sqrt(dzz*dzz+dyy*dyy)/(Dprop/2.)
+!			    Ax    = Pprop/(pi/4.*Dprop**2*uprop0*vol_V(i,j)/(Ru(i)*(phivt(j)-phivt(j-1))*dz))
+!     &                              /REAL(nprop)
+			    Ax    = Pprop/(pi/4.*Dprop**2*uprop0*vol_V(i,j)/(Ru(i)*(phivt(j)-phivt(j-1))*dz))
+     &                              /REAL(nprop)*dr(i)/Dprop !last term to make sure to divide Pprop over complete dx of cutter wheel, otherwise too much power is added to flow
+				  fbx2 = 0. !only rotation
+			      !fbx2   = 3./4.*Ax
+			    if (n.eq.1) then
+				    fbphi = 1./4.*Ax*YYY*1.5   * (-rot_prop)/ABS(rot_prop)
+			    else
+				    fbphi =-1./4.*Ax*YYY*1.5   * (-rot_prop)/ABS(rot_prop)
+			    endif
+					!! right rotation positive 
+					!! correction 1.5 is for integral linear function YYY on circilar area
+					!! fbphi=1/4 of total thrust, results in about Utangent=50%Uprop 
+					!! (fbx is reduced to keep total thrust/power similar)
 
+		 	    fby2   = -fbphi * sin(atan2(dzz,dyy))
+			    if (rudder.eq.1) then 
+!				! add downward force at one side of rudder and upward at other side: 
+!				! force is zero at z=D/2 and max at z=-D/2 (right part, vice versa left part)
+				! test show this does not work as a rudder...
+!				fbz    =  fbphi * cos(atan2(dzz,dyy)) 
+!     &					  + 0.4*fbx2 * SIGN(1.,dyy)*(rot_prop)/ABS(rot_prop)*(SIGN(1.,-dyy)*dzz+Dprop/2.)/Dprop
+!				! add downward force bottom and upward on top: 
+				fbz    =  fbphi * cos(atan2(dzz,dyy)) 
+     &					  - 0.4*fbx2 * dzz/(0.5*Dprop)
+			    else
+				fbz    =  fbphi * cos(atan2(dzz,dyy)) 
+			    endif
+
+			    fbx   =  fbx2 * cos(phi) - fby2 * sin(phi)
+			    fby   =  fbx2 * sin(phi) + fby2 * cos(phi)
+			
+			   Ppropx_dummy(i,j  ,k)=cos_ut(j)*fbx+sin_ut(j)*fby	
+			   Ppropy_dummy(i,j  ,k)=Ppropy_dummy(i,j  ,k)
+     & -0.5*sin_vt(j)*fbx+0.5*cos_vt(j)*fby
+			   Ppropy_dummy(i,j-1,k)=Ppropy_dummy(i,j-1,k)
+     & -0.5*sin_vt(j-1)*fbx+0.5*cos_vt(j-1)*fby
+			   Ppropz_dummy(i,j,k  )=Ppropz_dummy(i,j,k)+0.5*fbz
+			   Ppropz_dummy(i,j,k-1)=Ppropz_dummy(i,j,k-1)+0.5*fbz
+			  endif			   
+			enddo
+		enddo
+	      enddo
+		  enddo
+		ELSE
 	      do n=1,nprop2
 		do j=1,jmax*px
 			do k=1,kmax
@@ -1060,7 +1142,8 @@ C ...  Locals
 			    YYY    = sqrt(dzz*dzz+dyy*dyy)/(Dprop/2.)
 			    Ax    = Pprop/(pi/4.*Dprop**2*uprop0*vol_V(i_min(n),j)/(Ru(i_min(n))*(phivt(j)-phivt(j-1))*dz))
      &                              /REAL(nprop)!*(uprop0+Ua)/uprop0
-			    fbx2   = 3./4.*Ax 
+			    fbx2   = 3./4.*Ax
+				
 			    if (n.eq.1) then
 				    fbphi = 1./4.*Ax*YYY*1.5   * (-rot_prop)/ABS(rot_prop)
 			    else
@@ -1095,7 +1178,7 @@ C ...  Locals
      & -0.5*sin_vt(j-1)*fbx+0.5*cos_vt(j-1)*fby
 			   Ppropz_dummy(i_min(n),j,k  )=Ppropz_dummy(i_min(n),j,k)+0.5*fbz
 			   Ppropz_dummy(i_min(n),j,k-1)=Ppropz_dummy(i_min(n),j,k-1)+0.5*fbz
-			  endif
+
 !			  if (rudder.eq.1.and.(i_min(n)+7)<i1) then
 !			    if (ABS(dyy).le.(1.2*dyprop2_min(n))) then !! Middle of prop is found for rudder
 !			      if (ABS(dzz).le.(Dprop/2.)) then
@@ -1109,10 +1192,13 @@ C ...  Locals
 !				k_inVpunt_rudder_dummy(tel1)=k
 !			      endif
 !			    endif
-!			  endif
+			  endif
 			enddo
 		enddo
-	      enddo
+	      enddo		
+		ENDIF
+		  
+		  
 	ENDIF !IF LOA>0
 	ENDIF !rank=0
 
