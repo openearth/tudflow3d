@@ -2026,7 +2026,6 @@ c get stuff from other CPU's
       do t=1,tmax_inPpunt
 	i=i_inPpunt(t)
 	j=j_inPpunt(t)
-	write(*,*),'rank,i,j',rank,i,j
 	do k=k1-kjet-2,k1
 	  Cbound(i,j,k)=Cbound2(i,j,k)
 	enddo

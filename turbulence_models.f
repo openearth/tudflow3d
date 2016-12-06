@@ -323,6 +323,7 @@
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),rr(0:i1,0:j1,0:k1)
 
 	real ekm2(0:i1,0:j1,0:k1)
+	integer im,ip,jm,jp,km,kp
 
 !	real shr(1:imax,1:jmax,1:kmax),ekm1(1:imax,1:jmax,1:kmax),ekm2(1:imax,1:jmax,1:kmax)
 !	real shr_T(1:imax,1:jmax*px,1:kmax/px),ekm2_T(1:imax,1:jmax*px,1:kmax/px),ekm2y(1:imax,1:jmax,1:kmax)
@@ -558,6 +559,18 @@ c*************************************************************
             k=k_inPpuntTSHD(t)
             !ekm(i,j,k)=0.
 			Diffcof(i,j,k)=0. 
+			im=MAX(0,i-1)
+			ip=MIN(i1,i+1)
+			jm=MAX(0,j-1)
+			jp=MIN(j1,j+1)
+			km=MAX(0,k-1)
+			kp=MIN(k1,k+1)
+			Diffcof(im,j,k)=0.
+			Diffcof(ip,j,k)=0.
+			Diffcof(i,jm,k)=0.
+			Diffcof(i,jp,k)=0.
+			Diffcof(i,j,km)=0.
+			Diffcof(i,j,kp)=0.			
           enddo
 		ELSEIF(kjet>0) THEN
           !ekm(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
@@ -583,6 +596,7 @@ c*************************************************************
 
 	real ekm2(0:i1,0:j1,0:k1)
 	real z,Ri,dudz,dvdz,drdz,Diffcof2(0:i1,0:j1,0:k1),Lm2_Bak(1:kmax),MuAn_factor
+	integer im,ip,jm,jp,km,kp
 
 !	real shr(1:imax,1:jmax,1:kmax),ekm1(1:imax,1:jmax,1:kmax),ekm2(1:imax,1:jmax,1:kmax)
 !	real shr_T(1:imax,1:jmax*px,1:kmax/px),ekm2_T(1:imax,1:jmax*px,1:kmax/px),ekm2y(1:imax,1:jmax,1:kmax)
@@ -804,6 +818,18 @@ c*************************************************************
             k=k_inPpuntTSHD(t)
             !ekm(i,j,k)=0.
 	    Diffcof(i,j,k)=0.
+			im=MAX(0,i-1)
+			ip=MIN(i1,i+1)
+			jm=MAX(0,j-1)
+			jp=MIN(j1,j+1)
+			km=MAX(0,k-1)
+			kp=MIN(k1,k+1)
+			Diffcof(im,j,k)=0.
+			Diffcof(ip,j,k)=0.
+			Diffcof(i,jm,k)=0.
+			Diffcof(i,jp,k)=0.
+			Diffcof(i,j,km)=0.
+			Diffcof(i,j,kp)=0.			
           enddo
 	ELSEIF(kjet>0) THEN
           !ekm(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
@@ -873,6 +899,7 @@ c*************************************************************
 	real dwdx,dwdy,dwdz
 	real Sd11,Sd12,Sd13,Sd22,Sd23,Sd33
 	real MuAn_factor,drdz,Ri 
+	integer im,ip,jm,jp,km,kp
 
 
 	MuAn_factor=0.
@@ -1041,6 +1068,18 @@ c*************************************************************
             k=k_inPpuntTSHD(t)
             !ekm(i,j,k)=0.
 			Diffcof(i,j,k)=0. 
+			im=MAX(0,i-1)
+			ip=MIN(i1,i+1)
+			jm=MAX(0,j-1)
+			jp=MIN(j1,j+1)
+			km=MAX(0,k-1)
+			kp=MIN(k1,k+1)
+			Diffcof(im,j,k)=0.
+			Diffcof(ip,j,k)=0.
+			Diffcof(i,jm,k)=0.
+			Diffcof(i,jp,k)=0.
+			Diffcof(i,j,km)=0.
+			Diffcof(i,j,kp)=0.				
           enddo
 	ELSEIF (kjet>0) THEN
           !ekm(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
@@ -1068,6 +1107,7 @@ c*************************************************************
 	real G11,G22,G33,G12,G13,G23
 	real s1,s2,s3,a1,a2,a3,II1,II2,II3
 	real rrr,qqq,ppp,alpha,ss1,ss2,ss3,sm1,sm2
+	integer im,ip,jm,jp,km,kp
 
 
 	dzi=1./dz
@@ -1264,6 +1304,18 @@ c*************************************************************
             k=k_inPpuntTSHD(t)
             !ekm(i,j,k)=0.
 			Diffcof(i,j,k)=0. 
+			im=MAX(0,i-1)
+			ip=MIN(i1,i+1)
+			jm=MAX(0,j-1)
+			jp=MIN(j1,j+1)
+			km=MAX(0,k-1)
+			kp=MIN(k1,k+1)
+			Diffcof(im,j,k)=0.
+			Diffcof(ip,j,k)=0.
+			Diffcof(i,jm,k)=0.
+			Diffcof(i,jp,k)=0.
+			Diffcof(i,j,km)=0.
+			Diffcof(i,j,kp)=0.				
           enddo
 		ELSEIF (kjet>0) THEN
 			  !ekm(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
@@ -1308,6 +1360,7 @@ c*************************************************************
 	real L11,L12,L13,L22,L23,L33
 	real M11,M12,M13,M22,M23,M33
 	integer ii,jj,kk
+	integer im,ip,jm,jp,km,kp
 	
 
 	inv27=1./27.
@@ -1776,6 +1829,18 @@ c*************************************************************
             k=k_inPpuntTSHD(t)
             !ekm(i,j,k)=0.
 			Diffcof(i,j,k)=0.
+			im=MAX(0,i-1)
+			ip=MIN(i1,i+1)
+			jm=MAX(0,j-1)
+			jp=MIN(j1,j+1)
+			km=MAX(0,k-1)
+			kp=MIN(k1,k+1)
+			Diffcof(im,j,k)=0.
+			Diffcof(ip,j,k)=0.
+			Diffcof(i,jm,k)=0.
+			Diffcof(i,jp,k)=0.
+			Diffcof(i,j,km)=0.
+			Diffcof(i,j,kp)=0.				
           enddo
 		ELSEIF (kjet>0) THEN
 			  !ekm(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
@@ -1808,6 +1873,7 @@ c*************************************************************
 	integer imm,jmm,kmm,ipp,jpp,kpp,ie,je,ke
 	real*8 ubb(0:i1,0:k1),ubf(0:i1,0:k1)
 	REAL Uvel2(-1:i1+1,-1:j1+1,-1:k1+1),Vvel2(-1:i1+1,-1:j1+1,-1:k1+1),Wvel2(-1:i1+1,-1:j1+1,-1:k1+1)
+	integer im,ip,jm,jp,km,kp
 
 	Uvel=Uvel4
 	Vvel=Vvel4
@@ -2120,6 +2186,18 @@ c get stuff from other CPU's
             k=k_inPpuntTSHD(t)
             !ekm(i,j,k)=0.
 			Diffcof(i,j,k)=0. 
+			im=MAX(0,i-1)
+			ip=MIN(i1,i+1)
+			jm=MAX(0,j-1)
+			jp=MIN(j1,j+1)
+			km=MAX(0,k-1)
+			kp=MIN(k1,k+1)
+			Diffcof(im,j,k)=0.
+			Diffcof(ip,j,k)=0.
+			Diffcof(i,jm,k)=0.
+			Diffcof(i,jp,k)=0.
+			Diffcof(i,j,km)=0.
+			Diffcof(i,j,kp)=0.				
           enddo
 		ELSEIF (kjet>0) THEN
 			  !ekm(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
