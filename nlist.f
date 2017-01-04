@@ -134,7 +134,7 @@
       REAL, DIMENSION(:,:),ALLOCATABLE :: Ubcoarse1,Vbcoarse1,Wbcoarse1,Ubcoarse2,Vbcoarse2,Wbcoarse2
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: Cbcoarse1,Cbcoarse2
 
-	REAL, DIMENSION(:,:,:,:),ALLOCATABLE :: Cold,Cnew,dcdt,cc,ccold,dcdt2
+	REAL, DIMENSION(:,:,:,:),ALLOCATABLE :: Cold,Cnew,dcdt,cc,ccold,dcdt2,Clivebed
 	REAL, DIMENSION(:,:,:),ALLOCATABLE :: Coldbot,Cnewbot,dcdtbot,ccbot,ccoldbot
 
 	type fractions
@@ -233,7 +233,7 @@
 	comp_filter_n = 0
 	CNdiffz = 0
 	npresIBM = 0
-	advec_conc='TVD' !nerdoption, default is 'TVD' alpha-cfl dependent scheme, can also be 'VLE' (TVD Van Leer) or 'NVD' (alpha-cfl dependent scheme via NVD manner)
+	advec_conc='VLE' !nerdoption, default is 'VLE' (TVD Van Leer) most robust scheme, can also be 'TVD' alpha-cfl dependent scheme or 'NVD' (alpha-cfl dependent scheme via NVD manner) which should also be robust/stable and sligthly more accurate. In a test VLE gave no negative concentrations and TVD did...
 	!! ambient:
 	U_b = -999.
 	V_b = -999.
@@ -888,7 +888,11 @@
 	ALLOCATE(Coldbot(nfrac,0:i1,0:j1))
 	ALLOCATE(Cnewbot(nfrac,0:i1,0:j1))
 	ALLOCATE(dCdtbot(nfrac,0:i1,0:j1))
-
+	IF (interaction_bed.ge.4) THEN 
+		ALLOCATE(Clivebed(nfrac,0:i1,0:j1,0:k1))
+	ENDIF
+	Clivebed=0.
+	
 	ALLOCATE(Ppropx(0:i1,0:j1,0:k1))
 	ALLOCATE(Ppropy(0:i1,0:j1,0:k1))
 	ALLOCATE(Ppropz(0:i1,0:j1,0:k1))

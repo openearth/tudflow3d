@@ -1,15 +1,22 @@
 &simulation
-px =7				! number of processors [-]
-imax = 288			! imax can be chosen freely [-]
-jmax = 154			! jmax must be multiple of px [-]
-kmax = 35			! kmax must be multiple of px [-]
-imax_grid=70 103 128 178 208 288	! end indices where dr_grid switches (must be compatable with imax) [-]
-dr_grid=0.8 0.4 0.7 1.0 1.3 1.6	! various dr_grid (must be compatable with imax_grid) [m]
-Rmin =90.			! Radius where cylindrical grid starts [m]
-schuif_x = 150.                 ! Shift in x-coordinate to make (x,y) plume = (0,0) [m]
-dy = 0.4			! width gridcell at (x,y)=(0,0) [m]
-depth = 15.			! Depth [m] (dz=depth/kmax)
-hisfile = ''			! Input file for history points
+px =32				! number of processors [-]
+imax = 450 			! imax can be chosen freely [-]
+jmax = 224 			! jmax must be multiple of px [-]
+kmax = 320 			! kmax must be multiple of px [-]
+imax_grid=50 170 450   	! end indices where dr_grid switches (must be compatable with imax) [-]
+dr_grid=0.006 0.00072 0.00072! various dr_grid (must be compatable with imax_grid) [m]
+fac_r_grid=0.96 1 1.008  ! various growth factor of dr_grid, each consequtive cell has dr(i)=dr(i-1)*fac_r_grid
+lim_r_grid=0.00072 0.00072 0.0063 ! various limit of dr, with fac_r_grid>1 it is the max dr, with fac_r_grid<1 it is the minimum dr
+jmax_grid=25 112    ! end indices where dy_grid switches (must be compatible with jmax; depening on sym_grid_y!) [-]
+dy_grid=0.00072 0.00072    ! various dy_grid (must be compatable with jmax_grid) [m]
+fac_y_grid=1.0 1.024  ! various growth factor of dy_grid, each consequtive cell has dr(j)=dr(j-1)*fac_y_grid [-]
+lim_y_grid=0.00072 100. ! various limit of dy, with fac_y_grid>1 it is the max dy, with fac_y_grid<1 it is the minimum dy [-]
+sym_grid_y=1    ! if 0 then no symmetry on dy_grid is applied [-]
+Rmin =0.4			! Radius where cylindrical grid starts [m]
+schuif_x = 0.57016                 ! Shift in x-coordinate to make (x,y) plume = (0,0) [m]
+dy = 0.00288			! width gridcell at (x,y)=(0,0) [m]
+depth = 0.558			! Depth [m] (dz=depth/kmax)
+hisfile = './inputfiles/his_jicf_Gal_ufvar04.inp'			! Input file for history points
 restart_dir =''			! Path restart files influding start of filename e.g. '/data/.../flow3d_000000010_'
 /
 

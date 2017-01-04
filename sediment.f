@@ -209,12 +209,13 @@
 
 	real     wsed(nfrac,0:i1,0:j1,0:k1),erosion,deposition,uu,vv,absU,z0,ust,yplus,tau !local variables
 	integer n,tel,kplus
+	integer kbedloc !input/output --> nog aanpassen in code
 	REAL     ccnew(nfrac,0:i1,0:j1,0:k1),cbotnew(nfrac,0:i1,0:j1)  ! output
 	REAL     ccfd(nfrac,0:i1,0:j1,0:k1),cbotcfd(nfrac,0:i1,0:j1)  ! input
 	REAL	 ddt,dz ! input
 	REAL     ucfd(0:i1,0:j1,0:k1),vcfd(0:i1,0:j1,0:k1),wcfd(0:i1,0:j1,0:k1),rcfd(0:i1,0:j1,0:k1) ! input
 	REAL     wfluid(0:i1,0:j1,0:k1) !dummy
-
+	REAL     cbottot,kn_sed_avg,Mr_avg,tau_e_avg,cfixedbed,ctot_firstcel,erosion_avg,cbotnewtot
 	erosion=0.
 	deposition=0.
 	
@@ -230,65 +231,156 @@
 !	   Wsed(n,:,:,0)=Wsed(n,:,:,0)+0.5*(Wnew(:,:,1)-Wnew(:,:,0)) !correct for average Wnew at k=1/2 (location of C(:,:,1))
 !	ENDDO
 !	write(*,*),'Wnew(10,10,0),3xCnew,3xwsed',rank,Wnew(10,10,0),cnew(1:3,10,10,0),wsed(1:3,10,10,0)
+	
+	IF (interaction_bed.le.3) THEN ! erosion sedimentation without bed update and for each sediment fraction independently
+		DO i=1,imax
+		  DO j=1,jmax
+			!! First Ubot_TSHD and Vbot_TSHD is subtracted to determine tau 
+			!! only over ambient velocities not over U_TSHD
+			kplus = MIN(kbed(i,j)+1,k1)
+			uu=ucfd(i,j,kplus)-Ubot_TSHD(j)
+			vv=vcfd(i,j,kplus)-Vbot_TSHD(j)
+			absU=sqrt((uu)**2+(vv)**2)
+			DO n=1,nfrac
+				ust=0.1*absU
+				do tel=1,10 ! 10 iter is more than enough
+					z0=frac(n)%kn_sed/30.+0.11*nu_mol/MAX(ust,1.e-9) 
+					! for tau shear on sediment don't use kn (which is result of bed ripples), use frac(n)%kn_sed 
+					! it is adviced to use kn_sed=dfloc
+					ust=absU/MAX(1./kappa*log(0.5*dz/z0),2.) !ust maximal 0.5*absU
+				enddo
+				yplus=0.5*dz*ust/nu_mol
+						if (yplus<30.) then
+						  do tel=1,10 ! 10 iter is more than enough
+								yplus=0.5*dz*ust/nu_mol
+								ust=absU/MAX((5.*log(yplus)-3.05),2.) !ust maximal 0.5*absU
+						  enddo
+						endif
+						if (yplus<5.) then !viscous sublayer uplus=yplus
+								ust=sqrt(absU*nu_mol/(0.5*dz))
+						endif
+		!               if (yplus<11.225) then  !viscous sublayer uplus=yplus
+		!                       ust=sqrt(absU*nu_mol/(0.5*dz))
+		!               endif
+				kplus = MIN(kbed(i,j)+1,k1)
+				tau=rcfd(i,j,kplus)*ust*ust  
 
-	DO i=1,imax
-	  DO j=1,jmax
-	    !! First Ubot_TSHD and Vbot_TSHD is subtracted to determine tau 
-	    !! only over ambient velocities not over U_TSHD
-		kplus = MIN(kbed(i,j)+1,k1)
-  	    uu=ucfd(i,j,kplus)-Ubot_TSHD(j)
-	    vv=vcfd(i,j,kplus)-Vbot_TSHD(j)
-	    absU=sqrt((uu)**2+(vv)**2)
-	    DO n=1,nfrac
-		ust=0.1*absU
-		do tel=1,10 ! 10 iter is more than enough
-			z0=frac(n)%kn_sed/30.+0.11*nu_mol/MAX(ust,1.e-9) 
-			! for tau shear on sediment don't use kn (which is result of bed ripples), use frac(n)%kn_sed 
-			! it is adviced to use kn_sed=dfloc
-			ust=absU/MAX(1./kappa*log(0.5*dz/z0),2.) !ust maximal 0.5*absU
-		enddo
-		yplus=0.5*dz*ust/nu_mol
-                if (yplus<30.) then
-                  do tel=1,10 ! 10 iter is more than enough
-                        yplus=0.5*dz*ust/nu_mol
-                        ust=absU/MAX((5.*log(yplus)-3.05),2.) !ust maximal 0.5*absU
-                  enddo
-                endif
-                if (yplus<5.) then !viscous sublayer uplus=yplus
-                        ust=sqrt(absU*nu_mol/(0.5*dz))
-                endif
+					 ! called before update in correc (in last k3 step of RK3) so Cnewbot and Cnew are used to determine interaction with bed, 
+					 ! but effect is added to dcdtbot and dcdt to make superposition on other terms already included in dcdt
+					 ! dcdtbot contains sediment volume concentration in bed [-] with ghost bed-cells of dz deep
+					 ! dcdt contains sediment volume concentration in water-cells [-] 
+				 IF (interaction_bed.ge.2) THEN
+					  erosion = frac(n)%M*MAX(0.,(tau/frac(n)%tau_e-1.))*ddt/frac(n)%rho ! m3/m2
+				 ENDIF
+				 IF (interaction_bed.eq.3) THEN
+					   erosion = MIN(erosion,cbotcfd(n,i,j)*dz) ! m3/m2, not more material can be eroded than there was in the bed
+				 ENDIF
+				 kplus = MIN(kbed(i,j)+1,k1)
+				 deposition = MAX(0.,(1.-tau/frac(n)%tau_d))*ccfd(n,i,j,kplus)*MIN(0.,Wsed(n,i,j,kbed(i,j)))*ddt ! m
+				 ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus)+(erosion+deposition)/(dz) ! vol conc. [-]
+				 cbotnew(n,i,j)=cbotnew(n,i,j)-(erosion+deposition)/(dz) ! vol conc. [-]
+			ENDDO
+		  ENDDO
+		ENDDO
+	ELSE ! including bedupdate; erosion based on avg sediment properties top layer
+		DO i=1,imax
+		  DO j=1,jmax
+			!! First Ubot_TSHD and Vbot_TSHD is subtracted to determine tau 
+			!! only over ambient velocities not over U_TSHD
+			kplus = MIN(kbed(i,j)+1,k1)
+			uu=ucfd(i,j,kplus)-Ubot_TSHD(j)
+			vv=vcfd(i,j,kplus)-Vbot_TSHD(j)
+			absU=sqrt((uu)**2+(vv)**2)
+			
+			cbottot=0.
+			DO n=1,nfrac
+				cbottot=cbottot+cbotcfd(n,i,j)
+			ENDDO
+			cbottot=MAX(cbottot,1.e-16)
+			kn_sed_avg=0.
+			Mr_avg=0.
+			tau_e_avg=0.
+			DO n=1,nfrac
+				kn_sed_avg=kn_sed_avg+(cbotcfd(n,i,j)/cbottot)*frac(n)%kn_sed
+				Mr_avg=Mr_avg+(cbotcfd(n,i,j)/cbottot)*frac(n)%M/frac(n)%rho
+				tau_e_avg=tau_e_avg+(cbotcfd(n,i,j)/cbottot)*frac(n)%tau_e
+			ENDDO
+			kn_sed_avg=kn_sed_avg/REAL(nfrac)
+			Mr_avg=Mr_avg/REAL(nfrac)
+			tau_e_avg=tau_e_avg/REAL(nfrac)
+			
+			ust=0.1*absU
+			do tel=1,10 ! 10 iter is more than enough
+				z0=kn_sed_avg/30.+0.11*nu_mol/MAX(ust,1.e-9) 
+				! for tau shear on sediment don't use kn (which is result of bed ripples), use frac(n)%kn_sed 
+				! it is adviced to use kn_sed=dfloc
+				ust=absU/MAX(1./kappa*log(0.5*dz/z0),2.) !ust maximal 0.5*absU
+			enddo
+			yplus=0.5*dz*ust/nu_mol
+			if (yplus<30.) then
+			  do tel=1,10 ! 10 iter is more than enough
+					yplus=0.5*dz*ust/nu_mol
+					ust=absU/MAX((5.*log(yplus)-3.05),2.) !ust maximal 0.5*absU
+			  enddo
+			endif
+			if (yplus<5.) then !viscous sublayer uplus=yplus
+					ust=sqrt(absU*nu_mol/(0.5*dz))
+			endif
 !               if (yplus<11.225) then  !viscous sublayer uplus=yplus
 !                       ust=sqrt(absU*nu_mol/(0.5*dz))
 !               endif
-		kplus = MIN(kbed(i,j)+1,k1)
-		tau=rcfd(i,j,kplus)*ust*ust  
-
-	      	 ! called before update in correc (in last k3 step of RK3) so Cnewbot and Cnew are used to determine interaction with bed, 
-	      	 ! but effect is added to dcdtbot and dcdt to make superposition on other terms already included in dcdt
-	      	 ! dcdtbot contains sediment volume concentration in bed [-] with ghost bed-cells of dz deep
-	     	 ! dcdt contains sediment volume concentration in water-cells [-] 
-		 IF (interaction_bed.ge.2) THEN
-	      	  erosion = frac(n)%M*MAX(0.,(tau/frac(n)%tau_e-1.))*ddt/frac(n)%rho ! m3/m2
-		 ENDIF
-		 IF (interaction_bed.eq.3) THEN
-	      	   erosion = MIN(erosion,cbotcfd(n,i,j)*dz) ! m3/m2, not more material can be eroded than there was in the bed
-		 ENDIF
-		     kplus = MIN(kbed(i,j)+1,k1)
-	     	 deposition = MAX(0.,(1.-tau/frac(n)%tau_d))*ccfd(n,i,j,kplus)*MIN(0.,Wsed(n,i,j,kbed(i,j)))*ddt ! m
-	      	 ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus)+(erosion+deposition)/(dz) ! vol conc. [-]
-	      	 cbotnew(n,i,j)=cbotnew(n,i,j)-(erosion+deposition)/(dz) ! vol conc. [-]
-
-!		 if (i.eq.10.and.j.eq.10) then
-!	write(*,*),'rank,n,i,j,absU,tau,Cnew,Wsed,ero,dep',rank,n,i,j,absU,tau,Cnew(n,i,j,1),Wsed(n,i,j,0),
-!     & frac(n)%M*MAX(0.,(tau/frac(n)%tau_e-1.)),deposition
-!		 endif
-!		 if (deposition>0.) then
-!			write(*,*),'n,i,j,absU,tau,Cnew,Wsed,deposition',n,i,j,absU,tau,Cnew(n,i,j,1),Wsed(n,i,j,0),deposition
-!		 endif
-			
-	    ENDDO
-	  ENDDO
-	ENDDO
+			kplus = MIN(kbed(i,j)+1,k1)
+			tau=rcfd(i,j,kplus)*ust*ust  
+			erosion_avg = Mr_avg*MAX(0.,(tau/tau_e_avg-1.))*ddt ! m3/m2
+			cbotnewtot=0.	
+			ctot_firstcel=0.
+			DO n=1,nfrac
+				erosion = erosion_avg * (cbotcfd(n,i,j)/cbottot) !erosion per fraction
+				erosion = MIN(erosion,(cbotcfd(n,i,j)+Clivebed(n,i,j,kbed(i,j)))*dz) ! m3/m2, not more material can be eroded than there was in top layer cbotcfd+c in top cel bed
+				 kplus = MIN(kbed(i,j)+1,k1)
+				 deposition = MAX(0.,(1.-tau/frac(n)%tau_d))*ccfd(n,i,j,kplus)*MIN(0.,Wsed(n,i,j,kbed(i,j)))*ddt ! m --> dep is negative due to negative wsed
+				 ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus)+(erosion+deposition)/(dz) ! vol conc. [-]
+				 cbotnew(n,i,j)=cbotnew(n,i,j)-(erosion+deposition)/(dz) ! vol conc. [-]
+				 cbotnewtot=cbotnewtot+cbotnew(n,i,j)
+				 ctot_firstcel=ccnew(n,i,j,kplus)+ctot_firstcel
+			ENDDO
+			cfixedbed=0.6
+			IF (cbotnewtot.lt.0.) THEN !erosion of 1 layer dz:
+				DO n=1,nfrac ! also cbotnew(n,i,j) is le 0:
+					erosion = erosion_avg * (cbotcfd(n,i,j)/cbottot) !erosion per fraction
+					erosion = MIN(erosion,(cbotcfd(n,i,j)+Clivebed(n,i,j,kbed(i,j)))*dz) ! m3/m2, not more material can be eroded than there was in top layer cbotcfd+c in top cel bed
+					 kplus = MIN(kbed(i,j)+1,k1)
+					 deposition = MAX(0.,(1.-tau/frac(n)%tau_d))*ccfd(n,i,j,kplus)*MIN(0.,Wsed(n,i,j,kbed(i,j)))*ddt ! m --> dep is negative due to negative wsed				
+					cbotnew(n,i,j)=Clivebed(n,i,j,kbed(i,j))+cbotnew(n,i,j) !top layer is now previous top cel bed minus (erosion>top-layer)
+					ccnew(n,i,j,kbed(i,j))=(erosion+deposition)/(dz) !assign all erosion+depo as new sediment concentration new bottom layer fluid
+					ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus)-(erosion+deposition)/(dz) !remove erosion+depo from previous bottom layer fluid
+					Clivebed(n,i,j,kbed(i,j))=0. ! not bed anymore but fluid
+				ENDDO
+!				write(*,*),'erosion:istep,i,j,kbed',istep,i,j,kbed(i,j),rcfd(i,j,kbed(i,j)),rcfd(i,j,kbed(i,j)+1),
+!     &				ccnew(n,i,j,kbed(i,j)),ccnew(n,i,j,kbed(i,j)+1),Clivebed(n,i,j,kbed(i,j)),cbotnew(n,i,j),
+!     &	 cbotnewtot,erosion,deposition,ccfd(n,i,j,kplus)
+!				kbed(i,j)=MAX(kbed(i,j)-1,0)  !update bed level
+!				n=1
+!				write(*,*),'erosion:istep,i,j,kbed',istep,i,j,kbed(i,j),n,
+!     &	 cbotnewtot,erosion,deposition,ccfd(n,i,j,kplus),ddt,MIN(0.,Wsed(n,i,j,kbed(i,j))),MAX(0.,(1.-tau/frac(n)%tau_d)),
+!     &      MAX(0.,(1.-tau/frac(n)%tau_d))*ccfd(n,i,j,kplus)*MIN(0.,Wsed(n,i,j,kbed(i,j)))*ddt,
+!     &      tau,frac(n)%tau_d
+				kbed(i,j)=MAX(kbed(i,j)-1,0)  !update bed level				
+			ELSEIF ((cbotnewtot+ctot_firstcel).gt.cfixedbed) THEN ! sedimentation of 1 layer dz each time:
+				DO n=1,nfrac 
+					cbotnew(n,i,j)=cbotnew(n,i,j)-(cfixedbed-ctot_firstcel)*cbotnew(n,i,j)/cbotnewtot
+					Clivebed(n,i,j,kbed(i,j))=ccnew(n,i,j,kbed(i,j))+(cfixedbed-ctot_firstcel)*cbotnew(n,i,j)/cbotnewtot  ! apply sedimentation ratio between fractions new sediment concentration of cells within bed
+					!only adjustment sediment concentration in bed, no adjustment of sediment concentration in fluid cells needed
+				ENDDO
+				write(*,*),'sedimentation:istep,i,j,kbed,rho',istep,i,j,kbed(i,j) !,rcfd(i,j,kbed(i,j)),rcfd(i,j,kbed(i,j)+1),
+!     &				ccnew(n,i,j,kbed(i,j)),ccnew(n,i,j,kbed(i,j)+1),Clivebed(n,i,j,kbed(i,j)),cbotnew(n,i,j)
+				kbed(i,j)=MIN(kbed(i,j)+1,kmax) !update bed level				
+			ENDIF
+		  ENDDO
+		ENDDO
+	ENDIF		
+	
+	
 
 	
       END SUBROUTINE erosion_deposition

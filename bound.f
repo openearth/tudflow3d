@@ -447,6 +447,21 @@ c get stuff from other CPU's
 	  Wbound(i,j,k)=Wjetbc
        enddo
 
+ 
+	IF (interaction_bed.ge.4) THEN ! dynamic bed update, IBM bed re-defined every timestep:
+		DO i=1,imax
+			DO j=1,jmax
+				DO k=0,kbed(i,j)
+					Ubound(i,j,k)=0.
+					Ubound(i-1,j,k)=0.
+					Vbound(i,j,k)=0.
+					Vbound(i,j-1,k)=0.
+					Wbound(i,j,k)=0.
+				ENDDO
+			ENDDO
+		ENDDO
+	ENDIF	   
+	   
       end
 
       subroutine bound_incljet(Ubound,Vbound,Wbound,rho,botstress,tt,Ub1in,Vb1in,Wb1in,Ub2in,Vb2in,Wb2in,Ub3in,Vb3in,Wb3in)
@@ -1031,7 +1046,21 @@ c get stuff from other CPU's
 	   enddo
 	  enddo
 	endif
-
+ 
+	IF (interaction_bed.ge.4) THEN ! dynamic bed update, IBM bed re-defined every timestep:
+		DO i=1,imax
+			DO j=1,jmax
+				DO k=0,kbed(i,j)
+					Ubound(i,j,k)=0.
+					Ubound(i-1,j,k)=0.
+					Vbound(i,j,k)=0.
+					Vbound(i,j-1,k)=0.
+					Wbound(i,j,k)=0.
+				ENDDO
+			ENDDO
+		ENDDO
+	ENDIF
+	
 
       end
 
