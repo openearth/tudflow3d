@@ -1112,14 +1112,14 @@ c*****************************************************************
 	enddo
       enddo
 
-	if (nobst>0) then
-	 DO i=0,i1
-	  DO j=0,j1
-	    kplus = MIN(kbed(i,j)+1,k1)
-	  	putin2(i,j,kbed(i,j))=putin2(i,j,kplus) ! apply neumann boundary over obstacles to get correct drift flux settling
-	  ENDDO
-	 ENDDO
-	endif
+!	if (nobst>0) then
+!	 DO i=0,i1
+!	  DO j=0,j1
+!	    kplus = MIN(kbed(i,j)+1,k1)
+!	  	putin2(i,j,kbed(i,j))=putin2(i,j,kplus) ! apply neumann boundary over obstacles --> not needed anymore because diffcof is zero around immersed objects
+!	  ENDDO
+!	 ENDDO
+!	endif
 	
 	  
       dzdz_i=1./(dz*dz)

@@ -496,7 +496,7 @@ c******************************************************************
 		! rho is calculated in state called after fkdat
 	    ENDDO
 	   ENDIF
-	    IF (bp(n)%u.ne.-99999.) THEN
+	    IF (bp(n)%u.ne.-99999.and.bp(n).t0.eq.0.) THEN
 	      Uold(i,j,k)=bp(n)%u*cos_u(j)+bp(n)%v*sin_u(j)
 	      Vold(i,j,k)=-bp(n)%u*sin_v(j)+bp(n)%v*cos_v(j) 
 	      Wold(i,j,k)=bp(n)%w
@@ -2252,7 +2252,8 @@ C ...  Locals
 	  yy=Rp(i)*sin_ut(j)
 
 !	  IF (k.le.FLOOR(ob(n)%height/dz)) THEN ! obstacle:
-	  IF ((k.ge.CEILING(ob(n)%zbottom/dz)).and.(k.le.FLOOR(ob(n)%height/dz)).and.(FLOOR(ob(n)%height/dz).eq.kbed2(i,j))) THEN ! obstacle:
+	  !IF ((k.ge.CEILING(ob(n)%zbottom/dz)).and.(k.le.FLOOR(ob(n)%height/dz)).and.(FLOOR(ob(n)%height/dz).eq.kbed2(i,j))) THEN ! obstacle:
+	  IF ((k.ge.CEILING(ob(n)%zbottom/dz)).and.(k.le.FLOOR(ob(n)%height/dz))) THEN ! obstacle: adjustment 10-1-2017 because some obstacles are missed with check on kbed
 		xTSHD(1:4)=ob(n)%x*cos(phi)-ob(n)%y*sin(phi)
 		yTSHD(1:4)=ob(n)%x*sin(phi)+ob(n)%y*cos(phi)
 		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
@@ -2315,7 +2316,8 @@ C ...  Locals
 	  xx=Rp(i)*cos_u(j)-schuif_x
 	  yy=Rp(i)*sin_u(j)
 !	  IF (k.le.FLOOR(ob(n)%height/dz)) THEN ! obstacle:
-	  IF ((k.ge.CEILING(ob(n)%zbottom/dz)).and.(k.le.FLOOR(ob(n)%height/dz)).and.(FLOOR(ob(n)%height/dz).eq.kbed(i,j))) THEN ! obstacle:
+	  !IF ((k.ge.CEILING(ob(n)%zbottom/dz)).and.(k.le.FLOOR(ob(n)%height/dz)).and.(FLOOR(ob(n)%height/dz).eq.kbed(i,j))) THEN ! obstacle:
+	  IF ((k.ge.CEILING(ob(n)%zbottom/dz)).and.(k.le.FLOOR(ob(n)%height/dz))) THEN ! obstacle: adjustment 10-1-2017 because some obstacles are missed with check on kbed
 		xTSHD(1:4)=ob(n)%x*cos(phi)-ob(n)%y*sin(phi)
 		yTSHD(1:4)=ob(n)%x*sin(phi)+ob(n)%y*cos(phi)
 		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
@@ -2345,7 +2347,8 @@ C ...  Locals
 	  xx=Rp(i)*cos_u(j)-schuif_x
 	  yy=Rp(i)*sin_u(j)
 !	  IF (k.le.FLOOR(ob(n)%height/dz)) THEN ! obstacle:
-	  IF ((k.ge.CEILING(ob(n)%zbottom/dz)).and.(k.le.FLOOR(ob(n)%height/dz)).and.(FLOOR(ob(n)%height/dz).eq.kbed(i,j))) THEN ! obstacle:
+!	  IF ((k.ge.CEILING(ob(n)%zbottom/dz)).and.(k.le.FLOOR(ob(n)%height/dz)).and.(FLOOR(ob(n)%height/dz).eq.kbed(i,j))) THEN ! obstacle:
+	  IF ((k.ge.CEILING(ob(n)%zbottom/dz)).and.(k.le.FLOOR(ob(n)%height/dz))) THEN ! obstacle: adjustment 10-1-2017 because some obstacles are missed with check on kbed
 		xTSHD(1:4)=ob(n)%x*cos(phi)-ob(n)%y*sin(phi)
 		yTSHD(1:4)=ob(n)%x*sin(phi)+ob(n)%y*cos(phi)
 		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
@@ -2419,7 +2422,7 @@ C ...  Locals
 	       do i=0,imax  !including i1 strangely gives crash (13/4/15) !1,imax !0,i1
 				kbed3(i,j)=FLOOR(zbed3(i,j)/dz)
 				kbed3(i,j)=MAX(0,kbed3(i,j))
-				kbed3(i,j)=MIN(k1,kbed3(i,j))
+				kbed3(i,j)=MIN(kmax,kbed3(i,j))
 				zbed(i,j)=MAX(zbed(i,j),zbed3(i,j)) !zero without obstacle, otherwise max of all obstacles at i,j  
 		enddo
 	       enddo
@@ -2543,7 +2546,7 @@ C ...  Locals
 	       do i=0,imax  !including i1 strangely gives crash (13/4/15) !1,imax !0,i1
 				kbed3(i,j)=FLOOR(zbed3(i,j)/dz)
 				kbed3(i,j)=MAX(0,kbed3(i,j))
-				kbed3(i,j)=MIN(k1,kbed3(i,j))
+				kbed3(i,j)=MIN(kmax,kbed3(i,j))
 				zbed(i,j)=MAX(zbed(i,j),zbed3(i,j)) !zero without obstacle, otherwise max of all obstacles at i,j  
 		enddo
 	       enddo
@@ -2731,6 +2734,12 @@ c get stuff from other CPU's
 	endif
 	endif	
 	
+	      do j=0,j1 
+	       do i=0,imax 
+	          kbed(i,j)=MIN(kbed(i,j),kmax) ! make sure kbed never is larger than kmax
+	       enddo
+	      enddo
+		   
       end
 
 	subroutine bedroughness_init

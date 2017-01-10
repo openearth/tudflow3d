@@ -80,7 +80,7 @@
 
 	csed2=csed
 	rr2=rr 
-	if (nobst>0) then
+	if (nobst>0.or.bedlevelfile.ne.''.or.interaction_bed.eq.4) then
 	 DO i=0,i1
 	  DO j=0,j1
 	    DO n=1,nfrac
@@ -209,7 +209,6 @@
 
 	real     wsed(nfrac,0:i1,0:j1,0:k1),erosion,deposition,uu,vv,absU,z0,ust,yplus,tau !local variables
 	integer n,tel,kplus
-	integer kbedloc !input/output --> nog aanpassen in code
 	REAL     ccnew(nfrac,0:i1,0:j1,0:k1),cbotnew(nfrac,0:i1,0:j1)  ! output
 	REAL     ccfd(nfrac,0:i1,0:j1,0:k1),cbotcfd(nfrac,0:i1,0:j1)  ! input
 	REAL	 ddt,dz ! input
@@ -219,14 +218,14 @@
 	erosion=0.
 	deposition=0.
 	
-	IF (nobst>0) THEN
+	IF (nobst>0.or.bedlevelfile.ne.''.or.interaction_bed.eq.4) THEN
 		call slipvelocity(ccfd,wcfd,wsed,rcfd,0,k1-1,wfluid,ddt,dz) 
 		!determine wsed on top of obstacles (actually everywhere in the domain)
 	ELSE
 		call slipvelocity(ccfd,wcfd,wsed,rcfd,0,0,wfluid,ddt,dz)
 	ENDIF
 
-	
+	!write(*,*),'kbed(1,1)=',kbed(1,1)
 !	DO n=1,nfrac
 !	   Wsed(n,:,:,0)=Wsed(n,:,:,0)+0.5*(Wnew(:,:,1)-Wnew(:,:,0)) !correct for average Wnew at k=1/2 (location of C(:,:,1))
 !	ENDDO
@@ -296,7 +295,7 @@
 			DO n=1,nfrac
 				cbottot=cbottot+cbotcfd(n,i,j)
 			ENDDO
-			cbottot=MAX(cbottot,1.e-16)
+			cbottot=MAX(cbottot,1.e-64)
 			kn_sed_avg=0.
 			Mr_avg=0.
 			tau_e_avg=0.
@@ -356,25 +355,20 @@
 					ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus)-(erosion+deposition)/(dz) !remove erosion+depo from previous bottom layer fluid
 					Clivebed(n,i,j,kbed(i,j))=0. ! not bed anymore but fluid
 				ENDDO
-!				write(*,*),'erosion:istep,i,j,kbed',istep,i,j,kbed(i,j),rcfd(i,j,kbed(i,j)),rcfd(i,j,kbed(i,j)+1),
-!     &				ccnew(n,i,j,kbed(i,j)),ccnew(n,i,j,kbed(i,j)+1),Clivebed(n,i,j,kbed(i,j)),cbotnew(n,i,j),
-!     &	 cbotnewtot,erosion,deposition,ccfd(n,i,j,kplus)
-!				kbed(i,j)=MAX(kbed(i,j)-1,0)  !update bed level
-!				n=1
-!				write(*,*),'erosion:istep,i,j,kbed',istep,i,j,kbed(i,j),n,
-!     &	 cbotnewtot,erosion,deposition,ccfd(n,i,j,kplus),ddt,MIN(0.,Wsed(n,i,j,kbed(i,j))),MAX(0.,(1.-tau/frac(n)%tau_d)),
-!     &      MAX(0.,(1.-tau/frac(n)%tau_d))*ccfd(n,i,j,kplus)*MIN(0.,Wsed(n,i,j,kbed(i,j)))*ddt,
-!     &      tau,frac(n)%tau_d
-				kbed(i,j)=MAX(kbed(i,j)-1,0)  !update bed level				
+				n=1
+!				write(*,*),'erosion voor:istep,n,i,j,kbed',istep,n,i,j,kbed(i,j),cbotnew(n,i,j),Clivebed(n,i,j,kbed(i,j))
+				kbed(i,j)=MAX(kbed(i,j)-1,0)  !update bed level end		
+!				write(*,*),'erosion na:istep,n,i,j,kbed',istep,n,i,j,kbed(i,j),cbotnew(n,i,j),Clivebed(n,i,j,kbed(i,j))				
 			ELSEIF ((cbotnewtot+ctot_firstcel).gt.cfixedbed) THEN ! sedimentation of 1 layer dz each time:
+				kbed(i,j)=MIN(kbed(i,j)+1,kmax) !update bed level at start sedimentation 				
+!				write(*,*),'rank,i,j,kbed(i,j)',rank,i,j,kbed(i,j)				
 				DO n=1,nfrac 
-					cbotnew(n,i,j)=cbotnew(n,i,j)-(cfixedbed-ctot_firstcel)*cbotnew(n,i,j)/cbotnewtot
 					Clivebed(n,i,j,kbed(i,j))=ccnew(n,i,j,kbed(i,j))+(cfixedbed-ctot_firstcel)*cbotnew(n,i,j)/cbotnewtot  ! apply sedimentation ratio between fractions new sediment concentration of cells within bed
+					cbotnew(n,i,j)=cbotnew(n,i,j)-(cfixedbed-ctot_firstcel)*cbotnew(n,i,j)/cbotnewtot					
 					!only adjustment sediment concentration in bed, no adjustment of sediment concentration in fluid cells needed
 				ENDDO
-				write(*,*),'sedimentation:istep,i,j,kbed,rho',istep,i,j,kbed(i,j) !,rcfd(i,j,kbed(i,j)),rcfd(i,j,kbed(i,j)+1),
-!     &				ccnew(n,i,j,kbed(i,j)),ccnew(n,i,j,kbed(i,j)+1),Clivebed(n,i,j,kbed(i,j)),cbotnew(n,i,j)
-				kbed(i,j)=MIN(kbed(i,j)+1,kmax) !update bed level				
+				n=1
+				!if (cbotnewtot.gt.0.55.and.rank.eq.1.and.i.eq.88.and.j.eq.1) then
 			ENDIF
 		  ENDDO
 		ENDDO

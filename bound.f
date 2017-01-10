@@ -451,7 +451,7 @@ c get stuff from other CPU's
 	IF (interaction_bed.ge.4) THEN ! dynamic bed update, IBM bed re-defined every timestep:
 		DO i=1,imax
 			DO j=1,jmax
-				DO k=0,kbed(i,j)
+				DO k=1,kbed(i,j)
 					Ubound(i,j,k)=0.
 					Ubound(i-1,j,k)=0.
 					Vbound(i,j,k)=0.
@@ -1050,7 +1050,7 @@ c get stuff from other CPU's
 	IF (interaction_bed.ge.4) THEN ! dynamic bed update, IBM bed re-defined every timestep:
 		DO i=1,imax
 			DO j=1,jmax
-				DO k=0,kbed(i,j)
+				DO k=1,kbed(i,j)
 					Ubound(i,j,k)=0.
 					Ubound(i-1,j,k)=0.
 					Vbound(i,j,k)=0.
@@ -2042,8 +2042,8 @@ c get stuff from other CPU's
  	    k=k_inPpuntTSHD(t)		
 	    i=i_inPpuntTSHD(t)
             j=j_inPpuntTSHD(t)
-	      if (k.eq.kcheck) then 
-	        Cbound(i,j,k-1)=Cbound(i,j,k-1)+Cbound(i,j,k) ! move sediment from first (lowest) cell in TSHD-hull to first cell in fluid
+	      if (k.eq.kcheck.and.frac(n)%ws.lt.0.and.kjet>0) then 
+	        Cbound(i,j,k-1)=Cbound(i,j,k-1)+Cbound(i,j,k) ! move air from first (lowest) cell in TSHD-hull to first cell in fluid
 		!! Idea is to undo the effect of diffusion and air bubble rising up into hull
 	      endif
 	      if (k.gt.0.and.k.eq.kbed(i,j)) then
@@ -2060,6 +2060,17 @@ c get stuff from other CPU's
 	enddo
       enddo
 
+		IF (interaction_bed.ge.4) THEN ! dynamic bed update, IBM bed re-defined every timestep, make c inside bed zero (diffcof is made zero in turbulence.f to eliminate incorrect diffusion into bed):
+		
+			DO i=1,imax
+				DO j=1,jmax
+					DO k=0,kbed(i,j)
+						Cbound(i,j,k)=0. 
+					ENDDO
+				ENDDO
+			ENDDO
+		ENDIF	
+		
       end
 
 	
