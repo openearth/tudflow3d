@@ -2209,6 +2209,7 @@ C ...  Locals
 		  ENDIF
 		  if (inout.eq.1) then
 		      kbed(i,j)=MAX(kbed(i,j),FLOOR(ob(n)%height/dz)) !zero without obstacle, otherwise max of all obstacles at i,j
+			  kbed(i,j)=MIN(kbed(i,j),kmax)
 		      zbed(i,j)=MAX(zbed(i,j),ob(n)%height) !zero without obstacle, otherwise max of all obstacles at i,j  
 		  endif
 		enddo
@@ -2375,32 +2376,33 @@ C ...  Locals
       tmax_inUpuntTSHD=tel2
 	ENDDO ! obstacles loop
 
-	kbed=0
-	zbed=0.
-
-	DO n=1,nobst
-	!! search for zbed and kbed on each proc (j=0,j1): (used for deposition and bc in solver [adjusted for ob(n)%zbottom])
-	      do j=0,j1 
-	       do i=0,i1  
-		in=.false.
-		do k=0,k1 
-		  xx=Rp(i)*cos_u(j)-schuif_x
-		  yy=Rp(i)*sin_u(j)
-		  IF (k.le.FLOOR(ob(n)%height/dz)) THEN ! obstacle:
-			xTSHD(1:4)=ob(n)%x*cos(phi)-ob(n)%y*sin(phi)
-			yTSHD(1:4)=ob(n)%x*sin(phi)+ob(n)%y*cos(phi)
-			CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
-		  ELSE 
-		 	inout=0
-		  ENDIF
-		  if (inout.eq.1.and.ob(n)%zbottom.le.0.) then ! only when zbottom.le.0, then kbed and zbed should deviate from zero, zbottom default<0
-		      kbed(i,j)=MAX(kbed(i,j),FLOOR(ob(n)%height/dz)) !zero without obstacle, otherwise max of all obstacles at i,j
-		      zbed(i,j)=MAX(zbed(i,j),ob(n)%height) !zero without obstacle, otherwise max of all obstacles at i,j  
-		  endif
-		enddo
-	       enddo
-	      enddo
-	ENDDO
+	
+	!! waarom nog een keer kbed bepalen??
+!	kbed=0
+!	zbed=0.
+!	DO n=1,nobst
+!	!! search for zbed and kbed on each proc (j=0,j1): (used for deposition and bc in solver [adjusted for ob(n)%zbottom])
+!	      do j=0,j1 
+!	       do i=0,i1  
+!		in=.false.
+!		do k=0,k1 
+!		  xx=Rp(i)*cos_u(j)-schuif_x
+!		  yy=Rp(i)*sin_u(j)
+!		  IF (k.le.FLOOR(ob(n)%height/dz)) THEN ! obstacle:
+!			xTSHD(1:4)=ob(n)%x*cos(phi)-ob(n)%y*sin(phi)
+!			yTSHD(1:4)=ob(n)%x*sin(phi)+ob(n)%y*cos(phi)
+!			CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+!		  ELSE 
+!		 	inout=0
+!		  ENDIF
+!		  if (inout.eq.1.and.ob(n)%zbottom.le.0.) then ! only when zbottom.le.0, then kbed and zbed should deviate from zero, zbottom default<0
+!		      kbed(i,j)=MAX(kbed(i,j),FLOOR(ob(n)%height/dz)) !zero without obstacle, otherwise max of all obstacles at i,j
+!		      zbed(i,j)=MAX(zbed(i,j),ob(n)%height) !zero without obstacle, otherwise max of all obstacles at i,j  
+!		  endif
+!		enddo
+!	       enddo
+!	      enddo
+!	ENDDO
 
 	
 	if (.true.) then ! true = 0th order IBM staircase manner, false = 1st order IBM scaling with volume grid cell inside object
@@ -2419,7 +2421,7 @@ C ...  Locals
 	kbed3=0
 	!! search for zbed and kbed on each proc (j=0,j1): (used for deposition and bc in solver [adjusted for ob(n)%zbottom])
 	      do j=0,j1 
-	       do i=0,imax  !including i1 strangely gives crash (13/4/15) !1,imax !0,i1
+	       do i=0,i1 !imax  !including i1 strangely gives crash (13/4/15) !1,imax !0,i1
 				kbed3(i,j)=FLOOR(zbed3(i,j)/dz)
 				kbed3(i,j)=MAX(0,kbed3(i,j))
 				kbed3(i,j)=MIN(kmax,kbed3(i,j))
@@ -2519,11 +2521,11 @@ C ...  Locals
       tmax_inUpuntTSHD=tel2
 
 		!! update kbed on each proc (j=0,j1) with kbed3 (used for deposition and bc in solver [adjusted for ob(n)%zbottom])
-	      do j=0,j1 
-	       do i=0,imax !including i1 strangely gives crash (13/4/15) !1,imax !0,i1
-	          kbed(i,j)=MAX(kbed(i,j),kbed3(i,j)) !zero without obstacle, otherwise max of all obstacles at i,j  
+		do j=0,j1 
+			do i=0,i1 !imax !including i1 strangely gives crash (13/4/15) !1,imax !0,i1
+				kbed(i,j)=MAX(kbed(i,j),kbed3(i,j)) !zero without obstacle, otherwise max of all obstacles at i,j  
+			enddo
 		enddo
-	       enddo
 	endif
 	else ! 1st order IBM with facIBM scaling with percentage volume of grid cell captured in immersed object
 	if (bedlevelfile.ne.'') then
@@ -2739,6 +2741,16 @@ c get stuff from other CPU's
 	          kbed(i,j)=MIN(kbed(i,j),kmax) ! make sure kbed never is larger than kmax
 	       enddo
 	      enddo
+		  
+		do j=0,j1 
+			do i=0,i1 !imax !including i1 strangely gives crash (13/4/15) !1,imax !0,i1
+				do k=1,kbed(i,j) ! assign initial bed concentrations
+					do n=1,nfrac
+						Clivebed(n,i,j,k)=c_bed(n)
+					enddo
+				enddo
+			enddo
+		enddo		  
 		   
       end
 

@@ -208,15 +208,22 @@
        implicit none
 
 	real     wsed(nfrac,0:i1,0:j1,0:k1),erosion,deposition,uu,vv,absU,z0,ust,yplus,tau !local variables
-	integer n,tel,kplus
+	integer n,tel,kplus,n1
 	REAL     ccnew(nfrac,0:i1,0:j1,0:k1),cbotnew(nfrac,0:i1,0:j1)  ! output
 	REAL     ccfd(nfrac,0:i1,0:j1,0:k1),cbotcfd(nfrac,0:i1,0:j1)  ! input
 	REAL	 ddt,dz ! input
 	REAL     ucfd(0:i1,0:j1,0:k1),vcfd(0:i1,0:j1,0:k1),wcfd(0:i1,0:j1,0:k1),rcfd(0:i1,0:j1,0:k1) ! input
 	REAL     wfluid(0:i1,0:j1,0:k1) !dummy
-	REAL     cbottot,kn_sed_avg,Mr_avg,tau_e_avg,cfixedbed,ctot_firstcel,erosion_avg,cbotnewtot
+	REAL     cbottot,kn_sed_avg,Mr_avg,tau_e_avg,ctot_firstcel,cbotnewtot
+	REAL PSD_bot_sand_massfrac(nfr_sand),PSD_bed_sand_massfrac(nfr_sand),PSD_sand(0:nfr_sand),factor,d50
+	REAL cbottot_sand,mbottot_sand,cbedtot,mbedtot_sand,diameter_sand_PSD(0:nfr_sand)
+	REAL cbedtot_sand,rho_botsand,rho_bedsand,rho_sand,delta,Dstar,Shields_cr,ustc2,TT,phip,erosion_sand
+	REAL erosionf(nfrac),depositionf(nfrac),erosion_avg(nfrac)
 	erosion=0.
 	deposition=0.
+
+
+			
 	
 	IF (nobst>0.or.bedlevelfile.ne.''.or.interaction_bed.eq.4) THEN
 		call slipvelocity(ccfd,wcfd,wsed,rcfd,0,k1-1,wfluid,ddt,dz) 
@@ -283,7 +290,12 @@
 		ENDDO
 	ELSE ! including bedupdate; erosion based on avg sediment properties top layer
 		DO i=1,imax
-		  DO j=1,jmax
+		  DO j=1,jmax 
+			erosion=0.
+			deposition=0.
+			cbotnewtot=0.	
+			ctot_firstcel=0.			
+			!! 1 determine erosion/sedimentation of mixture of all silt fractions
 			!! First Ubot_TSHD and Vbot_TSHD is subtracted to determine tau 
 			!! only over ambient velocities not over U_TSHD
 			kplus = MIN(kbed(i,j)+1,k1)
@@ -292,21 +304,36 @@
 			absU=sqrt((uu)**2+(vv)**2)
 			
 			cbottot=0.
-			DO n=1,nfrac
+			cbedtot=0.
+			DO n1=1,nfr_silt
+				n=nfrac_silt(n1)
 				cbottot=cbottot+cbotcfd(n,i,j)
+				cbedtot=cbedtot+Clivebed(n,i,j,kbed(i,j))
 			ENDDO
-			cbottot=MAX(cbottot,1.e-64)
+			
 			kn_sed_avg=0.
 			Mr_avg=0.
 			tau_e_avg=0.
-			DO n=1,nfrac
-				kn_sed_avg=kn_sed_avg+(cbotcfd(n,i,j)/cbottot)*frac(n)%kn_sed
-				Mr_avg=Mr_avg+(cbotcfd(n,i,j)/cbottot)*frac(n)%M/frac(n)%rho
-				tau_e_avg=tau_e_avg+(cbotcfd(n,i,j)/cbottot)*frac(n)%tau_e
-			ENDDO
-			kn_sed_avg=kn_sed_avg/REAL(nfrac)
-			Mr_avg=Mr_avg/REAL(nfrac)
-			tau_e_avg=tau_e_avg/REAL(nfrac)
+			IF (cbottot>0.) THEN
+				DO n1=1,nfr_silt
+					n=nfrac_silt(n1)
+					kn_sed_avg=kn_sed_avg+(cbotcfd(n,i,j)/cbottot)*frac(n)%kn_sed
+					Mr_avg=Mr_avg+(cbotcfd(n,i,j)/cbottot)*frac(n)%M/frac(n)%rho
+					tau_e_avg=tau_e_avg+(cbotcfd(n,i,j)/cbottot)*frac(n)%tau_e
+				ENDDO
+			ELSEIF (cbedtot>0.) THEN ! determine avg sediment characteristics from bed:
+				DO n1=1,nfr_silt
+					n=nfrac_silt(n1)
+					kn_sed_avg=kn_sed_avg+(Clivebed(n,i,j,kbed(i,j))/cbedtot)*frac(n)%kn_sed
+					Mr_avg=Mr_avg+(Clivebed(n,i,j,kbed(i,j))/cbedtot)*frac(n)%M/frac(n)%rho
+					tau_e_avg=tau_e_avg+(Clivebed(n,i,j,kbed(i,j))/cbedtot)*frac(n)%tau_e
+				ENDDO
+			ELSE !arbitrarily choose silt frac 1, no effect as there is no erosion possible
+				kn_sed_avg=frac(nfrac_silt(1))%kn_sed
+				Mr_avg=frac(nfrac_silt(1))%M
+				tau_e_avg=frac(nfrac_silt(1))%tau_e
+			ENDIF
+			cbottot=MAX(cbottot,1.e-64)
 			
 			ust=0.1*absU
 			do tel=1,10 ! 10 iter is more than enough
@@ -325,43 +352,178 @@
 			if (yplus<5.) then !viscous sublayer uplus=yplus
 					ust=sqrt(absU*nu_mol/(0.5*dz))
 			endif
-!               if (yplus<11.225) then  !viscous sublayer uplus=yplus
-!                       ust=sqrt(absU*nu_mol/(0.5*dz))
-!               endif
 			kplus = MIN(kbed(i,j)+1,k1)
 			tau=rcfd(i,j,kplus)*ust*ust  
-			erosion_avg = Mr_avg*MAX(0.,(tau/tau_e_avg-1.))*ddt ! m3/m2
-			cbotnewtot=0.	
-			ctot_firstcel=0.
-			DO n=1,nfrac
-				erosion = erosion_avg * (cbotcfd(n,i,j)/cbottot) !erosion per fraction
-				erosion = MIN(erosion,(cbotcfd(n,i,j)+Clivebed(n,i,j,kbed(i,j)))*dz) ! m3/m2, not more material can be eroded than there was in top layer cbotcfd+c in top cel bed
-				 kplus = MIN(kbed(i,j)+1,k1)
-				 deposition = MAX(0.,(1.-tau/frac(n)%tau_d))*ccfd(n,i,j,kplus)*MIN(0.,Wsed(n,i,j,kbed(i,j)))*ddt ! m --> dep is negative due to negative wsed
-				 ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus)+(erosion+deposition)/(dz) ! vol conc. [-]
-				 cbotnew(n,i,j)=cbotnew(n,i,j)-(erosion+deposition)/(dz) ! vol conc. [-]
+			DO n1=1,nfr_silt
+				n=nfrac_silt(n1)
+				erosion_avg(n) = Mr_avg*MAX(0.,(tau/tau_e_avg-1.))*ddt ! m3/m2	 erosion_avg is filled for silt fractions only with silt erosion			
+				IF (cbottot>0.) THEN
+					erosionf(n) = erosion_avg(n) * (cbotcfd(n,i,j)/cbottot) !erosion per fraction
+				ELSEIF (cbedtot>0.) THEN
+					erosionf(n) = erosion_avg(n) * (Clivebed(n,i,j,kbed(i,j))/cbedtot) !erosion per fraction
+				ELSE
+					erosionf(n) = 0.
+				ENDIF
+				erosionf(n) = MIN(erosionf(n),(cbotcfd(n,i,j)+Clivebed(n,i,j,kbed(i,j)))*dz) ! m3/m2, not more material can be eroded than there was in top layer cbotcfd+c in top cel bed
+				kplus = MIN(kbed(i,j)+1,k1)
+				ust=0.1*absU !re-calculate tau with kn_sed for deposition as it is not dependent on avg dpart in mixture
+				do tel=1,10 ! 10 iter is more than enough
+					z0=frac(n)%kn_sed/30.+0.11*nu_mol/MAX(ust,1.e-9) 
+					! for tau shear on sediment don't use kn (which is result of bed ripples), use frac(n)%kn_sed 
+					! it is adviced to use kn_sed=dfloc
+					ust=absU/MAX(1./kappa*log(0.5*dz/z0),2.) !ust maximal 0.5*absU
+				enddo
+				yplus=0.5*dz*ust/nu_mol
+				if (yplus<30.) then
+				  do tel=1,10 ! 10 iter is more than enough
+						yplus=0.5*dz*ust/nu_mol
+						ust=absU/MAX((5.*log(yplus)-3.05),2.) !ust maximal 0.5*absU
+				  enddo
+				endif
+				if (yplus<5.) then !viscous sublayer uplus=yplus
+						ust=sqrt(absU*nu_mol/(0.5*dz))
+				endif
+				tau=rcfd(i,j,kplus)*ust*ust  !for deposition apply tau belonging to own frac(n)%kn_sed
+ 
+				 depositionf(n) = MAX(0.,(1.-tau/frac(n)%tau_d))*ccfd(n,i,j,kplus)*MIN(0.,Wsed(n,i,j,kbed(i,j)))*ddt ! m --> dep is negative due to negative wsed
+				 ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus)+(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-]
+				 cbotnew(n,i,j)=cbotnew(n,i,j)-(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-]
 				 cbotnewtot=cbotnewtot+cbotnew(n,i,j)
 				 ctot_firstcel=ccnew(n,i,j,kplus)+ctot_firstcel
 			ENDDO
-			cfixedbed=0.6
+			!! 2 determine erosion/sedimentation of mixture of all sand fractions
+			! bepaal d50 en d90 van zand fracties en let op indien er maar 1 fractie nog aanwezig is in het bed --> dan is d50 triviaal en d90 is gelijk aan d50 of met vuistregels d90 afleiden voor het geval dat er maar met 1 fractie gerekend wordt??
+			! bepaal ucrit, bepaal T, bepaal D*, bepaal erosion_sand
+			IF (nfr_sand>0) THEN
+				cbottot_sand=0.
+				cbedtot_sand=0.
+				mbottot_sand=0.
+				mbedtot_sand=0.
+				rho_botsand=0.
+				rho_bedsand=0.
+				PSD_sand=0.
+				DO n1=1,nfr_sand
+					n=nfrac_sand(n1)
+					IF (n1<nfr_sand) THEN
+						diameter_sand_PSD(n1)=0.5*(frac(nfrac_sand(n1))%dpart+frac(nfrac_sand(n1+1))%dpart)
+					ELSEIF (n1>1) THEN
+						diameter_sand_PSD(n1)=frac(nfrac_sand(n1))%dpart+( frac(nfrac_sand(n1))%dpart-diameter_sand_PSD(n1-1) )
+					ELSE
+						diameter_sand_PSD(n1)=frac(n)%dpart
+					ENDIF
+					IF (nfr_sand>1) THEN
+						diameter_sand_PSD(0)=frac(nfrac_sand(1))%dpart+( frac(nfrac_sand(1))%dpart-diameter_sand_PSD(1) )
+					ELSE
+						diameter_sand_PSD(0)=0.
+					ENDIF					
+					cbottot_sand=cbottot_sand+cbotcfd(n,i,j)
+					cbedtot_sand=cbedtot_sand+Clivebed(n,i,j,kbed(i,j))
+					mbottot_sand=mbottot_sand+cbotcfd(n,i,j)*frac(n)%rho
+					mbedtot_sand=mbedtot_sand+Clivebed(n,i,j,kbed(i,j))*frac(n)%rho
+					PSD_bot_sand_massfrac(n1)=mbottot_sand
+					PSD_bed_sand_massfrac(n1)=mbedtot_sand
+					rho_botsand=rho_botsand+cbotcfd(n,i,j)*frac(n)%rho
+					rho_bedsand=rho_bedsand+Clivebed(n,i,j,kbed(i,j))*frac(n)%rho
+				ENDDO
+				IF (mbottot_sand>0.) THEN
+					PSD_sand(1:nfr_sand)=PSD_bot_sand_massfrac/mbottot_sand
+					rho_sand=rho_botsand/cbottot_sand
+				ELSEIF (mbedtot_sand>0.) THEN
+					PSD_sand(1:nfr_sand)=PSD_bed_sand_massfrac/mbedtot_sand
+					rho_sand=rho_bedsand/cbedtot_sand
+				ELSE
+					PSD_sand=0. ! there is no sand, hence there will be no erosion either therefore choice in PSD and resulting d50 is not important
+					rho_sand=frac(nfrac_sand(1))%rho
+				ENDIF
+				IF (nfr_sand>1) THEN
+				! determine d50 based on different input fractions
+				! PSD and d50 is calculated under the assumption that each concentration is valid in the range of dpart  AVG(d_n-1;d_n)..AVG(d_n+1;d_n)
+				! for the first and last fraction the assumption is that the provided dpart is exactly the middle of the particle size range of this bin
+				! Example A: dpart=15,100,200mu and conc=0.06,0.3,0.24 gives PSD=0,0.1,0.6,1 for particle size class edges -27.5,57.5,150,250mu  --> d50=131.5 mu
+				! Please note that the first negative number is only for correct interpolation, never will it result in a negative d50.
+				! Example B: dpart=dpart=15,100,200mu and conc=0.55,0.05,0.0 gives PSD=0,0.9167,1,1 for particle size class edges -27.5,57.5,150,250mu  --> d50=18.9 mu
+				! Example C: dpart=dpart=15,100,200mu and conc=0.05,0.0,0.55 gives PSD=0,0.0833,0.0833,1 for particle size class edges -27.5,57.5,150,250mu  --> d50=195 mu
+				! Example D: dpart=dpart=15,100,200mu and conc=0.00,0.0,0.6 gives PSD=0,0,0,1 for particle size class edges -27.5,57.5,150,250mu  --> d50=200 mu
+				! Example E: dpart=dpart=15,100,200mu and conc=0.60,0.0,0.0 gives PSD=1,0,0,0 for particle size class edges -27.5,57.5,150,250mu  --> d50=15 mu
+				! Example F: dpart=dpart=15,100,200mu and conc=0.00,0.60,0 gives PSD=0,0,1,1 for particle size class edges -27.5,57.5,150,250mu  --> d50=103.75 mu (this is centre of middle PSD, which complies with the median d50 definition however it is not exactly 100 mu because of choice in not perfectly symmetrical bins)
+				! Example G: dpart=dpart=15,100,185mu and conc=0.00,0.60,0 gives PSD=0,0,1,1 for particle size class edges -27.5,57.5,142.5,227.5mu  --> d50=100 mu (this new input dpart is symmetric!)
+
+					DO 	n1=1,nfr_sand
+						IF (PSD_sand(n1).ge.0.5) THEN
+!							IF (n1.eq.1) THEN
+!								d50=frac(nfrac_sand(n1))%dpart
+!								EXIT
+!							ELSE
+								factor=(PSD_sand(n1)-0.5)/(PSD_sand(n1)-PSD_sand(n1-1))
+								!d50=factor*frac(nfrac_sand(n1-1))%dpart+(1.-factor)*frac(nfrac_sand(n1))%dpart
+								d50=factor*diameter_sand_PSD(n1-1)+(1.-factor)*diameter_sand_PSD(n1)
+								EXIT
+!							ENDIF
+						ELSE ! concentration is zero, no d50 found, assign d50 as largest dpart, doesn't matter there can't be erosion anyway:
+							d50=frac(nfrac_sand(nfr_sand))%dpart
+						ENDIF
+					ENDDO
+				ELSE
+					d50=frac(nfrac_sand(1))%dpart
+				ENDIF
+			ENDIF
+			
+			kn_sed_avg=2*d50 !  kn=2*d50 is mentioned in VanRijn1984 paper, the pickup function which is applied here, however elsewhere vanRijn mentions larger kn_sed like 6*d50...)
+			ust=0.1*absU
+			do tel=1,10 ! 10 iter is more than enough
+				z0=kn_sed_avg/30.+0.11*nu_mol/MAX(ust,1.e-9) 
+				ust=absU/MAX(1./kappa*log(0.5*dz/z0),2.) !ust maximal 0.5*absU
+			enddo
+			yplus=0.5*dz*ust/nu_mol
+			if (yplus<30.) then
+			  do tel=1,10 ! 10 iter is more than enough
+					yplus=0.5*dz*ust/nu_mol
+					ust=absU/MAX((5.*log(yplus)-3.05),2.) !ust maximal 0.5*absU
+			  enddo
+			endif
+			if (yplus<5.) then !viscous sublayer uplus=yplus
+					ust=sqrt(absU*nu_mol/(0.5*dz))
+			endif
+			kplus = MIN(kbed(i,j)+1,k1)
+			delta = (rho_sand-rcfd(i,j,kplus))/rcfd(i,j,kplus)
+			Dstar = d50 * ((delta*ABS(gz))/nu_mol**2)**(0.333333333333333)
+			Shields_cr = 0.3/(1.+1.2*Dstar)+0.055*(1.-exp(-0.02*Dstar))  !Soulsby and Whitehouse 1997 curve through original Shields for threshold of motion sediment particles, Soulsy book Eq. SC(77)
+			ustc2 = Shields_cr * ABS(gz)*delta*d50
+			
+			TT = (ust*ust-ustc2)/(MAX(ust*ust,1.e-12))
+			TT = MAX(TT,0.) !TT must be positive
+			phip = 0.00033*Dstar**0.3*TT**1.5   ! VanRijn1984 pickup function
+			
+			DO n1=1,nfr_sand
+				n=nfrac_sand(n1)			
+				erosion_avg(n) = phip * (delta*ABS(gz)*d50)**0.5*ddt  !*rho_sand/rho_sand ! erosion flux in kg/m2/(kg/m3)= m3/m2=m
+				IF (cbottot>0.) THEN
+					erosionf(n) = erosion_avg(n) * (cbotcfd(n,i,j)/cbottot) !erosion per fraction
+				ELSEIF (cbedtot>0.) THEN
+					erosionf(n) = erosion_avg(n) * (Clivebed(n,i,j,kbed(i,j))/cbedtot) !erosion per fraction
+				ELSE
+					erosionf(n) = 0.
+				ENDIF
+				erosionf(n) = MIN(erosionf(n),(cbotcfd(n,i,j)+Clivebed(n,i,j,kbed(i,j)))*dz) ! m3/m2, not more material can be eroded than there was in top layer cbotcfd+c in top cel bed
+				depositionf(n) = ccfd(n,i,j,kplus)*MIN(0.,Wsed(n,i,j,kbed(i,j)))*ddt ! m --> dep is negative due to negative wsed
+				ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus)+(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-]
+				cbotnew(n,i,j)=cbotnew(n,i,j)-(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-]
+				cbotnewtot=cbotnewtot+cbotnew(n,i,j)
+				ctot_firstcel=ccnew(n,i,j,kplus)+ctot_firstcel
+			ENDDO
+				
+!update bedlevel for combined erosion deposition silt plus sand fractions: 
 			IF (cbotnewtot.lt.0.) THEN !erosion of 1 layer dz:
 				DO n=1,nfrac ! also cbotnew(n,i,j) is le 0:
-					erosion = erosion_avg * (cbotcfd(n,i,j)/cbottot) !erosion per fraction
-					erosion = MIN(erosion,(cbotcfd(n,i,j)+Clivebed(n,i,j,kbed(i,j)))*dz) ! m3/m2, not more material can be eroded than there was in top layer cbotcfd+c in top cel bed
-					 kplus = MIN(kbed(i,j)+1,k1)
-					 deposition = MAX(0.,(1.-tau/frac(n)%tau_d))*ccfd(n,i,j,kplus)*MIN(0.,Wsed(n,i,j,kbed(i,j)))*ddt ! m --> dep is negative due to negative wsed				
 					cbotnew(n,i,j)=Clivebed(n,i,j,kbed(i,j))+cbotnew(n,i,j) !top layer is now previous top cel bed minus (erosion>top-layer)
-					ccnew(n,i,j,kbed(i,j))=(erosion+deposition)/(dz) !assign all erosion+depo as new sediment concentration new bottom layer fluid
-					ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus)-(erosion+deposition)/(dz) !remove erosion+depo from previous bottom layer fluid
+					ccnew(n,i,j,kbed(i,j))=(erosionf(n)+depositionf(n))/(dz) !assign all erosion+depo as new sediment concentration new bottom layer fluid
+					ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus)-(erosionf(n)+depositionf(n))/(dz) !remove erosion+depo from previous bottom layer fluid
 					Clivebed(n,i,j,kbed(i,j))=0. ! not bed anymore but fluid
 				ENDDO
 				n=1
-!				write(*,*),'erosion voor:istep,n,i,j,kbed',istep,n,i,j,kbed(i,j),cbotnew(n,i,j),Clivebed(n,i,j,kbed(i,j))
-				kbed(i,j)=MAX(kbed(i,j)-1,0)  !update bed level end		
-!				write(*,*),'erosion na:istep,n,i,j,kbed',istep,n,i,j,kbed(i,j),cbotnew(n,i,j),Clivebed(n,i,j,kbed(i,j))				
+				kbed(i,j)=MAX(kbed(i,j)-1,0)  !update bed level at end		
 			ELSEIF ((cbotnewtot+ctot_firstcel).gt.cfixedbed) THEN ! sedimentation of 1 layer dz each time:
 				kbed(i,j)=MIN(kbed(i,j)+1,kmax) !update bed level at start sedimentation 				
-!				write(*,*),'rank,i,j,kbed(i,j)',rank,i,j,kbed(i,j)				
 				DO n=1,nfrac 
 					Clivebed(n,i,j,kbed(i,j))=ccnew(n,i,j,kbed(i,j))+(cfixedbed-ctot_firstcel)*cbotnew(n,i,j)/cbotnewtot  ! apply sedimentation ratio between fractions new sediment concentration of cells within bed
 					cbotnew(n,i,j)=cbotnew(n,i,j)-(cfixedbed-ctot_firstcel)*cbotnew(n,i,j)/cbotnewtot					

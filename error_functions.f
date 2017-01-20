@@ -300,6 +300,12 @@
 	CASE(131)
 		write(*,*) '# k history < 1                                  #'			
 		write(*,*) '#                                                #'
+	CASE(171)
+		write(*,*) '# namelist &fractions_in_plume                   #'			
+		write(*,*) '# type must be 1 (default),2, or 3                   #'	
+	CASE(172)
+		write(*,*) '# namelist &fractions_in_plume                   #'			
+		write(*,*) '# fractions must be ordered with increasing dpart#'			
 	CASE(200)
 		write(*,*) '#                                                #'			
 		write(*,*) '# input file not found                           #'
@@ -481,6 +487,15 @@
 	CASE(606)
 		write(*,*) '# namelist &ambient                              #'			
 		write(*,*) '# input bedlevel file does not exist             #'	
+	CASE(607)
+		write(*,*) '# namelist &ambient                              #'			
+		write(*,*) '# cfixedbed must be >=0 and <=1 (default 0.6)    #'			
+	CASE(608)
+		write(*,*) '# namelist &ambient                              #'			
+		write(*,*) '# c_bed must be >0 and <1                        #'			
+	CASE(609)
+		write(*,*) '# namelist &ambient                              #'			
+		write(*,*) '# sum of c_bed must be >=cfixedbed and <=1       #'			
 	CASE(611)
 		write(*,*) '# namelist &ambient                              #'			
 		write(*,*) '# input U_w must be defined if Hs>0              #'			

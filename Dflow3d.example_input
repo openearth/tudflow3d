@@ -76,6 +76,8 @@ V_b3 = -0.29			! Ambient bc V velocity [m/s] in surf_layer with respect to TSHD 
 surf_layer = 0.			! Layer depth [m] from free surface with U_b3,V_b3 ambient current (default 0)
 wallup=0			! 0 wall = below; wall = up (default 0)
 bedlevelfile = ''		! Input netcdf file for bedlevel which are simulated by IBM obstacles (filled with zbed(1:imax,0:jmax*px+1) [m])
+c_bed= 0.1 				! Initial volume fractions inside bed [-] (length vector must be nfrac large and sum must be equal to cfixedbed)
+cfixedbed = 0.6			! Volume concentration threshold for fixed bed (default 0.6)
 
 Hs=0.7				! Significant waveheigth [m] (using linear wave theory to mimic wave-orbital velocity)
 Tp=5.5				! Wave peak period [s] (using linear wave theory to mimic wave-orbital velocity)
@@ -131,11 +133,12 @@ fract(1)%c = 0.00234 		! Volume fraction of this particle fraction in source plu
 fract(1)%rho = 2650.		! Particle density [kg/m3]
 fract(1)%dpart = 15.		! Particle diameter [10^-6 m]
 fract(1)%dfloc = 80.		! Floc diameter equal or more than dpart (for sand equal to dpart) [10^-6 m]
-fract(1)%tau_e = 0.15		! Critical shear stress for erosion [N/m2]
-fract(1)%tau_d =  0.1		! Critical shear stress for deposition [N/m2]
-fract(1)%M = 1.e-4		! Erosion rate [kg/sm2] VanRijn proposes 1e-5 - 5e-4 kg/sm2
-fract(1)%kn_sed = 80.		! Nikkuradse roughness for shear stress acting on this sediment fraction (advised as dfloc for mud and 3*d90=6*d50=6*dpart for sand) [10^-6 m]
+fract(1)%tau_e = 0.15		! Critical shear stress for erosion of mud [N/m2], not used for sand
+fract(1)%tau_d =  0.1		! Critical shear stress for deposition of mud [N/m2], not used for sand
+fract(1)%M = 1.e-4		! Erosion rate mud [kg/sm2] VanRijn proposes 1e-5 - 5e-4 kg/sm2, not used for sand
+fract(1)%kn_sed = 80.		! Nikkuradse roughness for shear stress acting on this sediment fraction (advised as dfloc for mud, for sand with interaction_bed=4 kn_sed is not used, but 2*d50 is used in line with Van Rijn 1984) [10^-6 m] (Elsewhere van Rijn proposes kn_sed=3*d90=6*d50=6*dpart for sand...) 
 fract(1)%zair_ref_belowsurf = 0.		! Optional reference level used to make air_fraction semi-compressible; fract(1)%rho is defined at zair_ref_belowsurf [m]
+fract(1)%type = 1			! 1 = silt/mud (default), 2=sand, 3=air
 /
 
 &LESmodel

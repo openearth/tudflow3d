@@ -39,15 +39,16 @@
       INTEGER tmax_inUpunt_tauTSHD,tmax_inVpunt_tauTSHD,tmax_inVpunt_rudder
       INTEGER tmax_inWpunt2,tmax_inVpunt2,tmax_inPpunt2,tmax_inWpunt_suction
       INTEGER nfrac,slipvel,interaction_bed,nobst,kbed_bc,nbedplume
+      INTEGER nfr_silt,nfr_sand,nfr_air
       CHARACTER*256 hisfile,restart_dir,inpfile,plumetseriesfile,bcfile,plumetseriesfile2,bedlevelfile
       CHARACTER*3 time_int,advec_conc,cutter
       CHARACTER*5 sgs_model
       CHARACTER*4 damping_drho_dz
-      REAL damping_a1,damping_b1,damping_a2,damping_b2
+      REAL damping_a1,damping_b1,damping_a2,damping_b2,cfixedbed
       REAL plumetseries(1:100000) 
       REAL plumeUseries(1:100000)
       REAL plumetseries2(1:100000) 
-      REAL plumeUseries2(1:100000)
+      REAL plumeUseries2(1:100000),c_bed(100)
       INTEGER plumeseriesloc,plumeseriesloc2
       INTEGER nr_HPfilter
       REAL timeAB_real(1:4),dpdx,dpdy
@@ -93,7 +94,7 @@
       INTEGER*2, DIMENSION(:,:,:),ALLOCATABLE :: llist1,llist2,llist3
       INTEGER*2, DIMENSION(:,:),ALLOCATABLE :: llmax1,llmax2,llmax3,kbed,kbedt,kbed2
       INTEGER, DIMENSION(:,:),ALLOCATABLE :: Xkk,Tii
-      INTEGER, DIMENSION(:),ALLOCATABLE :: Xii,Tkk,nfrac_air
+      INTEGER, DIMENSION(:),ALLOCATABLE :: Xii,Tkk,nfrac_air,nfrac_silt,nfrac_sand
       REAL, DIMENSION(:),ALLOCATABLE :: cos_u,cos_v,sin_u,sin_v,cos_ut,sin_ut,cos_vt,sin_vt
       REAL, DIMENSION(:),ALLOCATABLE :: Ru,Rp,dr,phivt,phipt,dphi2t,phiv,phip,dphi2
       REAL*8, DIMENSION(:),ALLOCATABLE :: xSEM1,ySEM1,zSEM1,uSEM1
@@ -139,6 +140,7 @@
 
 	type fractions
 	    REAL ::	ws,rho,c,dpart,dfloc,n,tau_d,tau_e,M,kn_sed,ws_dep,zair_ref_belowsurf
+	    INTEGER :: type
 	end type fractions
 	type bed_obstacles
 	    REAL ::	x(4),y(4),height,zbottom
@@ -165,9 +167,10 @@
 !      include 'param.txt'
 !      include 'common.txt'
 
-	integer ios,n
+	integer ios,n,n1,n2,n3
 	type frac_init
 	  real :: ws,c,rho,dpart,dfloc,tau_d,tau_e,M,kn_sed,ws_dep,zair_ref_belowsurf
+	  integer :: type
 	end type frac_init
 	TYPE(frac_init), DIMENSION(100) :: fract
 
@@ -178,8 +181,9 @@
 	NAMELIST /times/t_end,t0_output,dt_output,te_output,tstart_rms,dt_max,dt_ini,time_int,CFL,
      & t0_output_movie,dt_output_movie,te_output_movie
 	NAMELIST /num_scheme/convection,numdiff,diffusion,comp_filter_a,comp_filter_n,CNdiffz,npresIBM,advec_conc
-	NAMELIST /ambient/U_b,V_b,W_b,bcfile,rho_b,SEM,nmax2,nmax1,nmax3,lm_min,lm_min3,slip_bot,kn,interaction_bed,periodicx,periodicy,
-     & dpdx,dpdy,W_ox,Hs,Tp,nx_w,ny_w,obst,bc_obst_h,U_b3,V_b3,surf_layer,wallup,bedlevelfile,U_bSEM,V_bSEM,U_w,V_w
+	NAMELIST /ambient/U_b,V_b,W_b,bcfile,rho_b,SEM,nmax2,nmax1,nmax3,lm_min,lm_min3,slip_bot,kn,interaction_bed,
+     & periodicx,periodicy,dpdx,dpdy,W_ox,Hs,Tp,nx_w,ny_w,obst,bc_obst_h,U_b3,V_b3,surf_layer,wallup,bedlevelfile,
+     & U_bSEM,V_bSEM,U_w,V_w,c_bed,cfixedbed
 	NAMELIST /plume/W_j,plumetseriesfile,Awjet,Aujet,Avjet,Strouhal,azi_n,kjet,radius_j,Sc,slipvel,outflow_overflow_down,
      & U_j2,plumetseriesfile2,Awjet2,Aujet2,Avjet2,Strouhal2,azi_n2,radius_j2,zjet2,bedplume,radius_inner_j,xj,yj,W_j_powerlaw,
      & plume_z_outflow_belowsurf
@@ -263,6 +267,8 @@
 	U_w=-9999.
 	V_w=-9999.	
 	bedlevelfile = ''
+	cfixedbed=0.6
+	c_bed(:)=-1.
 	DO i=1,4
 		obst(:)%x(i) = -99999.
 		obst(:)%y(i) = -99999. 
@@ -335,7 +341,11 @@
 	fract(:)%kn_sed=-999.
 	fract(:)%ws_dep=-999.
 	fract(:)%zair_ref_belowsurf=-999.
+	fract(:)%type=1
 	nfrac=0
+	nfr_silt=0
+	nfr_sand=0
+	nfr_air=0
 	!! LESmodel
 	sgs_model = 'ARGHH'
 	Cs = -999.
@@ -515,6 +525,8 @@
 	ENDDO
 	IF (bc_obst_h<0.or.bc_obst_h>depth) CALL writeerror(601)
 	IF (wallup.ne.0.and.wallup.ne.1) CALL writeerror(605)
+	IF (cfixedbed<0.or.cfixedbed>1.) CALL writeerror(607)
+
 
 	READ (UNIT=1,NML=plume,IOSTAT=ios)
 	!! check input plume
@@ -548,7 +560,12 @@
 	END DO
 	ALLOCATE(frac(nfrac))
 	ALLOCATE(nfrac_air(nfrac))
+	ALLOCATE(nfrac_silt(nfrac))
+	ALLOCATE(nfrac_sand(nfrac))
 	  i=0
+	  n1=0
+	  n2=0
+	  n3=0	  
 	DO n=1,nfrac
 	  frac(n)%ws=fract(n)%ws
 	  frac(n)%rho=fract(n)%rho
@@ -561,6 +578,7 @@
 	  frac(n)%kn_sed=fract(n)%kn_sed/1000000. !!convert from 10^-6m to m 
 	  frac(n)%ws_dep=fract(n)%ws_dep
 	  frac(n)%zair_ref_belowsurf=fract(n)%zair_ref_belowsurf	  
+	  frac(n)%type = fract(n)%type
 	!! check input fractions_in_plume
 	  IF (frac(n)%ws.eq.-999.) THEN
 		write(*,*)'Fraction:',n
@@ -610,8 +628,45 @@
 		nfrac_air(i)=n
 		write(*,*),'air fraction found: ',n
 	  ENDIF
+	  IF (frac(n)%type.eq.1) THEN
+		n1=n1+1
+		nfrac_silt(n1)=n
+		IF (n1>1) THEN
+			IF (frac(n)%dpart.le.frac(nfrac_silt(n1-1))%dpart) THEN	
+				write(*,*)'Fraction:',n
+				CALL writeerror(172)
+			ENDIF				
+		ENDIF
+	  ELSEIF (frac(n)%type.eq.2) THEN
+		n2=n2+1
+		nfrac_sand(n2)=n
+		IF (n2>1) THEN
+			IF (frac(n)%dpart.le.frac(nfrac_sand(n2-1))%dpart) THEN	
+				write(*,*)'Fraction:',n
+				CALL writeerror(172)
+			ENDIF				
+		ENDIF		
+	  ELSEIF (frac(n)%type.eq.3) THEN 
+		n3=n3+1
+		nfrac_air(n3)=n
+	  ELSE
+		write(*,*),'fraction nr:',n
+	    CALL writeerror(171)
+	  ENDIF
 	ENDDO
-	  nair=i
+	  nair=i !nr of compressible air fractions
+	  nfr_silt=n1
+	  nfr_sand=n2
+	  nfr_air=n3
+	  
+	  !check op c_bed after nfrac
+	DO n=1,nfrac
+		IF(c_bed(n)<0.or.c_bed(n)>1.) THEN
+		write(*,*),'fraction :',n		
+			CALL writeerror(608)
+		ENDIF
+	ENDDO
+	!IF (SUM(c_bed(1:nfrac))<cfixedbed.or.SUM(c_bed(1:nfrac))>1.) CALL writeerror(609)	  
 	  
 	! check op input bedplume after nfrac is known
 	nbedplume=0
