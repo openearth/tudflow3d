@@ -92,9 +92,10 @@
       INTEGER*8, DIMENSION(:),ALLOCATABLE :: pt,pt3
 
       INTEGER*2, DIMENSION(:,:,:),ALLOCATABLE :: llist1,llist2,llist3
-      INTEGER*2, DIMENSION(:,:),ALLOCATABLE :: llmax1,llmax2,llmax3,kbed,kbedt,kbed2
+      INTEGER*2, DIMENSION(:,:),ALLOCATABLE :: llmax1,llmax2,llmax3 !,kbed,kbedt,kbed2
+      INTEGER*8, DIMENSION(:,:),ALLOCATABLE :: kbed,kbedt,kbed2
       INTEGER, DIMENSION(:,:),ALLOCATABLE :: Xkk,Tii
-      INTEGER, DIMENSION(:),ALLOCATABLE :: Xii,Tkk,nfrac_air,nfrac_silt,nfrac_sand
+      INTEGER, DIMENSION(:),ALLOCATABLE :: Xii,Tkk,nfrac_air,nfrac_silt,nfrac_sand,nfrac_air2
       REAL, DIMENSION(:),ALLOCATABLE :: cos_u,cos_v,sin_u,sin_v,cos_ut,sin_ut,cos_vt,sin_vt
       REAL, DIMENSION(:),ALLOCATABLE :: Ru,Rp,dr,phivt,phipt,dphi2t,phiv,phip,dphi2
       REAL*8, DIMENSION(:),ALLOCATABLE :: xSEM1,ySEM1,zSEM1,uSEM1
@@ -560,6 +561,7 @@
 	END DO
 	ALLOCATE(frac(nfrac))
 	ALLOCATE(nfrac_air(nfrac))
+	ALLOCATE(nfrac_air2(nfrac))
 	ALLOCATE(nfrac_silt(nfrac))
 	ALLOCATE(nfrac_sand(nfrac))
 	  i=0
@@ -648,7 +650,7 @@
 		ENDIF		
 	  ELSEIF (frac(n)%type.eq.3) THEN 
 		n3=n3+1
-		nfrac_air(n3)=n
+		nfrac_air2(n3)=n
 	  ELSE
 		write(*,*),'fraction nr:',n
 	    CALL writeerror(171)
@@ -945,8 +947,9 @@
 	ALLOCATE(dCdtbot(nfrac,0:i1,0:j1))
 	IF (interaction_bed.ge.4) THEN 
 		ALLOCATE(Clivebed(nfrac,0:i1,0:j1,0:k1))
+		Clivebed=0.
 	ENDIF
-	Clivebed=0.
+
 	
 	ALLOCATE(Ppropx(0:i1,0:j1,0:k1))
 	ALLOCATE(Ppropy(0:i1,0:j1,0:k1))

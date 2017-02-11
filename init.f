@@ -46,7 +46,7 @@ c******************************************************************
 !	kmaxTSHD_ind=MIN(kmax+2,kmaxTSHD_ind) !used to conservatively allocate dummy_ind TSHD hull
 !	kmaxTSHD_ind=2*kmaxTSHD_ind
 
-        ii=(i1+1)*(j1+1)*(kmaxTSHD_ind)
+        ii=(i1+1)*(j1+1)*(kmaxTSHD_ind)*2 ! per partition it is possible that obstacles overlap
         ALLOCATE(i_inPpuntTSHD(ii))
         ALLOCATE(j_inPpuntTSHD(ii))
         ALLOCATE(k_inPpuntTSHD(ii))
@@ -515,9 +515,9 @@ c******************************************************************
 	
 	DO n=1,nbedplume
 	  bp(n)%volncells=0.
-      do k=0,k1
-       do i=0,i1  
-         do j=jmax*px+1,0,-1       ! bedplume loop is only initial condition: do not bother to have U,V,W initial staggering perfect 
+      do k=1,kmax
+       do i=1,imax 
+         do j=1,jmax*px       ! bedplume loop is only initial condition: do not bother to have U,V,W initial staggering perfect 
 	  xx=Rp(i)*cos_ut(j)-schuif_x !global xx over different processors
 	  yy=Rp(i)*sin_ut(j)          !global yy over different processors
 	  IF (k.le.FLOOR(bp(n)%height/dz).and.k.ge.CEILING(bp(n)%zbottom/dz)) THEN ! obstacle: 
@@ -1040,7 +1040,7 @@ C ...  Locals
 	IF (LOA>0.) THEN
 
 	
-	uprop0=1.15*(Pprop/REAL(nprop)/(rho_b*Dprop*Dprop))**(1./3.) ! factor 0.7 left out because full Dprop is forced by propeller
+	uprop0=1.15*(Pprop/MAX(REAL(nprop),1.)/(MAX(rho_b*Dprop*Dprop,1.e-12)))**(1./3.) ! factor 0.7 left out because full Dprop is forced by propeller
 	Ua=U_TSHD-U_b	! ambient velocity (positive flowing out of propeller) 
 
 	tel1=0
@@ -1636,11 +1636,13 @@ C ...  Locals
 	enddo
 
 !	add one Vpunt extra because staggered:
-	if (in.and.j_inVpuntTSHD_dummy(tel2).gt.0) then !always if a jet-point is found an extra Vpunt must be included
-	  tel2=tel2+1
-	  i_inVpuntTSHD_dummy(tel2)=i_inVpuntTSHD_dummy(tel2-1)
-	  j_inVpuntTSHD_dummy(tel2)=j_inVpuntTSHD_dummy(tel2-1)-1
-	  k_inVpuntTSHD_dummy(tel2)=k_inVpuntTSHD_dummy(tel2-1)
+	if (tel2>0) then
+		if (in.and.j_inVpuntTSHD_dummy(tel2).gt.0) then !always if a jet-point is found an extra Vpunt must be included
+		  tel2=tel2+1
+		  i_inVpuntTSHD_dummy(tel2)=i_inVpuntTSHD_dummy(tel2-1)
+		  j_inVpuntTSHD_dummy(tel2)=j_inVpuntTSHD_dummy(tel2-1)-1
+		  k_inVpuntTSHD_dummy(tel2)=k_inVpuntTSHD_dummy(tel2-1)
+		endif
 	endif
        enddo
       enddo
@@ -1717,11 +1719,13 @@ C ...  Locals
 	  endif
 	enddo
 !	add one Wpunt extra because staggered:
-	if (in.and.k_inWpuntTSHD(tel1)>0) then !always if a TSHD-point is found an extra Wpunt must included
-	  tel1=tel1+1
-	  i_inWpuntTSHD(tel1)=i_inWpuntTSHD(tel1-1)
-	  j_inWpuntTSHD(tel1)=j_inWpuntTSHD(tel1-1)
-	  k_inWpuntTSHD(tel1)=k_inWpuntTSHD(tel1-1)-1
+	if (tel1>0) then
+		if (in.and.k_inWpuntTSHD(tel1)>0) then !always if a TSHD-point is found an extra Wpunt must included
+		  tel1=tel1+1
+		  i_inWpuntTSHD(tel1)=i_inWpuntTSHD(tel1-1)
+		  j_inWpuntTSHD(tel1)=j_inWpuntTSHD(tel1-1)
+		  k_inWpuntTSHD(tel1)=k_inWpuntTSHD(tel1-1)-1
+		endif
 	endif
        enddo
       enddo
@@ -1771,11 +1775,13 @@ C ...  Locals
 	enddo
 
 !	add one Upunt extra because staggered:
-	if (in.and.i_inUpuntTSHD(tel2)>0) then !always if a TSHD-point is found an extra Upunt must included
-	  tel2=tel2+1
-	  i_inUpuntTSHD(tel2)=i_inUpuntTSHD(tel2-1)-1
-	  j_inUpuntTSHD(tel2)=j_inUpuntTSHD(tel2-1)
-	  k_inUpuntTSHD(tel2)=k_inUpuntTSHD(tel2-1)
+	if (tel2>0) then
+		if (in.and.i_inUpuntTSHD(tel2)>0) then !always if a TSHD-point is found an extra Upunt must included
+		  tel2=tel2+1
+		  i_inUpuntTSHD(tel2)=i_inUpuntTSHD(tel2-1)-1
+		  j_inUpuntTSHD(tel2)=j_inUpuntTSHD(tel2-1)
+		  k_inUpuntTSHD(tel2)=k_inUpuntTSHD(tel2-1)
+		endif
 	endif
        enddo
       enddo
@@ -1848,11 +1854,13 @@ C ...  Locals
 	  endif
 	enddo
 !	add one Vpunt extra because staggered:
-	if (in.and.j_inVpuntTSHD_dummy(tel2)>0) then !always if a jet-point is found an extra Vpunt must be included
-	  tel2=tel2+1
-	  i_inVpuntTSHD_dummy(tel2)=i_inVpuntTSHD_dummy(tel2-1)
-	  j_inVpuntTSHD_dummy(tel2)=j_inVpuntTSHD_dummy(tel2-1)-1
-	  k_inVpuntTSHD_dummy(tel2)=k_inVpuntTSHD_dummy(tel2-1)
+	if (tel2>0) then
+		if (in.and.j_inVpuntTSHD_dummy(tel2)>0) then !always if a jet-point is found an extra Vpunt must be included
+		  tel2=tel2+1
+		  i_inVpuntTSHD_dummy(tel2)=i_inVpuntTSHD_dummy(tel2-1)
+		  j_inVpuntTSHD_dummy(tel2)=j_inVpuntTSHD_dummy(tel2-1)-1
+		  k_inVpuntTSHD_dummy(tel2)=k_inVpuntTSHD_dummy(tel2-1)
+		endif
 	endif
        enddo
       enddo
@@ -1969,11 +1977,13 @@ C ...  Locals
 	  endif
 	enddo
 !	add one Upunt extra because staggered:
-	if (in.and.i_inUpuntTSHD(tel2)>0) then !always if a TSHD-point is found an extra Upunt must included
-	  tel2=tel2+1
-	  i_inUpuntTSHD(tel2)=i_inUpuntTSHD(tel2-1)-1
-	  j_inUpuntTSHD(tel2)=j_inUpuntTSHD(tel2-1)
-	  k_inUpuntTSHD(tel2)=k_inUpuntTSHD(tel2-1)
+	if (tel2>0) then
+		if (in.and.i_inUpuntTSHD(tel2)>0) then !always if a TSHD-point is found an extra Upunt must included
+		  tel2=tel2+1
+		  i_inUpuntTSHD(tel2)=i_inUpuntTSHD(tel2-1)-1
+		  j_inUpuntTSHD(tel2)=j_inUpuntTSHD(tel2-1)
+		  k_inUpuntTSHD(tel2)=k_inUpuntTSHD(tel2-1)
+		endif
 	endif
        enddo
       enddo
@@ -2038,11 +2048,13 @@ C ...  Locals
 	enddo
 
 !	add one Vpunt extra because staggered:
-	if (in.and.j_inVpuntTSHD_dummy(tel2)>0) then !always if a jet-point is found an extra Vpunt must be included
-	  tel2=tel2+1
-	  i_inVpuntTSHD_dummy(tel2)=i_inVpuntTSHD_dummy(tel2-1)
-	  j_inVpuntTSHD_dummy(tel2)=j_inVpuntTSHD_dummy(tel2-1)-1
-	  k_inVpuntTSHD_dummy(tel2)=k_inVpuntTSHD_dummy(tel2-1)
+	if (tel2>0) then
+		if (in.and.j_inVpuntTSHD_dummy(tel2)>0) then !always if a jet-point is found an extra Vpunt must be included
+		  tel2=tel2+1
+		  i_inVpuntTSHD_dummy(tel2)=i_inVpuntTSHD_dummy(tel2-1)
+		  j_inVpuntTSHD_dummy(tel2)=j_inVpuntTSHD_dummy(tel2-1)-1
+		  k_inVpuntTSHD_dummy(tel2)=k_inVpuntTSHD_dummy(tel2-1)
+		endif
 	endif
        enddo
       enddo
@@ -2157,11 +2169,13 @@ C ...  Locals
 	  endif
 	enddo
 !	add one Upunt extra because staggered:
-	if (in.and.i_inUpuntTSHD(tel2)>0) then !always if a TSHD-point is found an extra Upunt must included
-	  tel2=tel2+1
-	  i_inUpuntTSHD(tel2)=i_inUpuntTSHD(tel2-1)-1
-	  j_inUpuntTSHD(tel2)=j_inUpuntTSHD(tel2-1)
-	  k_inUpuntTSHD(tel2)=k_inUpuntTSHD(tel2-1)
+	if (tel2>0) then
+		if (in.and.i_inUpuntTSHD(tel2)>0) then !always if a TSHD-point is found an extra Upunt must included
+		  tel2=tel2+1
+		  i_inUpuntTSHD(tel2)=i_inUpuntTSHD(tel2-1)-1
+		  j_inUpuntTSHD(tel2)=j_inUpuntTSHD(tel2-1)
+		  k_inUpuntTSHD(tel2)=k_inUpuntTSHD(tel2-1)
+		endif
 	endif
        enddo
       enddo
@@ -2200,7 +2214,7 @@ C ...  Locals
 		do k=0,k1 ! one extra in vertical direction for W  
 		  xx=Rp(i)*cos_u(j)-schuif_x
 		  yy=Rp(i)*sin_u(j)
-		  IF (k.le.FLOOR(ob(n)%height/dz)) THEN ! obstacle:
+		  IF (k.le.FLOOR(ob(n)%height/dz).and.ob(n)%zbottom.le.0.) THEN ! obstacle part of bed:
 			xTSHD(1:4)=ob(n)%x*cos(phi)-ob(n)%y*sin(phi)
 			yTSHD(1:4)=ob(n)%x*sin(phi)+ob(n)%y*cos(phi)
 			CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
@@ -2226,7 +2240,7 @@ C ...  Locals
 		do k=0,k1 ! one extra in vertical direction for W  
 		  xx=Rp(i)*cos_ut(j)-schuif_x
 		  yy=Rp(i)*sin_ut(j)
-		  IF (k.le.FLOOR(ob(n)%height/dz)) THEN ! obstacle:
+		  IF (k.le.FLOOR(ob(n)%height/dz).and.ob(n)%zbottom.le.0.) THEN ! obstacle part of bed:
 			xTSHD(1:4)=ob(n)%x*cos(phi)-ob(n)%y*sin(phi)
 			yTSHD(1:4)=ob(n)%x*sin(phi)+ob(n)%y*cos(phi)
 			CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
@@ -2275,11 +2289,13 @@ C ...  Locals
 	enddo
 
 !	add one Vpunt extra because staggered:
-	if (in.and.j_inVpuntTSHD_dummy(tel2)>0) then !always if a jet-point is found an extra Vpunt must be included
-	  tel2=tel2+1
-	  i_inVpuntTSHD_dummy(tel2)=i_inVpuntTSHD_dummy(tel2-1)
-	  j_inVpuntTSHD_dummy(tel2)=j_inVpuntTSHD_dummy(tel2-1)-1
-	  k_inVpuntTSHD_dummy(tel2)=k_inVpuntTSHD_dummy(tel2-1)
+	if (tel2>0) then
+		if (in.and.j_inVpuntTSHD_dummy(tel2)>0) then !always if a jet-point is found an extra Vpunt must be included
+		  tel2=tel2+1
+		  i_inVpuntTSHD_dummy(tel2)=i_inVpuntTSHD_dummy(tel2-1)
+		  j_inVpuntTSHD_dummy(tel2)=j_inVpuntTSHD_dummy(tel2-1)-1
+		  k_inVpuntTSHD_dummy(tel2)=k_inVpuntTSHD_dummy(tel2-1)
+		endif
 	endif
        enddo
       enddo
@@ -2365,11 +2381,13 @@ C ...  Locals
 	  endif
 	enddo
 !	add one Upunt extra because staggered:
-	if (in.and.i_inUpuntTSHD(tel2)>0) then !always if a TSHD-point is found an extra Upunt must included
-	  tel2=tel2+1
-	  i_inUpuntTSHD(tel2)=i_inUpuntTSHD(tel2-1)-1
-	  j_inUpuntTSHD(tel2)=j_inUpuntTSHD(tel2-1)
-	  k_inUpuntTSHD(tel2)=k_inUpuntTSHD(tel2-1)
+	if (tel2>0) then
+		if (in.and.i_inUpuntTSHD(tel2)>0) then !always if a TSHD-point is found an extra Upunt must included
+		  tel2=tel2+1
+		  i_inUpuntTSHD(tel2)=i_inUpuntTSHD(tel2-1)-1
+		  j_inUpuntTSHD(tel2)=j_inUpuntTSHD(tel2-1)
+		  k_inUpuntTSHD(tel2)=k_inUpuntTSHD(tel2-1)
+		endif
 	endif
        enddo
       enddo
@@ -2429,6 +2447,8 @@ C ...  Locals
 		enddo
 	       enddo
 		
+		
+		IF(.false.) THEN ! 11-2-2017 adjusted; bedlevelfile is now immersed boundary via kbed not via TSHD arrays
       !! Search for P,V:
       tel1=tmax_inPpuntTSHD
       tel2=tmax_inVpuntTSHD
@@ -2454,11 +2474,13 @@ C ...  Locals
 	  endif
 	enddo
 !	add one Vpunt extra because staggered:
-	if (in.and.j_inVpuntTSHD_dummy(tel2)>0) then !always if a jet-point is found an extra Vpunt must be included
-	  tel2=tel2+1
-	  i_inVpuntTSHD(tel2)=i_inVpuntTSHD(tel2-1)
-	  j_inVpuntTSHD(tel2)=j_inVpuntTSHD(tel2-1)-1
-	  k_inVpuntTSHD(tel2)=k_inVpuntTSHD(tel2-1)
+	if (tel2>0) then
+		if (in.and.j_inVpuntTSHD_dummy(tel2)>0) then !always if a jet-point is found an extra Vpunt must be included
+		  tel2=tel2+1
+		  i_inVpuntTSHD(tel2)=i_inVpuntTSHD(tel2-1)
+		  j_inVpuntTSHD(tel2)=j_inVpuntTSHD(tel2-1)-1
+		  k_inVpuntTSHD(tel2)=k_inVpuntTSHD(tel2-1)
+		endif
 	endif
        enddo
       enddo
@@ -2510,16 +2532,18 @@ C ...  Locals
 	  endif
 	enddo
 !	add one Upunt extra because staggered:
-	if (in.and.i_inUpuntTSHD(tel2)>0) then !always if a TSHD-point is found an extra Upunt must included
-	  tel2=tel2+1
-	  i_inUpuntTSHD(tel2)=i_inUpuntTSHD(tel2-1)-1
-	  j_inUpuntTSHD(tel2)=j_inUpuntTSHD(tel2-1)
-	  k_inUpuntTSHD(tel2)=k_inUpuntTSHD(tel2-1)
+	if (tel2>0) then
+		if (in.and.i_inUpuntTSHD(tel2)>0) then !always if a TSHD-point is found an extra Upunt must included
+		  tel2=tel2+1
+		  i_inUpuntTSHD(tel2)=i_inUpuntTSHD(tel2-1)-1
+		  j_inUpuntTSHD(tel2)=j_inUpuntTSHD(tel2-1)
+		  k_inUpuntTSHD(tel2)=k_inUpuntTSHD(tel2-1)
+		endif
 	endif
        enddo
       enddo
       tmax_inUpuntTSHD=tel2
-
+	ENDIF ! endif (.false.) ! 11-2-2017 adjusted; bedlevelfile is now immersed boundary via kbed not via TSHD arrays
 		!! update kbed on each proc (j=0,j1) with kbed3 (used for deposition and bc in solver [adjusted for ob(n)%zbottom])
 		do j=0,j1 
 			do i=0,i1 !imax !including i1 strangely gives crash (13/4/15) !1,imax !0,i1
@@ -2741,17 +2765,21 @@ c get stuff from other CPU's
 	          kbed(i,j)=MIN(kbed(i,j),kmax) ! make sure kbed never is larger than kmax
 	       enddo
 	      enddo
-		  
-		do j=0,j1 
-			do i=0,i1 !imax !including i1 strangely gives crash (13/4/15) !1,imax !0,i1
-				do k=1,kbed(i,j) ! assign initial bed concentrations
-					do n=1,nfrac
-						Clivebed(n,i,j,k)=c_bed(n)
+
+		IF (interaction_bed.ge.4) THEN   
+			do j=0,j1 
+				do i=0,i1 !imax !including i1 strangely gives crash (13/4/15) !1,imax !0,i1
+					do k=1,kbed(i,j) ! assign initial bed concentrations
+						do n=1,nfrac
+							Clivebed(n,i,j,k)=c_bed(n)
+							Cold(n,i,j,k)=c_bed(n)
+							Cnew(n,i,j,k)=c_bed(n)
+							dCdt(n,i,j,k)=c_bed(n)	
+						enddo
 					enddo
 				enddo
-			enddo
-		enddo		  
-		   
+			enddo		  
+		ENDIF		   
       end
 
 	subroutine bedroughness_init

@@ -427,13 +427,13 @@ c*************************************************************
   		  z0=kn/30+0.11*nu_mol/MAX(ust,1.e-6)
   		  ust=absU/MAX(1./kappa*log(0.5*dz/z0),2.) !ust maximal 0.5*absU
   	      enddo
-  	      yplus=0.5*dz*ust/nu_mol
+  	      yplus=MAX(0.5*dz*ust/nu_mol,1e-12)
   	      if (yplus<11.225) then	!viscous sublayer uplus=yplus
   		  ust=sqrt(absU*nu_mol/(0.5*dz))
   	      endif
   ! 	      write(*,*) 'ust van Driest damping',ust
  	      do k=1,10 ! first 10 grid layers from wall are adjusted
- 		  yplus=(REAL(k)-0.5)*dz*ust/nu_mol
+ 		  yplus=MAX((REAL(k)-0.5)*dz*ust/nu_mol,1e-12)		  
  		  ekm(i,j,k)=ekm(i,j,k) * (1. - exp(-yplus/26.))
  	      enddo
  	    enddo
@@ -520,13 +520,13 @@ c*************************************************************
   		  z0=kn/30+0.11*nu_mol/MAX(ust,1.e-6)
   		  ust=absU/MAX(1./kappa*log(0.5*dz/z0),2.) !ust maximal 0.5*absU
   	      enddo
-  	      yplus=0.5*dz*ust/nu_mol
+  	      yplus=MAX(0.5*dz*ust/nu_mol,1e-12)
   	      if (yplus<11.225) then	!viscous sublayer uplus=yplus
   		  ust=sqrt(absU*nu_mol/(0.5*dz))
   	      endif
   ! 	      write(*,*) 'ust van Driest damping',ust
  	      do kt=k,k-10,-1 ! first 10 grid layers from wall are adjusted
- 		  yplus=(REAL(kmax-kjet-kt)+0.5)*dz*ust/nu_mol
+ 		  yplus=MAX((REAL(kmax-kjet-kt)+0.5)*dz*ust/nu_mol,1e-12)
  		  ekm(i,j,kt)=ekm(i,j,kt) * (1. - exp(-yplus/26.))
  	      enddo
 
@@ -580,8 +580,19 @@ c*************************************************************
 			DO i=1,imax
 				DO j=1,jmax
 					DO k=0,kbed(i,j)
+						im=i-1
+						ip=i+1
+						jm=j-1
+						jp=j+1
+						km=k-1
+						kp=MIN(k+1,k1)
+						Diffcof(im,j,k)=0.
+						Diffcof(ip,j,k)=0.
+						Diffcof(i,jm,k)=0.
+						Diffcof(i,jp,k)=0.
 						Diffcof(i,j,k)=0.
-						Diffcof(i,j,k+1)=0.
+						Diffcof(i,j,kp)=0.									
+
 					ENDDO
 				ENDDO
 			ENDDO
@@ -849,8 +860,18 @@ c*************************************************************
 			DO i=1,imax
 				DO j=1,jmax
 					DO k=0,kbed(i,j)
+						im=i-1
+						ip=i+1
+						jm=j-1
+						jp=j+1
+						km=k-1
+						kp=MIN(k+1,k1)
+						Diffcof(im,j,k)=0.
+						Diffcof(ip,j,k)=0.
+						Diffcof(i,jm,k)=0.
+						Diffcof(i,jp,k)=0.
 						Diffcof(i,j,k)=0.
-						Diffcof(i,j,k+1)=0.
+						Diffcof(i,j,kp)=0.									
 					ENDDO
 				ENDDO
 			ENDDO
@@ -869,13 +890,13 @@ c*************************************************************
   		  z0=kn/30+0.11*nu_mol/MAX(ust,1.e-6)
   		  ust=absU/MAX(1./kappa*log(0.5*dz/z0),2.) !ust maximal 0.5*absU
   	      enddo
-  	      yplus=0.5*dz*ust/nu_mol
+  	      yplus=MAX(0.5*dz*ust/nu_mol,1e-12)
   	      if (yplus<11.225) then	!viscous sublayer uplus=yplus
   		  ust=sqrt(absU*nu_mol/(0.5*dz))
   	      endif
   ! 	      write(*,*) 'ust van Driest damping',ust
  	      do kt=k,k-10,-1 ! first 10 grid layers from wall are adjusted
- 		  yplus=(REAL(kmax-kjet-kt)+0.5)*dz*ust/nu_mol
+ 		  yplus=MAX((REAL(kmax-kjet-kt)+0.5)*dz*ust/nu_mol,1e-12)
  		  ekm(i,j,kt)=ekm(i,j,kt) * (1. - exp(-yplus/26.))
  		  Diffcof(i,j,kt)=Diffcof(i,j,kt) * (1. - exp(-yplus/26.))
  	      enddo
@@ -1108,8 +1129,19 @@ c*************************************************************
 			DO i=1,imax
 				DO j=1,jmax
 					DO k=0,kbed(i,j)
+						im=i-1
+						ip=i+1
+						jm=j-1
+						jp=j+1
+						km=k-1
+						kp=k+1
+						Diffcof(im,j,k)=0.
+						Diffcof(ip,j,k)=0.
+						Diffcof(i,jm,k)=0.
+						Diffcof(i,jp,k)=0.
 						Diffcof(i,j,k)=0.
-						Diffcof(i,j,k+1)=0.
+						Diffcof(i,j,kp)=0.									
+
 					ENDDO
 				ENDDO
 			ENDDO
@@ -1354,8 +1386,18 @@ c*************************************************************
 			DO i=1,imax
 				DO j=1,jmax
 					DO k=0,kbed(i,j)
+						im=i-1
+						ip=i+1
+						jm=j-1
+						jp=j+1
+						km=k-1
+						kp=MIN(k+1,k1)
+						Diffcof(im,j,k)=0.
+						Diffcof(ip,j,k)=0.
+						Diffcof(i,jm,k)=0.
+						Diffcof(i,jp,k)=0.
 						Diffcof(i,j,k)=0.
-						Diffcof(i,j,k+1)=0.
+						Diffcof(i,j,kp)=0.									
 					ENDDO
 				ENDDO
 			ENDDO
@@ -1888,8 +1930,18 @@ c*************************************************************
 			DO i=1,imax
 				DO j=1,jmax
 					DO k=0,kbed(i,j)
+						im=i-1
+						ip=i+1
+						jm=j-1
+						jp=j+1
+						km=k-1
+						kp=MIN(k+1,k1)
+						Diffcof(im,j,k)=0.
+						Diffcof(ip,j,k)=0.
+						Diffcof(i,jm,k)=0.
+						Diffcof(i,jp,k)=0.
 						Diffcof(i,j,k)=0.
-						Diffcof(i,j,k+1)=0.
+						Diffcof(i,j,kp)=0.									
 					ENDDO
 				ENDDO
 			ENDDO
@@ -2254,8 +2306,18 @@ c get stuff from other CPU's
 			DO i=1,imax
 				DO j=1,jmax
 					DO k=0,kbed(i,j)
+						im=i-1
+						ip=i+1
+						jm=j-1
+						jp=j+1
+						km=k-1
+						kp=MIN(k+1,k1)
+						Diffcof(im,j,k)=0.
+						Diffcof(ip,j,k)=0.
+						Diffcof(i,jm,k)=0.
+						Diffcof(i,jp,k)=0.
 						Diffcof(i,j,k)=0.
-						Diffcof(i,j,k+1)=0.
+						Diffcof(i,j,kp)=0.									
 					ENDDO
 				ENDDO
 			ENDDO

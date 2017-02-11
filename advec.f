@@ -227,7 +227,7 @@ c********************************************************************
       end
 
 
-      subroutine advecw_driftfluxCDS2(putout,Uvel,Vvel,Wvel,RHO,Ru,Rp,dr,phiv,dz,
+      subroutine advecw_driftfluxCDS2(putout,Wvel,RHO,Ru,Rp,dr,phiv,dz,
      +                  i1,j1,k1,ib,ie,jb,je,kb,ke)
       implicit none
 c
@@ -262,8 +262,7 @@ c          other parameters  : all unchanged
 c
 c********************************************************************
       integer  i,j,k,im,ip,jm,jp,km,kp,i1,j1,k1,ib,ie,jb,je,kb,ke
-      real     putout(0:i1,0:j1,0:k1),Uvel(0:i1,0:j1,0:k1),
-     +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
+      real     putout(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
      +         dr(0:i1),phiv(0:j1),dz,Ru(0:i1),Rp(0:i1)
       real rho(0:i1,0:j1,0:k1)
       real rhoip,rhoim,rhojp,rhojm,dzi
@@ -1775,7 +1774,7 @@ c********************************************************************
       real     putout(0:i1,0:j1),putin(0:i1,0:j1),putin2(-1:i1+1,-1:j1+1),
      +         Uvel(0:j1),Vvel(0:j1),
      +         dr(0:i1),phiv(0:j1),phipt(0:je*px+1),dz,Ru(0:i1),Rp(0:i1),Rp2(-1:i1+1),
-     +         noemer,rRpos,rRneg,rLpos,rLneg,cRpos,cRneg,cLpos,cLneg,limiter2,
+     +         noemer,rRpos,rRneg,rLpos,rLneg,cRpos,cRneg,cLpos,cLneg,limiter,
      +         rho_p,rho_m
       
       real 	dz_i,Rpdr_i,Rpdphi_i,varx_grid_Rpos,varx_grid_Rneg,varx_grid_Lpos,varx_grid_Lneg
@@ -1884,11 +1883,14 @@ c
 	rLpos = (putin2(im,j)-putin2(imm-1,j))/noemer *varx_grid_Lpos
 	cflR = dt*ABS(Uvel(j))/(Rp(ip)-Rp(i))
 	cflL = dt*ABS(Uvel(j))/(Rp(i)-Rp(im))
-	cRpos = putin2(i ,j) + 0.5*limiter2(rRpos,cflR)*(putin2(ip,j) - putin2(i ,j))*(1.-cflR)
-	cLpos = putin2(im,j) + 0.5*limiter2(rLpos,cflL)*(putin2( i,j) - putin2(im,j))*(1.-cflL)
-	cRneg = putin2(ip,j) + 0.5*limiter2(rRneg,cflR)*(putin2( i,j) - putin2(ip,j))*(1.-cflR)
-	cLneg = putin2(i ,j) + 0.5*limiter2(rLneg,cflL)*(putin2(im,j) - putin2(i ,j))*(1.-cflL)
-
+!	cRpos = putin2(i ,j) + 0.5*limiter2(rRpos,cflR)*(putin2(ip,j) - putin2(i ,j))*(1.-cflR)
+!	cLpos = putin2(im,j) + 0.5*limiter2(rLpos,cflL)*(putin2( i,j) - putin2(im,j))*(1.-cflL)
+!	cRneg = putin2(ip,j) + 0.5*limiter2(rRneg,cflR)*(putin2( i,j) - putin2(ip,j))*(1.-cflR)
+!	cLneg = putin2(i ,j) + 0.5*limiter2(rLneg,cflL)*(putin2(im,j) - putin2(i ,j))*(1.-cflL)
+	cRpos = putin2(i ,j) + 0.5*limiter(rRpos)*(putin2(ip,j) - putin2(i ,j))*(1.-cflR)
+	cLpos = putin2(im,j) + 0.5*limiter(rLpos)*(putin2( i,j) - putin2(im,j))*(1.-cflL)
+	cRneg = putin2(ip,j) + 0.5*limiter(rRneg)*(putin2( i,j) - putin2(ip,j))*(1.-cflR)
+	cLneg = putin2(i ,j) + 0.5*limiter(rLneg)*(putin2(im,j) - putin2(i ,j))*(1.-cflL)
       putout(i,j) = - (
      &   Ru(i)  * ( 0.5*(Uvel(j)+ABS(Uvel(j)))*cRpos + 0.5*(Uvel(j)-ABS(Uvel(j)))*cRneg ) -
      &   Ru(im) * ( 0.5*(Uvel(j)+ABS(Uvel(j)))*cLpos + 0.5*(Uvel(j)-ABS(Uvel(j)))*cLneg ) )
@@ -1908,11 +1910,14 @@ c
 	cflL = dt*ABS(Vvel(jm))*Rpdphi_i
 	cflR = dt*ABS(Vvel(j ))*Rpdphi_i
 
-	cRpos = putin2(i ,j) + 0.5*limiter2(rRpos,cflR)*(putin2(i,jp) - putin2(i ,j))*(1.-cflR)
-	cLpos = putin2(i,jm) + 0.5*limiter2(rLpos,cflL)*(putin2( i,j) - putin2(i,jm))*(1.-cflL)
-	cRneg = putin2(i,jp) + 0.5*limiter2(rRneg,cflR)*(putin2( i,j) - putin2(i,jp))*(1.-cflR)
-	cLneg = putin2(i,j ) + 0.5*limiter2(rLneg,cflL)*(putin2(i,jm) - putin2(i,j ))*(1.-cflL)
-
+!	cRpos = putin2(i ,j) + 0.5*limiter2(rRpos,cflR)*(putin2(i,jp) - putin2(i ,j))*(1.-cflR)
+!	cLpos = putin2(i,jm) + 0.5*limiter2(rLpos,cflL)*(putin2( i,j) - putin2(i,jm))*(1.-cflL)
+!	cRneg = putin2(i,jp) + 0.5*limiter2(rRneg,cflR)*(putin2( i,j) - putin2(i,jp))*(1.-cflR)
+!	cLneg = putin2(i,j ) + 0.5*limiter2(rLneg,cflL)*(putin2(i,jm) - putin2(i,j ))*(1.-cflL)
+	cRpos = putin2(i ,j) + 0.5*limiter(rRpos)*(putin2(i,jp) - putin2(i ,j))*(1.-cflR)
+	cLpos = putin2(i,jm) + 0.5*limiter(rLpos)*(putin2( i,j) - putin2(i,jm))*(1.-cflL)
+	cRneg = putin2(i,jp) + 0.5*limiter(rRneg)*(putin2( i,j) - putin2(i,jp))*(1.-cflR)
+	cLneg = putin2(i,j ) + 0.5*limiter(rLneg)*(putin2(i,jm) - putin2(i,j ))*(1.-cflL)
 
 	putout(i,j) = putout(i,j) - (
      &   (  0.5*(Vvel(j )+ABS(Vvel(j )))*cRpos + 0.5*(Vvel(j )-ABS(Vvel(j )))*cRneg )  -
@@ -1951,7 +1956,7 @@ c
 	  alpha=0.6667-0.3333*cfl
 !	limiter2=MAX(0.,MIN(MIN(2.*r,alpha*r+1.-alpha),2.))					!advised for non-linear systems a more restrictive TVD constraints
 	!limiter2=MAX(0.,MIN(MIN(2./cfl*r,alpha*r+1.-alpha),2./(1.-cfl)))		!less restrictive TVD constraints with CFL dependance 
-	limiter2=MAX(0.,MIN(2./cfl*r,alpha*r+1.-alpha,2./(1.-cfl)))		!less restrictive TVD constraints with CFL dependance 
+	limiter2=MAX(0.,MIN(2./(MAX(cfl,1e-12)*MAX(r,1e-12)),alpha*r+1.-alpha,2./(1.-cfl)))		!less restrictive TVD constraints with CFL dependance 
 	
 	!limiter2=(r+ABS(r))/MAX(1.+r,1.) 	! Van Leer limiter
 

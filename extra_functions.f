@@ -24,7 +24,7 @@
 !       include 'common.txt'
       include 'mpif.h'
       integer ierr
-      real  dr2,dz2,df,df2,kcoeff,tmp1,tmp2,tmp3,Courant,dtmp
+      real  dr2,dz2,df,df2,kcoeff,tmp1,tmp2,tmp3,Courant,dtmp,dtold
 
 	  
 !		IF (nobst>0.and.bp(1)%forever.eq.0.and.time_np+dt.gt.bp(1)%t0.and.counter<10) THEN
@@ -37,13 +37,15 @@
 			Courant = CFL
 !		ENDIF
 		
+		
+		dtold=dt
       IF (istep.le.10) THEN
 	dt = dt_ini
       ELSE
 	dt = dt_max
       ENDIF
 	  
-      
+!		write(*,*),'dt,rank voor',dt,rank
       IF (CNdiffz.eq.1) THEN
 	dz2 = 1.e9*dz*dz ! no dt restriction for vertical diff with CN implicit scheme
       ELSE
@@ -64,33 +66,16 @@
             tmp3 =Courant *tmp3 
             dt = min( dt , tmp3 )
             dtmp = dt
-!		if (abs(dt)/abs(dt_max).le.0.7) then
-!			write(*,*)'rank,i,j,k,dt=',rank,i,j,k,dt
-!			write(*,*)'U,V,W:',Unew(i,j,k),Vnew(i,j,k),Wnew(i,j,k)
-!			write(*,*)'*i-1: U,V,W:',Unew(i-1,j,k),Vnew(i-1,j,k),Wnew(i-1,j,k)
-!			write(*,*)'*j-1:U,V,W:',Unew(i,j-1,k),Vnew(i,j-1,k),Wnew(i,j-1,k)
-!			write(*,*)'*k-1:U,V,W:',Unew(i,j,k-1),Vnew(i,j,k-1),Wnew(i,j,k-1)
-!			write(*,*)'*i+1: U,V,W:',Unew(i+1,j,k),Vnew(i+1,j,k),Wnew(i+1,j,k)
-!			write(*,*)'*j+1:U,V,W:',Unew(i,j+1,k),Vnew(i,j+1,k),Wnew(i,j+1,k)
-!			write(*,*)'*k+1:U,V,W:',Unew(i,j,k+1),Vnew(i,j,k+1),Wnew(i,j,k+1)
-!			write(*,*)'Rp*dphi,Rp(i+1)-Rp(i),dz',df,Rp(i+1)-Rp(i),dz
-!			write(*,*)'dyn viscosity nu,ekm,rho:',kcoeff,ekm(i,j,k),rnew(i,j,k)
-!			write(*,*)'dt CFL,dt visc:',1./tmp1,1./(tmp2*kcoeff)
-!			call output(99999,time_np)
-!			CALL writeerror(10000)
-!		endif
             enddo
          enddo
       enddo
 
-	if (dt<1.e-12) then 
-	   write(*,*),'rank,dt',rank,dt 
-	endif
-      
-	call mpi_allreduce(dtmp,dt,1,mpi_real8,mpi_min,mpi_comm_world,ierr)
-!	call mpi_allreduce(dtmp,dt,1,mpi_real,mpi_min,mpi_comm_world,ierr)
+!	call mpi_allreduce(dtmp,dt,1,mpi_real8,mpi_min,mpi_comm_world,ierr)
+	!call mpi_allreduce(dtmp,dt,1,mpi_real,mpi_min,mpi_comm_world,ierr)
+	call mpi_allreduce(dtmp,dt,1,mpi_double_precision,mpi_min,mpi_comm_world,ierr)	
 
-
+	  dt=MIN(dt,dtold*1.1) !change in time step never more than +10% in one timestep for extra stability
+	  
 	if (isnan(dt)) stop 'ERROR, QUITING DFLOW3D: "dt" is a NaN'
 	if (dt<1.e-12) stop 'ERROR, QUITING DFLOW3D: "dt" is smaller than 1e-12'
 

@@ -202,7 +202,7 @@ c********************************************************************
 	endif
 	if (slipvel.eq.1.or.slipvel.eq.2) then
 	do n=1,nfrac
-	  call advecw_driftfluxCDS2(dnew,0.,0.,wsed(n,:,:,:)-Wnew,
+	  call advecw_driftfluxCDS2(dnew,wsed(n,:,:,:)-Wnew,
      &  cnew(n,:,:,:)*frac(n)%rho,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke)
 	enddo
 	endif
@@ -353,12 +353,14 @@ c********************************************************************
      +            ib,ie,jb,je,kb,ke)
 		dcdt(n,:,:,:) =cnew(n,:,:,:) + dt*(1.5*dnewc(n,:,:,:)-0.5*cc(n,:,:,:)) !AB2
 		cc(n,:,:,:)=dnewc(n,:,:,:)
-	      	  if (interaction_bed>0) then
+	      	  if (interaction_bed>0.and.interaction_bed.ne.4) then
 		    !! advec concentration in bed with velocity TSHD:
 	      	    call adveccbot_TVD(dnewcbot(n,:,:),cnewbot(n,:,:),Ubot_TSHD,Vbot_TSHD,Ru,Rp,dr,phiv,phipt,dz,
      +            	i1,j1,ib,ie,jb,je,dt,rank,px,periodicx,periodicy)
-		    dcdtbot(n,:,:) =cnewbot(n,:,:) + dt*(1.5*dnewcbot(n,:,:)-0.5*ccbot(n,:,:)) !AB2
-		    ccbot(n,:,:)=dnewcbot(n,:,:)
+				dcdtbot(n,:,:) =cnewbot(n,:,:) + dt*(1.5*dnewcbot(n,:,:)-0.5*ccbot(n,:,:)) !AB2
+				ccbot(n,:,:)=dnewcbot(n,:,:)	 
+			  elseif(interaction_bed.eq.4) then
+			    dcdtbot(n,:,:)=cnewbot(n,:,:)
 	      	  endif
 	  enddo
       	  if (interaction_bed>0) then
@@ -487,7 +489,7 @@ c********************************************************************
 	  W_km_sum=W_km_sum+wsed(n,:,:,:)-Wnew
 	 enddo 
 	 W_km_sum=W_km_sum+Wfluid !Wfluid is difference with Ucfd 
-	 call advecw_driftfluxCDS2(dnew,0.,0.,W_km_sum,
+	 call advecw_driftfluxCDS2(dnew,W_km_sum,
      &   rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke)
 	endif
 
@@ -661,6 +663,7 @@ c********************************************************************
 
 	dcdt = 0.
 	Wfluid = 0.
+	dnewc=0.
 c********************************************************************
 c     CALCULATE slipvelocity
 c********************************************************************
@@ -679,7 +682,7 @@ c********************************************************************
 		if (LOA>0.and.outflow_overflow_down.eq.1) then
 		 do n=1,nfrac
 	    	  do k=kmax-kjet+1,kmax 
-		 	Wsed(n,i,j,k)=Wnew(i,j,k)
+			Wsed(n,i,j,k)=Wnew(i,j,k)
 		  enddo
 		 enddo	
 		endif
@@ -724,11 +727,13 @@ c********************************************************************
 	      call diffc_CDS2 (dnewc(n,:,:,:),Cnew(n,:,:,:),Diffcof,
      +            ib,ie,jb,je,kb,ke)
 		dcdt(n,:,:,:) =cnew(n,:,:,:) + dt*(dnewc(n,:,:,:)) !update in time with EE1 for TVD
-	      	  if (interaction_bed>0) then
+	      	  if (interaction_bed>0.and.interaction_bed.ne.4) then
 		    !! advec concentration in bed with velocity TSHD:
 	      	    call adveccbot_TVD(dnewcbot(n,:,:),cnewbot(n,:,:),Ubot_TSHD,Vbot_TSHD,Ru,Rp,dr,phiv,phipt,dz,
      +            	i1,j1,ib,ie,jb,je,dt,rank,px,periodicx,periodicy)
 		    dcdtbot(n,:,:)= cnewbot(n,:,:) + dt*dnewcbot(n,:,:) ! time update
+			  elseif(interaction_bed.eq.4) then
+			    dcdtbot(n,:,:)=cnewbot(n,:,:)			
 	      	  endif
            IF (CNdiffz.eq.1) THEN !CN semi implicit treatment diff-z:
 	     call bound_c(dcdt(n,:,:,:),frac(n)%c,n,0.) ! bc start CN-diffz ABv
@@ -891,7 +896,7 @@ c********************************************************************
 	 enddo 
 	 W_km_sum=W_km_sum+(1.-c_sum)*rho_b*Wfluid !Wfluid is difference with Ucfd 
 	 W_km_sum=W_km_sum/rnew
-	 call advecw_driftfluxCDS2(dnew,0.,0.,W_km_sum,
+	 call advecw_driftfluxCDS2(dnew,W_km_sum,
      &   rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke)
 	endif
 	
@@ -1232,11 +1237,13 @@ c********************************************************************
      +            ib,ie,jb,je,kb,ke)
 !		dcdt(n,:,:,:) =cnew(n,:,:,:) + a21*dt*(k1c(n,:,:,:)) !pred1
 		dcdt(n,:,:,:) =cnew(n,:,:,:) + cn1*dt*(k1c(n,:,:,:)) !pred1
-	      	  if (interaction_bed>0) then
+	      	  if (interaction_bed>0.and.interaction_bed.ne.4) then
 		    !! advec concentration in bed with velocity TSHD:
 	      	    call adveccbot_TVD(k1cbot(n,:,:),cnewbot(n,:,:),Ubot_TSHD,Vbot_TSHD,Ru,Rp,dr,phiv,phipt,dz,
      +            	i1,j1,ib,ie,jb,je,cn1*dt,rank,px,periodicx,periodicy)
 		    dcdt1bot(n,:,:)= cnewbot(n,:,:) + cn1*dt*k1cbot(n,:,:) ! pred1
+			  elseif(interaction_bed.eq.4) then
+			    dcdt1bot(n,:,:)=cnewbot(n,:,:)			
 	      	  endif
            IF (CNdiffz.eq.1) THEN !CN semi implicit treatment diff-z:
 	     call bound_c(dcdt(n,:,:,:),frac(n)%c,n,0.) ! bc start CN-diffz k1 RK3
@@ -1353,7 +1360,7 @@ c********************************************************************
 	 enddo 
 	 W_km_sum=W_km_sum+(1.-c_sum)*rho_b*Wfluid !Wfluid is difference with Ucfd 
 	 W_km_sum=W_km_sum/rnew
-	 call advecw_driftfluxCDS2(k1w,0.,0.,W_km_sum,
+	 call advecw_driftfluxCDS2(k1w,W_km_sum,
      &   rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke)
 	endif
 
@@ -1662,11 +1669,13 @@ c********************************************************************
 		  endif
 	      call diffc_CDS2 (k2c(n,:,:,:),dCdt(n,:,:,:),Diffcof,
      +            ib,ie,jb,je,kb,ke)
-	          if (interaction_bed>0) then
+	          if (interaction_bed>0.and.interaction_bed.ne.4) then
 		    !! advec concentration in bed with velocity TSHD:
 	            call adveccbot_TVD(k2cbot(n,:,:),dcdt1bot(n,:,:),Ubot_TSHD,Vbot_TSHD,Ru,Rp,dr,phiv,phipt,dz,
      +              i1,j1,ib,ie,jb,je,cn2*dt,rank,px,periodicx,periodicy)
 		    dcdt2bot(n,:,:)= dcdt1bot(n,:,:) + cn2*dt*k2cbot(n,:,:) ! pred2
+			  elseif(interaction_bed.eq.4) then
+			    dcdt2bot(n,:,:)=dcdt1bot(n,:,:)			
 	          endif
 	  enddo
 	  dcdt2=dcdt
@@ -1791,7 +1800,7 @@ c********************************************************************
 	 enddo
 	 W_km_sum=W_km_sum+(1.-c_sum)*rho_b*Wfluid  !Wfluid is difference with Ucfd
 	 W_km_sum=W_km_sum/drdt
-	 call advecw_driftfluxCDS2(k2w,0.,0.,W_km_sum,
+	 call advecw_driftfluxCDS2(k2w,W_km_sum,
      &   drdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke)
 	endif
 
@@ -2109,11 +2118,14 @@ c********************************************************************
 	      call diffc_CDS2 (k3c(n,:,:,:),dCdt(n,:,:,:),Diffcof,
      +            ib,ie,jb,je,kb,ke)
 
-	          if (interaction_bed>0) then
+	          if (interaction_bed>0.and.interaction_bed.ne.4) then
 		    !! advec concentration in bed with velocity TSHD:
 	            call adveccbot_TVD(k3cbot(n,:,:),dcdt2bot(n,:,:),Ubot_TSHD,Vbot_TSHD,Ru,Rp,dr,phiv,phipt,dz,
      +              i1,j1,ib,ie,jb,je,cn3*dt,rank,px,periodicx,periodicy)
 		    dcdtbot(n,:,:)= dcdt2bot(n,:,:) + cn3*dt*k3cbot(n,:,:) ! n+1
+			  elseif(interaction_bed.eq.4) then
+			    dcdtbot(n,:,:)=dcdt2bot(n,:,:)						
+			
 	          endif
 	  enddo
 	  dcdt2=dcdt 
@@ -2242,7 +2254,7 @@ c********************************************************************
 	 enddo
 	 W_km_sum=W_km_sum+(1.-c_sum)*rho_b*Wfluid  !Wfluid is difference with Ucfd
 	 W_km_sum=W_km_sum/drdt
-	 call advecw_driftfluxCDS2(k3w,0.,0.,W_km_sum,
+	 call advecw_driftfluxCDS2(k3w,W_km_sum,
      &   drdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke)
 	endif
 	
@@ -2589,7 +2601,7 @@ c********************************************************************
 	endif
 	if (slipvel.eq.1.or.slipvel.eq.2) then
 	do n=1,nfrac
-	  call advecw_driftfluxCDS2(dnew,0.,0.,wsed(n,:,:,:)-Wnew,
+	  call advecw_driftfluxCDS2(dnew,wsed(n,:,:,:)-Wnew,
      &  cnew(n,:,:,:)*frac(n)%rho,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke)
 	enddo
 	endif
@@ -4372,7 +4384,7 @@ c  J --> direction      (yrt)
          do j=j1,0,-1       ! bedplume loop is only initial condition: do not bother to have U,V,W initial staggering perfect 
 	  xx=Rp(i)*cos_u(j)-schuif_x
 	  yy=Rp(i)*sin_u(j)
-	  IF (k.le.FLOOR(bp(n2)%height/dz)) THEN ! obstacle:
+	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
 		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
 		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
 		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 

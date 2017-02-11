@@ -322,7 +322,7 @@
 !	real y(1:imax,1:jmax,1:kmax)
 !	real z(1:imax,1:jmax,1:kmax)
 	real uu(1:imax,1:jmax,1:kmax)
-	real vv(1:imax,1:jmax,1:kmax)
+	real vv(1:imax,1:jmax,1:kmax),zzbed(1:imax,1:jmax)
 	real mass_bed(1:nfrac,1:imax,1:jmax)
 	real tt
 	integer tel,istap,n
@@ -336,14 +336,15 @@
        integer, parameter :: NDIMS = 3
        integer, parameter :: NDIMS2 = 4
        integer, parameter :: NDIMS3 = 1
+	   integer, parameter :: NDIMS5 = 2
 !       integer, parameter :: NX = imax, NY = jmax, NZ = kmax
      
        ! When we create netCDF files, variables and dimensions, we get back
        ! an ID for each one.
        integer :: ncid, varid1,varid2,varid3, varid4, varid5, varid6, varid7, varid8, varid9
-	   integer :: dimids(NDIMS), dimids2(NDIMS2),dimids3(NDIMS3)
+	   integer :: dimids(NDIMS), dimids2(NDIMS2),dimids3(NDIMS3),dimids5(NDIMS5)
        integer :: x_dimid, y_dimid, z_dimid, nfrac_dimid, par_dimid
-	integer :: dimids4(NDIMS),varid20
+	integer :: dimids4(NDIMS),varid20,varid21
 	character(1024) :: svnversion
 	character(1024) :: svnurl
       include 'version.inc'
@@ -360,6 +361,7 @@
 	   do j=1,jmax
 	     	do n=1,nfrac
 			mass_bed(n,i,j) = Cnewbot(n,i,j)*dz*frac(n)%rho ! Cnewbot(n,i,j)*dz*dr(i)*Rp(i)*dphi*frac(n)%rho
+			zzbed(i,j) = REAL(kbed(i,j))*dz
 		enddo		
 	   enddo
 	enddo
@@ -370,7 +372,7 @@
        ! Create the netCDF file. The nf90_clobber parameter tells netCDF to
        ! overwrite this file, if it already exists.
        call check( nf90_create(FILE_NAME, NF90_CLOBBER, ncid) )
-     
+	   
        ! Define the dimensions. NetCDF will hand back an ID for each.
        call check( nf90_def_dim(ncid, "xdim", imax, x_dimid) )
        call check( nf90_def_dim(ncid, "ydim", jmax, y_dimid) )
@@ -387,9 +389,11 @@
        if (nfrac>0) then
        	dimids2 =  (/ nfrac_dimid, x_dimid, y_dimid, z_dimid /)
 	dimids4 =  (/ nfrac_dimid, x_dimid, y_dimid /)
-	endif
+	   dimids5 =  (/ x_dimid, y_dimid  /) 
+		endif
        dimids3 =  (/ par_dimid  /) 
-    
+
+
        ! Define the variable. The type of the variable in this case is
        ! NF90_DOUBLE (4-byte double).
        call check( nf90_def_var(ncid, "U", NF90_REAL, dimids, varid1) )
@@ -409,8 +413,13 @@
        call check( nf90_put_att(ncid, varid4, 'units', '-') )
        call check( nf90_put_att(ncid, varid4, 'long_name', 'Volume concentration for each fraction') )
        call check( nf90_def_var(ncid, "mass_bed", NF90_REAL, dimids4, varid20) )
-       call check( nf90_put_att(ncid, varid4, 'units', 'kg/m2') )
-       call check( nf90_put_att(ncid, varid4, 'long_name', 'Mass per m2 sediment fractions in bed') )
+       call check( nf90_put_att(ncid, varid20, 'units', 'kg/m2') )
+       call check( nf90_put_att(ncid, varid20, 'long_name', 'Mass per m2 sediment fractions in bed') )
+		if (interaction_bed.ge.4) then
+			call check( nf90_def_var(ncid, "zbed", NF90_REAL, dimids5, varid21) )
+			call check( nf90_put_att(ncid, varid21, 'units', 'm') )
+			call check( nf90_put_att(ncid, varid21, 'long_name', 'Bed level height of dynamic morphological bed') )
+		endif
 	endif
        call check( nf90_def_var(ncid, "rho", NF90_REAL, dimids, varid5) )
        call check( nf90_put_att(ncid, varid5, 'units', 'kg/m3') )
@@ -439,16 +448,22 @@
 
        ! End define mode. This tells netCDF we are done defining metadata.
        call check( nf90_enddef(ncid) )
-     
+   
        ! Write the pretend data to the file. Although netCDF supports
        ! reading and writing subsets of data, in this case we write all the
        ! data in one operation.
        call check( nf90_put_var(ncid, varid1, uu(1:imax,1:jmax,1:kmax)) )
        call check( nf90_put_var(ncid, varid2, vv(1:imax,1:jmax,1:kmax)) )
        call check( nf90_put_var(ncid, varid3, Wnew(1:imax,1:jmax,1:kmax)) )
+
+	   
        if (nfrac>0) then
-       	call check( nf90_put_var(ncid, varid4, Cnew(1:nfrac,1:imax,1:jmax,1:kmax)) )
-	call check( nf90_put_var(ncid, varid20, mass_bed(1:nfrac,1:imax,1:jmax)) )
+       	call check( nf90_put_var(ncid, varid4, Cnew(1:nfrac,1:imax,1:jmax,1:kmax)) ) 
+		call check( nf90_put_var(ncid, varid20, mass_bed(1:nfrac,1:imax,1:jmax)) ) 
+		if (interaction_bed.ge.4) then
+		  call check( nf90_put_var(ncid, varid21, zzbed(1:imax,1:jmax) ))
+		endif
+		  
 	endif
        call check( nf90_put_var(ncid, varid5, rnew(1:imax,1:jmax,1:kmax)) )
        call check( nf90_put_var(ncid, varid6, ekm(1:imax,1:jmax,1:kmax)) )
@@ -459,10 +474,11 @@
 	     call check( nf90_put_var(ncid, varid9, Csgrid(1:imax,1:jmax,1:kmax)) )
 	   endif
        call check( nf90_put_var(ncid, varid8, tt) )
-     
+    
        ! Close the file. This frees up any internal netCDF resources
        ! associated with the file, and flushes any buffers.
        call check( nf90_close(ncid) )
+
 
 	end
 

@@ -324,10 +324,10 @@ c get stuff from other CPU's
       !! Set boundary conditions vertical jet in:
        	if (plumetseriesfile.eq.'') then
        		Wjet=W_j
-       		f=Strouhal*ABS(W_j)/(radius_j*2.) !Strouholt number is 0.3
+       		f=Strouhal*ABS(W_j)/MAX(radius_j*2.,1.e-12) !Strouholt number is 0.3
 	else
        		Wjet=interpseries(plumetseries,plumeUseries,plumeseriesloc,tt)
-       		f=Strouhal*ABS(W_j)/(radius_j*2.) !Strouholt number is 0.3
+       		f=Strouhal*ABS(W_j)/MAX(radius_j*2.,1.e-12) !Strouholt number is 0.3
 	endif
 	jetcorr=pi/(2.*pi*(1/(1./W_j_powerlaw+1)-1./(1./W_j_powerlaw+2.))) !=1.22449 for W_j_powerlaw=7
        do t=1,tmax_inPpunt
@@ -339,7 +339,7 @@ c get stuff from other CPU's
  	enddo
 	  xx=Rp(i)*cos_u(j)-schuif_x
 	  yy=Rp(i)*sin_u(j)
-	  rr=1.-sqrt((xx**2+yy**2)/radius_j**2)
+	  rr=1.-sqrt((xx**2+yy**2)/MAX(radius_j**2,1.e-12))
 	  rr=MAX(rr,0.)
 	  if (outflow_overflow_down.eq.1) then
 		Wbound(i,j,kmax)=jetcorr*Wjet*rr**(1./W_j_powerlaw)+Awjet/REAL(azi_n)*Wjet*fluc !no turb SEM fluc
@@ -426,7 +426,7 @@ c get stuff from other CPU's
  	  j=j_inVpunt2(t)
 	  zzz=k*dz-0.5*dz-zjet2
 	  yy=Rp(0)*sin_v(j)
-	  rr=1.-sqrt((zzz**2+yy**2)/radius_j**2)
+	  rr=1.-sqrt((zzz**2+yy**2)/MAX(radius_j**2,1.e-12))
 	  rr=MAX(rr,0.)
  	  fluc=0.
  	  do n=1,azi_n
@@ -443,25 +443,10 @@ c get stuff from other CPU's
  	  k=k_inWpunt_suction(t)
  	  j=j_inWpunt_suction(t)
  	  i=i_inWpunt_suction(t)
-	  Wjetbc=pi*radius_j**2*W_j*perc_dh_suction/(dr(i)*3.*Dsp) !(m3/s)/m2=m/s per suction cell (perc_dh_suction is corrected for number of dragheads)
+	  Wjetbc=pi*MAX(radius_j**2,1.e-12)*W_j*perc_dh_suction/(dr(i)*3.*Dsp) !(m3/s)/m2=m/s per suction cell (perc_dh_suction is corrected for number of dragheads)
 	  Wbound(i,j,k)=Wjetbc
        enddo
 
- 
-	IF (interaction_bed.ge.4) THEN ! dynamic bed update, IBM bed re-defined every timestep:
-		DO i=1,imax
-			DO j=1,jmax
-				DO k=1,kbed(i,j)
-					Ubound(i,j,k)=0.
-					Ubound(i-1,j,k)=0.
-					Vbound(i,j,k)=0.
-					Vbound(i,j-1,k)=0.
-					Wbound(i,j,k)=0.
-				ENDDO
-			ENDDO
-		ENDDO
-	ENDIF	   
-	   
       end
 
       subroutine bound_incljet(Ubound,Vbound,Wbound,rho,botstress,tt,Ub1in,Vb1in,Wb1in,Ub2in,Vb2in,Wb2in,Ub3in,Vb3in,Wb3in)
@@ -474,7 +459,7 @@ c
 !       include 'common.txt'
 
 c
-      integer jtmp,t,inout
+      integer jtmp,t,inout,im,jm
 	real xTSHD(1:4),yTSHD(1:4)
 c
       real  Ubound(0:i1,0:j1,0:k1),Vbound(0:i1,0:j1,0:k1),rho(0:i1,0:j1,0:k1),
@@ -876,10 +861,10 @@ c get stuff from other CPU's
 	! set boundary conditions vertical jet:
        	if (plumetseriesfile.eq.'') then
        		Wjet=W_j
-       		f=Strouhal*ABS(W_j)/(radius_j*2.) !Strouholt number is 0.3
+       		f=Strouhal*ABS(W_j)/MAX(radius_j*2.,1.e-12) !Strouholt number is 0.3
 	else
        		Wjet=interpseries(plumetseries,plumeUseries,plumeseriesloc,tt)
-       		f=Strouhal*ABS(W_j)/(radius_j*2.) !Strouholt number is 0.3
+       		f=Strouhal*ABS(W_j)/MAX(radius_j*2.,1.e-12) !Strouholt number is 0.3
 	endif
 	jetcorr=pi/(2.*pi*(1/(1./W_j_powerlaw+1)-1./(1./W_j_powerlaw+2.))) !=1.22449 for W_j_powerlaw=7
        do t=1,tmax_inPpunt
@@ -891,7 +876,7 @@ c get stuff from other CPU's
  	enddo
 	xx=Rp(i)*cos_u(j)-schuif_x
 	yy=Rp(i)*sin_u(j)
-	rr=1.-sqrt((xx**2+yy**2)/radius_j**2)
+	rr=1.-sqrt((xx**2+yy**2)/MAX(radius_j**2,1.e-12))
 	rr=MAX(rr,0.)
 	if (outflow_overflow_down.eq.1) then
 	 	do k=kmax-kjet,kmax-kjet
@@ -1001,7 +986,7 @@ c get stuff from other CPU's
  	  j=j_inVpunt2(t)
 	  zzz=k*dz-0.5*dz-zjet2
 	  yy=Rp(0)*sin_v(j)
-	  rr=1.-sqrt((zzz**2+yy**2)/radius_j**2)
+	  rr=1.-sqrt((zzz**2+yy**2)/MAX(radius_j**2,1.e-12))
 	  rr=MAX(rr,0.)
  	  fluc=0.
  	  do n=1,azi_n
@@ -1017,7 +1002,7 @@ c get stuff from other CPU's
  	  k=k_inWpunt_suction(t)
  	  j=j_inWpunt_suction(t)
  	  i=i_inWpunt_suction(t)
-	  Wjetbc=pi*radius_j**2*W_j*perc_dh_suction/(dr(i)*3.*Dsp) !(m3/s)/m2=m/s per suction cell (perc_dh_suction is corrected for number of dragheads)
+	  Wjetbc=pi*MAX(radius_j**2,1.e-12)*W_j*perc_dh_suction/(dr(i)*3.*Dsp) !(m3/s)/m2=m/s per suction cell (perc_dh_suction is corrected for number of dragheads)
 	  Wbound(i,j,k)=Wjetbc
        enddo
 
@@ -1047,14 +1032,16 @@ c get stuff from other CPU's
 	  enddo
 	endif
  
-	IF (interaction_bed.ge.4) THEN ! dynamic bed update, IBM bed re-defined every timestep:
-		DO i=1,imax
-			DO j=1,jmax
-				DO k=1,kbed(i,j)
+	IF (interaction_bed.ge.4.or.bedlevelfile.ne.'') THEN ! dynamic bed update, IBM bed re-defined every timestep:
+		DO i=0,i1 !1,imax
+			DO j=0,j1 !1,jmax
+				DO k=0,kbed(i,j)
 					Ubound(i,j,k)=0.
-					Ubound(i-1,j,k)=0.
 					Vbound(i,j,k)=0.
-					Vbound(i,j-1,k)=0.
+					im=MAX(i-1,0)
+					jm=MAX(j-1,0)
+					Ubound(im,j,k)=0.
+					Vbound(i,jm,k)=0.
 					Wbound(i,j,k)=0.
 				ENDDO
 			ENDDO
@@ -1074,7 +1061,7 @@ c
 !       include 'common.txt'
 
 c
-      integer jtmp,botstress,n,t,jp,inout
+      integer jtmp,botstress,n,t,jp,inout,im,jm
 	real xTSHD(1:4),yTSHD(1:4)
 c
       real  Ubound(0:i1,0:j1,0:k1),Vbound(0:i1,0:j1,0:k1),rho(0:i1,0:j1,0:k1),
@@ -1584,10 +1571,10 @@ c get stuff from other CPU's
 	! set boundary conditions vertical jet:
        	if (plumetseriesfile.eq.'') then
        		Wjet=W_j
-       		f=Strouhal*ABS(W_j)/(radius_j*2.) !Strouholt number is 0.3
+       		f=Strouhal*ABS(W_j)/MAX(radius_j*2.,1.e-12) !Strouholt number is 0.3
 	else
        		Wjet=interpseries(plumetseries,plumeUseries,plumeseriesloc,tt)
-       		f=Strouhal*ABS(W_j)/(radius_j*2.) !Strouholt number is 0.3
+       		f=Strouhal*ABS(W_j)/MAX(radius_j*2.,1.e-12) !Strouholt number is 0.3
 	endif
 	jetcorr=pi/(2.*pi*(1/(1./W_j_powerlaw+1)-1./(1./W_j_powerlaw+2.))) !=1.22449 for W_j_powerlaw=7
        do t=1,tmax_inPpunt
@@ -1599,7 +1586,7 @@ c get stuff from other CPU's
  	enddo
 	  xx=Rp(i)*cos_u(j)-schuif_x
 	  yy=Rp(i)*sin_u(j)
-	  rr=1.-sqrt((xx**2+yy**2)/radius_j**2)
+	  rr=1.-sqrt((xx**2+yy**2)/MAX(radius_j**2,1.e-12))
 	  rr=MAX(rr,0.)
 	if (outflow_overflow_down.eq.1) then
  		do k=kmax-kjet,kmax-kjet
@@ -1709,7 +1696,7 @@ c get stuff from other CPU's
  	  j=j_inVpunt2(t)
 	  zzz=k*dz-0.5*dz-zjet2
 	  yy=Rp(0)*sin_v(j)
-	  rr=1.-sqrt((zzz**2+yy**2)/radius_j**2)
+	  rr=1.-sqrt((zzz**2+yy**2)/MAX(radius_j**2,1.e-12))
 	  rr=MAX(rr,0.)
  	  fluc=0.
  	  do n=1,azi_n
@@ -1727,7 +1714,7 @@ c get stuff from other CPU's
  	  k=k_inWpunt_suction(t)
  	  j=j_inWpunt_suction(t)
  	  i=i_inWpunt_suction(t)
-	  Wjetbc=pi*radius_j**2*W_j*perc_dh_suction/(dr(i)*3.*Dsp) !(m3/s)/m2=m/s per suction cell (perc_dh_suction is corrected for number of dragheads)
+	  Wjetbc=pi*MAX(radius_j**2,1.e-12)*W_j*perc_dh_suction/(dr(i)*3.*Dsp) !(m3/s)/m2=m/s per suction cell (perc_dh_suction is corrected for number of dragheads)
 	  Wbound(i,j,k)=Wjetbc*0.5*(rho(i,j,k)+rho(i,j,k+1))
        enddo
 
@@ -1758,7 +1745,21 @@ c get stuff from other CPU's
 	  enddo
 	endif
 
-
+	IF (interaction_bed.ge.4.or.bedlevelfile.ne.'') THEN ! dynamic bed update, IBM bed re-defined every timestep:
+		DO i=0,i1
+			DO j=0,j1
+				DO k=0,kbed(i,j)
+					Ubound(i,j,k)=0.
+					Vbound(i,j,k)=0.
+					im=MAX(i-1,0)
+					jm=MAX(j-1,0)
+					Ubound(im,j,k)=0.
+					Vbound(i,jm,k)=0.					
+					Wbound(i,j,k)=0.
+				ENDDO
+			ENDDO
+		ENDDO
+	ENDIF	 	
 
 
       end
@@ -1769,7 +1770,7 @@ c get stuff from other CPU's
 
       implicit none
 
-	integer t
+	integer t,im,jm
 	real Ubound(0:i1,0:j1,0:k1),Vbound(0:i1,0:j1,0:k1),Wbound(0:i1,0:j1,0:k1)
 	real Ubound2(0:i1,0:j1,0:k1),Vbound2(0:i1,0:j1,0:k1),Wbound2(0:i1,0:j1,0:k1)
 
@@ -1830,6 +1831,21 @@ c get stuff from other CPU's
  	 enddo
 	enddo
 
+	IF (interaction_bed.ge.4.or.bedlevelfile.ne.'') THEN ! dynamic bed update, IBM bed re-defined every timestep:
+		DO i=0,i1
+			DO j=0,j1
+				DO k=0,kbed(i,j)
+					Ubound(i,j,k)=0.
+					Vbound(i,j,k)=0.
+					im=MAX(i-1,0)
+					jm=MAX(j-1,0)
+					Ubound(im,j,k)=0.
+					Vbound(i,jm,k)=0.					
+					Wbound(i,j,k)=0.
+				ENDDO
+			ENDDO
+		ENDDO
+	ENDIF	 	
 
 	end
 
@@ -2037,20 +2053,33 @@ c get stuff from other CPU's
 	ENDIF
 	ENDDO ! bedplume loop
 
+!			IF (interaction_bed.ge.4) THEN ! dynamic bed update, IBM bed re-defined every timestep, make c inside bed zero (diffcof is made zero in turbulence.f to eliminate incorrect diffusion into bed):
+!		! switched off 28-1-2017
+!			DO i=0,i1 
+!				DO j=0,j1
+!					DO k=0,kbed(i,j)
+!						Cbound(i,j,k)=0. 
+!					ENDDO
+!				ENDDO
+!			ENDDO
+!		ENDIF	
+		!! from 17-2-2017 bedlevelfile is dealt with via kbed, not via TSHD immersed boundary; with utr,vtr,wtr and diffcof zero for all sides of bed-cell concentration in bed should stay exactly zero and tricks like below to remove sediment from bed and add it to lowest fluid cell shouldn't be necessary
 	kcheck=kmax-(kjet-1) 
 	  do t=1,tmax_inPpuntTSHD ! when no TSHD then this loop is skipped
  	    k=k_inPpuntTSHD(t)		
 	    i=i_inPpuntTSHD(t)
             j=j_inPpuntTSHD(t)
-	      if (k.eq.kcheck.and.frac(n)%ws.lt.0.and.kjet>0) then 
+	      if (k.eq.kcheck.and.frac(n)%ws.lt.0.and.kjet>0.and.interaction_bed.ne.4) then 
 	        Cbound(i,j,k-1)=Cbound(i,j,k-1)+Cbound(i,j,k) ! move air from first (lowest) cell in TSHD-hull to first cell in fluid
 		!! Idea is to undo the effect of diffusion and air bubble rising up into hull
 	      endif
-	      if (k.gt.0.and.k.eq.kbed(i,j)) then
+	      if (k.gt.0.and.k.eq.kbed(i,j).and.interaction_bed.ne.4) then ! does not happen for bed with interaction_bed=4, or for bedlevelfile 
 	        Cbound(i,j,kbed(i,j)+1)=Cbound(i,j,kbed(i,j)+1)+Cbound(i,j,k) ! move sediment from heightest cell in obstacle to first cell in fluid
 		!! Idea is to undo the effect of diffusion into the obstacle
 	      endif
+		    IF (interaction_bed.ne.4) then
             Cbound(i,j,k)=0.  ! remove sediment from hull, not only in lowest line of cells in hull
+			endif
 	  enddo
       do t=1,tmax_inPpunt
 	i=i_inPpunt(t)
@@ -2060,16 +2089,7 @@ c get stuff from other CPU's
 	enddo
       enddo
 
-		IF (interaction_bed.ge.4) THEN ! dynamic bed update, IBM bed re-defined every timestep, make c inside bed zero (diffcof is made zero in turbulence.f to eliminate incorrect diffusion into bed):
-		
-			DO i=1,imax
-				DO j=1,jmax
-					DO k=0,kbed(i,j)
-						Cbound(i,j,k)=0. 
-					ENDDO
-				ENDDO
-			ENDDO
-		ENDIF	
+
 		
       end
 
@@ -2150,6 +2170,69 @@ c get stuff from other CPU's
 
 		end
 
+	subroutine bound_cbot_integer(Cbound) 
+      
+      USE nlist
+
+      implicit none
+c
+      integer jtmp,t,kcheck
+c
+      integer*8 Cbound(0:i1,0:j1)
+      integer*8 cbf(0:i1)
+      integer*8 cbb(0:i1)
+c
+c
+c*************************************************************
+c
+c     Subroutine sets the boundary conditions for Cbound for integer array
+c
+c
+c*************************************************************
+c get stuff from other CPU's
+	  
+	call shiftf_intl(Cbound,cbf) 
+	call shiftb_intl(Cbound,cbb) 
+
+	if (periodicy.eq.0.or.periodicy.eq.2) then
+		if (rank.eq.0) then ! boundaries in j-direction
+		   do i=1,imax
+		   Cbound(i,0) = Cbound(i,1) !cbf(i,k)
+		   Cbound(i,j1) =cbb(i) 
+		   enddo
+		elseif (rank.eq.px-1) then
+		   do i=1,imax
+		   Cbound(i,0) = cbf(i)
+		   Cbound(i,j1) =Cbound(i,jmax) !cbb(i,k) 
+		   enddo
+		else
+		   do i=1,imax
+		   Cbound(i,0) = cbf(i)
+		   Cbound(i,j1) =cbb(i) 
+		   enddo
+		endif
+	else
+	   do i=1,imax
+		   Cbound(i,0) = cbf(i)
+		   Cbound(i,j1) =cbb(i) 
+	   enddo
+	endif
+	
+	 ! boundaries in i-direction
+	if (periodicx.eq.0) then
+         do j=0,j1
+		   Cbound(0,j)    =    Cbound(1,j)
+		   Cbound(i1,j)   =    Cbound(imax,j)
+         enddo   
+	else 
+         do j=0,j1
+		   Cbound(0,j)    =    Cbound(imax,j)
+		   Cbound(i1,j)   =    Cbound(1,j)
+         enddo   
+	endif
+
+		end		
+		
 	subroutine wall_fun(uu,vv,rr,dz,dt,kn,kappa,depth,U_b,nu_mol)
 		
 	implicit none
@@ -2184,12 +2267,12 @@ c*************************************************************
 !		endif
 	else
 		do tel=1,10 ! 10 iter is more than enough
-			yplus=0.5*dz*ust/nu_mol
+			yplus=MAX(0.5*dz*ust/nu_mol,1e-12)
 			ust=absU/MAX((2.5*log(yplus)+5.5),2.) !ust maximal 0.5*absU			
 		enddo
 	   	if (yplus<30.) then
 		  do tel=1,10 ! 10 iter is more than enough
-			yplus=0.5*dz*ust/nu_mol
+			yplus=MAX(0.5*dz*ust/nu_mol,1e-12)
 			ust=absU/MAX((5.*log(yplus)-3.05),2.) !ust maximal 0.5*absU			
 		  enddo	
 		endif
@@ -2238,12 +2321,12 @@ c*************************************************************
 !		endif
 	else
 		do tel=1,10 ! 10 iter is more than enough
-			yplus=0.5*dz*ust/nu_mol
+			yplus=MAX(0.5*dz*ust/nu_mol,1e-12)
 			ust=absU/MAX((2.5*log(yplus)+5.5),2.) !ust maximal 0.5*absU			
 		enddo
 	   	if (yplus<30.) then
 		  do tel=1,10 ! 10 iter is more than enough
-			yplus=0.5*dz*ust/nu_mol
+			yplus=MAX(0.5*dz*ust/nu_mol,1e-12)
 			ust=absU/MAX((5.*log(yplus)-3.05),2.) !ust maximal 0.5*absU			
 		  enddo	
 		endif
@@ -2452,6 +2535,77 @@ c      endif
 
       end
 
+	subroutine shiftb_intl(UT1,UP1)
+      USE nlist
+
+
+      implicit none
+!       include 'param.txt'
+!       include 'common.txt'
+      integer ileng,rankb,rankf,ierr
+!       parameter (ileng= (k1+1)*(i1+1) )
+      include 'mpif.h'
+      integer itag1,status(MPI_STATUS_SIZE),l
+      integer*8 ut1(0:i1,0:j1)
+      integer*8 up1(0:i1),UTMP1(0:I1)
+	!real up(0:i1,0:k1),UTMP(0:I1,0:K1)
+      do i=0,i1
+	  utmp1(i) =UT1(i,1)
+      enddo
+      itag1 = 121
+      ileng = i1+1
+      rankf=rank+1
+      rankb=rank-1
+	if (periodicy.eq.0.or.periodicy.eq.2) then
+           if(rank.eq.px-1)rankf=MPI_PROC_NULL
+           if(rank.eq.   0)rankb=MPI_PROC_NULL
+	else 
+      	   if(rank.eq.px-1)rankf=0 ! MPI_PROC_NULL
+	   if(rank.eq.   0)rankb=px-1 !MPI_PROC_NULL
+	endif
+
+      call mpi_sendrecv(utmp1 ,ileng,MPI_INTEGER8,rankb,itag1,
+     $                  up1 ,ileng,MPI_INTEGER8,rankf,itag1, MPI_COMM_WORLD,status,ierr)
+
+!      call mpi_sendrecv(utmp ,ileng,MPI_REAL,rankb,itag,
+!     $                  up ,ileng,MPI_REAL,rankf,itag, MPI_COMM_WORLD,status,ierr)
+      end
+
+	subroutine shiftf_intl(UT,UP)
+      USE nlist
+
+      implicit none
+!       include 'param.txt'
+!       include 'common.txt'
+      integer ileng,rankb,rankf
+!       parameter (ileng= (k1+1)*(i1+1))
+      include 'mpif.h'
+      integer*8 UT(0:i1,0:j1),UP(0:i1),UTMP(0:i1)
+	!real UT(0:i1,0:j1,0:k1),UP(0:i1,0:k1),UTMP(0:i1,0:k1)
+      integer  itag2,status(MPI_STATUS_SIZE),l,ierr
+      itag2 = 131
+      ileng = i1+1
+        do i=0,i1
+	  UTMP(i) =UT(i,jmax)
+          enddo
+      rankf=rank+1
+      rankb=rank-1
+	if (periodicy.eq.0.or.periodicy.eq.2) then
+           if(rank.eq.px-1)rankf=MPI_PROC_NULL
+           if(rank.eq.   0)rankb=MPI_PROC_NULL
+	else 
+      	   if(rank.eq.px-1)rankf=0 ! MPI_PROC_NULL
+	   if(rank.eq.   0)rankb=px-1 !MPI_PROC_NULL
+	endif
+
+      call mpi_sendrecv(utmp ,ileng,MPI_INTEGER8,rankf,itag2,
+     $                  up   ,ileng,MPI_INTEGER8,rankb,itag2, MPI_COMM_WORLD,status,ierr)
+!      call mpi_sendrecv(utmp ,ileng,MPI_REAL,rankf,itag,
+!     $                  up   ,ileng,MPI_REAL,rankb,itag, MPI_COMM_WORLD,status,ierr)
+
+      end
+	  
+	  
 	subroutine shiftb_l2(UT1,UP1)
 
       USE nlist
@@ -2537,3 +2691,71 @@ c       endif
 c      endif
 	end 
 
+	subroutine shiftb_intl2(UT1,UP1)
+
+      USE nlist
+
+
+      implicit none
+!       include 'param.txt'
+!       include 'common.txt'
+      integer ileng,rankb,rankf,ierr
+!       parameter (ileng= (k1+1)*(i1+1) )
+      include 'mpif.h'
+      integer itag1,status(MPI_STATUS_SIZE),l
+      integer*8 ut1(0:i1,0:j1)
+      integer*8 up1(0:i1),UTMP1(0:I1)
+	!real up(0:i1,0:k1),UTMP(0:I1,0:K1)
+      do i=0,i1
+	  utmp1(i) =UT1(i,2)
+      enddo
+      itag1 = 12
+      ileng = i1+1
+      rankf=rank+1
+      rankb=rank-1
+	if (periodicy.eq.0.or.periodicy.eq.2) then
+           if(rank.eq.px-1)rankf=MPI_PROC_NULL
+           if(rank.eq.   0)rankb=MPI_PROC_NULL
+	else 
+      	   if(rank.eq.px-1)rankf=0 ! MPI_PROC_NULL
+	   if(rank.eq.   0)rankb=px-1 !MPI_PROC_NULL
+	endif
+
+      call mpi_sendrecv(utmp1 ,ileng,MPI_INTEGER8,rankb,itag1,
+     $                  up1 ,ileng,MPI_INTEGER8,rankf,itag1, MPI_COMM_WORLD,status,ierr)
+!      call mpi_sendrecv(utmp ,ileng,MPI_REAL,rankb,itag,
+!     $                  up ,ileng,MPI_REAL,rankf,itag, MPI_COMM_WORLD,status,ierr)
+      end
+
+	subroutine shiftf_intl2(UT,UP)
+      USE nlist
+
+      implicit none
+!       include 'param.txt'
+!       include 'common.txt'
+      integer ileng,rankb,rankf
+!       parameter (ileng= (k1+1)*(i1+1))
+      include 'mpif.h'
+      integer*8 UT(0:i1,0:j1),UP(0:i1),UTMP(0:i1)
+	!real UT(0:i1,0:j1,0:k1),UP(0:i1,0:k1),UTMP(0:i1,0:k1)
+      integer  itag2,status(MPI_STATUS_SIZE),l,ierr
+      itag2 = 13
+      ileng = i1+1
+        do i=0,i1
+	  UTMP(i) =UT(i,jmax-1)
+          enddo
+      rankf=rank+1
+      rankb=rank-1
+	if (periodicy.eq.0.or.periodicy.eq.2) then
+           if(rank.eq.px-1)rankf=MPI_PROC_NULL
+           if(rank.eq.   0)rankb=MPI_PROC_NULL
+	else 
+      	   if(rank.eq.px-1)rankf=0 ! MPI_PROC_NULL
+	   if(rank.eq.   0)rankb=px-1 !MPI_PROC_NULL
+	endif
+
+      call mpi_sendrecv(utmp ,ileng,MPI_INTEGER8,rankf,itag2,
+     $                  up   ,ileng,MPI_INTEGER8,rankb,itag2, MPI_COMM_WORLD,status,ierr)
+!      call mpi_sendrecv(utmp ,ileng,MPI_REAL,rankf,itag,
+!     $                  up   ,ileng,MPI_REAL,rankb,itag, MPI_COMM_WORLD,status,ierr)
+	end 

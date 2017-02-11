@@ -73,7 +73,7 @@
       call determine_indices_ship_in
       call bedroughness_init
 
-      dt    = 0.5*dt_max !first timestep 50% for stable startup
+      dt    = MIN(dt_ini,dt_max) 
       ekm   =0. 
       if (SEM.eq.1) then
 	call create_init_eddies_SEM
