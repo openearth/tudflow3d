@@ -487,7 +487,7 @@
 				
 				TT = (ust*ust-ustc2)/(MAX(ustc2,1.e-12))
 				TT = MAX(TT,0.) !TT must be positive
-				phip = 0.00033*Dstar**0.3*TT**1.5   ! VanRijn1984 pickup function
+				phip = calibfac_sand_pickup*0.00033*Dstar**0.3*TT**1.5   ! VanRijn1984 pickup function
 				
 				DO n1=1,nfr_sand
 					n=nfrac_sand(n1)			

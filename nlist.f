@@ -25,7 +25,7 @@
       
       INTEGER i,j,k,imax,jmax,kmax,i1,j1,k1,px,rank,kjet,nmax1,nmax2,nmax3,istep,CNdiffz,npresIBM,counter
       INTEGER Lmix_type,slip_bot,SEM,azi_n,outflow_overflow_down,azi_n2
-      REAL ekm_mol,nu_mol,pi,kappa,gx,gy,gz,Cs,Sc
+      REAL ekm_mol,nu_mol,pi,kappa,gx,gy,gz,Cs,Sc,calibfac_sand_pickup
       REAL dt,time_nm,time_n,time_np,t_end,t0_output,dt_output,te_output,dt_max,tstart_rms,CFL,dt_ini
       REAL dt_output_movie,t0_output_movie,te_output_movie
       REAL U_b,V_b,W_b,rho_b,W_j,Awjet,Aujet,Avjet,Strouhal,radius_j,kn,W_ox,U_bSEM,V_bSEM,U_w,V_w
@@ -189,7 +189,7 @@
      & U_j2,plumetseriesfile2,Awjet2,Aujet2,Avjet2,Strouhal2,azi_n2,radius_j2,zjet2,bedplume,radius_inner_j,xj,yj,W_j_powerlaw,
      & plume_z_outflow_belowsurf
 	NAMELIST /LESmodel/sgs_model,Cs,Lmix_type,nr_HPfilter,damping_drho_dz,damping_a1,damping_b1,damping_a2,damping_b2
-	NAMELIST /constants/kappa,gx,gy,gz,ekm_mol
+	NAMELIST /constants/kappa,gx,gy,gz,ekm_mol,calibfac_sand_pickup
 	NAMELIST /fractions_in_plume/fract
 	NAMELIST /ship/U_TSHD,LOA,Lfront,Breadth,Draught,Lback,Hback,xfront,yfront,kn_TSHD,nprop,Dprop,xprop,yprop,zprop,
      &   Pprop,rudder,rot_prop,draghead,Dsp,xdh,perc_dh_suction,softnose,Hfront,cutter
@@ -366,6 +366,7 @@
 	time_nm = 0.
 	time_n=0.
 	time_np=0.
+	calibfac_sand_pickup = 1.
 	!! ship
 	U_TSHD=-999.
 	LOA=-999.

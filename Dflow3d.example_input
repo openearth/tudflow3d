@@ -157,6 +157,7 @@ gx = 0. 			! Gravity [m/s2] positive to work in positive x-dir
 gy = 0.				! Gravity [m/s2] positive to work in positive y-dir
 gz = 9.81			! Gravity [m/s2] positive to work in negative z-dir
 ekm_mol = 1.e-3			! Moleculair dyn. viscosity [kg/(sm)]
+calibfac_sand_pickup = 1. ! Calibration factor for sand pickup, default 1. [-].
 /
 
 &ship
