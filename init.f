@@ -26,6 +26,8 @@
       real  delta(imax),Yplus,X,Rmax,dx,xx,yy,theta_V,theta_U,phi,maxh_obst
       integer ngridsteps,begin,n,ii
 	  real dphi_shft,schuifphi,phiv2t(0:jmax*px+1)
+      real cbf(0:i1)
+      real cbb(0:i1)	  
 c******************************************************************
       pi   = 4.0 * atan(1.0)
 	
@@ -261,6 +263,53 @@ c******************************************************************
 	    vol_V(i,j)=(Ru(i)-Ru(i-1))*(phivt(j)-phivt(j-1))*Rp(i)*dz 
 	  enddo
 	enddo
+	do i=1,imax
+	  do j=1,jmax
+	    vol_Vp(i,j)=(Ru(i)-Ru(i-1))*(phiv(j)-phiv(j-1))*Rp(i)*dz
+	  enddo
+	enddo	
+
+	call shiftf_l(vol_Vp,cbf) 
+	call shiftb_l(vol_Vp,cbb) 
+
+	if (periodicy.eq.0.or.periodicy.eq.2) then
+		if (rank.eq.0) then ! boundaries in j-direction
+		   do i=1,imax
+		   vol_Vp(i,0) = vol_Vp(i,1) 
+		   vol_Vp(i,j1) =cbb(i) 
+		   enddo
+		elseif (rank.eq.px-1) then
+		   do i=1,imax
+		   vol_Vp(i,0) = cbf(i)
+		   vol_Vp(i,j1) =vol_Vp(i,jmax)  
+		   enddo
+		else
+		   do i=1,imax
+		   vol_Vp(i,0) = cbf(i)
+		   vol_Vp(i,j1) =cbb(i) 
+		   enddo
+		endif
+	else
+	   do i=1,imax
+		   vol_Vp(i,0) = cbf(i)
+		   vol_Vp(i,j1) =cbb(i) 
+	   enddo
+	endif
+	 ! boundaries in i-direction
+	if (periodicx.eq.0) then
+         do j=0,j1
+		   vol_Vp(0,j)    =    vol_Vp(1,j)
+		   vol_Vp(i1,j)   =    vol_Vp(imax,j)
+         enddo   
+	else 
+         do j=0,j1
+		   vol_Vp(0,j)    =    vol_Vp(imax,j)
+		   vol_Vp(i1,j)   =    vol_Vp(1,j)
+         enddo   
+	endif
+
+	
+	
       end
 
 
@@ -2225,6 +2274,7 @@ C ...  Locals
 		      kbed(i,j)=MAX(kbed(i,j),FLOOR(ob(n)%height/dz)) !zero without obstacle, otherwise max of all obstacles at i,j
 			  kbed(i,j)=MIN(kbed(i,j),kmax)
 		      zbed(i,j)=MAX(zbed(i,j),ob(n)%height) !zero without obstacle, otherwise max of all obstacles at i,j  
+			  bednotfixed(i,j,k)=0. ! obstacle in bed cannot be avalanched
 		  endif
 		enddo
 	       enddo

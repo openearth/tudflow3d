@@ -278,7 +278,17 @@
 		write(*,*) '# gz is not defined                              #'	
 	CASE(094)
 		write(*,*) '# namelist &constants                            #'			
-		write(*,*) '# ekm_mol is not defined                         #'	
+		write(*,*) '# ekm_mol is not defined                         #'
+	CASE(095)
+		write(*,*) '# namelist &constants                            #'			
+		write(*,*) '# pickup_formula is not defined                  #'
+		write(*,*) '# choose ''vanrijn1984'',or ''nielsen1992'',or ''okayasu2010'' #'	
+	CASE(096)
+		write(*,*) '# namelist &constants                            #'			
+		write(*,*) '# kn_d50_multiplier must be >0.                  #'		
+	CASE(097)
+		write(*,*) '# namelist &constants                            #'			
+		write(*,*) '# avalanche_slope must be >=0.                   #'			
 	CASE(100)
 		write(*,*) '# Namelist error occured                         #'			
 		write(*,*) '# Namelist involved: HISTORIES                   #'

@@ -32,6 +32,7 @@ CFL = 1.6			! CFL limit [-]
 t0_output_movie = 10.		! Start time for low-storage concentration output usable for movies [s]
 dt_output_movie = 10.		! Time interval for low-storage concentration output usable for movies [s]
 te_output_movie = 450.		! End time for low-storage concentration output usable for movies [s]
+tstart_morf = 1. 	! Start time bedupdate [s] (default 0)
 /
 
 &num_scheme
@@ -60,7 +61,7 @@ nmax3= 0 			!Number of SEM eddies jet inflow
 lm_min3 = 0.03		! Minimal Lm SEM eddies jet pipe [m] (1/10*radius_j)
 slip_bot = 1			! 1 = no slip bottom, 0 = free slip bottom
 kn = 0.1			! Nikkuradse roughness flow [m]
-interaction_bed = 0		! 0 no erosion/sedimentation, 1 only deposition, 2 deposition & unlimited erosion, 3 deposition & erosion previously deposited material
+interaction_bed = 4		! 0 no erosion/sedimentation, 1 only deposition, 2 deposition & unlimited erosion, 3 deposition & erosion previously deposited material, 4 depo&ero including bed-update, 5 depo&ero excluding bed-update,
 periodicx = 0			! 1 periodic in x dir 0 not periodic (default 0)
 periodicy = 0			! 1 periodic in y dir 0 not periodic 2 is free slip lateral boundaries (default 0)
 dpdx = 0.0			! Driving pressure gradient in x dir in case periodic [Pa/m] (default 0)
@@ -158,6 +159,9 @@ gy = 0.				! Gravity [m/s2] positive to work in positive y-dir
 gz = 9.81			! Gravity [m/s2] positive to work in negative z-dir
 ekm_mol = 1.e-3			! Moleculair dyn. viscosity [kg/(sm)]
 calibfac_sand_pickup = 1. ! Calibration factor for sand pickup, default 1. [-].
+pickup_formula = 'nielsen1992' !options are 'vanrijn1984' (default),'nielsen1992','okayasu2010'
+kn_d50_multiplier = 2. 	! Defines Nikuradse bedroughness for sand pickup function (not for flow shear stress), default 2.; kn=2*d50 defined in paper Van Rijn 1984
+avalanche_slope = 2. ! Max bedslope 1:as; all slopes steeper avalanche towards 1:as (0=vertical slope, wet sand=30deg=1.7--15deg=3.7)
 /
 
 &ship

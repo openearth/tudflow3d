@@ -26,7 +26,7 @@
       INTEGER i,j,k,imax,jmax,kmax,i1,j1,k1,px,rank,kjet,nmax1,nmax2,nmax3,istep,CNdiffz,npresIBM,counter
       INTEGER Lmix_type,slip_bot,SEM,azi_n,outflow_overflow_down,azi_n2
       REAL ekm_mol,nu_mol,pi,kappa,gx,gy,gz,Cs,Sc,calibfac_sand_pickup
-      REAL dt,time_nm,time_n,time_np,t_end,t0_output,dt_output,te_output,dt_max,tstart_rms,CFL,dt_ini
+      REAL dt,time_nm,time_n,time_np,t_end,t0_output,dt_output,te_output,dt_max,tstart_rms,CFL,dt_ini,tstart_morf
       REAL dt_output_movie,t0_output_movie,te_output_movie
       REAL U_b,V_b,W_b,rho_b,W_j,Awjet,Aujet,Avjet,Strouhal,radius_j,kn,W_ox,U_bSEM,V_bSEM,U_w,V_w
       REAL U_j2,Awjet2,Aujet2,Avjet2,Strouhal2,radius_j2,zjet2
@@ -44,6 +44,7 @@
       CHARACTER*3 time_int,advec_conc,cutter
       CHARACTER*5 sgs_model
       CHARACTER*4 damping_drho_dz
+	  CHARACTER*11 pickup_formula
       REAL damping_a1,damping_b1,damping_a2,damping_b2,cfixedbed
       REAL plumetseries(1:100000) 
       REAL plumeUseries(1:100000)
@@ -51,7 +52,7 @@
       REAL plumeUseries2(1:100000),c_bed(100)
       INTEGER plumeseriesloc,plumeseriesloc2
       INTEGER nr_HPfilter
-      REAL timeAB_real(1:4),dpdx,dpdy
+      REAL timeAB_real(1:4),dpdx,dpdy,kn_d50_multiplier,avalanche_slope
       INTEGER periodicx,periodicy,wallup
       REAL U_b3,V_b3,surf_layer
       INTEGER ksurf_bc,kmaxTSHD_ind,nair
@@ -101,13 +102,13 @@
       REAL*8, DIMENSION(:),ALLOCATABLE :: xSEM1,ySEM1,zSEM1,uSEM1
       REAL*8, DIMENSION(:),ALLOCATABLE :: lmxSEM1,lmySEM1,lmzSEM1
       REAL*8, DIMENSION(:),ALLOCATABLE :: xSEM2,ySEM2,zSEM2,uSEM2 
-      REAL*8, DIMENSION(:,:),ALLOCATABLE :: epsSEM1,epsSEM2,epsSEM3,Lmix2,Lmix2hat,vol_V
+      REAL*8, DIMENSION(:,:),ALLOCATABLE :: epsSEM1,epsSEM2,epsSEM3,Lmix2,Lmix2hat,vol_V,vol_Vp
       REAL*8, DIMENSION(:),ALLOCATABLE :: lmxSEM2,lmySEM2,lmzSEM2
 	  REAL*8, DIMENSION(:),ALLOCATABLE :: rSEM3,thetaSEM3,zSEM3,wSEM3,xSEM3,ySEM3
 	  REAL, DIMENSION(:,:,:,:),ALLOCATABLE :: AA3
       REAL*8, DIMENSION(:),ALLOCATABLE :: lmrSEM3,lmzSEM3
       REAL, DIMENSION(:,:),ALLOCATABLE :: azi_angle_p,azi_angle_u,azi_angle_v,zbed,Ubc1,Vbc1,Ubc2,Vbc2,rhocorr_air_z
-      REAL, DIMENSION(:,:,:),ALLOCATABLE :: ekm,AA,Diffcof
+      REAL, DIMENSION(:,:,:),ALLOCATABLE :: ekm,AA,Diffcof,bednotfixed
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: Uold,Vold,Wold,Rold
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: Unew,Vnew,Wnew,Rnew
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: dUdt,dVdt,dWdt,drdt
@@ -116,7 +117,7 @@
       INTEGER, DIMENSION(:),ALLOCATABLE, TARGET :: jco,iro,beg,di,di2
       REAL Hs,Tp,Lw,nx_w,ny_w,kabs_w,kx_w,ky_w,om_w
       REAL, DIMENSION(:),ALLOCATABLE :: LUB,LHS2 
-      REAL, DIMENSION(:,:),ALLOCATABLE, TARGET :: lhs,LUBs
+      REAL, DIMENSION(:,:),ALLOCATABLE, TARGET :: lhs,LUBs,ubot
       INTEGER, DIMENSION(:),ALLOCATABLE, TARGET :: jco3,iro3,beg3,di3 
       REAL, DIMENSION(:),ALLOCATABLE, TARGET :: lhs3
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: rhs3
@@ -180,7 +181,7 @@
 	NAMELIST /simulation/px,imax,jmax,kmax,imax_grid,dr_grid,Rmin,schuif_x,dy,depth,hisfile,restart_dir
      & ,lim_r_grid,fac_r_grid,jmax_grid,lim_y_grid,fac_y_grid,sym_grid_y,dy_grid
 	NAMELIST /times/t_end,t0_output,dt_output,te_output,tstart_rms,dt_max,dt_ini,time_int,CFL,
-     & t0_output_movie,dt_output_movie,te_output_movie
+     & t0_output_movie,dt_output_movie,te_output_movie,tstart_morf
 	NAMELIST /num_scheme/convection,numdiff,diffusion,comp_filter_a,comp_filter_n,CNdiffz,npresIBM,advec_conc
 	NAMELIST /ambient/U_b,V_b,W_b,bcfile,rho_b,SEM,nmax2,nmax1,nmax3,lm_min,lm_min3,slip_bot,kn,interaction_bed,
      & periodicx,periodicy,dpdx,dpdy,W_ox,Hs,Tp,nx_w,ny_w,obst,bc_obst_h,U_b3,V_b3,surf_layer,wallup,bedlevelfile,
@@ -189,7 +190,7 @@
      & U_j2,plumetseriesfile2,Awjet2,Aujet2,Avjet2,Strouhal2,azi_n2,radius_j2,zjet2,bedplume,radius_inner_j,xj,yj,W_j_powerlaw,
      & plume_z_outflow_belowsurf
 	NAMELIST /LESmodel/sgs_model,Cs,Lmix_type,nr_HPfilter,damping_drho_dz,damping_a1,damping_b1,damping_a2,damping_b2
-	NAMELIST /constants/kappa,gx,gy,gz,ekm_mol,calibfac_sand_pickup
+	NAMELIST /constants/kappa,gx,gy,gz,ekm_mol,calibfac_sand_pickup,pickup_formula,kn_d50_multiplier,avalanche_slope
 	NAMELIST /fractions_in_plume/fract
 	NAMELIST /ship/U_TSHD,LOA,Lfront,Breadth,Draught,Lback,Hback,xfront,yfront,kn_TSHD,nprop,Dprop,xprop,yprop,zprop,
      &   Pprop,rudder,rot_prop,draghead,Dsp,xdh,perc_dh_suction,softnose,Hfront,cutter
@@ -222,7 +223,7 @@
 	t0_output = 0. ! if not defined than zero
 	dt_output = -999.
 	te_output = 9.e18 ! if not defined than inf --> continue output towards end simulation
-	tstart_rms = 999.
+	tstart_rms = 9.e18
 	dt_max = -999.
 	dt_ini = -999.
 	time_int=''
@@ -230,6 +231,7 @@
 	t0_output_movie = 9.e18
 	dt_output_movie = 9.e18
 	te_output_movie = 9.e18
+	tstart_morf=0.
 	!! num_scheme
 	convection = 'ARGH'
 	numdiff = 0.
@@ -367,6 +369,9 @@
 	time_n=0.
 	time_np=0.
 	calibfac_sand_pickup = 1.
+	pickup_formula = 'vanrijn1984' !default
+	kn_d50_multiplier = 2. !default, kn=2*d50 defined in paper Van Rijn 1984
+	avalanche_slope = 0. !default vertical slopes are allowed
 	!! ship
 	U_TSHD=-999.
 	LOA=-999.
@@ -750,6 +755,10 @@
 	IF (gy<-800.) CALL writeerror(92)
 	IF (gz<-80000000.) CALL writeerror(93)
 	IF (ekm_mol<0.) CALL writeerror(94)
+	IF (pickup_formula.ne.'vanrijn1984'.and.pickup_formula.ne.'nielsen1992'.and.pickup_formula.ne.'okayasu2010') 
+     &    CALL writeerror(95)
+	IF (kn_d50_multiplier<0.) CALL writeerror(96)
+	IF (avalanche_slope<0.) CALL writeerror(97)
 
 	READ (UNIT=1,NML=ship,IOSTAT=ios)
 	!! check input constants
@@ -872,6 +881,7 @@
 	ALLOCATE(Lmix2(1:imax,1:jmax))
 	ALLOCATE(Lmix2hat(1:imax,1:jmax))
 	ALLOCATE(vol_V(1:imax,1:jmax*px))
+	ALLOCATE(vol_Vp(0:i1,0:j1))
 	ALLOCATE(kbed(0:i1,0:j1))
 	ALLOCATE(kbed2(0:i1,0:px*jmax+1))
 	ALLOCATE(kbedt(0:i1,0:j1))
@@ -948,7 +958,9 @@
 	ALLOCATE(dCdtbot(nfrac,0:i1,0:j1))
 	IF (interaction_bed.ge.4) THEN 
 		ALLOCATE(Clivebed(nfrac,0:i1,0:j1,0:k1))
+		ALLOCATE(bednotfixed(0:i1,0:j1,0:k1))
 		Clivebed=0.
+		bednotfixed=1. !default avalanche is allowed everywhere, only in obstacles connected to bed not allowed, see init.f
 	ENDIF
 
 	
@@ -1048,6 +1060,7 @@
 	ALLOCATE(Vbc1(1:imax,1:kmax))
 	ALLOCATE(Ubc2(0:j1,1:kmax))
 	ALLOCATE(Vbc2(0:j1,1:kmax))
+	ALLOCATE(ubot(0:i1,0:j1))
 	! init at zero (when no bcfile it stays zero)
 	Ubcoarse1=0.
 	Ubcoarse2=0.
@@ -1057,6 +1070,7 @@
 	Wbcoarse2=0.
 	Cbcoarse1=0.
 	Cbcoarse2=0.
+	ubot=0.
 
 	ALLOCATE(Xii(1:kmax))
 	ALLOCATE(Tkk(1:jmax*px))

@@ -353,14 +353,14 @@ c********************************************************************
      +            ib,ie,jb,je,kb,ke)
 		dcdt(n,:,:,:) =cnew(n,:,:,:) + dt*(1.5*dnewc(n,:,:,:)-0.5*cc(n,:,:,:)) !AB2
 		cc(n,:,:,:)=dnewc(n,:,:,:)
-	      	  if (interaction_bed>0.and.interaction_bed.ne.4) then
+			  if (interaction_bed.eq.4.or.interaction_bed.eq.5) then
+			    dcdtbot(n,:,:)=cnewbot(n,:,:)
+			  else
 		    !! advec concentration in bed with velocity TSHD:
 	      	    call adveccbot_TVD(dnewcbot(n,:,:),cnewbot(n,:,:),Ubot_TSHD,Vbot_TSHD,Ru,Rp,dr,phiv,phipt,dz,
      +            	i1,j1,ib,ie,jb,je,dt,rank,px,periodicx,periodicy)
 				dcdtbot(n,:,:) =cnewbot(n,:,:) + dt*(1.5*dnewcbot(n,:,:)-0.5*ccbot(n,:,:)) !AB2
-				ccbot(n,:,:)=dnewcbot(n,:,:)	 
-			  elseif(interaction_bed.eq.4) then
-			    dcdtbot(n,:,:)=cnewbot(n,:,:)
+				ccbot(n,:,:)=dnewcbot(n,:,:)				  
 	      	  endif
 	  enddo
       	  if (interaction_bed>0) then
@@ -727,13 +727,13 @@ c********************************************************************
 	      call diffc_CDS2 (dnewc(n,:,:,:),Cnew(n,:,:,:),Diffcof,
      +            ib,ie,jb,je,kb,ke)
 		dcdt(n,:,:,:) =cnew(n,:,:,:) + dt*(dnewc(n,:,:,:)) !update in time with EE1 for TVD
-	      	  if (interaction_bed>0.and.interaction_bed.ne.4) then
+			  if(interaction_bed.eq.4.or.interaction_bed.eq.5) then
+			    dcdtbot(n,:,:)=cnewbot(n,:,:)	
+			  else
 		    !! advec concentration in bed with velocity TSHD:
 	      	    call adveccbot_TVD(dnewcbot(n,:,:),cnewbot(n,:,:),Ubot_TSHD,Vbot_TSHD,Ru,Rp,dr,phiv,phipt,dz,
      +            	i1,j1,ib,ie,jb,je,dt,rank,px,periodicx,periodicy)
-		    dcdtbot(n,:,:)= cnewbot(n,:,:) + dt*dnewcbot(n,:,:) ! time update
-			  elseif(interaction_bed.eq.4) then
-			    dcdtbot(n,:,:)=cnewbot(n,:,:)			
+		    dcdtbot(n,:,:)= cnewbot(n,:,:) + dt*dnewcbot(n,:,:) ! time update			  
 	      	  endif
            IF (CNdiffz.eq.1) THEN !CN semi implicit treatment diff-z:
 	     call bound_c(dcdt(n,:,:,:),frac(n)%c,n,0.) ! bc start CN-diffz ABv
@@ -1237,13 +1237,13 @@ c********************************************************************
      +            ib,ie,jb,je,kb,ke)
 !		dcdt(n,:,:,:) =cnew(n,:,:,:) + a21*dt*(k1c(n,:,:,:)) !pred1
 		dcdt(n,:,:,:) =cnew(n,:,:,:) + cn1*dt*(k1c(n,:,:,:)) !pred1
-	      	  if (interaction_bed>0.and.interaction_bed.ne.4) then
+			  if(interaction_bed.eq.4.or.interaction_bed.eq.5) then
+			    dcdt1bot(n,:,:)=cnewbot(n,:,:)	
+			  else
 		    !! advec concentration in bed with velocity TSHD:
 	      	    call adveccbot_TVD(k1cbot(n,:,:),cnewbot(n,:,:),Ubot_TSHD,Vbot_TSHD,Ru,Rp,dr,phiv,phipt,dz,
      +            	i1,j1,ib,ie,jb,je,cn1*dt,rank,px,periodicx,periodicy)
-		    dcdt1bot(n,:,:)= cnewbot(n,:,:) + cn1*dt*k1cbot(n,:,:) ! pred1
-			  elseif(interaction_bed.eq.4) then
-			    dcdt1bot(n,:,:)=cnewbot(n,:,:)			
+		    dcdt1bot(n,:,:)= cnewbot(n,:,:) + cn1*dt*k1cbot(n,:,:) ! pred1			  
 	      	  endif
            IF (CNdiffz.eq.1) THEN !CN semi implicit treatment diff-z:
 	     call bound_c(dcdt(n,:,:,:),frac(n)%c,n,0.) ! bc start CN-diffz k1 RK3
@@ -1669,13 +1669,14 @@ c********************************************************************
 		  endif
 	      call diffc_CDS2 (k2c(n,:,:,:),dCdt(n,:,:,:),Diffcof,
      +            ib,ie,jb,je,kb,ke)
-	          if (interaction_bed>0.and.interaction_bed.ne.4) then
+
+			  if(interaction_bed.eq.4.or.interaction_bed.eq.5) then
+			    dcdt2bot(n,:,:)=dcdt1bot(n,:,:)	
+			  else
 		    !! advec concentration in bed with velocity TSHD:
 	            call adveccbot_TVD(k2cbot(n,:,:),dcdt1bot(n,:,:),Ubot_TSHD,Vbot_TSHD,Ru,Rp,dr,phiv,phipt,dz,
      +              i1,j1,ib,ie,jb,je,cn2*dt,rank,px,periodicx,periodicy)
-		    dcdt2bot(n,:,:)= dcdt1bot(n,:,:) + cn2*dt*k2cbot(n,:,:) ! pred2
-			  elseif(interaction_bed.eq.4) then
-			    dcdt2bot(n,:,:)=dcdt1bot(n,:,:)			
+		    dcdt2bot(n,:,:)= dcdt1bot(n,:,:) + cn2*dt*k2cbot(n,:,:) ! pred2			  
 	          endif
 	  enddo
 	  dcdt2=dcdt
@@ -2118,14 +2119,13 @@ c********************************************************************
 	      call diffc_CDS2 (k3c(n,:,:,:),dCdt(n,:,:,:),Diffcof,
      +            ib,ie,jb,je,kb,ke)
 
-	          if (interaction_bed>0.and.interaction_bed.ne.4) then
+			  if(interaction_bed.eq.4.or.interaction_bed.eq.5) then
+			    dcdtbot(n,:,:)=dcdt2bot(n,:,:)	
+			  else
 		    !! advec concentration in bed with velocity TSHD:
 	            call adveccbot_TVD(k3cbot(n,:,:),dcdt2bot(n,:,:),Ubot_TSHD,Vbot_TSHD,Ru,Rp,dr,phiv,phipt,dz,
      +              i1,j1,ib,ie,jb,je,cn3*dt,rank,px,periodicx,periodicy)
-		    dcdtbot(n,:,:)= dcdt2bot(n,:,:) + cn3*dt*k3cbot(n,:,:) ! n+1
-			  elseif(interaction_bed.eq.4) then
-			    dcdtbot(n,:,:)=dcdt2bot(n,:,:)						
-			
+		    dcdtbot(n,:,:)= dcdt2bot(n,:,:) + cn3*dt*k3cbot(n,:,:) ! n+1			
 	          endif
 	  enddo
 	  dcdt2=dcdt 
@@ -2743,16 +2743,6 @@ c
 	ENDIF
 	ENDDO ! bedplume loop
 
-	
-!		if (rank.eq.5) then
-!		  Qsource = 0.0694  !2.5 !positive is suction
-!		  do i=71,106
-!		    do j=1,2
-!			    k=5
-!				p(i,j,k)=p(i,j,k)+drdt(i,j,k)*Qsource/vol_V(i,j)/dt
-!			enddo
-!		  enddo
-!		endif
       return
       end
 
@@ -2822,17 +2812,6 @@ c
 	enddo
 	ENDIF
 	ENDDO ! bedplume loop
-	
-	  
-!		if (rank.eq.5) then
-!		  Qsource = 0.0694 !positive is suction
-!		  do i=71,106
-!		    do j=1,2
-!			    k=5
-!				p(i,j,k)=p(i,j,k)+rr(i,j,k)*Qsource/vol_V(i,j)/dt
-!			enddo
-!		  enddo
-!		endif	  
  
       return
       end

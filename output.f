@@ -361,7 +361,7 @@
 	   do j=1,jmax
 	     	do n=1,nfrac
 			mass_bed(n,i,j) = Cnewbot(n,i,j)*dz*frac(n)%rho ! Cnewbot(n,i,j)*dz*dr(i)*Rp(i)*dphi*frac(n)%rho
-			zzbed(i,j) = REAL(kbed(i,j))*dz
+			zzbed(i,j) = REAL(MAX(kbed(i,j)-1,0))*dz+ SUM(Clivebed(1:nfrac,i,j,kbed(i,j)))/cfixedbed*dz 
 		enddo		
 	   enddo
 	enddo

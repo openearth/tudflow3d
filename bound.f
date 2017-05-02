@@ -2604,6 +2604,78 @@ c      endif
 !     $                  up   ,ileng,MPI_REAL,rankb,itag, MPI_COMM_WORLD,status,ierr)
 
       end
+
+	subroutine shiftb_lreverse(UT1,UP1)
+
+      USE nlist
+
+      implicit none
+!       include 'param.txt'
+!       include 'common.txt'
+      integer ileng,rankb,rankf,ierr,n
+!       parameter (ileng= (k1+1)*(i1+1) )
+      include 'mpif.h'
+      integer itag1,status(MPI_STATUS_SIZE),l
+      real*8 ut1(1:nfrac,0:i1,0:j1)
+      real*8 up1(1:nfrac,0:i1),UTMP1(1:nfrac,0:I1)
+	!real up(0:i1,0:k1),UTMP(0:I1,0:K1)
+	 do n=1,nfrac
+      do i=0,i1
+	  utmp1(n,i) =UT1(n,i,0) !UT1(i,1)
+      enddo
+	 enddo
+      itag1 = 1112
+      ileng = nfrac*(i1+1)
+      rankf=rank+1
+      rankb=rank-1
+	if (periodicy.eq.0.or.periodicy.eq.2) then
+           if(rank.eq.px-1)rankf=MPI_PROC_NULL
+           if(rank.eq.   0)rankb=MPI_PROC_NULL
+	else 
+      	   if(rank.eq.px-1)rankf=0 ! MPI_PROC_NULL
+	   if(rank.eq.   0)rankb=px-1 !MPI_PROC_NULL
+	endif
+
+      call mpi_sendrecv(utmp1 ,ileng,MPI_REAL8,rankb,itag1,
+     $                  up1 ,ileng,MPI_REAL8,rankf,itag1, MPI_COMM_WORLD,status,ierr)
+	 
+      end
+
+	subroutine shiftf_lreverse(UT,UP)
+      USE nlist
+
+      implicit none
+!       include 'param.txt'
+!       include 'common.txt'
+      integer ileng,rankb,rankf,n
+!       parameter (ileng= (k1+1)*(i1+1))
+      include 'mpif.h'
+      real*8 UT(1:nfrac,0:i1,0:j1),UP(1:nfrac,0:i1),UTMP(1:nfrac,0:i1)
+	!real UT(0:i1,0:j1,0:k1),UP(0:i1,0:k1),UTMP(0:i1,0:k1)
+      integer  itag2,status(MPI_STATUS_SIZE),l,ierr
+      itag2 = 1113
+      ileng = nfrac*(i1+1)
+	 do n=1,nfrac	  
+        do i=0,i1
+	  UTMP(n,i) =UT(n,i,j1) !UT(i,jmax)
+          enddo
+		enddo
+		
+      rankf=rank+1
+      rankb=rank-1
+	if (periodicy.eq.0.or.periodicy.eq.2) then
+           if(rank.eq.px-1)rankf=MPI_PROC_NULL
+           if(rank.eq.   0)rankb=MPI_PROC_NULL
+	else 
+      	   if(rank.eq.px-1)rankf=0 ! MPI_PROC_NULL
+	   if(rank.eq.   0)rankb=px-1 !MPI_PROC_NULL
+	endif
+
+      call mpi_sendrecv(utmp ,ileng,MPI_REAL8,rankf,itag2,
+     $                  up   ,ileng,MPI_REAL8,rankb,itag2, MPI_COMM_WORLD,status,ierr)
+ 
+      end
+
 	  
 	  
 	subroutine shiftb_l2(UT1,UP1)
