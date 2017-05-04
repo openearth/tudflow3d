@@ -2274,7 +2274,7 @@ C ...  Locals
 		      kbed(i,j)=MAX(kbed(i,j),FLOOR(ob(n)%height/dz)) !zero without obstacle, otherwise max of all obstacles at i,j
 			  kbed(i,j)=MIN(kbed(i,j),kmax)
 		      zbed(i,j)=MAX(zbed(i,j),ob(n)%height) !zero without obstacle, otherwise max of all obstacles at i,j  
-			  bednotfixed(i,j,k)=0. ! obstacle in bed cannot be avalanched
+			  bednotfixed(i,j,k)=0. ! obstacle in bed cannot be avalanched or eroded
 		  endif
 		enddo
 	       enddo
@@ -2318,7 +2318,7 @@ C ...  Locals
 
 !	  IF (k.le.FLOOR(ob(n)%height/dz)) THEN ! obstacle:
 	  !IF ((k.ge.CEILING(ob(n)%zbottom/dz)).and.(k.le.FLOOR(ob(n)%height/dz)).and.(FLOOR(ob(n)%height/dz).eq.kbed2(i,j))) THEN ! obstacle:
-	  IF ((k.ge.CEILING(ob(n)%zbottom/dz)).and.(k.le.FLOOR(ob(n)%height/dz))) THEN ! obstacle: adjustment 10-1-2017 because some obstacles are missed with check on kbed
+	  IF ((k.ge.CEILING(ob(n)%zbottom/dz)).and.(k.le.FLOOR(ob(n)%height/dz)).and.ob(n)%zbottom.gt.0.) THEN ! obstacle: adjustment 10-1-2017 because some obstacles are missed with check on kbed
 		xTSHD(1:4)=ob(n)%x*cos(phi)-ob(n)%y*sin(phi)
 		yTSHD(1:4)=ob(n)%x*sin(phi)+ob(n)%y*cos(phi)
 		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
@@ -2384,7 +2384,7 @@ C ...  Locals
 	  yy=Rp(i)*sin_u(j)
 !	  IF (k.le.FLOOR(ob(n)%height/dz)) THEN ! obstacle:
 	  !IF ((k.ge.CEILING(ob(n)%zbottom/dz)).and.(k.le.FLOOR(ob(n)%height/dz)).and.(FLOOR(ob(n)%height/dz).eq.kbed(i,j))) THEN ! obstacle:
-	  IF ((k.ge.CEILING(ob(n)%zbottom/dz)).and.(k.le.FLOOR(ob(n)%height/dz))) THEN ! obstacle: adjustment 10-1-2017 because some obstacles are missed with check on kbed
+	  IF ((k.ge.CEILING(ob(n)%zbottom/dz)).and.(k.le.FLOOR(ob(n)%height/dz)).and.ob(n)%zbottom.gt.0.) THEN ! obstacle: adjustment 10-1-2017 because some obstacles are missed with check on kbed
 		xTSHD(1:4)=ob(n)%x*cos(phi)-ob(n)%y*sin(phi)
 		yTSHD(1:4)=ob(n)%x*sin(phi)+ob(n)%y*cos(phi)
 		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
@@ -2415,7 +2415,7 @@ C ...  Locals
 	  yy=Rp(i)*sin_u(j)
 !	  IF (k.le.FLOOR(ob(n)%height/dz)) THEN ! obstacle:
 !	  IF ((k.ge.CEILING(ob(n)%zbottom/dz)).and.(k.le.FLOOR(ob(n)%height/dz)).and.(FLOOR(ob(n)%height/dz).eq.kbed(i,j))) THEN ! obstacle:
-	  IF ((k.ge.CEILING(ob(n)%zbottom/dz)).and.(k.le.FLOOR(ob(n)%height/dz))) THEN ! obstacle: adjustment 10-1-2017 because some obstacles are missed with check on kbed
+	  IF ((k.ge.CEILING(ob(n)%zbottom/dz)).and.(k.le.FLOOR(ob(n)%height/dz)).and.ob(n)%zbottom.gt.0.) THEN ! obstacle: adjustment 10-1-2017 because some obstacles are missed with check on kbed
 		xTSHD(1:4)=ob(n)%x*cos(phi)-ob(n)%y*sin(phi)
 		yTSHD(1:4)=ob(n)%x*sin(phi)+ob(n)%y*cos(phi)
 		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 

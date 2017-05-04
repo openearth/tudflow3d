@@ -2680,7 +2680,7 @@ c********************************************************************
       USE nlist
       implicit none
 
-	real xx,yy,r_orifice2,twodtdt,Qsource
+	real xx,yy,r_orifice2,twodtdt,Qsource,rrri,rrrj,rrrk,rrrim,rrrjm,rrrkm
 	integer t
 	real xTSHD(1:4),yTSHD(1:4),phi
 	integer inout,n2
@@ -2694,7 +2694,43 @@ c       *** Fill the right hand for the poisson solver. ***
 c
 c**************************************************************
 c
-
+	IF (continuity_solver.eq.2) THEN ! Optional: 2 (neglect drdt)
+      do  k=1,kmax
+        do j=1,jmax
+          do i=1,imax
+			
+      p(i,j,k)  =(
+     1  ( Ru(i)*dUdt(i,j,k) - Ru(i-1)*dUdt(i-1,j,k) ) / ( Rp(i)*dr(i) )
+     +              +
+     2  (       dVdt(i,j,k) -         dVdt(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
+     +              +
+     3  (       dWdt(i,j,k) -         dWdt(i,j,k-1) ) / ( dz )
+     +              ) /dt 
+          enddo
+        enddo
+      enddo
+	ELSEIF (continuity_solver.eq.3) THEN ! Optional: 3 (dudx=0)
+      do  k=1,kmax
+        do j=1,jmax
+          do i=1,imax
+		   rrri=0.5*(drdt(i,j,k)+drdt(i+1,j,k))
+		   rrrj=0.5*(drdt(i,j,k)+drdt(i,j+1,k))
+		   rrrk=0.5*(drdt(i,j,k)+drdt(i,j,k+1))
+		   rrrim=0.5*(drdt(i,j,k)+drdt(i-1,j,k))
+		   rrrjm=0.5*(drdt(i,j,k)+drdt(i,j-1,k))
+		   rrrkm=0.5*(drdt(i,j,k)+drdt(i,j,k-1))		   
+c
+      p(i,j,k)  =drdt(i,j,k)*(
+     1  ( Ru(i)*dUdt(i,j,k)/rrri - Ru(i-1)*dUdt(i-1,j,k)/rrrim ) / ( Rp(i)*dr(i) )
+     +              +
+     2  (       dVdt(i,j,k)/rrrj -         dVdt(i,j-1,k)/rrrjm ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
+     +              +
+     3  (       dWdt(i,j,k)/rrrk -         dWdt(i,j,k-1)/rrrkm ) / ( dz )
+     +              ) /dt 
+          enddo
+        enddo
+      enddo	
+	ELSE !default is 1 (drdt+drudx=0)
 	twodtdt=MAX((3.*time_np-4.*time_n+time_nm)*dt,1.e-12)
 
       do  k=1,kmax
@@ -2712,7 +2748,7 @@ c
           enddo
         enddo
       enddo
-	  
+	ENDIF
 
 	DO n2=1,nbedplume
 	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.bp(n2)%Q.ne.0.)) THEN
@@ -2750,7 +2786,7 @@ c
       USE nlist
       implicit none
 
-	real xx,yy,r_orifice2,twodtdt,Qsource
+	real xx,yy,r_orifice2,twodtdt,Qsource,rrri,rrrj,rrrk,rrrim,rrrjm,rrrkm
 	real tt,ddtt,uu(0:i1,0:j1,0:k1),vv(0:i1,0:j1,0:k1),ww(0:i1,0:j1,0:k1),rr(0:i1,0:j1,0:k1)
 	integer t
 	real xTSHD(1:4),yTSHD(1:4),phi
@@ -2766,6 +2802,42 @@ c
 c**************************************************************
 c
 
+	IF (continuity_solver.eq.2) THEN ! Optional: 2 (neglect drdt)
+      do  k=1,kmax
+        do j=1,jmax
+          do i=1,imax
+c
+      p(i,j,k)  =(
+     1  ( Ru(i)*uu(i,j,k) - Ru(i-1)*uu(i-1,j,k) ) / ( Rp(i)*dr(i) )
+     +              +
+     2  (       vv(i,j,k) -         vv(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
+     +              +
+     3  (       ww(i,j,k) -         ww(i,j,k-1) ) / ( dz )
+     +              ) /ddtt  
+          enddo
+        enddo
+      enddo
+	ELSEIF (continuity_solver.eq.3) THEN ! Optional: 3 (dudx=0)
+      do  k=1,kmax
+        do j=1,jmax
+          do i=1,imax
+		   rrri=0.5*(rr(i,j,k)+rr(i+1,j,k))
+		   rrrj=0.5*(rr(i,j,k)+rr(i,j+1,k))
+		   rrrk=0.5*(rr(i,j,k)+rr(i,j,k+1))
+		   rrrim=0.5*(rr(i,j,k)+rr(i-1,j,k))
+		   rrrjm=0.5*(rr(i,j,k)+rr(i,j-1,k))
+		   rrrkm=0.5*(rr(i,j,k)+rr(i,j,k-1))
+      p(i,j,k)  =rr(i,j,k)*(
+     1  ( Ru(i)*uu(i,j,k)/rrri - Ru(i-1)*uu(i-1,j,k)/rrrim ) / ( Rp(i)*dr(i) )
+     +              +
+     2  (       vv(i,j,k)/rrrj -         vv(i,j-1,k)/rrrjm ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
+     +              +
+     3  (       ww(i,j,k)/rrrk -         ww(i,j,k-1)/rrrkm ) / ( dz )
+     +              ) /ddtt  
+          enddo
+        enddo
+      enddo
+	ELSE !default is 1 (drdt+drudx=0)
 	twodtdt=MAX((3.*tt-4.*time_n+time_nm)*ddtt,1.e-12)
 	
       do  k=1,kmax
@@ -2783,6 +2855,8 @@ c
           enddo
         enddo
       enddo
+	ENDIF
+	
 
 	DO n2=1,nbedplume
 	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.bp(n2)%Q.ne.0.)) THEN
@@ -4349,6 +4423,7 @@ c  J --> direction      (yrt)
 	 enddo
         enddo
       enddo
+	  
 	DO n2=1,nbedplume
 	IF (bp(n2)%forever.eq.0.and.time_n.lt.bp(n2)%t0.and.time_np.gt.bp(n2)%t0) THEN
 	! rotation ship for ambient side current
@@ -4373,7 +4448,7 @@ c  J --> direction      (yrt)
 	  if (inout.eq.1) then
 		rnew(i,j,k)=rho(i,j,k)
 		rold(i,j,k)=rho(i,j,k)
-		! prevent large source in pres-corr by sudden increase in density
+		! prevent large source in pres-corr by sudden increase in density with bp%c 
 	   endif
 	  enddo
 	 enddo

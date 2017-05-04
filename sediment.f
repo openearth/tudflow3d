@@ -359,7 +359,7 @@
 				tau=rcfd(i,j,kplus)*ust*ust  
 				DO n1=1,nfr_silt
 					n=nfrac_silt(n1)
-					erosion_avg(n) = Mr_avg*MAX(0.,(tau/tau_e_avg-1.))*ddt ! m3/m2	 erosion_avg is filled for silt fractions only with silt erosion			
+					erosion_avg(n) = Mr_avg*MAX(0.,(tau/tau_e_avg-1.))*ddt*bednotfixed(i,j,kbed(i,j)) ! m3/m2	 erosion_avg is filled for silt fractions only with silt erosion			
 					IF (cbottot>0.) THEN
 						erosionf(n) = erosion_avg(n) * (cbotcfd(n,i,j)/cbottot) !erosion per fraction
 					ELSEIF (cbedtot>0.) THEN
@@ -476,6 +476,7 @@
 				
 				kplus = MIN(kbed(i,j)+1,k1)
 				delta = (rho_sand-rcfd(i,j,kplus))/rcfd(i,j,kplus) !choose rcfd and not rho_b to adjust for sediment saturated flow
+				delta = MAX(delta,0.1) ! rho_sand must be > 2*rho_fluid
 				Dstar = d50 * ((delta*ABS(gz))/nu_mol**2)**(0.333333333333333)
 				Shields_cr = 0.3/(1.+1.2*Dstar)+0.055*(1.-exp(-0.02*Dstar))  !Soulsby and Whitehouse 1997 curve through original Shields for threshold of motion sediment particles, Soulsy book Eq. SC(77)				
 				kn_sed_avg=kn_d50_multiplier*d50 !  kn=2*d50 is mentioned in VanRijn1984 paper, the pickup function which is applied here, however elsewhere vanRijn mentions larger kn_sed like 6*d50...)
@@ -534,7 +535,7 @@
 				
 				DO n1=1,nfr_sand
 					n=nfrac_sand(n1)			
-					erosion_avg(n) = phip * (delta*ABS(gz)*d50)**0.5*ddt  !*rho_sand/rho_sand ! erosion flux in kg/m2/(kg/m3)= m3/m2=m
+					erosion_avg(n) = phip * (delta*ABS(gz)*d50)**0.5*ddt*bednotfixed(i,j,kbed(i,j))  !*rho_sand/rho_sand ! erosion flux in kg/m2/(kg/m3)= m3/m2=m
 					IF (cbottot_sand>0.) THEN
 						erosionf(n) = erosion_avg(n) * (cbotcfd(n,i,j)/cbottot_sand) !erosion per fraction
 					ELSEIF (cbedtot_sand>0.) THEN
@@ -614,6 +615,12 @@
 	
 	IF (interaction_bed.eq.4.and.time_n.ge.tstart_morf) THEN
 		call bound_cbot_integer(kbed) ! apply correct boundary conditions for updated kbed	
+		DO i=0,i1
+			DO j=0,j1
+				zbed(i,j)=REAL(kbed(i,j))*dz
+			ENDDO
+		ENDDO
+		
 		IF (avalanche_slope.gt.0.) THEN
 			d_cbotnew = 0.
 			DO i=1,imax
@@ -733,6 +740,11 @@
 			ENDDO
 			
 			call bound_cbot_integer(kbed) ! apply correct boundary conditions for updated kbed
+			DO i=0,i1
+				DO j=0,j1
+					zbed(i,j)=REAL(kbed(i,j))*dz
+				ENDDO
+			ENDDO			
 			
 !! mpi transfer sum d_cbotnew over edges:
 			call shiftf_lreverse(d_cbotnew,cbf) 

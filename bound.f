@@ -2037,6 +2037,7 @@ c get stuff from other CPU's
 		else
 		  Cbound(i,j,k)=(Cbound(i,j,k)+bp(n2)%sedflux(n)*ddtt/bp(n2)%volncells/frac(n)%rho)
      &  /(1.-MIN(0.,bp(n2)%Q)*ddtt/bp(n2)%volncells) !when Q negative, remove sediment from cell as well   IMPLICIT 
+	 ! IMPLICIT: c^n+1-c^n=-Qout_cel/Vol_cel*dt*c^n+1 --> c^n+1 = c^n/(1+Qout_cel/Vol_cel*dt)
 		endif
 		! rho is calculated in state called after fkdat
 	   endif

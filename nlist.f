@@ -38,7 +38,7 @@
       INTEGER tmax_inPpuntTSHD,tmax_inUpuntTSHD,tmax_inVpuntTSHD,tmax_inWpuntTSHD
       INTEGER tmax_inUpunt_tauTSHD,tmax_inVpunt_tauTSHD,tmax_inVpunt_rudder
       INTEGER tmax_inWpunt2,tmax_inVpunt2,tmax_inPpunt2,tmax_inWpunt_suction
-      INTEGER nfrac,slipvel,interaction_bed,nobst,kbed_bc,nbedplume
+      INTEGER nfrac,slipvel,interaction_bed,nobst,kbed_bc,nbedplume,continuity_solver
       INTEGER nfr_silt,nfr_sand,nfr_air
       CHARACTER*256 hisfile,restart_dir,inpfile,plumetseriesfile,bcfile,plumetseriesfile2,bedlevelfile
       CHARACTER*3 time_int,advec_conc,cutter
@@ -182,7 +182,7 @@
      & ,lim_r_grid,fac_r_grid,jmax_grid,lim_y_grid,fac_y_grid,sym_grid_y,dy_grid
 	NAMELIST /times/t_end,t0_output,dt_output,te_output,tstart_rms,dt_max,dt_ini,time_int,CFL,
      & t0_output_movie,dt_output_movie,te_output_movie,tstart_morf
-	NAMELIST /num_scheme/convection,numdiff,diffusion,comp_filter_a,comp_filter_n,CNdiffz,npresIBM,advec_conc
+	NAMELIST /num_scheme/convection,numdiff,diffusion,comp_filter_a,comp_filter_n,CNdiffz,npresIBM,advec_conc,continuity_solver
 	NAMELIST /ambient/U_b,V_b,W_b,bcfile,rho_b,SEM,nmax2,nmax1,nmax3,lm_min,lm_min3,slip_bot,kn,interaction_bed,
      & periodicx,periodicy,dpdx,dpdy,W_ox,Hs,Tp,nx_w,ny_w,obst,bc_obst_h,U_b3,V_b3,surf_layer,wallup,bedlevelfile,
      & U_bSEM,V_bSEM,U_w,V_w,c_bed,cfixedbed
@@ -241,6 +241,7 @@
 	CNdiffz = 0
 	npresIBM = 0
 	advec_conc='VLE' !nerdoption, default is 'VLE' (TVD Van Leer) most robust scheme, can also be 'TVD' alpha-cfl dependent scheme or 'NVD' (alpha-cfl dependent scheme via NVD manner) which should also be robust/stable and sligthly more accurate. In a test VLE gave no negative concentrations and TVD did...
+	continuity_solver = 1 !nerd option, default is 1 (drdt+drudx=0). Optional: 2 (neglect drdt), 3 (dudx=0)
 	!! ambient:
 	U_b = -999.
 	V_b = -999.
@@ -956,12 +957,10 @@
 	ALLOCATE(Coldbot(nfrac,0:i1,0:j1))
 	ALLOCATE(Cnewbot(nfrac,0:i1,0:j1))
 	ALLOCATE(dCdtbot(nfrac,0:i1,0:j1))
-	IF (interaction_bed.ge.4) THEN 
-		ALLOCATE(Clivebed(nfrac,0:i1,0:j1,0:k1))
-		ALLOCATE(bednotfixed(0:i1,0:j1,0:k1))
-		Clivebed=0.
-		bednotfixed=1. !default avalanche is allowed everywhere, only in obstacles connected to bed not allowed, see init.f
-	ENDIF
+	ALLOCATE(bednotfixed(0:i1,0:j1,0:k1))	
+	bednotfixed=1. !default avalanche is allowed everywhere, only in obstacles connected to bed not allowed, see init.f
+	ALLOCATE(Clivebed(nfrac,0:i1,0:j1,0:k1))
+	Clivebed=0.
 
 	
 	ALLOCATE(Ppropx(0:i1,0:j1,0:k1))
