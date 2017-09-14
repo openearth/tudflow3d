@@ -388,7 +388,8 @@
 					endif
 					tau=rcfd(i,j,kplus)*ust*ust  !for deposition apply tau belonging to own frac(n)%kn_sed
 	 
-					 depositionf(n) = MAX(0.,(1.-tau/frac(n)%tau_d))*ccfd(n,i,j,kplus)*MIN(0.,Wsed(n,i,j,kbed(i,j)))*ddt ! m --> dep is negative due to negative wsed
+					 depositionf(n) = MAX(0.,(1.-tau/frac(n)%tau_d))*ccfd(n,i,j,kplus)*MIN(0.,Wsed(n,i,j,kbed(i,j)))*ddt
+     & *bednotfixed_depo(i,j,kbed(i,j))					 ! m --> dep is negative due to negative wsed
 					 ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus)+(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-]
 					 cbotnew(n,i,j)=cbotnew(n,i,j)-(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-]
 					 cbotnewtot=cbotnewtot+cbotnew(n,i,j)
@@ -478,7 +479,8 @@
 				delta = (rho_sand-rcfd(i,j,kplus))/rcfd(i,j,kplus) !choose rcfd and not rho_b to adjust for sediment saturated flow
 				delta = MAX(delta,0.1) ! rho_sand must be > 2*rho_fluid
 				Dstar = d50 * ((delta*ABS(gz))/nu_mol**2)**(0.333333333333333)
-				Shields_cr = 0.3/(1.+1.2*Dstar)+0.055*(1.-exp(-0.02*Dstar))  !Soulsby and Whitehouse 1997 curve through original Shields for threshold of motion sediment particles, Soulsy book Eq. SC(77)				
+				Shields_cr = 0.3/(1.+1.2*Dstar)+0.055*(1.-exp(-0.02*Dstar))  !Soulsby and Whitehouse 1997 curve through original Shields for threshold of motion sediment particles, Soulsy book Eq. SC(77)	
+				Shields_cr = Shields_cr*calibfac_Shields_cr
 				kn_sed_avg=kn_d50_multiplier*d50 !  kn=2*d50 is mentioned in VanRijn1984 paper, the pickup function which is applied here, however elsewhere vanRijn mentions larger kn_sed like 6*d50...)
 				ust=0.1*absU
 				do tel=1,10 ! 10 iter is more than enough
@@ -544,7 +546,7 @@
 						erosionf(n) = 0.
 					ENDIF
 					erosionf(n) = MIN(erosionf(n),(cbotcfd(n,i,j)+Clivebed(n,i,j,kbed(i,j)))*dz) ! m3/m2, not more material can be eroded than there was in top layer cbotcfd+c in top cel bed
-					depositionf(n) = ccfd(n,i,j,kplus)*MIN(0.,Wsed(n,i,j,kbed(i,j)))*ddt ! m --> dep is negative due to negative wsed
+					depositionf(n) = ccfd(n,i,j,kplus)*MIN(0.,Wsed(n,i,j,kbed(i,j)))*ddt*bednotfixed_depo(i,j,kbed(i,j)) ! m --> dep is negative due to negative wsed
 					ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus)+(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-]
 					cbotnew(n,i,j)=cbotnew(n,i,j)-(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-]
 					cbotnewtot=cbotnewtot+cbotnew(n,i,j)
@@ -555,7 +557,6 @@
 			IF (interaction_bed.eq.4) THEN
 				IF (cbotnewtot.lt.0.and.(kbed(i,j)-1).ge.0.and.SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed) THEN 
 				!add half cell sediment on cbot account for further erosion without lowering 1 dz yet (because otherwise flipflop between ero-1dz and depo+1dz)
-					kplus = MIN(kbed(i,j)+1,k1)
 					DO n=1,nfrac ! also cbotnew(n,i,j) is le 0:
 						cbotnew(n,i,j)=cbotnew(n,i,j)+0.5*Clivebed(n,i,j,kbed(i,j)) 
 						Clivebed(n,i,j,kbed(i,j))=0.5*Clivebed(n,i,j,kbed(i,j)) 
@@ -576,7 +577,8 @@
 					ENDDO
 					!kbed(i,j)=MAX(kbed(i,j)-1,0)  !update bed level at end		
 					kbed(i,j)=kbed(i,j)-1
-				ELSEIF (ctot_firstcel.ge.cfixedbed.and.kbed(i,j)+1.le.kmax ) THEN
+				ELSEIF (ctot_firstcel.ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.
+     &             SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed) THEN
 !     &				.and.(SUM(erosionf(1:nfrac))+SUM(depositionf(1:nfrac))).lt.0.) THEN ! sedimentation of 1 layer dz each time because ctot in fluid already above threshold of bed, only if erosion is less than deposition::
 					kbed(i,j)=kbed(i,j)+1
 					drdt(i,j,kbed(i,j))=rho_b
@@ -586,12 +588,13 @@
 						Clivebed(n,i,j,kbed(i,j))=ccnew(n,i,j,kbed(i,j))+
      &						(cfixedbed-ctot_firstcel)*ccnew(n,i,j,kbed(i,j))/MAX(ctot_firstcel,1.e-12)  ! reduce ccnew to arrive at ctot = cfixedbed
 						cbotnew(n,i,j)=cbotnew(n,i,j)-(cfixedbed-ctot_firstcel)*ccnew(n,i,j,kbed(i,j))/MAX(ctot_firstcel,1.e-12)
-						ccnew(n,i,j,kbed(i,j))=Clivebed(n,i,j,kbed(i,j)) ! to have correct density in this cell, this doesn't give incorrect sediment balance as soon as a bed cel becomes fluid again then ccnew is restarted with (ero+depo) and this old concentration is forgotten
+						ccnew(n,i,j,kbed(i,j))=0. !Clivebed(n,i,j,kbed(i,j)) ! to have correct density in this cell, this doesn't give incorrect sediment balance as soon as a bed cel becomes fluid again then ccnew is restarted with (ero+depo) and this old concentration is forgotten
 						drdt(i,j,kbed(i,j)) = drdt(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 						rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 						rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density						
 					ENDDO
-				ELSEIF ((cbotnewtot+ctot_firstcel).ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.cbotnewtot.gt.1.e-12) THEN
+				ELSEIF ((cbotnewtot+ctot_firstcel).ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.cbotnewtot.gt.1.e-12.and.
+     &             SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed) THEN
 !     &				.and.(SUM(erosionf(1:nfrac))+SUM(depositionf(1:nfrac))).lt.0.) THEN ! sedimentation of 1 layer dz each time, only if erosion is less than deposition:
 					kbed(i,j)=kbed(i,j)+1
 					drdt(i,j,kbed(i,j))=rho_b
@@ -602,11 +605,18 @@
 						Clivebed(n,i,j,kbed(i,j))=ccnew(n,i,j,kbed(i,j))+
      &						(cfixedbed-ctot_firstcel)*cbotnew(n,i,j)/MAX(cbotnewtot,1.e-12)  ! apply sedimentation ratio between fractions new sediment concentration of cells within bed
 						cbotnew(n,i,j)=cbotnew(n,i,j)-(cfixedbed-ctot_firstcel)*cbotnew(n,i,j)/MAX(cbotnewtot,1.e-12)
-						ccnew(n,i,j,kbed(i,j))=Clivebed(n,i,j,kbed(i,j)) ! to have correct density in this cell, this doesn't give incorrect sediment balance as soon as a bed cel becomes fluid again then ccnew is restarted with (ero+depo) and this old concentration is forgotten
+						ccnew(n,i,j,kbed(i,j))=0. !Clivebed(n,i,j,kbed(i,j)) ! to have correct density in this cell, this doesn't give incorrect sediment balance as soon as a bed cel becomes fluid again then ccnew is restarted with (ero+depo) and this old concentration is forgotten
 						drdt(i,j,kbed(i,j)) = drdt(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 						rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 						rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density						
 					ENDDO
+				ELSEIF (cbotnewtot.gt.1.e-12.and.SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).lt.cfixedbed) THEN
+					! add sediment to Clivebed to bring it to cfixedbed again 
+					DO n=1,nfrac ! also cbotnew(n,i,j) is le 0:
+						c_adjust=MIN(cfixedbed-SUM(Clivebed(1:nfrac,i,j,kbed(i,j)))/cbotnewtot,1.)*cbotnew(n,i,j)
+						cbotnew(n,i,j)=cbotnew(n,i,j)-c_adjust
+						Clivebed(n,i,j,kbed(i,j))=Clivebed(n,i,j,kbed(i,j))+c_adjust
+					ENDDO				
 				ENDIF
 			ENDIF
 		  ENDDO

@@ -344,7 +344,7 @@
        integer :: ncid, varid1,varid2,varid3, varid4, varid5, varid6, varid7, varid8, varid9
 	   integer :: dimids(NDIMS), dimids2(NDIMS2),dimids3(NDIMS3),dimids5(NDIMS5)
        integer :: x_dimid, y_dimid, z_dimid, nfrac_dimid, par_dimid
-	integer :: dimids4(NDIMS),varid20,varid21
+	integer :: dimids4(NDIMS),varid20,varid21,varid22
 	character(1024) :: svnversion
 	character(1024) :: svnurl
       include 'version.inc'
@@ -419,6 +419,9 @@
 			call check( nf90_def_var(ncid, "zbed", NF90_REAL, dimids5, varid21) )
 			call check( nf90_put_att(ncid, varid21, 'units', 'm') )
 			call check( nf90_put_att(ncid, varid21, 'long_name', 'Bed level height of dynamic morphological bed') )
+		   call check( nf90_def_var(ncid, "Cbed", NF90_REAL, dimids2, varid22) )
+		   call check( nf90_put_att(ncid, varid22, 'units', '-') )
+		   call check( nf90_put_att(ncid, varid22, 'long_name', 'Volume concentration for each fraction inside bed') )			
 		endif
 	endif
        call check( nf90_def_var(ncid, "rho", NF90_REAL, dimids, varid5) )
@@ -462,6 +465,7 @@
 		call check( nf90_put_var(ncid, varid20, mass_bed(1:nfrac,1:imax,1:jmax)) ) 
 		if (interaction_bed.ge.4) then
 		  call check( nf90_put_var(ncid, varid21, zzbed(1:imax,1:jmax) ))
+		  call check( nf90_put_var(ncid, varid22, Clivebed(1:nfrac,1:imax,1:jmax,1:kmax)) )
 		endif
 		  
 	endif

@@ -25,6 +25,7 @@
       include 'mpif.h'
       integer ierr
       real  dr2,dz2,df,df2,kcoeff,tmp1,tmp2,tmp3,Courant,dtmp,dtold
+	  double precision Tadapt,Uav,Vav,localsum,globalsum,du,duu
 
 	  
 !		IF (nobst>0.and.bp(1)%forever.eq.0.and.time_np+dt.gt.bp(1)%t0.and.counter<10) THEN
@@ -66,6 +67,7 @@
             tmp3 =Courant *tmp3 
             dt = min( dt , tmp3 )
             dtmp = dt
+
             enddo
          enddo
       enddo
@@ -95,6 +97,66 @@
 !	    dt=dt_max
 !	  endif
 !	endif
+	  if (periodicx.eq.1.and.ABS(dpdx).lt.1.e-12) THEN ! test determination correct dpdx and dpdy based on wanted u or v
+	    localsum=0.
+        do k=1,kmax
+          do j=1,jmax
+             do i=1,imax	  
+		       localsum=localsum+Unew(i,j,k)*(Rp(i+1)-Rp(i))*(phiv(j)-phiv(j-1))*Ru(i)*dz
+			 enddo
+		  enddo
+	    enddo
+		call mpi_allreduce(localsum,globalsum,1,mpi_double_precision,mpi_sum,mpi_comm_world,ierr)
+		
+		Uav = globalsum/(SUM(Vol_V)*REAL(kmax)) 
+		if (istep>1) THEN
+			du = Uav-Uavold
+		else
+			du = 0.
+		endif
+		Uavold = Uav
+		Tadapt = 100.*depth/sqrt(U_b**2+V_b**2) !for test just take a value
+		duu = Tadapt*du/dt !30 seconds worked
+		Uav = Uav + duu 
+		dpdx1 = dpdx1 + ABS(U_b)*(U_b-Uav)*rho_b/depth*dt/Tadapt 
+		Ppropx = dpdx1
+		Uav = Uav - duu
+		if (rank.eq.0) then
+			if (mod(istep,10) .eq.0) then   
+				write(*,'(a,f8.2,a,f6.2,a,f6.2,a)') ' # dpdx: ',dpdx1,' Pa/m; Uav: ',Uav,'; U_b:',U_b,' m/s #'
+			endif  
+		endif			
+	  endif
+	  if (periodicy.eq.1.and.ABS(dpdy).lt.1.e-12) THEN ! test determination correct dpdx and dpdy based on wanted u or v
+	    localsum=0.
+        do k=1,kmax
+          do j=1,jmax
+             do i=1,imax	  
+		       localsum=localsum+Vnew(i,j,k)*(Ru(i)-Ru(i-1))*(phip(j+1)-phip(j))*Rp(i)*dz
+			 enddo
+		  enddo
+	    enddo
+		call mpi_allreduce(localsum,globalsum,1,mpi_double_precision,mpi_sum,mpi_comm_world,ierr)	
+		Vav = globalsum/(SUM(Vol_V)*REAL(kmax)) 
+		if (istep>1) THEN
+			du = Vav-Vavold
+		else
+			du = 0.
+		endif
+		Vavold = Vav
+		Tadapt = 100.*depth/sqrt(U_b**2+V_b**2) !for test just take a value
+		duu = Tadapt*du/dt !30 seconds worked
+		Vav = Vav + duu 
+		dpdy1 = dpdy1 + ABS(V_b)*(V_b-Vav)*rho_b/depth*dt/Tadapt 
+		Ppropy = dpdy1
+		Vav = Vav - duu
+		if (rank.eq.0) then
+			if (mod(istep,10) .eq.0) then   
+				write(*,'(a,f8.2,a,f6.2,a,f6.2,a)') ' # dpdy: ',dpdy1,' Pa/m; Vav: ',Vav,'; V_b:',V_b,' m/s #'		
+			endif  
+		endif	
+	   endif		
+
       end
 
       subroutine chkdiv
@@ -161,10 +223,10 @@
            enddo
          enddo
       enddo
-      call mpi_allreduce(divbar1,divbar_tot1,1,mpi_real8,mpi_max,mpi_comm_world,ierr)
-      call mpi_allreduce(divmax1,divmax_tot1,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
-      call mpi_allreduce(divbar2,divbar_tot2,1,mpi_real8,mpi_max,mpi_comm_world,ierr)
-      call mpi_allreduce(divmax2,divmax_tot2,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+      call mpi_allreduce(divbar1,divbar_tot1,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+      call mpi_allreduce(divmax1,divmax_tot1,1,mpi_real8,mpi_max,mpi_comm_world,ierr)
+      call mpi_allreduce(divbar2,divbar_tot2,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+      call mpi_allreduce(divmax2,divmax_tot2,1,mpi_real8,mpi_max,mpi_comm_world,ierr)
       !call mpi_allreduce(divbar,divbar_tot,1,mpi_real,mpi_max,mpi_comm_world,ierr)
       !call mpi_allreduce(divmax,divmax_tot,1,mpi_real,mpi_sum,mpi_comm_world,ierr)
       

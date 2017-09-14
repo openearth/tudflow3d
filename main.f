@@ -72,6 +72,7 @@
       call init_propeller
       call determine_indices_ship_in
       call bedroughness_init
+	  
 
       dt    = MIN(dt_ini,dt_max) 
       ekm   =0. 
@@ -123,7 +124,7 @@
       call bound(Uold,Vold,Wold,rold,0,0.,Ub1old,Vb1old,Wb1old,Ub2old,Vb2old,Wb2old,Ub3old,Vb3old,Wb3old)
       call bound(Unew,Vnew,Wnew,rnew,0,0.,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
       call bound_rhoU(dUdt,dVdt,dWdt,drdt,slip_bot,0.,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
-
+	  
 !	call stress_terms(Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
 !	call diffu_com4(wx,Srr,Spr,Szr,Spp,Ru,Rp,dr,dphi,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 
@@ -163,7 +164,7 @@
       time_nm=-dt
       time_n=0.
       time_np=dt
-	
+	  call update_nvol_bedplume(time_n)
 
 !      call fillps 
 !      CALL SOLVEpois(p) !,Ru,Rp,DPHI,dz,rank,imax,jmax,kmax,px)
@@ -217,6 +218,7 @@
 			call RK3(ib,ie,jb,je,kb,ke)
 		endif
 		call bound_rhoU(dUdt,dVdt,dWdt,drdt,slip_bot,time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
+		call update_nvol_bedplume(time_np)
 
 		if (comp_filter_n>0) then
 			if (mod(istep,comp_filter_n).eq.0) then

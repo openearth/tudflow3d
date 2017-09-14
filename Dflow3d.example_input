@@ -43,6 +43,7 @@ comp_filter_a = 0.495		! Alpha in compact filter (0-0.5), default 0.5 (no filter
 comp_filter_n = 0		! Compact filter is applied every comp_filter_n timesteps, default 0 (no filtering) [-]
 CNdiffz = 1			! 1 is implicit CN treatment of diffusion in z-dir 0 is explicit in z-dir (default 0)
 npresIBM = 0			! number of extra pres-correction steps to make IBM objects better impermeable (default 0)
+continuity_solver =3    !nerd option, default is 1 (drdt+drudx=0). Optional: 2 (neglect drdt), 3 (dudx=0)
 /
 
 &ambient
@@ -72,6 +73,8 @@ obst(1)%x = -500. 50. 50. -500. ! x coordinate 4 corners obstacle
 obst(1)%y = -500. -500. 500. 500. ! y coordinate 4 corners obstacle
 obst(1)%height = 0.5            ! vertical height obstacle
 obst(1)%zbottom = 0.2            ! vertical bottom start height obstacle [m] (optional, default 0)
+obst(1)%ero = 0. 				! 0. = no erosion on top of obstacle, 1. = erosion possible  (optional, default 0)
+obst(1)%depo = 0. 				! 0. = no deposition on top of obstacle, 1. = deposition possible  (optional, default 0)
 U_b3 = -0.47			! Ambient bc U velocity [m/s] in surf_layer with respect to TSHD motion: negative means TSHD sailing against current (Utotal=U_TSHD-U_b), without TSHD positive is inward velocity
 V_b3 = -0.29			! Ambient bc V velocity [m/s] in surf_layer with respect to TSHD motion: positive means current from starboard  
 surf_layer = 0.			! Layer depth [m] from free surface with U_b3,V_b3 ambient current (default 0)
@@ -117,15 +120,19 @@ zjet2 = 0.5			! vertical position centre of horizontal plume [m]
 bedplume(1)%x = -500. 50. 50. -500. ! x coordinate 4 corners bedplume [m]
 bedplume(1)%y = -500. -500. 500. 500. ! y coordinate 4 corners bedplume [m]
 bedplume(1)%height = 0.5            ! vertical height bedplume [m]
+bedplume(1)%h_tseriesfile = ''		! file containing timeseries of bedplume height [m] (optional overrules bedplume(.)%height, default '')
 bedplume(1)%zbottom= 0.2           	! vertical bottom start height bedplume [m] (optional, default 0)
+bedplume(1)%zb_tseriesfile = ''		! file containing timeseries of bedplume bottom [m] (optional overrules bedplume(.)%zbottom, default '')
 bedplume(1)%u = 0.5            		! Initial U velocity inside bedplume [m/s] (if not defined then vertical profile based on U_b is used)
 bedplume(1)%v = 0.5            		! Initial V velocity inside bedplume [m/s] (if not defined then vertical profile based on V_b is used)
 bedplume(1)%w = 0.5            		! Initial W velocity inside bedplume [m/s] (if not defined then W_b is used)
 bedplume(1)%c = 0.1 0.1 0.1    		! Initial volume fractions inside bedplume [-] (length vector must be nfrac large)
 bedplume(1)%forever = 0        		! 1 is bedplume put in place every timestep, 0 is only initial bedplume (default 0)
 bedplume(1)%t0 = 0.        			! bedplume is started after t0 seconds (default 0. s) 
+bedplume(1)%t_end = 0.        		! bedplume ends after t_end seconds (default t_end of simulation) 
 bedplume(1)%Q = 2.5 				! Fluid flux [m3/s] (divided evenly over all cells within bedplume) 
-bedplume(1)%sedflux = 6.625 59.625  ! Sediment flux [kg/s] (divided evenly over all cells within bedplume)
+bedplume(1)%sedflux = 6.625 59.625  ! Sediment flux [kg/s] (divided evenly over all cells within bedplume, length vector must be nfrac large)
+bedplume(1)%changesedsuction = 1.   ! 0. is no sediment is removed from suction domain in case bedplume%Q negative (default 1.=sediment is sucked out of domain) 
 /
 
 &fractions_in_plume
@@ -159,9 +166,11 @@ gy = 0.				! Gravity [m/s2] positive to work in positive y-dir
 gz = 9.81			! Gravity [m/s2] positive to work in negative z-dir
 ekm_mol = 1.e-3			! Moleculair dyn. viscosity [kg/(sm)]
 calibfac_sand_pickup = 1. ! Calibration factor for sand pickup, default 1. [-].
+calibfac_Shields_cr = 1. ! Calibration factor to adjust Shields_cr curve for start motion sand pickup, default 1. [-].
 pickup_formula = 'nielsen1992' !options are 'vanrijn1984' (default),'nielsen1992','okayasu2010'
 kn_d50_multiplier = 2. 	! Defines Nikuradse bedroughness for sand pickup function (not for flow shear stress), default 2.; kn=2*d50 defined in paper Van Rijn 1984
 avalanche_slope = 2. ! Max bedslope 1:as; all slopes steeper avalanche towards 1:as (0=vertical slope, wet sand=30deg=1.7--15deg=3.7)
+
 /
 
 &ship

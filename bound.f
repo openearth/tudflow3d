@@ -765,7 +765,7 @@ c get stuff from other CPU's
 
 	DO n=1,nbedplume
 	IF (bp(n)%u.ne.-99999.) THEN ! apply bedplume velocity boundary condition:
-	IF ((bp(n)%forever.eq.1.and.time_np.gt.bp(n)%t0)
+	IF ((bp(n)%forever.eq.1.and.time_np.gt.bp(n)%t0.and.time_np.lt.bp(n)%t_end)
      &     .or.(bp(n)%forever.eq.0.and.time_n.lt.bp(n)%t0.and.time_np.gt.bp(n)%t0)) THEN
 	! rotation ship for ambient side current
 	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
@@ -773,6 +773,7 @@ c get stuff from other CPU's
 	else
 	  phi=atan2(V_b,(U_TSHD-U_b))
 	endif
+	
       !! Search for P,V:
       do k=k1,0,-1 !from top to bottom
        do i=0,i1  
@@ -1451,7 +1452,7 @@ c get stuff from other CPU's
 
 	DO n=1,nbedplume
 	IF (bp(n)%u.ne.-99999.) THEN ! apply bedplume velocity boundary condition:
-	IF ((bp(n)%forever.eq.1.and.time_np.gt.bp(n)%t0)
+	IF ((bp(n)%forever.eq.1.and.time_np.gt.bp(n)%t0.and.time_np.lt.bp(n)%t_end)
      &     .or.(bp(n)%forever.eq.0.and.time_n.lt.bp(n)%t0.and.time_np.gt.bp(n)%t0)) THEN
 	! rotation ship for ambient side current
 	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
@@ -1849,6 +1850,7 @@ c get stuff from other CPU's
 
 	end
 
+	
 
       subroutine bound_c(Cbound,cjet,n,ddtt)
       
@@ -1866,7 +1868,7 @@ c
       real ubb(0:i1,0:k1),val,theta,rbc,xx,yy,r_orifice2,rjet,theta_U,theta_V
       real cbf(0:i1,0:k1)
       real cbb(0:i1,0:k1)
-	real xTSHD(4),yTSHD(4),phi,ddtt
+	real xTSHD(4),yTSHD(4),phi,ddtt,interpseries
 c
 c
 c*************************************************************
@@ -2011,7 +2013,7 @@ c get stuff from other CPU's
 	Cbound2=Cbound
 
 	DO n2=1,nbedplume
-	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0)
+	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end)
      &     .or.(bp(n2)%forever.eq.0.and.time_n.lt.bp(n2)%t0.and.time_np.gt.bp(n2)%t0)) THEN
 	! rotation ship for ambient side current
 	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
@@ -2036,7 +2038,7 @@ c get stuff from other CPU's
 		  Cbound(i,j,k)=bp(n2)%c(n)
 		else
 		  Cbound(i,j,k)=(Cbound(i,j,k)+bp(n2)%sedflux(n)*ddtt/bp(n2)%volncells/frac(n)%rho)
-     &  /(1.-MIN(0.,bp(n2)%Q)*ddtt/bp(n2)%volncells) !when Q negative, remove sediment from cell as well   IMPLICIT 
+     &  /(1.-MIN(0.,bp(n2)%Q*bp(n2)%changesedsuction)*ddtt/bp(n2)%volncells) !when Q negative, remove sediment from cell as well   IMPLICIT 
 	 ! IMPLICIT: c^n+1-c^n=-Qout_cel/Vol_cel*dt*c^n+1 --> c^n+1 = c^n/(1+Qout_cel/Vol_cel*dt)
 		endif
 		! rho is calculated in state called after fkdat
@@ -2055,14 +2057,14 @@ c get stuff from other CPU's
 	ENDDO ! bedplume loop
 
 !			IF (interaction_bed.ge.4) THEN ! dynamic bed update, IBM bed re-defined every timestep, make c inside bed zero (diffcof is made zero in turbulence.f to eliminate incorrect diffusion into bed):
-!		! switched off 28-1-2017
-!			DO i=0,i1 
-!				DO j=0,j1
-!					DO k=0,kbed(i,j)
-!						Cbound(i,j,k)=0. 
-!					ENDDO
-!				ENDDO
-!			ENDDO
+!		!switched back on 5-5-2017 ! switched off 28-1-2017
+			DO i=0,i1 
+				DO j=0,j1
+					DO k=0,kbed(i,j)
+						Cbound(i,j,k)=0. 
+					ENDDO
+				ENDDO
+			ENDDO
 !		ENDIF	
 		!! from 17-2-2017 bedlevelfile is dealt with via kbed, not via TSHD immersed boundary; with utr,vtr,wtr and diffcof zero for all sides of bed-cell concentration in bed should stay exactly zero and tricks like below to remove sediment from bed and add it to lowest fluid cell shouldn't be necessary
 	kcheck=kmax-(kjet-1) 
@@ -2070,17 +2072,17 @@ c get stuff from other CPU's
  	    k=k_inPpuntTSHD(t)		
 	    i=i_inPpuntTSHD(t)
             j=j_inPpuntTSHD(t)
-	      if (k.eq.kcheck.and.frac(n)%ws.lt.0.and.kjet>0.and.interaction_bed.ne.4) then 
+	      if (k.eq.kcheck.and.frac(n)%ws.lt.0.and.kjet>0.) then !and.interaction_bed.ne.4) then 
 	        Cbound(i,j,k-1)=Cbound(i,j,k-1)+Cbound(i,j,k) ! move air from first (lowest) cell in TSHD-hull to first cell in fluid
 		!! Idea is to undo the effect of diffusion and air bubble rising up into hull
 	      endif
-	      if (k.gt.0.and.k.eq.kbed(i,j).and.interaction_bed.ne.4) then ! does not happen for bed with interaction_bed=4, or for bedlevelfile 
+	      if (k.gt.0.and.k.eq.kbed(i,j)) then !.and.interaction_bed.ne.4) then ! does not happen for bed with interaction_bed=4, or for bedlevelfile 
 	        Cbound(i,j,kbed(i,j)+1)=Cbound(i,j,kbed(i,j)+1)+Cbound(i,j,k) ! move sediment from heightest cell in obstacle to first cell in fluid
 		!! Idea is to undo the effect of diffusion into the obstacle
 	      endif
-		    IF (interaction_bed.ne.4) then
+		    !IF (interaction_bed.ne.4) then
             Cbound(i,j,k)=0.  ! remove sediment from hull, not only in lowest line of cells in hull
-			endif
+			!endif
 	  enddo
       do t=1,tmax_inPpunt
 	i=i_inPpunt(t)
@@ -2341,6 +2343,53 @@ c*************************************************************
 	end
 
 
+	subroutine update_nvol_bedplume(tt)
+	
+	USE nlist
+	
+	implicit none
+	
+	real tt
+	integer n2,inout
+	real xTSHD(4),yTSHD(4),phi,interpseries,xx,yy
+	
+	DO n2=1,nbedplume
+		IF (bp(n2).h_tseriesfile.ne.''.or.bp(n2).zb_tseriesfile.ne.'') THEN !necessary to update volncells!
+		  IF (bp(n2).h_tseriesfile.ne.'') THEN
+			bp(n2)%height=interpseries(bp(n2)%h_tseries,bp(n2)%h_series,bp(n2)%h_seriesloc,tt)
+		  ENDIF
+		  IF (bp(n2).zb_tseriesfile.ne.'') THEN
+			bp(n2)%zbottom=interpseries(bp(n2)%zb_tseries,bp(n2)%zb_series,bp(n2)%zb_seriesloc,tt)
+		  ENDIF	
+		  bp(n2)%volncells=0.
+		  do k=1,kmax
+		   do i=1,imax 
+			 do j=1,jmax*px        
+		  xx=Rp(i)*cos_ut(j)-schuif_x !global xx over different processors
+		  yy=Rp(i)*sin_ut(j)          !global yy over different processors
+		  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle: 
+			xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
+			yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
+			CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+		  ELSE 
+			inout=0
+		  ENDIF
+		  if (inout.eq.1) then
+		   bp(n2)%volncells=bp(n2)%volncells+vol_V(i,j)
+		   endif
+		  enddo
+		 enddo
+		enddo	  
+		 if (bp(n2)%volncells.le.0.) then
+		   write(*,*),'WARNING, no cells found for bedplume number: ',n2,bp(n2)%volncells,rank
+		   write(*,*),'In case a sedflux or Q has been defined the code will crash because of division by a zero volncells'
+		 endif
+		ENDIF ! bedplume loop
+	ENDDO	
+	
+	end
+	
+	
 	REAL function interpseries(tseries,series,sloc,tt)
 
 	REAL tseries(1:10000),series(1:10000),tt

@@ -25,7 +25,7 @@
       
       INTEGER i,j,k,imax,jmax,kmax,i1,j1,k1,px,rank,kjet,nmax1,nmax2,nmax3,istep,CNdiffz,npresIBM,counter
       INTEGER Lmix_type,slip_bot,SEM,azi_n,outflow_overflow_down,azi_n2
-      REAL ekm_mol,nu_mol,pi,kappa,gx,gy,gz,Cs,Sc,calibfac_sand_pickup
+      REAL ekm_mol,nu_mol,pi,kappa,gx,gy,gz,Cs,Sc,calibfac_sand_pickup,calibfac_Shields_cr
       REAL dt,time_nm,time_n,time_np,t_end,t0_output,dt_output,te_output,dt_max,tstart_rms,CFL,dt_ini,tstart_morf
       REAL dt_output_movie,t0_output_movie,te_output_movie
       REAL U_b,V_b,W_b,rho_b,W_j,Awjet,Aujet,Avjet,Strouhal,radius_j,kn,W_ox,U_bSEM,V_bSEM,U_w,V_w
@@ -52,7 +52,7 @@
       REAL plumeUseries2(1:100000),c_bed(100)
       INTEGER plumeseriesloc,plumeseriesloc2
       INTEGER nr_HPfilter
-      REAL timeAB_real(1:4),dpdx,dpdy,kn_d50_multiplier,avalanche_slope
+      REAL timeAB_real(1:4),dpdx,dpdy,kn_d50_multiplier,avalanche_slope,dpdx1,dpdy1,Uavold,Vavold
       INTEGER periodicx,periodicy,wallup
       REAL U_b3,V_b3,surf_layer
       INTEGER ksurf_bc,kmaxTSHD_ind,nair
@@ -108,7 +108,7 @@
 	  REAL, DIMENSION(:,:,:,:),ALLOCATABLE :: AA3
       REAL*8, DIMENSION(:),ALLOCATABLE :: lmrSEM3,lmzSEM3
       REAL, DIMENSION(:,:),ALLOCATABLE :: azi_angle_p,azi_angle_u,azi_angle_v,zbed,Ubc1,Vbc1,Ubc2,Vbc2,rhocorr_air_z
-      REAL, DIMENSION(:,:,:),ALLOCATABLE :: ekm,AA,Diffcof,bednotfixed
+      REAL, DIMENSION(:,:,:),ALLOCATABLE :: ekm,AA,Diffcof,bednotfixed,bednotfixed_depo
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: Uold,Vold,Wold,Rold
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: Unew,Vnew,Wnew,Rnew
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: dUdt,dVdt,dWdt,drdt
@@ -145,17 +145,18 @@
 	    INTEGER :: type
 	end type fractions
 	type bed_obstacles
-	    REAL ::	x(4),y(4),height,zbottom
+	    REAL ::	x(4),y(4),height,zbottom,ero,depo
 	end type bed_obstacles
 	type bed_plumes
-	    REAL ::	x(4),y(4),height,u,v,w,c(100),t0,zbottom,Q,sedflux(100),volncells !c(100) matches with size frac_init
-	    INTEGER :: forever
+	    REAL ::	x(4),y(4),height,u,v,w,c(100),t0,t_end,zbottom,Q,sedflux(100),volncells,changesedsuction !c(100) matches with size frac_init
+		REAL :: h_tseries(10000),h_series(10000),zb_tseries(10000),zb_series(10000)
+	    INTEGER :: forever,h_seriesloc,zb_seriesloc
+		CHARACTER*256 :: h_tseriesfile,zb_tseriesfile
 	end type bed_plumes
 	TYPE(fractions), DIMENSION(:), ALLOCATABLE :: frac
-	TYPE(bed_obstacles), DIMENSION(:), ALLOCATABLE :: ob
-	TYPE(bed_obstacles), DIMENSION(1000) :: obst !temporary array to read namelist with unknown size
-	TYPE(bed_plumes), DIMENSION(:), ALLOCATABLE :: bp
-	TYPE(bed_plumes), DIMENSION(100) :: bedplume !temporary array to read namelist with unknown size
+	TYPE(bed_obstacles), DIMENSION(:), ALLOCATABLE :: ob,obst
+	TYPE(bed_plumes), DIMENSION(:), ALLOCATABLE :: bp,bedplume
+
       
 !       REAL*8, DIMENSION(:,:,:),ALLOCATABLE :: UT
 !       REAL*8, DIMENSION(:,:),ALLOCATABLE :: UP,UTMP
@@ -176,6 +177,8 @@
 	end type frac_init
 	TYPE(frac_init), DIMENSION(100) :: fract
 
+	ALLOCATE(bedplume(1000)) !temporary array to read namelist with unknown size
+	ALLOCATE(obst(1000)) !temporary array to read namelist with unknown size
 ! 	TYPE(gridtype), DIMENSION(1) :: grid
 
 	NAMELIST /simulation/px,imax,jmax,kmax,imax_grid,dr_grid,Rmin,schuif_x,dy,depth,hisfile,restart_dir
@@ -190,7 +193,8 @@
      & U_j2,plumetseriesfile2,Awjet2,Aujet2,Avjet2,Strouhal2,azi_n2,radius_j2,zjet2,bedplume,radius_inner_j,xj,yj,W_j_powerlaw,
      & plume_z_outflow_belowsurf
 	NAMELIST /LESmodel/sgs_model,Cs,Lmix_type,nr_HPfilter,damping_drho_dz,damping_a1,damping_b1,damping_a2,damping_b2
-	NAMELIST /constants/kappa,gx,gy,gz,ekm_mol,calibfac_sand_pickup,pickup_formula,kn_d50_multiplier,avalanche_slope
+	NAMELIST /constants/kappa,gx,gy,gz,ekm_mol,calibfac_sand_pickup,pickup_formula,kn_d50_multiplier,avalanche_slope,
+     &	calibfac_Shields_cr
 	NAMELIST /fractions_in_plume/fract
 	NAMELIST /ship/U_TSHD,LOA,Lfront,Breadth,Draught,Lback,Hback,xfront,yfront,kn_TSHD,nprop,Dprop,xprop,yprop,zprop,
      &   Pprop,rudder,rot_prop,draghead,Dsp,xdh,perc_dh_suction,softnose,Hfront,cutter
@@ -263,6 +267,10 @@
 	periodicy=0
 	dpdx=0.
 	dpdy=0.
+	dpdx1=0.
+	dpdy1=0.
+	Uavold=0.
+	Vavold=0.
 	W_ox=0.
 	Hs=0. 
 	Tp=999.
@@ -279,6 +287,8 @@
 	ENDDO
 	obst(:)%height = -99999. 
 	obst(:)%zbottom = -99999.
+	obst(:)%ero = 0.  !default no erosion on top of obstacle with interaction_bed=4
+	obst(:)%depo = 0. !default no deposition on top of obstacle with interaction_bed=4
 	bc_obst_h = 0.
 	U_b3=-9999.
 	V_b3=-9999.
@@ -325,9 +335,21 @@
 	bedplume(:)%w = -99999. 
 	bedplume(:)%forever = 0
 	bedplume(:)%t0 = 0.
+	bedplume(:)%t_end = 9.e18
 	bedplume(:)%Q = 0.
 	bedplume(:)%volncells = 0.
 	bedplume(:)%zbottom = -99999.
+	bedplume(:)%changesedsuction = 1.	
+	bedplume(:)%h_tseriesfile=''
+	bedplume(:)%h_seriesloc=1	
+	bedplume(:)%zb_tseriesfile=''
+	bedplume(:)%zb_seriesloc=1
+	DO i=1,10000
+		bedplume(:)%h_tseries(i)=-99999.
+		bedplume(:)%h_series(i)=-99999.
+		bedplume(:)%zb_tseries(i)=-99999.
+		bedplume(:)%zb_series(i)=-99999.
+	ENDDO
 	DO i=1,100
 		bedplume(:)%c(i) = 0.
 		bedplume(:)%sedflux(i) = 0. 
@@ -370,6 +392,7 @@
 	time_n=0.
 	time_np=0.
 	calibfac_sand_pickup = 1.
+	calibfac_Shields_cr = 1.
 	pickup_formula = 'vanrijn1984' !default
 	kn_d50_multiplier = 2. !default, kn=2*d50 defined in paper Van Rijn 1984
 	avalanche_slope = 0. !default vertical slopes are allowed
@@ -439,10 +462,10 @@
 	ENDIF
 	IF (time_int.ne.'EE1'.AND.time_int.ne.'RK3'.AND.time_int.ne.'AB2'.AND.time_int.ne.'AB3'.AND.time_int.ne.'ABv') 
      &     CALL writeerror(34) 	 
-	IF (time_int.eq.'EE1'.or.time_int.eq.'AB2'.or.time_int.eq.'AB3'.or.time_int.eq.'ABv') THEN
+	IF (time_int.eq.'EE1'.or.time_int.eq.'AB2'.or.time_int.eq.'AB3') THEN
 		write(*,*),' WARNING: Your time integration scheme: ',time_int
 		write(*,*),' is a testing option and not all functionalities of Dflow3d are working,'
-		write(*,*),' use RK3 for a fully supported time integration scheme.'
+		write(*,*),' use ABv or RK3 for a fully supported time integration scheme.'
 	ENDIF
 	IF (CFL<0.) CALL writeerror(35)
 
@@ -485,7 +508,7 @@
 	IF (interaction_bed<0) CALL writeerror(50)
 	IF (periodicx.ne.0.and.periodicx.ne.1.and.periodicx.ne.2) CALL writeerror(52)
 	IF (periodicy.ne.0.and.periodicy.ne.1.and.periodicy.ne.2) CALL writeerror(53)
-	IF (periodicx.eq.1.and.dpdx.eq.0.) CALL writeerror(54)
+	!IF (periodicx.eq.1.and.dpdx.eq.0.) CALL writeerror(54)
 	IF (Hs>0.and.Hs>depth) CALL writeerror(55)
 	IF (Hs>0.and.Tp.le.0) CALL writeerror(56)
 	IF (Hs>0.and.(nx_w>1.or.ny_w>1.or.nx_w<-1.or.ny_w<-1.or.(nx_w**2+ny_w**2)>1.01.or.(nx_w**2+ny_w**2)<0.99)) THEN
@@ -520,21 +543,28 @@
 	  ob(n)%y=obst(n)%y
 	  ob(n)%height=obst(n)%height
 	  ob(n)%zbottom=obst(n)%zbottom
+	  ob(n)%ero=obst(n)%ero
+	  ob(n)%depo=obst(n)%depo
+	    IF (ob(n)%ero.lt.0.or.ob(n)%depo.lt.0.or.ob(n)%ero.gt.1.or.ob(n)%depo.gt.1.) THEN
+			write(*,*),' Obstacle:',n
+			CALL writeerror(1051)
+	    ENDIF	  
 	  DO i=1,4
 	    IF (ob(n)%x(i).eq.-99999.or.ob(n)%y(i).eq.-99999) THEN
-		write(*,*),' Obstacle:',n
-		CALL writeerror(58)
+			write(*,*),' Obstacle:',n
+			CALL writeerror(58)
 	    ENDIF
 	  ENDDO
 	  IF (ob(n)%height<0.) THEN
-	    write(*,*),' Obstacle:',n
-	    CALL writeerror(59)
+			write(*,*),' Obstacle:',n
+			CALL writeerror(59)
 	  ENDIF
 	ENDDO
 	IF (bc_obst_h<0.or.bc_obst_h>depth) CALL writeerror(601)
 	IF (wallup.ne.0.and.wallup.ne.1) CALL writeerror(605)
 	IF (cfixedbed<0.or.cfixedbed>1.) CALL writeerror(607)
 
+	DEALLOCATE(obst)
 
 	READ (UNIT=1,NML=plume,IOSTAT=ios)
 	!! check input plume
@@ -693,10 +723,31 @@
 	  bp(n)%c=bedplume(n)%c
 	  bp(n)%forever=bedplume(n)%forever
 	  bp(n)%t0=bedplume(n)%t0
+	  bp(n)%t_end=bedplume(n)%t_end
 	  bp(n)%zbottom=bedplume(n)%zbottom
 	  bp(n)%Q=bedplume(n)%Q
 	  bp(n)%sedflux=bedplume(n)%sedflux
 	  bp(n)%volncells = bedplume(n)%volncells
+	  bp(n)%changesedsuction=bedplume(n)%changesedsuction
+	  bp(n)%h_tseriesfile=bedplume(n)%h_tseriesfile
+	  bp(n)%zb_tseriesfile=bedplume(n)%zb_tseriesfile
+	  bp(n)%h_seriesloc=bedplume(n)%h_seriesloc
+	  bp(n)%zb_seriesloc=bedplume(n)%zb_seriesloc
+	  bp(n)%h_tseries=bedplume(n)%h_tseries
+	  bp(n)%zb_tseries=bedplume(n)%zb_tseries
+	  bp(n)%h_series=bedplume(n)%h_series
+	  bp(n)%zb_series=bedplume(n)%zb_series
+	  
+	IF (bp(n)%h_tseriesfile.eq.'') THEN
+	ELSE
+	   call readtseries2(bp(n)%h_tseriesfile,bp(n)%h_tseries,bp(n)%h_series)
+	   bp(n)%h_seriesloc=1
+	ENDIF	  
+	IF (bp(n)%zb_tseriesfile.eq.'') THEN
+	ELSE
+	   call readtseries2(bp(n)%zb_tseriesfile,bp(n)%zb_tseries,bp(n)%zb_series)
+	   bp(n)%zb_seriesloc=1
+	ENDIF
 	  DO i=1,4
 	    IF (bp(n)%x(i).eq.-99999.or.bp(n)%y(i).eq.-99999) THEN
 		write(*,*),' Bedplume:',n
@@ -725,7 +776,7 @@
 	    write(*,*),' Bedplume:',n
 	    CALL writeerror(272)
 	  ENDIF
-	  IF (bp(n)%t0.lt.0.) THEN
+	  IF (bp(n)%t0.lt.0.or.bp(n)%t_end.lt.0.) THEN
 	    write(*,*),' Bedplume:',n
 	    CALL writeerror(273)
 	  ENDIF
@@ -733,9 +784,14 @@
 	    write(*,*),' Bedplume:',n
 	    CALL writeerror(274)
 	  ENDIF
+	  IF (bp(n)%changesedsuction.lt.0.or.bp(n)%changesedsuction.gt.1.) THEN
+	    write(*,*),' Bedplume:',n
+	    CALL writeerror(278)
+	  ENDIF
 	ENDDO
 
-		
+	DEALLOCATE(bedplume)
+	  
 	READ (UNIT=1,NML=LESmodel,IOSTAT=ios)
 	!! check input LESmodel
 	IF (sgs_model.ne.'SSmag'.and.sgs_model.ne.'FSmag'.and.sgs_model.ne.'SWALE'.and.
@@ -760,6 +816,8 @@
      &    CALL writeerror(95)
 	IF (kn_d50_multiplier<0.) CALL writeerror(96)
 	IF (avalanche_slope<0.) CALL writeerror(97)
+	IF (calibfac_sand_pickup<0.) CALL writeerror(98)
+	IF (calibfac_Shields_cr<0.) CALL writeerror(99)
 
 	READ (UNIT=1,NML=ship,IOSTAT=ios)
 	!! check input constants
@@ -958,7 +1016,9 @@
 	ALLOCATE(Cnewbot(nfrac,0:i1,0:j1))
 	ALLOCATE(dCdtbot(nfrac,0:i1,0:j1))
 	ALLOCATE(bednotfixed(0:i1,0:j1,0:k1))	
-	bednotfixed=1. !default avalanche is allowed everywhere, only in obstacles connected to bed not allowed, see init.f
+	ALLOCATE(bednotfixed_depo(0:i1,0:j1,0:k1))
+	bednotfixed=1. !default avalanche or erosion is allowed everywhere, only in obstacles connected to bed not allowed, see init.f
+	bednotfixed_depo=1. !default deposition is allowed everywhere, only in obstacles connected to bed not allowed, see init.f
 	ALLOCATE(Clivebed(nfrac,0:i1,0:j1,0:k1))
 	Clivebed=0.
 
@@ -1133,7 +1193,7 @@
 	series=-9999.
 	OPEN(10,FILE=seriesfile,IOSTAT=ios,ACTION='read')
 
-		write(*,*) 'File :', seriesfile,'inlezen'
+		write(*,*) 'File :', seriesfile,'reading'
 
 	IF (ios/=0) THEN
 		write(*,*) 'File :', seriesfile
@@ -1156,5 +1216,42 @@
 
 	END SUBROUTINE readtseries
 
+	
+		SUBROUTINE readtseries2(seriesfile,tseries,series)
+!	SUBROUTINE readtseries(seriesfile,tseries,series)
+!	reads a time series from seriesfile
+!	Lynyrd de Wit, October 2010
+
+	CHARACTER*256 seriesfile
+	REAL tseries(1:10000),series(1:10000)
+	REAL begintime,timestep,endtime
+	INTEGER i,k,p,ios
+
+	NAMELIST /timeseries/begintime,timestep,endtime,series
+	series=-9999.
+	OPEN(10,FILE=seriesfile,IOSTAT=ios,ACTION='read')
+
+		write(*,*) 'File :', seriesfile,'reading'
+
+	IF (ios/=0) THEN
+		write(*,*) 'File :', seriesfile
+		CALL writeerror(1001)
+	END IF
+	READ (UNIT=10,NML=timeseries,IOSTAT=ios)
+	IF (ios/=0) THEN
+		write(*,*) 'File :', seriesfile
+		CALL writeerror(1002)
+	END IF
+	CLOSE(10)
+	k=1
+	DO WHILE (series(k).NE.-9999)
+		tseries(k)=begintime+REAL(k)*timestep-timestep
+		k=k+1
+	END DO
+!		write(*,*) 'File :', seriesfile,'ingelezen'
+!		write(*,*) 'tseries:', tseries(1:100)
+!		write(*,*) 'series:', series(1:100)
+
+	END SUBROUTINE readtseries2
 
 	END MODULE nlist

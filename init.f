@@ -319,7 +319,7 @@ c******************************************************************
 
 	integer n,n2,ii,inout
 	real ampli,phi,uu,vv,xTSHD(4),yTSHD(4),z,xx,yy
-	real U2,V2,z0_U,ust_U_b,z0_V,ust_V_b
+	real U2,V2,z0_U,ust_U_b,z0_V,ust_V_b,interpseries
 	integer clock
       INTEGER, DIMENSION(:), ALLOCATABLE :: seed
 
@@ -379,52 +379,13 @@ c******************************************************************
 !		ENDIF
 
 	else !periodic in x direction:
-!	CALL SYSTEM_CLOCK(COUNT=clock)
-!	CALL RANDOM_SEED(size = n)
-!	ALLOCATE(seed(n))
-!	CALL SYSTEM_CLOCK(COUNT=clock)
-!	seed = clock + 37 * (/ (i - 1, i = 1, n) /)
-!	CALL RANDOM_SEED(PUT = seed)
-		do n=1,4
-		  do k=0,k1
-		    do j=0,j1
-		    call random_number(ampli)
-		      do i=0,i1
-			Vnew(i,j,k)=Vnew(i,j,k)+ampli/2.*sin(2.*pi*Ru(i)/(0.5*(depth-bc_obst_h)*REAL(n)))
-			Wnew(i,j,k)=Wnew(i,j,k)+ampli/2.*cos(2.*pi*Ru(i)/(0.5*(depth-bc_obst_h)*REAL(n)))
-		      enddo
-		    enddo
-		  enddo
-	
-!	CALL SYSTEM_CLOCK(COUNT=clock)
-!	CALL RANDOM_SEED(size = n)
-!!	ALLOCATE(seed(n))
-!	CALL SYSTEM_CLOCK(COUNT=clock)
-!	seed = clock + 37 * (/ (i - 1, i = 1, n) /)
-!	CALL RANDOM_SEED(PUT = seed)
-
-!		  do k=0,k1
-!		    do j=0,j1
-!		    call random_number(ampli)
-!		      do i=0,i1
-!			Wnew(i,j,k)=Wnew(i,j,k)+ampli/2.*sin(2.*pi*Ru(i)/(0.5*(depth-bc_obst_h)*REAL(n)))
-!		      enddo
-!		    enddo
-!		  enddo
-		enddo
-		Wnew(:,:,kmax:k1)=0.
-		Wnew(:,:,0:1)=0.
-
-!		call random_number(Unew) ! uniform distribution 0,1
-!		call random_number(Vnew) ! uniform distribution 0,1
-!		call random_number(Wnew) ! uniform distribution 0,1		
-		Vnew=Vnew*sqrt(dpdx*(depth-bc_obst_h)/rho_b)*4. !scale with 20u_tau		
 		if (LOA>0.) then ! apply U_b as bc also for periodic sims, so to keep random fluctuations alive
 			Unew=-U_b 
 		else
 			Unew=U_b
 		endif
-		Wnew=Wnew*sqrt(dpdx*(depth-bc_obst_h)/rho_b)*4. !scale with 20u_tau
+		Vnew=V_b
+		Wnew=W_b !Wnew*sqrt(dpdx*(depth-bc_obst_h)/rho_b)*4. !scale with 20u_tau
 		Uold=Unew
 		Vold=Vnew
 		Wold=Wnew
@@ -446,20 +407,6 @@ c******************************************************************
 			ENDIF
 	  	enddo
 	endif
-!	  	do n=1,nfrac
-!			cnew(n,:,:,12:13) = frac(n)%c
-!			cold(n,:,:,12:13) = frac(n)%c
-!			dcdt(n,:,:,12:13) = frac(n)%c
-!			Coldbot=0.
-!			Cnewbot=0.
-!			dCdtbot=0.
-!			IF (time_int.eq.'AB2'.or.time_int.eq.'AB3'.or.time_int.eq.'ABv') THEN
-!				cc(n,:,:,:) = frac(n)%c
-!				ccold(n,:,:,:) = frac(n)%c
-!				ccbot=0.
-!				ccoldbot=0.
-!			ENDIF
-!	  	enddo
 
 	IF (nbedplume>0) THEN
 
@@ -2274,7 +2221,9 @@ C ...  Locals
 		      kbed(i,j)=MAX(kbed(i,j),FLOOR(ob(n)%height/dz)) !zero without obstacle, otherwise max of all obstacles at i,j
 			  kbed(i,j)=MIN(kbed(i,j),kmax)
 		      zbed(i,j)=MAX(zbed(i,j),ob(n)%height) !zero without obstacle, otherwise max of all obstacles at i,j  
-			  bednotfixed(i,j,k)=0. ! obstacle in bed cannot be avalanched or eroded
+			  
+			  bednotfixed(i,j,k)=ob(n)%ero ! obstacle in bed cannot be avalanched or eroded if ob(n)%ero=0. (default) user can choose to have erosion: ob(n)%ero=1.
+			  bednotfixed_depo(i,j,k)=ob(n)%depo ! obstacle in bed cannot have deposition if ob(n)%depo=0. (default)
 		  endif
 		enddo
 	       enddo
@@ -2397,6 +2346,9 @@ C ...  Locals
 	      j_inWpuntTSHD(tel1)=j
   	      k_inWpuntTSHD(tel1)=k
 	      in=.true.
+		  bednotfixed(i,j,k)=ob(n)%ero ! obstacle in bed cannot be avalanched or eroded if ob(n)%ero=0. (default) user can choose to have erosion: ob(n)%ero=1.
+		  bednotfixed_depo(i,j,k)=ob(n)%depo ! obstacle in bed cannot have deposition if ob(n)%depo=0. (default)		  
+		  
 !	      kbed(i,j)=MAX(kbed(i,j),FLOOR(ob(n)%height/dz)) !zero without obstacle, otherwise max of all obstacles at i,j
 !	      zbed(i,j)=MAX(zbed(i,j),ob(n)%height) !zero without obstacle, otherwise max of all obstacles at i,j  
 	  endif
@@ -2822,9 +2774,9 @@ c get stuff from other CPU's
 					do k=1,kbed(i,j) ! assign initial bed concentrations
 						do n=1,nfrac
 							Clivebed(n,i,j,k)=c_bed(n)
-							Cold(n,i,j,k)=c_bed(n)
-							Cnew(n,i,j,k)=c_bed(n)
-							dCdt(n,i,j,k)=c_bed(n)	
+							!Cold(n,i,j,k)=c_bed(n)
+							!Cnew(n,i,j,k)=c_bed(n)
+							!dCdt(n,i,j,k)=c_bed(n)	
 						enddo
 					enddo
 				enddo

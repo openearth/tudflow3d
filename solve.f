@@ -2730,6 +2730,32 @@ c
           enddo
         enddo
       enddo	
+	ELSEIF (continuity_solver.eq.4) THEN ! Optional: 4 (dudx=0 via drudx=rdudx+udrdx)
+      do  k=1,kmax
+        do j=1,jmax
+          do i=1,imax
+		   rrri=0.5*(drdt(i,j,k)+drdt(i+1,j,k))
+		   rrrj=0.5*(drdt(i,j,k)+drdt(i,j+1,k))
+		   rrrk=0.5*(drdt(i,j,k)+drdt(i,j,k+1))
+		   rrrim=0.5*(drdt(i,j,k)+drdt(i-1,j,k))
+		   rrrjm=0.5*(drdt(i,j,k)+drdt(i,j-1,k))
+		   rrrkm=0.5*(drdt(i,j,k)+drdt(i,j,k-1))
+      p(i,j,k)  =(
+     1  ( Ru(i)*dudt(i,j,k) - Ru(i-1)*dudt(i-1,j,k) ) / ( Rp(i)*dr(i) )
+     +              +
+     2  (       dvdt(i,j,k) -         dvdt(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
+     +              +
+     3  (       dwdt(i,j,k) -         dwdt(i,j,k-1) ) / ( dz )
+     +              )   -  (
+     1  0.5*(dudt(i,j,k)/rrri+dudt(i-1,j,k)/rrrim)*(Ru(i) *rrri  - Ru(i-1)*rrrim ) / ( Rp(i)*dr(i) )
+     +              +
+     2  0.5*(dvdt(i,j,k)/rrrj+dvdt(i,j-1,k)/rrrjm)*(       rrrj -         rrrjm ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
+     +              +
+     3  0.5*(dwdt(i,j,k)/rrrk+dwdt(i,j,k-1)/rrrkm)*(       rrrk -         rrrkm ) / ( dz )	) 
+		  p(i,j,k) = p(i,j,k)/dt 	 
+          enddo
+        enddo
+      enddo	  	  
 	ELSE !default is 1 (drdt+drudx=0)
 	twodtdt=MAX((3.*time_np-4.*time_n+time_nm)*dt,1.e-12)
 
@@ -2751,7 +2777,7 @@ c
 	ENDIF
 
 	DO n2=1,nbedplume
-	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.bp(n2)%Q.ne.0.)) THEN
+	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
 	! rotation ship for ambient side current
 	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
 	  phi=atan2(V_b,1.e-12)
@@ -2837,6 +2863,32 @@ c
           enddo
         enddo
       enddo
+	ELSEIF (continuity_solver.eq.4) THEN ! Optional: 4 (dudx=0 via drudx=rdudx+udrdx)
+      do  k=1,kmax
+        do j=1,jmax
+          do i=1,imax
+		   rrri=0.5*(rr(i,j,k)+rr(i+1,j,k))
+		   rrrj=0.5*(rr(i,j,k)+rr(i,j+1,k))
+		   rrrk=0.5*(rr(i,j,k)+rr(i,j,k+1))
+		   rrrim=0.5*(rr(i,j,k)+rr(i-1,j,k))
+		   rrrjm=0.5*(rr(i,j,k)+rr(i,j-1,k))
+		   rrrkm=0.5*(rr(i,j,k)+rr(i,j,k-1))
+      p(i,j,k)  =(
+     1  ( Ru(i)*uu(i,j,k) - Ru(i-1)*uu(i-1,j,k) ) / ( Rp(i)*dr(i) )
+     +              +
+     2  (       vv(i,j,k) -         vv(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
+     +              +
+     3  (       ww(i,j,k) -         ww(i,j,k-1) ) / ( dz )
+     +              )  -  (
+     1  0.5*(uu(i,j,k)/rrri+uu(i-1,j,k)/rrrim)*(Ru(i) *rrri  - Ru(i-1)*rrrim ) / ( Rp(i)*dr(i) )
+     +              +
+     2  0.5*(vv(i,j,k)/rrrj+vv(i,j-1,k)/rrrjm)*(       rrrj -         rrrjm ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
+     +              +
+     3  0.5*(ww(i,j,k)/rrrk+ww(i,j,k-1)/rrrkm)*(       rrrk -         rrrkm ) / ( dz )	) 
+	  p(i,j,k) = p(i,j,k)/ddtt 
+          enddo
+        enddo
+      enddo	  
 	ELSE !default is 1 (drdt+drudx=0)
 	twodtdt=MAX((3.*tt-4.*time_n+time_nm)*ddtt,1.e-12)
 	
@@ -2859,7 +2911,7 @@ c
 	
 
 	DO n2=1,nbedplume
-	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.bp(n2)%Q.ne.0.)) THEN
+	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
 	! rotation ship for ambient side current
 	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
 	  phi=atan2(V_b,1.e-12)

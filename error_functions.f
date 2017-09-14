@@ -289,6 +289,12 @@
 	CASE(097)
 		write(*,*) '# namelist &constants                            #'			
 		write(*,*) '# avalanche_slope must be >=0.                   #'			
+	CASE(098)
+		write(*,*) '# namelist &constants                            #'			
+		write(*,*) '# calibfac_sand_pickup must be >=0.              #'	
+	CASE(099)
+		write(*,*) '# namelist &constants                            #'			
+		write(*,*) '# calibfac_Shields_cr must be >=0.               #'			
 	CASE(100)
 		write(*,*) '# Namelist error occured                         #'			
 		write(*,*) '# Namelist involved: HISTORIES                   #'
@@ -360,7 +366,7 @@
 		write(*,*) '# bedplume%forever should be 0 or 1              #'
 	CASE(273)
 		write(*,*) '# namelist &plume                                #'			
-		write(*,*) '# bedplume%t0 should be >0. (default 0.s)        #'
+		write(*,*) '# bedplume%t0 and t_end should be >0.            #'
 	CASE(274)
 		write(*,*) '# namelist &plume                                #'			
 		write(*,*) '# bedplume%zbottom should be >0. and < height    #'
@@ -372,7 +378,10 @@
 		write(*,*) '# W_j_powerlaw must be >0 (default 7 for 1/7 powerlaw)  #'	
 	CASE(277)
 		write(*,*) '# namelist &plume                                #'			
-		write(*,*) '# bedplume%c(1:nfrac), bedplume%sedflux(1:nfrac) cannot both be defined   #'		
+		write(*,*) '# bedplume%c(1:nfrac), bedplume%sedflux(1:nfrac) cannot both be defined   #'	
+	CASE(278)
+		write(*,*) '# namelist &plume                                #'			
+		write(*,*) '# bedplume%changesedsuction should be >0. and < 1. #'		
 	CASE(301)
 		write(*,*) '# namelist &ship                                 #'			
 		write(*,*) '# please prescribe U_TSHD                        #'	
@@ -530,7 +539,9 @@
 		write(*,*) '# error in reading timeseries                    #'	
 		write(*,*) '# should be a NAMELIST /timeseries/ begintime,timestep,endtime,series #'	
 		write(*,*) '# ended with a "/"                               #'	
-
+	CASE(1051)
+		write(*,*) '# namelist &ambient                              #'			
+		write(*,*) '# obst%ero or obst%depo should be between 0-1    #'
 	CASE(10000)
 		write(*,*) '# timestep becomes too small                     #'			
 		write(*,*) '# restart with smaller dt                        #'	
