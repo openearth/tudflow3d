@@ -2056,15 +2056,14 @@ c get stuff from other CPU's
 	ENDIF
 	ENDDO ! bedplume loop
 
-!			IF (interaction_bed.ge.4) THEN ! dynamic bed update, IBM bed re-defined every timestep, make c inside bed zero (diffcof is made zero in turbulence.f to eliminate incorrect diffusion into bed):
-!		!switched back on 5-5-2017 ! switched off 28-1-2017
-			DO i=0,i1 
-				DO j=0,j1
-					DO k=0,kbed(i,j)
-						Cbound(i,j,k)=0. 
-					ENDDO
-				ENDDO
-			ENDDO
+!			IF (interaction_bed.ge.4) THEN ! dynamic bed update, IBM bed re-defined every timestep, make c inside bed zero (diffcof is made zero in turbulence.f to eliminate incorrect diffusion into bed): ! 3-10-2017:why needed, hence switched off; might give trouble for some simulations (hopper filling?) 
+!			DO i=0,i1 
+!				DO j=0,j1
+!					DO k=0,kbed(i,j)
+!						Cbound(i,j,k)=0. 
+!					ENDDO
+!				ENDDO
+!			ENDDO
 !		ENDIF	
 		!! from 17-2-2017 bedlevelfile is dealt with via kbed, not via TSHD immersed boundary; with utr,vtr,wtr and diffcof zero for all sides of bed-cell concentration in bed should stay exactly zero and tricks like below to remove sediment from bed and add it to lowest fluid cell shouldn't be necessary
 	kcheck=kmax-(kjet-1) 
@@ -2287,7 +2286,8 @@ c*************************************************************
 ! 	write(*,*) 'ust wall function',ust
 
 	tau=ust*ust  ! omit rho otherwise first *rho then /rho to get dimensions right
-	uu = uu - tau*dt/dz*uu/MAX(absU,1.e-6) 	!! only uu is adjusted
+	!uu = uu - tau*dt/dz*uu/MAX(absU,1.e-6) 	!! only uu is adjusted
+	uu = uu / (1. + tau*dt/dz/MAX(absU,1.e-12)) 	!! only uu is adjusted !! implicit = more stable
 	end
 
 	subroutine wall_fun_rho(uu,vv,rr,dz,dt,kn,kappa,depth,U_b,nu_mol)
@@ -2339,7 +2339,8 @@ c*************************************************************
 	endif
 
 	tau=rr*ust*ust
-	uu = uu - tau*dt/dz*uu/rr/MAX(absU,1.e-6) 	!! only uu is adjusted
+	!uu = uu - tau*dt/dz*uu/rr/MAX(absU,1.e-6) 	!! only uu is adjusted
+	uu = uu / (1. + tau*dt/dz/rr/MAX(absU,1.e-9)) 	!! only uu is adjusted ! implicit = more stable
 	end
 
 

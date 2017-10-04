@@ -94,9 +94,9 @@
 !	if (poissolver.eq.1) THEN
 !	   CALL SOLVEpois_vg_init
 !	ENDIF
-	if (poissolver.eq.2) THEN
-	   CALL SOLVEpois_vg_init_mumps
-	ENDIF
+!	if (poissolver.eq.2) THEN
+!	   CALL SOLVEpois_vg_init_mumps
+!	ENDIF
       IF (poissolver.eq.3) THEN
 	    CALL SOLVEpois_vg_init_pardiso
       ENDIF
@@ -234,9 +234,9 @@
 			! npresIBM=0 -> order 1/1000 Umax in IBM objects (default)
 			! npresIBM=10 -> order 1/100000 Umax in IBM objects
 			call fillps2(dudt,dvdt,dwdt,drdt,time_np,dt)
-			  IF (poissolver.eq.2) THEN
-			   CALL SOLVEpois_vg_mumps(p)
-			  ELSEIF (poissolver.eq.3) THEN
+!			  IF (poissolver.eq.2) THEN
+!			   CALL SOLVEpois_vg_mumps(p)
+			IF (poissolver.eq.3) THEN
 			   CALL SOLVEpois_vg_pardiso(p)	   
 			ELSE
 			   CALL SOLVEpois(p) !,Ru,Rp,DPHI,dz,rank,imax,jmax,kmax,px)
@@ -256,9 +256,9 @@
 	    
 !	  IF (poissolver.eq.1) THEN
 !	   CALL SOLVEpois_vg(p)
-	  IF (poissolver.eq.2) THEN
-	   CALL SOLVEpois_vg_mumps(p)
-	  ELSEIF (poissolver.eq.3) THEN
+!	  IF (poissolver.eq.2) THEN
+!	   CALL SOLVEpois_vg_mumps(p)
+	  IF (poissolver.eq.3) THEN
 	   CALL SOLVEpois_vg_pardiso(p)	   
 	  ELSEIF (poissolver.eq.5) THEN
 	  

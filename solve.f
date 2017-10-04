@@ -1536,9 +1536,9 @@ c********************************************************************
       call fillps2(dUdt,dVdt,dWdt,dRdt,time_n+c2*dt,c2*dt) 
 !	  IF (poissolver.eq.1) THEN
 !	   CALL SOLVEpois_vg(p)
-	  IF (poissolver.eq.2) THEN
-	   CALL SOLVEpois_vg_mumps(p)
-	  ELSEIF (poissolver.eq.3) THEN
+!	  IF (poissolver.eq.2) THEN
+!	   CALL SOLVEpois_vg_mumps(p)
+	  IF (poissolver.eq.3) THEN
 	   CALL SOLVEpois_vg_pardiso(p)	   
 	  ELSE
 	   CALL SOLVEpois(p) !,Ru,Rp,DPHI,dz,rank,imax,jmax,kmax,px)
@@ -1976,9 +1976,9 @@ c********************************************************************
       call fillps2(dUdt,dVdt,dWdt,dRdt,time_n+c3*dt,c3*dt) 
 !	  IF (poissolver.eq.1) THEN
 !	   CALL SOLVEpois_vg(p)
-	  IF (poissolver.eq.2) THEN
-	   CALL SOLVEpois_vg_mumps(p)
-	  ELSEIF (poissolver.eq.3) THEN
+!	  IF (poissolver.eq.2) THEN
+!	   CALL SOLVEpois_vg_mumps(p)
+	  IF (poissolver.eq.3) THEN
 	   CALL SOLVEpois_vg_pardiso(p)	   
 	  ELSE
 	   CALL SOLVEpois(p) !,Ru,Rp,DPHI,dz,rank,imax,jmax,kmax,px)
@@ -3143,309 +3143,307 @@ c
 
 
  
-      SUBROUTINE SOLVEpois_vg_init_mumps
-!		initialises 2D poisson solver matrix structure A in cylindrical coordinates 
-!		for grid with variable grid size in two directions and fixed grid size (FFT) in one direction  
-!		Lynyrd de Wit September 2015
+!      SUBROUTINE SOLVEpois_vg_init_mumps
+!!		initialises 2D poisson solver matrix structure A in cylindrical coordinates 
+!!		for grid with variable grid size in two directions and fixed grid size (FFT) in one direction  
+!!		Lynyrd de Wit September 2015
+!	  
+!      USE nlist
+!      USE sparse_matrix
+!	  
+!      implicit none
+!
+!      include 'mpif.h'
+!! not needed, because USE sparse_matrix      INCLUDE 'dmumps_struc.h'	  
+!
+!      ! Local performance variables
+!      INTEGER          :: dmumps_flag,dmumps_niter
+!      DOUBLE PRECISION :: dmumps_runtime,dmumps_residual,dmumps_res0,dmumps_res,t1,t2,t3
+!	  
+!	  
+!      real      ar(imax),br(imax),cr(imax)
+!      real      zrt(kmax),yrt(px*jmax)
+!      real      aphi(jmax*px),bphi(jmax*px),cphi(jmax*px)
+!      integer   tel,tel2,tel3,tel4,ind
+!      real      dzi
+!      integer   knd,nnz
+!	  integer   newcom,newgroup,group,ierr
+!	  
+!	  
+!      pi = 4.*atan(1.)
+!	  
+!	  !   tridiagonal system in r-direction:
+!      do i=1,imax
+!        ar(i)= Ru(I-1)/((Rp(I)-Rp(I-1))*Rp(I)*(Ru(I)-Ru(I-1)))
+!	    cr(i)= Ru(I) /((Rp(I+1)-Rp(I))*Rp(I)*(Ru(I)-Ru(I-1)))
+!!        br(i)=-(Ru(I)/(Rp(I+1)-Rp(I))+Ru(I-1)/(Rp(I)-Rp(I-1)))/
+!!     $      (Rp(I)*(Ru(I)-Ru(I-1)))
+!	    br(i)=-ar(i)-cr(i)
+!      end do
+!! DON'T SWITCH ON:		br(imax)=br(imax)+cr(imax) !! p(imax+1)= p(imax); dpdn=0
+!		br(imax)=br(imax)-cr(imax) !! p(imax+1)=-p(imax); p=0 at full bc; don't do this, make p=0 at one location at outflow bc
+!		br(1)=br(1)+ar(1) !dpdn=0
+!		cr(imax)=0. !no interaction
+!		ar(1)=0. !no interaction	  
+!!       if (periodicx.eq.0) then !--> periodic need to be added later
+!	  
+!!  tridiagonal system in phi-direction
+!      do j=1,jmax*px
+!        aphi(j)=1. / ( (phipt(j  )-phipt(j-1))*(phivt(j  )-phivt(j-1)) )
+!        cphi(j)=1. / ( (phipt(j+1)-phipt(j  ))*(phivt(j  )-phivt(j-1)) )
+!        bphi(j)=-aphi(j)-cphi(j)
+!      enddo
+!      bphi(jmax*px)=bphi(jmax*px)+cphi(jmax*px) !dpdn=0
+!      bphi(1)=bphi(1)+aphi(1) !dpdn=0
+!      cphi(jmax*px)=0. !no interaction
+!      aphi(1)=0. !no interaction
+!	!!! to be added: periodic boundaries in j-dir for variable grid in j-dir
+!	
+!	
+!      !  K --> direction      (zrt)
+!      dzi = 1./dz
+!      do k=1,kmax
+!      zrt(k)=-4.*dzi*dzi*(sin(float((k-1))*pi/(2.*kmax)))**2
+!      enddo
+!	 ! build sparse matrix for 2D poisson r-phi plane
+!      do k=1,kmax/px
+!       knd = (rank)*kmax/px+k
+!       tel=0
+!       beg(1)=1
+!       tel2=1
+!       tel3=0	  
+!	   tel4=0
+!       do j=1,jmax*px
+!        do i=1,imax
+!         ind=(j-1)*imax+i !diagonal location
+!         tel3=tel3+1
+!         if ((ind-imax).gt.0.and.aphi(j).gt.0.) then
+!            tel=tel+1
+!            lhs(tel,k)=aphi(j)*1./(Rp(i)**2) !imax left from diagonal 
+!            jco(tel)=ind-imax
+!            iro(tel)=tel3
+!         endif
+!         if ((ind-1).gt.0.and.ar(i).gt.0.) then
+!            tel=tel+1
+!            lhs(tel,k)=ar(i) !one left from diagonal 
+!            jco(tel)=ind-1
+!            iro(tel)=tel3
+!         endif
+!         tel=tel+1
+!         lhs(tel,k)=(br(i)+bphi(j)*1./(Rp(i)**2)+zrt(knd)) ! diagonal entry
+!         jco(tel)=ind
+!		 tel4=tel4+1
+!		 di(tel4)=tel
+!         iro(tel)=tel3
+!         if ((ind+1).le.imax*jmax*px.and.cr(i).gt.0.) then
+!            tel=tel+1
+!            lhs(tel,k)=cr(i) !one right from diagonal 
+!            jco(tel)=ind+1
+!            iro(tel)=tel3
+!         endif
+!         if ((ind+imax).le.imax*jmax*px.and.cphi(j).gt.0.) then
+!            tel=tel+1
+!            lhs(tel,k)=cphi(j)*1./(Rp(i)**2) !imax right from diagonal 
+!            jco(tel)=ind+imax
+!            iro(tel)=tel3
+!         endif
+!         tel2=tel2+1
+!         beg(tel2)=tel+1
+!        enddo
+!       enddo
+!      enddo
+!
+!      ALLOCATE(id2(kmax/px))
+!      ! Define communicator
+!      CALL CPU_TIME(t1)
+!      CALL MPI_COMM_GROUP(MPI_COMM_WORLD,group,ierr) !gives group containing all ranks in mpi_comm_world
+!      CALL MPI_GROUP_INCL(group,1,rank,newgroup,ierr) !gives newgroup containing only present rank
+!      CALL MPI_COMM_CREATE(MPI_COMM_WORLD,newgroup,newcom,ierr) !gives communicator belonging to newgroup is only present rank
+!!      id%COMM = newcom
+!      ! MUMPS symmetric matrix
+!!      id%SYM=0
+!      ! Host working
+!!      id%PAR = 1
+!      ! Initialize an instance of the package
+!!      id%JOB = -1
+!!      CALL DMUMPS(id)
+!      ! Initialize matrix structure
+!!!      id%ICNTL(18)=3 !3=local input of matrix
+!!      id%N=imax*jmax*px !nnodeg
+!!      id%NZ=imax*jmax*px*5-2*imax-2*jmax*px !nmat
+!!		ALLOCATE( id%IRN ( id%NZ ) )
+!!		ALLOCATE( id%JCN ( id%NZ ) )
+!!		ALLOCATE( id%A( id%NZ ) )
+!!		ALLOCATE( id%RHS ( id%N ) )
+!!      id%IRN=iro
+!!      id%JCN=jco
+!!      id%JOB=1
+!
+!      DO k=1,kmax/px
+!	    id2(k)%COMM = newcom
+!        ! MUMPS unsymmetric matrix
+!        id2(k)%SYM=0 !0 !-->with SYM=2 then off-diags of A must be *0.5!
+!        ! Host working
+!        id2(k)%PAR = 1
+!        ! Initialize an instance of the package
+!        id2(k)%JOB = -1
+!        CALL DMUMPS(id2(k))
+!        ! Initialize matrix structure
+!!       id%ICNTL(18)=3 !3=local input of matrix
+!        id2(k)%N=imax*jmax*px !nnodeg
+!        nnz=imax*jmax*px*5-2*imax-2*jmax*px !imax*jmax*px*3-1*imax-1*jmax*px
+!        id2(k)%NZ=nnz  !nmat
+!!        ALLOCATE( id2(k)%IRN ( id%NZ ) )
+!!        ALLOCATE( id2(k)%JCN ( id%NZ ) )
+!!        ALLOCATE( id2(k)%A( id%NZ ) )
+!!        ALLOCATE( id2(k)%RHS ( id%N ) )
+!        id2(k)%IRN=>iro(1:nnz)
+!        id2(k)%JCN=>jco(1:nnz)
+!        !To suppress a lot of output information
+!        id2(k)%ICNTL(3)=0
+!        id2(k)%ICNTL(4)=1
+!        id2(k)%ICNTL(14)=40
+!		!! perfomance tweakers:
+!		!id2(k)%ICNTL(6)=7 !7 is standard
+!		
+!		! assign lhs:
+!        id2(k)%A=>lhs(1:nnz,k)		
+!        id2(k)%JOB = 4
+!        CALL DMUMPS(id2(k))			  
+!      enddo
+!      !To suppress a lot of output information
+!!      id%ICNTL(3)=0
+!!      id%ICNTL(4)=1
+!!      id%ICNTL(14)=40
+!!      CALL CPU_TIME(t2)
+!!      CALL DMUMPS(id)
+!!      CALL CPU_TIME(t3)
+!!      write(*,'(A,2F18.8,4I)') 't2-t1, t3-t2 = ',t2-t1,t3-t2,rank,id%MYID,id%INFOG(32),id%INFOG(7)
+!	  
+!
+!
+!      END SUBROUTINE SOLVEpois_vg_init_mumps
 	  
-      USE nlist
-      USE sparse_matrix
-	  
-      implicit none
-
-      include 'mpif.h'
-! not needed, because USE sparse_matrix      INCLUDE 'dmumps_struc.h'	  
-
-      ! Local performance variables
-      INTEGER          :: dmumps_flag,dmumps_niter
-      DOUBLE PRECISION :: dmumps_runtime,dmumps_residual,dmumps_res0,dmumps_res,t1,t2,t3
-	  
-	  
-      real      ar(imax),br(imax),cr(imax)
-      real      zrt(kmax),yrt(px*jmax)
-      real      aphi(jmax*px),bphi(jmax*px),cphi(jmax*px)
-      integer   tel,tel2,tel3,tel4,ind
-      real      dzi
-      integer   knd,nnz
-	  integer   newcom,newgroup,group,ierr
-	  
-	  
-      pi = 4.*atan(1.)
-	  
-	  !   tridiagonal system in r-direction:
-      do i=1,imax
-        ar(i)= Ru(I-1)/((Rp(I)-Rp(I-1))*Rp(I)*(Ru(I)-Ru(I-1)))
-	    cr(i)= Ru(I) /((Rp(I+1)-Rp(I))*Rp(I)*(Ru(I)-Ru(I-1)))
-!        br(i)=-(Ru(I)/(Rp(I+1)-Rp(I))+Ru(I-1)/(Rp(I)-Rp(I-1)))/
-!     $      (Rp(I)*(Ru(I)-Ru(I-1)))
-	    br(i)=-ar(i)-cr(i)
-      end do
-! DON'T SWITCH ON:		br(imax)=br(imax)+cr(imax) !! p(imax+1)= p(imax); dpdn=0
-		br(imax)=br(imax)-cr(imax) !! p(imax+1)=-p(imax); p=0 at full bc; don't do this, make p=0 at one location at outflow bc
-		br(1)=br(1)+ar(1) !dpdn=0
-		cr(imax)=0. !no interaction
-		ar(1)=0. !no interaction	  
-!       if (periodicx.eq.0) then !--> periodic need to be added later
-	  
-!  tridiagonal system in phi-direction
-      do j=1,jmax*px
-        aphi(j)=1. / ( (phipt(j  )-phipt(j-1))*(phivt(j  )-phivt(j-1)) )
-        cphi(j)=1. / ( (phipt(j+1)-phipt(j  ))*(phivt(j  )-phivt(j-1)) )
-        bphi(j)=-aphi(j)-cphi(j)
-      enddo
-      bphi(jmax*px)=bphi(jmax*px)+cphi(jmax*px) !dpdn=0
-      bphi(1)=bphi(1)+aphi(1) !dpdn=0
-      cphi(jmax*px)=0. !no interaction
-      aphi(1)=0. !no interaction
-	!!! to be added: periodic boundaries in j-dir for variable grid in j-dir
-	
-	
-      !  K --> direction      (zrt)
-      dzi = 1./dz
-      do k=1,kmax
-      zrt(k)=-4.*dzi*dzi*(sin(float((k-1))*pi/(2.*kmax)))**2
-      enddo
-	 ! build sparse matrix for 2D poisson r-phi plane
-      do k=1,kmax/px
-       knd = (rank)*kmax/px+k
-       tel=0
-       beg(1)=1
-       tel2=1
-       tel3=0	  
-	   tel4=0
-       do j=1,jmax*px
-        do i=1,imax
-         ind=(j-1)*imax+i !diagonal location
-         tel3=tel3+1
-         if ((ind-imax).gt.0.and.aphi(j).gt.0.) then
-            tel=tel+1
-            lhs(tel,k)=aphi(j)*1./(Rp(i)**2) !imax left from diagonal 
-            jco(tel)=ind-imax
-            iro(tel)=tel3
-         endif
-         if ((ind-1).gt.0.and.ar(i).gt.0.) then
-            tel=tel+1
-            lhs(tel,k)=ar(i) !one left from diagonal 
-            jco(tel)=ind-1
-            iro(tel)=tel3
-         endif
-         tel=tel+1
-         lhs(tel,k)=(br(i)+bphi(j)*1./(Rp(i)**2)+zrt(knd)) ! diagonal entry
-         jco(tel)=ind
-		 tel4=tel4+1
-		 di(tel4)=tel
-         iro(tel)=tel3
-         if ((ind+1).le.imax*jmax*px.and.cr(i).gt.0.) then
-            tel=tel+1
-            lhs(tel,k)=cr(i) !one right from diagonal 
-            jco(tel)=ind+1
-            iro(tel)=tel3
-         endif
-         if ((ind+imax).le.imax*jmax*px.and.cphi(j).gt.0.) then
-            tel=tel+1
-            lhs(tel,k)=cphi(j)*1./(Rp(i)**2) !imax right from diagonal 
-            jco(tel)=ind+imax
-            iro(tel)=tel3
-         endif
-         tel2=tel2+1
-         beg(tel2)=tel+1
-        enddo
-       enddo
-      enddo
-
-      ALLOCATE(id2(kmax/px))
-      ! Define communicator
-      CALL CPU_TIME(t1)
-      CALL MPI_COMM_GROUP(MPI_COMM_WORLD,group,ierr) !gives group containing all ranks in mpi_comm_world
-      CALL MPI_GROUP_INCL(group,1,rank,newgroup,ierr) !gives newgroup containing only present rank
-      CALL MPI_COMM_CREATE(MPI_COMM_WORLD,newgroup,newcom,ierr) !gives communicator belonging to newgroup is only present rank
-!      id%COMM = newcom
-      ! MUMPS symmetric matrix
-!      id%SYM=0
-      ! Host working
-!      id%PAR = 1
-      ! Initialize an instance of the package
-!      id%JOB = -1
-!      CALL DMUMPS(id)
-      ! Initialize matrix structure
-!!      id%ICNTL(18)=3 !3=local input of matrix
-!      id%N=imax*jmax*px !nnodeg
-!      id%NZ=imax*jmax*px*5-2*imax-2*jmax*px !nmat
-!		ALLOCATE( id%IRN ( id%NZ ) )
-!		ALLOCATE( id%JCN ( id%NZ ) )
-!		ALLOCATE( id%A( id%NZ ) )
-!		ALLOCATE( id%RHS ( id%N ) )
-!      id%IRN=iro
-!      id%JCN=jco
-!      id%JOB=1
-
-      DO k=1,kmax/px
-	    id2(k)%COMM = newcom
-        ! MUMPS unsymmetric matrix
-        id2(k)%SYM=0 !0 !-->with SYM=2 then off-diags of A must be *0.5!
-        ! Host working
-        id2(k)%PAR = 1
-        ! Initialize an instance of the package
-        id2(k)%JOB = -1
-        CALL DMUMPS(id2(k))
-        ! Initialize matrix structure
-!       id%ICNTL(18)=3 !3=local input of matrix
-        id2(k)%N=imax*jmax*px !nnodeg
-        nnz=imax*jmax*px*5-2*imax-2*jmax*px !imax*jmax*px*3-1*imax-1*jmax*px
-        id2(k)%NZ=nnz  !nmat
-!        ALLOCATE( id2(k)%IRN ( id%NZ ) )
-!        ALLOCATE( id2(k)%JCN ( id%NZ ) )
-!        ALLOCATE( id2(k)%A( id%NZ ) )
-!        ALLOCATE( id2(k)%RHS ( id%N ) )
-        id2(k)%IRN=>iro(1:nnz)
-        id2(k)%JCN=>jco(1:nnz)
-        !To suppress a lot of output information
-        id2(k)%ICNTL(3)=0
-        id2(k)%ICNTL(4)=1
-        id2(k)%ICNTL(14)=40
-		!! perfomance tweakers:
-		!id2(k)%ICNTL(6)=7 !7 is standard
-		
-		! assign lhs:
-        id2(k)%A=>lhs(1:nnz,k)		
-        id2(k)%JOB = 4
-        CALL DMUMPS(id2(k))			  
-      enddo
-      !To suppress a lot of output information
-!      id%ICNTL(3)=0
-!      id%ICNTL(4)=1
-!      id%ICNTL(14)=40
-!      CALL CPU_TIME(t2)
-!      CALL DMUMPS(id)
-!      CALL CPU_TIME(t3)
-!      write(*,'(A,2F18.8,4I)') 't2-t1, t3-t2 = ',t2-t1,t3-t2,rank,id%MYID,id%INFOG(32),id%INFOG(7)
-	  
-
-
-      END SUBROUTINE SOLVEpois_vg_init_mumps
-	  
-
-	  
-	  
-      SUBROUTINE SOLVEpois_vg_mumps(rhs)
-!		poisson solver in cylindrical coordinates 
-!		for grid with variable grid size in two directions and fixed grid size (FFT) in one direction
-!		Lynyrd de Wit, September 2015
-
-      USE nlist
-      USE sparse_matrix
-	  
-      implicit none
-
-      include 'mpif.h'
-
-!       include   'param.txt'
-      REAL      RHS(IMAX,JMAX,KMAX)
-      real      dzi
-      real      vfftk(imax*jmax,kmax),vfftj(imax*kmax/px,jmax*px)
-      real wj(4*px*jmax+15),wk(4*kmax+15),bb(imax),rtmp(imax,jmax*px,kmax/px)
-      integer   ipos,ierr,ind
-      real	rhs_ref
-      REAL, TARGET :: rhs_vec(imax*jmax*px,kmax/px)
-!	  real dumm(1,kmax),dumm2(1,kmax),dumm3(1,jmax*px),dumm4(1,jmax*px)
-!	  real p0_vec(imax*jmax*px,kmax/px),pprev(imax,jmax,kmax),pprev2(imax,jmax*px,kmax/px),vfftkp(imax*jmax,kmax)
-	  real time0,time1
-		
-	!   set up lookup tables
-      call vcosqi(kmax,wk)
-      do j=1,jmax
-         do i=1,imax
-         ipos = (j-1)*imax + i
-            do k=1,kmax
-               vfftk(ipos,k)=rhs(i,j,k)
-            enddo
-         enddo
-      enddo
-
-      call vcosqb(imax*jmax,kmax,vfftk,rhs,imax*jmax,wk)
-
-      do j=1,jmax
-         do i=1,imax
-         ipos = (j-1)*imax + i
-            do k=1,kmax
-               rhs(i,j,k)=vfftk(ipos,k)
-            enddo
-         enddo
-      enddo
-
-      call t2np(rhs,rtmp) !rtmp contains rhs shifted parallel in k-dir, size (i=1:imax,j=1:jmax*px,k=1:kmax/px)
-	  
-      do j=1,jmax*px
-       do i=1,imax
-        do k=1,kmax/px
-         ind = (j-1)*imax+i
-         rhs_vec(ind,k) = rtmp(i,j,k)
-        enddo
-       enddo
-      enddo
-
-      do k=1,kmax/px
-	  
-!	    rhs_vec(:,k)=0.
-!		do i=1,1
-!		  do j=1,jmax*px
-!		    ind = (j-1)*imax+i
-!			rhs_vec(ind,k)=1.15
-!		  enddo
-!		enddo
-		
-		! solve system lhs(:,k)*P=rhs_vec(:,k)
-      ! Assign left-hand side
-      !CALL CPU_TIME(time0)	  
-!      id%A=lhs(:,k)		
-!      id%RHS=rhs_vec(:,k)
-!      id%JOB = 5
-!      CALL DMUMPS(id)	
-      id2(k)%RHS=>rhs_vec(:,k)
-      id2(k)%JOB = 3 !5
-      CALL DMUMPS(id2(k))		  
-!	  	   write(*,*),'rank,k,sol',rank,k,id2(k).RHS
-      !CALL CPU_TIME(time1)
-       do j=1,jmax*px
-        do i=1,imax
-         ind = (j-1)*imax+i
-!         rtmp(i,j,k)=id%RHS(ind) ! sol(ind)
-		 rtmp(i,j,k)=id2(k)%RHS(ind) ! sol(ind)
-        enddo
-       enddo
-      enddo
-	  
-      call t2fp(rtmp,rhs)  !rhs (1:imax,1:jmax,1:kmax) contains solution P
-
-      do j=1,jmax
-         do i=1,imax
-         ipos = (j-1)*imax + i
-            do k=1,kmax
-               vfftk(ipos,k)=rhs(i,j,k)
-            enddo
-         enddo
-      enddo
-      call vcosqf(imax*jmax,kmax,vfftk,rhs,imax*jmax,wk)
-      do j=1,jmax
-         do i=1,imax
-         ipos = (j-1)*imax + i
-            do k=1,kmax
-               rhs(i,j,k)=vfftk(ipos,k)
-            enddo
-         enddo
-      enddo
-
-	!!    Make pressure zero at one point in outflow:
-	!!    Only b(imax)-c(imax) in matrix is not sufficient to make pressure exactly zero in (imax,1,1)
-	!!    Some small drift is occuring without following lines:
-		if (rank.eq.0) then
-		  rhs_ref=rhs(imax,1,1)
-		endif
-		call mpi_bcast(rhs_ref,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-		rhs=rhs-rhs_ref
-
-      return
-      end
+ 
+!      SUBROUTINE SOLVEpois_vg_mumps(rhs)
+!!		poisson solver in cylindrical coordinates 
+!!		for grid with variable grid size in two directions and fixed grid size (FFT) in one direction
+!!		Lynyrd de Wit, September 2015
+!
+!      USE nlist
+!      USE sparse_matrix
+!	  
+!      implicit none
+!
+!      include 'mpif.h'
+!
+!!       include   'param.txt'
+!      REAL      RHS(IMAX,JMAX,KMAX)
+!      real      dzi
+!      real      vfftk(imax*jmax,kmax),vfftj(imax*kmax/px,jmax*px)
+!      real wj(4*px*jmax+15),wk(4*kmax+15),bb(imax),rtmp(imax,jmax*px,kmax/px)
+!      integer   ipos,ierr,ind
+!      real	rhs_ref
+!      REAL, TARGET :: rhs_vec(imax*jmax*px,kmax/px)
+!!	  real dumm(1,kmax),dumm2(1,kmax),dumm3(1,jmax*px),dumm4(1,jmax*px)
+!!	  real p0_vec(imax*jmax*px,kmax/px),pprev(imax,jmax,kmax),pprev2(imax,jmax*px,kmax/px),vfftkp(imax*jmax,kmax)
+!	  real time0,time1
+!		
+!	!   set up lookup tables
+!      call vcosqi(kmax,wk)
+!      do j=1,jmax
+!         do i=1,imax
+!         ipos = (j-1)*imax + i
+!            do k=1,kmax
+!               vfftk(ipos,k)=rhs(i,j,k)
+!            enddo
+!         enddo
+!      enddo
+!
+!      call vcosqb(imax*jmax,kmax,vfftk,rhs,imax*jmax,wk)
+!
+!      do j=1,jmax
+!         do i=1,imax
+!         ipos = (j-1)*imax + i
+!            do k=1,kmax
+!               rhs(i,j,k)=vfftk(ipos,k)
+!            enddo
+!         enddo
+!      enddo
+!
+!      call t2np(rhs,rtmp) !rtmp contains rhs shifted parallel in k-dir, size (i=1:imax,j=1:jmax*px,k=1:kmax/px)
+!	  
+!      do j=1,jmax*px
+!       do i=1,imax
+!        do k=1,kmax/px
+!         ind = (j-1)*imax+i
+!         rhs_vec(ind,k) = rtmp(i,j,k)
+!        enddo
+!       enddo
+!      enddo
+!
+!      do k=1,kmax/px
+!	  
+!!	    rhs_vec(:,k)=0.
+!!		do i=1,1
+!!		  do j=1,jmax*px
+!!		    ind = (j-1)*imax+i
+!!			rhs_vec(ind,k)=1.15
+!!		  enddo
+!!		enddo
+!		
+!		! solve system lhs(:,k)*P=rhs_vec(:,k)
+!      ! Assign left-hand side
+!      !CALL CPU_TIME(time0)	  
+!!      id%A=lhs(:,k)		
+!!      id%RHS=rhs_vec(:,k)
+!!      id%JOB = 5
+!!      CALL DMUMPS(id)	
+!      id2(k)%RHS=>rhs_vec(:,k)
+!      id2(k)%JOB = 3 !5
+!      CALL DMUMPS(id2(k))		  
+!!	  	   write(*,*),'rank,k,sol',rank,k,id2(k).RHS
+!      !CALL CPU_TIME(time1)
+!       do j=1,jmax*px
+!        do i=1,imax
+!         ind = (j-1)*imax+i
+!!         rtmp(i,j,k)=id%RHS(ind) ! sol(ind)
+!		 rtmp(i,j,k)=id2(k)%RHS(ind) ! sol(ind)
+!        enddo
+!       enddo
+!      enddo
+!	  
+!      call t2fp(rtmp,rhs)  !rhs (1:imax,1:jmax,1:kmax) contains solution P
+!
+!      do j=1,jmax
+!         do i=1,imax
+!         ipos = (j-1)*imax + i
+!            do k=1,kmax
+!               vfftk(ipos,k)=rhs(i,j,k)
+!            enddo
+!         enddo
+!      enddo
+!      call vcosqf(imax*jmax,kmax,vfftk,rhs,imax*jmax,wk)
+!      do j=1,jmax
+!         do i=1,imax
+!         ipos = (j-1)*imax + i
+!            do k=1,kmax
+!               rhs(i,j,k)=vfftk(ipos,k)
+!            enddo
+!         enddo
+!      enddo
+!
+!	!!    Make pressure zero at one point in outflow:
+!	!!    Only b(imax)-c(imax) in matrix is not sufficient to make pressure exactly zero in (imax,1,1)
+!	!!    Some small drift is occuring without following lines:
+!		if (rank.eq.0) then
+!		  rhs_ref=rhs(imax,1,1)
+!		endif
+!		call mpi_bcast(rhs_ref,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+!		rhs=rhs-rhs_ref
+!
+!      return
+!      end
 	  
 	  
 
@@ -3457,7 +3455,7 @@ c
 !      USE mkl_pardiso
 	  
         IMPLICIT NONE
-        include 'mkl_pardiso.f77'
+!        include 'mkl_pardiso.f77'
 C.. Internal solver memory pointer for 64-bit architectures
 C.. INTEGER*8 pt(64)
 C.. Internal solver memory pointer for 32-bit architectures
@@ -3465,6 +3463,7 @@ C.. INTEGER*4 pt(64)
 C.. This is OK in both cases
 
 !      INCLUDE 'mkl_pardiso.f90'
+!      INCLUDE 'mkl_pardiso.h'	  
 
 !        INTEGER*8 pt(64)
 C.. All other variables
@@ -3884,7 +3883,7 @@ C.. Fill all arrays containing matrix data.
 !      USE mkl_pardiso
 	  
         IMPLICIT NONE
-        include 'mkl_pardiso.f77'
+!        include 'mkl_pardiso.f77'
 C.. Internal solver memory pointer for 64-bit architectures
 C.. INTEGER*8 pt(64)
 C.. Internal solver memory pointer for 32-bit architectures
