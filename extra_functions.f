@@ -262,114 +262,67 @@
 !      enddo
 !      end
 
-	MODULE work_array
-        REAL, DIMENSION(:,:,:), ALLOCATABLE :: Uavg,Vavg,Wavg,Ravg,Pavg,muavg
-	  REAL, DIMENSION(:,:,:), ALLOCATABLE :: sigU2,sigV2,sigW2,sigR2,sigUV,sigUW,sigVW
-	  REAL, DIMENSION(:,:,:,:), ALLOCATABLE :: sigC2,Cavg,sigUC,sigVC,sigWC,Cmax,Cmin
-	  INTEGER stat_count
-	REAL stat_time_count
-!        REAL, DIMENSION(:,:,:), ALLOCATABLE :: fUavg,sigfU2
-      END MODULE
+!	MODULE work_array
+!        REAL, DIMENSION(:,:,:), ALLOCATABLE :: Uavg,Vavg,Wavg,Ravg,Pavg,muavg
+!	  REAL, DIMENSION(:,:,:), ALLOCATABLE :: sigU2,sigV2,sigW2,sigR2,sigUV,sigUW,sigVW
+!	  REAL, DIMENSION(:,:,:,:), ALLOCATABLE :: sigC2,Cavg,sigUC,sigVC,sigWC,Cmax,Cmin
+!	  INTEGER stat_count
+!	REAL stat_time_count
+!!        REAL, DIMENSION(:,:,:), ALLOCATABLE :: fUavg,sigfU2
+!      END MODULE
       
 
 
 	
-	subroutine statistics(U,V,W,C,R)
-	USE work_array
+	subroutine statistics
+!	USE work_array
 	USE nlist
 	implicit none
 ! 	include 'param.txt'
 ! 	include 'common.txt'
 
-	REAL U(0:i1,0:j1,0:k1),V(0:i1,0:j1,0:k1),W(0:i1,0:j1,0:k1)
-	REAL R(0:i1,0:j1,0:k1),C(nfrac,0:i1,0:j1,0:k1)
-	REAL uu,vv,ww
+	REAL uu,vv,ww,uudt,vvdt,wwdt
 	INTEGER n
-
-!	REAL, ALLOCATABLE :: Uavg(:,:,:),Vavg(:,:,:),Wavg(:,:,:),Cavg(:,:,:),Ravg(:,:,:)
-!	REAL, ALLOCATABLE :: sigU2(:,:,:),sigV2(:,:,:),sigW2(:,:,:),sigC2(:,:,:),sigR2(:,:,:)  
-!	REAL, ALLOCATABLE :: Urms(:,:,:),Vrms(:,:,:),Wrms(:,:,:),Crms(:,:,:),Rrms(:,:,:)
-!	INTEGER :: stat_count
-
-	
-	IF (.not.ALLOCATED(Uavg)) then
-		ALLOCATE (Uavg(1:imax,1:jmax,1:kmax),Vavg(1:imax,1:jmax,1:kmax),
-     1                Wavg(1:imax,1:jmax,1:kmax),Cavg(nfrac,1:imax,1:jmax,1:kmax),
-     1                Ravg(1:imax,1:jmax,1:kmax),
-     1		      Pavg(1:imax,1:jmax,1:kmax),muavg(1:imax,1:jmax,1:kmax),						
-     1		      sigU2(1:imax,1:jmax,1:kmax),sigV2(1:imax,1:jmax,1:kmax),
-     1                sigW2(1:imax,1:jmax,1:kmax),sigC2(nfrac,1:imax,1:jmax,1:kmax),
-     1                sigR2(1:imax,1:jmax,1:kmax),
-     1		      sigUV(1:imax,1:jmax,1:kmax),sigVW(1:imax,1:jmax,1:kmax),
-     1                sigUW(1:imax,1:jmax,1:kmax) ,
-     1		      sigUC(nfrac,1:imax,1:jmax,1:kmax),sigVC(nfrac,1:imax,1:jmax,1:kmax),
-     1                sigWC(nfrac,1:imax,1:jmax,1:kmax),Cmax(nfrac,1:imax,1:jmax,1:kmax),
-     1                Cmin(nfrac,1:imax,1:jmax,1:kmax))
- !    1 			,fUavg(1:imax,1:jmax,1:kmax),sigfU2(1:imax,1:jmax,1:kmax))
-
-		stat_count=0
-		stat_time_count=0.
-		sigU2=0.
-		sigV2=0.
-		sigW2=0.
-		sigC2=0.
-		sigR2=0.
-		sigUV=0.
-		sigVW=0.
-		sigUW=0.
-		sigUC=0.	
-		sigVC=0.
-		sigWC=0.
-
-		Uavg=0.
-		Vavg=0.
-		Wavg=0.
-		Cavg=0.
-		Cmax=0.
-		Cmin=1.e18
-		Ravg=0.
-		Pavg=0.
-		muavg=0.
-!		sigfU2=0.
-!		fUavg=0.
-	endif
 
 
 	stat_count=stat_count+1
 	stat_time_count=stat_time_count+dt
-	
+	! expensive subroutine: 20-30% extra CPU time when avg/rms is determined within this loop; unclear why it so expensive
 	do i=1,imax
 	  do j=1,jmax
 	    do k=1,kmax
-		  uu=0.5*(U(i,j,k)+U(i-1,j,k))*cos_u(j)-0.5*(V(i,j,k)+V(i,j-1,k))*sin_u(j)
-		  vv=0.5*(V(i,j,k)+V(i,j-1,k))*cos_u(j)+0.5*(U(i,j,k)+U(i-1,j,k))*sin_u(j)
-		  ww=0.5*(W(i,j,k)+W(i,j,k-1))
+		  uu=0.5*(Unew(i,j,k)+Unew(i-1,j,k))*cos_u(j)-0.5*(Vnew(i,j,k)+Vnew(i,j-1,k))*sin_u(j)
+		  vv=0.5*(Vnew(i,j,k)+Vnew(i,j-1,k))*cos_u(j)+0.5*(Unew(i,j,k)+Unew(i-1,j,k))*sin_u(j)
+		  ww=0.5*(Wnew(i,j,k)+Wnew(i,j,k-1))
+		  uudt=uu*dt
+		  vvdt=vv*dt
+		  wwdt=ww*dt
                 !  uu=(U(i,j,k))*cos_u(j)-(V(i,j,k))*sin_v(j)
                 !  vv=(V(i,j,k))*cos_v(j)+(U(i,j,k))*sin_u(j)
                 !  ww=W(i,j,k)
 
-		  sigU2(i,j,k) = sigU2(i,j,k) + uu*uu*dt
-		  sigV2(i,j,k) = sigV2(i,j,k) + vv*vv*dt
-		  sigW2(i,j,k) = sigW2(i,j,k) + ww*ww*dt
-		  sigR2(i,j,k) = sigR2(i,j,k) + R(i,j,k)*R(i,j,k)*dt
-		  sigUV(i,j,k) = sigUV(i,j,k) + uu*vv*dt
-		  sigUW(i,j,k) = sigUW(i,j,k) + uu*ww*dt
-		  sigVW(i,j,k) = sigVW(i,j,k) + vv*ww*dt
+		  sigU2(i,j,k) = sigU2(i,j,k) + uu*uudt
+		  sigV2(i,j,k) = sigV2(i,j,k) + vv*vvdt
+		  sigW2(i,j,k) = sigW2(i,j,k) + ww*wwdt
+		  sigR2(i,j,k) = sigR2(i,j,k) + Rnew(i,j,k)*Rnew(i,j,k)*dt
+		  sigUV(i,j,k) = sigUV(i,j,k) + uu*vvdt
+		  sigUW(i,j,k) = sigUW(i,j,k) + uu*wwdt
+		  sigVW(i,j,k) = sigVW(i,j,k) + vv*wwdt
 
-		  Uavg(i,j,k)  = Uavg(i,j,k) + uu*dt
-		  Vavg(i,j,k)  = Vavg(i,j,k) + vv*dt
-		  Wavg(i,j,k)  = Wavg(i,j,k) + ww*dt
-		  Ravg(i,j,k)  = Ravg(i,j,k) + R(i,j,k)*dt
+		  Uavg(i,j,k)  = Uavg(i,j,k) + uudt
+		  Vavg(i,j,k)  = Vavg(i,j,k) + vvdt
+		  Wavg(i,j,k)  = Wavg(i,j,k) + wwdt
+		  Ravg(i,j,k)  = Ravg(i,j,k) + Rnew(i,j,k)*dt
 		  Pavg(i,j,k)  = Pavg(i,j,k) + (p(i,j,k)+pold(i,j,k))*dt
 		  muavg(i,j,k) = muavg(i,j,k) + ekm(i,j,k)*dt
 		do n=1,nfrac
-		  Cavg(n,i,j,k)  = Cavg(n,i,j,k) + C(n,i,j,k)*dt
-		  sigC2(n,i,j,k) = sigC2(n,i,j,k) + C(n,i,j,k)*C(n,i,j,k)*dt
-		  sigUC(n,i,j,k) = sigUC(n,i,j,k) + uu*C(n,i,j,k)*dt
-		  sigVC(n,i,j,k) = sigVC(n,i,j,k) + vv*C(n,i,j,k)*dt
-		  sigWC(n,i,j,k) = sigWC(n,i,j,k) + ww*C(n,i,j,k)*dt
-		  Cmax(n,i,j,k) = MAX(Cmax(n,i,j,k),C(n,i,j,k))
-		  Cmin(n,i,j,k) = MIN(Cmin(n,i,j,k),C(n,i,j,k))
+		  Cavg(n,i,j,k)  = Cavg(n,i,j,k) + Cnew(n,i,j,k)*dt
+		  sigC2(n,i,j,k) = sigC2(n,i,j,k) + Cnew(n,i,j,k)*Cnew(n,i,j,k)*dt
+		  sigUC(n,i,j,k) = sigUC(n,i,j,k) + Cnew(n,i,j,k)*uudt
+		  sigVC(n,i,j,k) = sigVC(n,i,j,k) + Cnew(n,i,j,k)*vvdt
+		  sigWC(n,i,j,k) = sigWC(n,i,j,k) + Cnew(n,i,j,k)*wwdt
+		  Cmax(n,i,j,k) = MAX(Cmax(n,i,j,k),Cnew(n,i,j,k))
+		  Cmin(n,i,j,k) = MIN(Cmin(n,i,j,k),Cnew(n,i,j,k))
 		enddo
 !!! Favre average results in differences of <1 promille for Umean and <1% for U' between Favre and Reynolds avg
 !!! for CO2 plume simulation (Wang et al. 2008), this is not important for dredge plumes, thus only Reynolds avg is calculated from now on

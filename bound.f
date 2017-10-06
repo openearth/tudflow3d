@@ -2075,10 +2075,11 @@ c get stuff from other CPU's
 	        Cbound(i,j,k-1)=Cbound(i,j,k-1)+Cbound(i,j,k) ! move air from first (lowest) cell in TSHD-hull to first cell in fluid
 		!! Idea is to undo the effect of diffusion and air bubble rising up into hull
 	      endif
-	      if (k.gt.0.and.k.eq.kbed(i,j)) then !.and.interaction_bed.ne.4) then ! does not happen for bed with interaction_bed=4, or for bedlevelfile 
-	        Cbound(i,j,kbed(i,j)+1)=Cbound(i,j,kbed(i,j)+1)+Cbound(i,j,k) ! move sediment from heightest cell in obstacle to first cell in fluid
-		!! Idea is to undo the effect of diffusion into the obstacle
-	      endif
+		  !! switched off 5-10-2017:
+!	      if (k.gt.0.and.k.eq.kbed(i,j)) then !.and.interaction_bed.ne.4) then ! does not happen for bed with interaction_bed=4, or for bedlevelfile 
+!	        Cbound(i,j,kbed(i,j)+1)=Cbound(i,j,kbed(i,j)+1)+Cbound(i,j,k) ! move sediment from heightest cell in obstacle to first cell in fluid
+!		!! Idea is to undo the effect of diffusion into the obstacle
+!	      endif
 		    !IF (interaction_bed.ne.4) then
             Cbound(i,j,k)=0.  ! remove sediment from hull, not only in lowest line of cells in hull
 			!endif

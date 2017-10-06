@@ -1107,19 +1107,17 @@ c*****************************************************************
 	do t=1,tmax_inPpunt
 	  i=i_inPpunt(t)
 	  j=j_inPpunt(t)
-!	  putin2(i,j,k) = 0. !! No diffusion in horizontal direction from jet to surroundings (now some material will diffuse into the jet, so it dissappears..)
 	  putin2(i,j,k) = putin2(i,j,kmax) ! No diffusion over vertical inflow boundary, this line is needed for exact influx
 	enddo
       enddo
 
-!	if (nobst>0) then
-!	 DO i=0,i1
+	  
+!	 DO i=0,i1 ! not needed anymore because Diffcoff is made 0 around kbed
 !	  DO j=0,j1
-!	    kplus = MIN(kbed(i,j)+1,k1)
-!	  	putin2(i,j,kbed(i,j))=putin2(i,j,kplus) ! apply neumann boundary over obstacles --> not needed anymore because diffcof is zero around immersed objects
+!	  	putin2(i,j,0)=putin2(i,j,1) ! neumann boundary to prevent vertical diffusion into bed
 !	  ENDDO
 !	 ENDDO
-!	endif
+
 	
 	  
       dzdz_i=1./(dz*dz)

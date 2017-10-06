@@ -139,6 +139,12 @@
 
 	REAL, DIMENSION(:,:,:,:),ALLOCATABLE :: Cold,Cnew,dcdt,cc,ccold,dcdt2,Clivebed
 	REAL, DIMENSION(:,:,:),ALLOCATABLE :: Coldbot,Cnewbot,dcdtbot,ccbot,ccoldbot
+	
+        REAL, DIMENSION(:,:,:), ALLOCATABLE :: Uavg,Vavg,Wavg,Ravg,Pavg,muavg
+	  REAL, DIMENSION(:,:,:), ALLOCATABLE :: sigU2,sigV2,sigW2,sigR2,sigUV,sigUW,sigVW
+	  REAL, DIMENSION(:,:,:,:), ALLOCATABLE :: sigC2,Cavg,sigUC,sigVC,sigWC,Cmax,Cmin
+	  INTEGER stat_count
+	REAL stat_time_count	
 
 	type fractions
 	    REAL ::	ws,rho,c,dpart,dfloc,n,tau_d,tau_e,M,kn_sed,ws_dep,zair_ref_belowsurf
@@ -1176,6 +1182,48 @@
 
 	nu_mol=ekm_mol/rho_b
   
+  
+	IF (tstart_rms<t_end) then
+		ALLOCATE (Uavg(1:imax,1:jmax,1:kmax),Vavg(1:imax,1:jmax,1:kmax),
+     1                Wavg(1:imax,1:jmax,1:kmax),Cavg(nfrac,1:imax,1:jmax,1:kmax),
+     1                Ravg(1:imax,1:jmax,1:kmax),
+     1		      Pavg(1:imax,1:jmax,1:kmax),muavg(1:imax,1:jmax,1:kmax),						
+     1		      sigU2(1:imax,1:jmax,1:kmax),sigV2(1:imax,1:jmax,1:kmax),
+     1                sigW2(1:imax,1:jmax,1:kmax),sigC2(nfrac,1:imax,1:jmax,1:kmax),
+     1                sigR2(1:imax,1:jmax,1:kmax),
+     1		      sigUV(1:imax,1:jmax,1:kmax),sigVW(1:imax,1:jmax,1:kmax),
+     1                sigUW(1:imax,1:jmax,1:kmax) ,
+     1		      sigUC(nfrac,1:imax,1:jmax,1:kmax),sigVC(nfrac,1:imax,1:jmax,1:kmax),
+     1                sigWC(nfrac,1:imax,1:jmax,1:kmax),Cmax(nfrac,1:imax,1:jmax,1:kmax),
+     1                Cmin(nfrac,1:imax,1:jmax,1:kmax))
+ !    1 			,fUavg(1:imax,1:jmax,1:kmax),sigfU2(1:imax,1:jmax,1:kmax))
+
+		stat_count=0
+		stat_time_count=0.
+		sigU2=0.
+		sigV2=0.
+		sigW2=0.
+		sigC2=0.
+		sigR2=0.
+		sigUV=0.
+		sigVW=0.
+		sigUW=0.
+		sigUC=0.	
+		sigVC=0.
+		sigWC=0.
+
+		Uavg=0.
+		Vavg=0.
+		Wavg=0.
+		Cavg=0.
+		Cmax=0.
+		Cmin=1.e18
+		Ravg=0.
+		Pavg=0.
+		muavg=0.
+!		sigfU2=0.
+!		fUavg=0.
+	endif  
 
 	END SUBROUTINE allocate_global_vars
 

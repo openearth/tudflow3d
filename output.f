@@ -683,7 +683,7 @@
       subroutine output_stat_nc(tt)
       USE nlist
       USE netcdf
-      USE work_array
+!      USE work_array
 
 
 	implicit none

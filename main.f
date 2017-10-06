@@ -299,7 +299,7 @@
 	   	rold=rnew
 		rnew=drdt
 		if (time_np.ge.tstart_rms) then
-			call statistics(Unew,Vnew,Wnew,Cnew,Rnew)
+			call statistics
 		endif
 
 !		if (time_np.ge.t_output) then

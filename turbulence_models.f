@@ -552,7 +552,7 @@ c*************************************************************
             Diffcof(i,j,k)=0.
           enddo
         enddo
-        IF (LOA>0.or.nobst>0.or.bedlevelfile.ne.'') THEN ! ship:
+        IF (LOA>0.or.nobst>0) THEN ! ship:
           do t=1,tmax_inPpuntTSHD
             i=i_inPpuntTSHD(t)
             j=j_inPpuntTSHD(t)
@@ -576,7 +576,7 @@ c*************************************************************
           !ekm(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
 		  Diffcof(0:i1,0:j1,kmax-kjet+1:k1)=0.
 		ENDIF
-		IF (interaction_bed.ge.4) THEN ! dynamic bed update, no diffusion allowed into bed:
+		! no diffusion allowed into bed:
 			DO i=1,imax
 				DO j=1,jmax
 					DO k=0,kbed(i,j)
@@ -596,8 +596,7 @@ c*************************************************************
 					ENDDO
 				ENDDO
 			ENDDO
-		ENDIF			 		
-	
+
       end
 
       subroutine LES_mixinglengthdamped(Uvel,Vvel,Wvel,rr)
@@ -832,7 +831,7 @@ c*************************************************************
        ekm=ekm+ekm_mol
 	ekm2=ekm
 	Diffcof2=Diffcof
-        IF (LOA>0.or.nobst>0.or.bedlevelfile.ne.'') THEN ! ship:
+        IF (LOA>0.or.nobst>0) THEN ! ship:
           do t=1,tmax_inPpuntTSHD
             i=i_inPpuntTSHD(t)
             j=j_inPpuntTSHD(t)
@@ -856,7 +855,7 @@ c*************************************************************
           !ekm(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
           Diffcof(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
 	ENDIF
-		IF (interaction_bed.ge.4) THEN ! dynamic bed update, no diffusion allowed into bed:
+		!no diffusion allowed into bed:
 			DO i=1,imax
 				DO j=1,jmax
 					DO k=0,kbed(i,j)
@@ -875,7 +874,7 @@ c*************************************************************
 					ENDDO
 				ENDDO
 			ENDDO
-		ENDIF			 
+ 
 	if (LOA>0.and.kn_TSHD>0.) then
 	  do t=1,tmax_inUpunt_tauTSHD
  	    i=i_inUpunt_tauTSHD(t)
@@ -1101,7 +1100,7 @@ c*************************************************************
             Diffcof(i,j,k)=0.
           enddo
         enddo
-        IF (LOA>0.or.nobst>0.or.bedlevelfile.ne.'') THEN ! ship:
+        IF (LOA>0.or.nobst>0) THEN ! ship:
           do t=1,tmax_inPpuntTSHD
             i=i_inPpuntTSHD(t)
             j=j_inPpuntTSHD(t)
@@ -1125,7 +1124,7 @@ c*************************************************************
           !ekm(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
 		  Diffcof(0:i1,0:j1,kmax-kjet+1:k1)=0.
 	ENDIF		
-		IF (interaction_bed.ge.4) THEN ! dynamic bed update, no diffusion allowed into bed:
+		 ! no horizontal or vertical diffusion allowed into bed:
 			DO i=1,imax
 				DO j=1,jmax
 					DO k=0,kbed(i,j)
@@ -1145,7 +1144,6 @@ c*************************************************************
 					ENDDO
 				ENDDO
 			ENDDO
-		ENDIF			 
 		
       end
 
@@ -1358,7 +1356,7 @@ c*************************************************************
             Diffcof(i,j,k)=0.
           enddo
         enddo
-        IF (LOA>0.or.nobst>0.or.bedlevelfile.ne.'') THEN ! ship:
+        IF (LOA>0.or.nobst>0) THEN ! ship:
           do t=1,tmax_inPpuntTSHD
             i=i_inPpuntTSHD(t)
             j=j_inPpuntTSHD(t)
@@ -1382,7 +1380,7 @@ c*************************************************************
 			  !ekm(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
 			  Diffcof(0:i1,0:j1,kmax-kjet+1:k1)=0.
 		ENDIF
-		IF (interaction_bed.ge.4) THEN ! dynamic bed update, no diffusion allowed into bed:
+		 ! no horizontal or vertical diffusion allowed into bed:
 			DO i=1,imax
 				DO j=1,jmax
 					DO k=0,kbed(i,j)
@@ -1401,7 +1399,6 @@ c*************************************************************
 					ENDDO
 				ENDDO
 			ENDDO
-		ENDIF			 	
 
       end
 
@@ -1902,7 +1899,7 @@ c*************************************************************
             Diffcof(i,j,k)=0.
           enddo
         enddo
-        IF (LOA>0.or.nobst>0.or.bedlevelfile.ne.'') THEN ! ship:
+        IF (LOA>0.or.nobst>0) THEN ! ship:
           do t=1,tmax_inPpuntTSHD
             i=i_inPpuntTSHD(t)
             j=j_inPpuntTSHD(t)
@@ -1926,7 +1923,7 @@ c*************************************************************
 			  !ekm(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
 			  Diffcof(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
 		ENDIF		
-		IF (interaction_bed.ge.4) THEN ! dynamic bed update, no diffusion allowed into bed:
+		 ! no horizontal or vertical diffusion allowed into bed:
 			DO i=1,imax
 				DO j=1,jmax
 					DO k=0,kbed(i,j)
@@ -1945,7 +1942,7 @@ c*************************************************************
 					ENDDO
 				ENDDO
 			ENDDO
-		ENDIF			 
+			 
       end
 	  
 
@@ -2278,7 +2275,7 @@ c get stuff from other CPU's
             Diffcof(i,j,k)=0.
           enddo
         enddo
-        IF (LOA>0.or.nobst>0.or.bedlevelfile.ne.'') THEN ! ship:
+        IF (LOA>0.or.nobst>0) THEN ! ship:
           do t=1,tmax_inPpuntTSHD
             i=i_inPpuntTSHD(t)
             j=j_inPpuntTSHD(t)
@@ -2302,7 +2299,7 @@ c get stuff from other CPU's
 			  !ekm(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
 			  Diffcof(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
 		ENDIF		
-		IF (interaction_bed.ge.4) THEN ! dynamic bed update, no diffusion allowed into bed:
+		 ! no horizontal or vertical diffusion allowed into bed:
 			DO i=1,imax
 				DO j=1,jmax
 					DO k=0,kbed(i,j)
@@ -2321,7 +2318,6 @@ c get stuff from other CPU's
 					ENDDO
 				ENDDO
 			ENDDO
-		ENDIF			 
 		
       end
 
