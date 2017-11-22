@@ -200,7 +200,7 @@
 		write(*,*) '# Sc is not defined                              #'
 	CASE(068)
 		write(*,*) '# namelist &plume                                #'			
-		write(*,*) '# slipvel is not defined                         #'
+		write(*,*) '# slipvel is not defined, should be 0,1,2        #'
 	CASE(069)
 		write(*,*) '# namelist &plume                                #'			
 		write(*,*) '# Strouhal is not defined                        #'
@@ -382,6 +382,12 @@
 	CASE(278)
 		write(*,*) '# namelist &plume                                #'			
 		write(*,*) '# bedplume%changesedsuction should be >0. and < 1. #'		
+	CASE(279)
+		write(*,*) '# namelist &plume                                #'			
+		write(*,*) '# timeseries file should be long enough          #'		
+	CASE(280)
+		write(*,*) '# namelist &plume                                #'			
+		write(*,*) '# hindered_settling should be 1,2,3              #'		
 	CASE(301)
 		write(*,*) '# namelist &ship                                 #'			
 		write(*,*) '# please prescribe U_TSHD                        #'	

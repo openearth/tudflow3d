@@ -600,26 +600,30 @@ c
 	  noemer = putin2(i,jp,k)-putin2(i,j,k)
 	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
 	  rRpos = (putin2(i,j    ,k)-putin2(i,jm,k))/noemer*vary_grid_Rpos
-	  cRpos = putin2(i ,j,k) + 0.5*limiter(rRpos)*(putin2(i,jp,k) - putin2(i ,j,k))*(1.-dt*ABS(Vvel2(i,j ,k))*Rpdphi_i)
+	  cRpos = putin2(i ,j,k) + 0.5*limiter(rRpos)*(putin2(i,jp,k) - putin2(i ,j,k))*
+     & (1.-dt*ABS(Vvel2(i,j ,k))/(Rp(i)*(phipt2(rank*je+jp)-phipt2(rank*je+j))))
 	  putout(i,j,k) = putout(i,j,k) - Vvel2(i,j ,k)*cRpos*Rpdphi_i 
 	ELSE
 	  noemer = putin2(i,jp,k)-putin2(i,j,k)
 	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
 	  rRneg = (putin2(i,jpp+1,k)-putin2(i,jp,k))/noemer*vary_grid_Rneg 
-	  cRneg = putin2(i,jp,k) + 0.5*limiter(rRneg)*(putin2( i,j,k) - putin2(i,jp,k))*(1.-dt*ABS(Vvel2(i,j ,k))*Rpdphi_i)
+	  cRneg = putin2(i,jp,k) + 0.5*limiter(rRneg)*(putin2( i,j,k) - putin2(i,jp,k))*
+     & (1.-dt*ABS(Vvel2(i,j ,k))/(Rp(i)*(phipt2(rank*je+jp)-phipt2(rank*je+j))))
 	  putout(i,j,k) = putout(i,j,k) - Vvel2(i,j ,k)*cRneg*Rpdphi_i 
 	ENDIF		
 	IF (Vvel(i,jm,k).ge.0.) THEN
 	  noemer = putin2(i,j,k)-putin2(i,jm,k)
   	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
 	  rLpos = (putin2(i,jm,k)-putin2(i,jmm-1,k))/noemer*vary_grid_Lpos
-	  cLpos = putin2(i,jm,k) + 0.5*limiter(rLpos)*(putin2( i,j,k) - putin2(i,jm,k))*(1.-dt*ABS(Vvel2(i,jm,k))*Rpdphi_i)
+	  cLpos = putin2(i,jm,k) + 0.5*limiter(rLpos)*(putin2( i,j,k) - putin2(i,jm,k))
+     & *(1.-dt*ABS(Vvel2(i,jm,k))/(Rp(i)*(phipt2(rank*je+j)-phipt2(rank*je+jm))))
 	  putout(i,j,k) = putout(i,j,k) + Vvel2(i,jm,k)*cLpos*Rpdphi_i 
 	ELSE
 	  noemer = putin2(i,j,k)-putin2(i,jm,k)
   	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
 	  rLneg = (putin2(i,jp,k)-putin2(i,j    ,k))/noemer*vary_grid_Lneg 
-	  cLneg = putin2(i,j ,k) + 0.5*limiter(rLneg)*(putin2(i,jm,k) - putin2(i,j ,k))*(1.-dt*ABS(Vvel2(i,jm,k))*Rpdphi_i)
+	  cLneg = putin2(i,j ,k) + 0.5*limiter(rLneg)*(putin2(i,jm,k) - putin2(i,j ,k))
+     & *(1.-dt*ABS(Vvel2(i,jm,k))/(Rp(i)*(phipt2(rank*je+j)-phipt2(rank*je+jm))))
 	  putout(i,j,k) = putout(i,j,k) + Vvel2(i,jm,k)*cLneg*Rpdphi_i 
 	ENDIF	
 !	putout(i,j,k) = putout(i,j,k) - (
@@ -673,7 +677,8 @@ c
 	subroutine advecc_TVD2(putout,putin,Uvel,Vvel,Wvel,rho,Ru,Rp,dr,phiv,phipt,dz,
      +                  i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)
       implicit none
-! default TVD scheme, efficiently face-based with limiter2 (3th order CFL dependent alpha limiter), LdW 25-11-15
+! TVD scheme called with nerd option advec_conc.eq.'TVD', efficiently face-based with limiter2 (3th order CFL dependent alpha limiter), LdW 25-11-15
+! in test sim this scheme gave some values <0 and default advec_conc.eq.'VLE' did not... this shouldn't have happened but it did...
 c
 c********************************************************************
 c
@@ -915,7 +920,7 @@ c
 	IF (Vvel(i,j ,k).ge.0.) THEN
 	  noemer = putin2(i,jp,k)-putin2(i,j,k)
 	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
-	  cfl=dt*ABS(Vvel2(i,j ,k))*Rpdphi_i
+	  cfl=dt*ABS(Vvel2(i,j ,k))/(Rp(i)*(phipt2(rank*je+jp)-phipt2(rank*je+j)))
 	  rRpos = (putin2(i,j    ,k)-putin2(i,jm,k))/noemer*vary_grid_Rpos
 	  cRpos = putin2(i ,j,k) + 0.5*limiter2(rRpos,cfl)*(putin2(i,jp,k) - putin2(i ,j,k)) *(1.-cfl)
 	  putout(i,j,k) = putout(i,j,k) - Vvel2(i,j ,k)*cRpos*Rpdphi_i 
@@ -925,26 +930,26 @@ c
 	ELSE
 	  noemer = putin2(i,jp,k)-putin2(i,j,k)
 	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
-	  cfl=dt*ABS(Vvel2(i,j ,k))*Rpdphi_i
+	  cfl=dt*ABS(Vvel2(i,j ,k))/(Rp(i)*(phipt2(rank*je+jp)-phipt2(rank*je+j)))
 	  rRneg = (putin2(i,jpp+1,k)-putin2(i,jp,k))/noemer*vary_grid_Rneg 
 	  cRneg = putin2(i,jp,k) + 0.5*limiter2(rRneg,cfl)*(putin2( i,j,k) - putin2(i,jp,k)) *(1.-cfl)
 	  putout(i,j,k) = putout(i,j,k) - Vvel2(i,j ,k)*cRneg*Rpdphi_i 
-	  if (jp.le.je) then
+	  !if (jp.le.je) then
 	  putout(i,jp,k) = putout(i,jp,k) + Vvel2(i,j ,k)*cRneg*Rpdphi_ip 
-	  endif
+	  !endif
 	ENDIF
 	IF (j.eq.1) THEN
 	IF (Vvel(i,jm,k).ge.0.) THEN
 	  noemer = putin2(i,j,k)-putin2(i,jm,k)
   	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
-	  cfl=dt*ABS(Vvel2(i,jm,k))*Rpdphi_i
+	  cfl=dt*ABS(Vvel2(i,jm,k))/(Rp(i)*(phipt2(rank*je+j)-phipt2(rank*je+jm)))
 	  rLpos = (putin2(i,jm,k)-putin2(i,jmm-1,k))/noemer*vary_grid_Lpos
 	  cLpos = putin2(i,jm,k) + 0.5*limiter2(rLpos,cfl)*(putin2( i,j,k) - putin2(i,jm,k)) *(1.-cfl)
 	  putout(i,j,k)  = putout(i,j ,k) + Vvel2(i,jm,k)*cLpos*Rpdphi_i 
 	ELSE
 	  noemer = putin2(i,j,k)-putin2(i,jm,k)
   	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
-	  cfl=dt*ABS(Vvel2(i,jm,k))*Rpdphi_i
+	  cfl=dt*ABS(Vvel2(i,jm,k))/(Rp(i)*(phipt2(rank*je+j)-phipt2(rank*je+jm)))
 	  rLneg = (putin2(i,jp,k)-putin2(i,j    ,k))/noemer*vary_grid_Lneg 
 	  cLneg = putin2(i,j ,k) + 0.5*limiter2(rLneg,cfl)*(putin2(i,jm,k) - putin2(i,j ,k)) *(1.-cfl)
 	  putout(i,j,k) = putout(i,j,k) + Vvel2(i,jm,k)*cLneg*Rpdphi_i 
@@ -1012,14 +1017,590 @@ c
 
 	  
 
+	subroutine advecc_NVD_upw5(putout,putin,Uvel,Vvel,Wvel,rho,Ru,Rp,dr,phiv,phipt,dz,
+     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)
+      implicit none
+!	Face-wise advection scheme according to NVD is similar to TVD, but manner of expression is different
+!	See for example:
+!	# Hirsch Chap 8.4.
+!	# Darwish 1994, Normalized Variable and Space Formulation Methodology for High-Resolution Schemes
+!	# Leonard 1991, The ULTIMATE conservative difference scheme applied to unsteady one-dimensional advection
+!	NVD combined with UPW5 high order scheme to minimise numerical diffusion and avoid under/overshoot -> that works, however in diagonal test waviness of the boundary occurs
+!   nerd-option advec_conc='NVD' calls NVD Fromm which gave best results in diagonal edge and diagonal square tests (<diff than vLeer and Arora and same small waviness edge as vLeer)
+!   this part is kept for future testing perhaps
+c
+c********************************************************************
+c
+c     advecc calculates the advection for a scalar variable, which is
+c     situated in the center point of the grid cell.
+c
+c     In formula:
+c
+c         1 d(ruC)     1 d(vC)     d(wC)
+c    - (  - ------  +  - -----  +  -----  )
+c         r   dr       r  dphi      dz
+c
+c      on input :
+c
+c          putout            : "empty" (initialised to zero)
+c          putin             : variable for which the advection has
+c                              to be calculated
+c          Uvel,Vvel,Wvel    : contain velocities at former timestep
+c          putinn            : contains subgrid energy at oldest timestep
+c          dr,phiv,dz        : grid spacing in r, phi and z-direction
+c          i1,j1,k1          : parameters for array-dimensions
+c          ib,ie,jb,je,kb,ke : range of gridpoints for which the
+c                              advection has to be calculated
+c          Ru,Rp             : radial positions of the U-velocity
+c                              component and the pressure location
+c                              respectively
+c
+c      on output :
+c
+c          putout            : advection part
+c          other parameters  : all unchanged
+c
+c********************************************************************
+      integer  i,j,k,im,ip,jm,jp,km,kp,i1,j1,k1,ib,ie,jb,je,kb,ke
+	  integer kmm,kpp,imm,ipp,jmm,jpp,rank,px,periodicx,periodicy
+      real     putout(0:i1,0:j1,0:k1),putin(0:i1,0:j1,0:k1),
+     +         Uvel(0:i1,0:j1,0:k1),rho(0:i1,0:j1,0:k1),
+     +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
+     +         dr(0:i1),phiv(0:j1),phipt(0:je*px+1),dz,Ru(0:i1),Rp(0:i1),
+     +         noemer,rRpos,rRneg,rLpos,rLneg,cRpos,cRneg,cLpos,cLneg,limiter,
+     +         rho_p,rho_m,Rp2(-1:i1+1)
+      
+      real 	dz_i,Rpdr_i,Rpdphi_i,varx_grid_Rpos,varx_grid_Rneg,varx_grid_Lpos,varx_grid_Lneg
+	  real  vary_grid_Rpos,vary_grid_Rneg,vary_grid_Lpos,vary_grid_Lneg,phipt2(-1:je*px+2)
+	real  dt,Vvel2(0:i1,0:j1,0:k1)
+	real*8 pbb(0:i1,0:k1),pbf(0:i1,0:k1),putin2(-2:i1+2,-2:j1+2,-2:k1+2)
+	real xD,xC,xU,xF,cD,cC,cU,cF,phic,phif,eps,xxf,xxc,cfl,alpha,del,Rpdr_ip,Rpdphi_ip,eps2,numdif
+	integer kkp,kkm,kkpp,kkppp,kkmm,kkmmm,jjp,jjm,jjpp,jjppp,jjmm,jjmmm,iip,iim,iipp,iippp,iimm,iimmm
+	real Ax,Bx,Cx,DDx
+	real Ay,By,Cy,DDy
+	real Az,Bz,Cz,DDz	
+
+      dz_i=1./dz
+	  eps=1.e-6
+	  eps2=1.e-2
+	  
+	  putout(ib:ie,jb:je,kb:ke)=0.
+
+	Rp2(0:i1)=Rp
+	Rp2(-1)=Rp(0)-(Rp(2)-Rp(1)) !needed for periodicx sim
+ 	Rp2(i1+1)=Rp(i1)+(Rp(i1)-Rp(i1-1)) !needed for periodicx sim
+	
+	phipt2(0:je*px+1)=phipt
+	phipt2(-1)=phipt(0)-(phipt(1)-phipt(0)) !needed for periodicy sim
+ 	phipt2(je*px+1+1)=phipt(je*px+1)+(phipt(je*px+1)-phipt(je*px+1-1)) !needed for periodicy sim
+	
+
+	numdif=0. !1./60. ! upwind5
+		  Az=37.
+		  Bz=-8.
+		  Cz=1.
+		  DDz=1./60.
+		  Ay=37.
+		  By=-8.
+		  Cy=1.
+		  DDy=1./60.
+		  Ax=37.
+		  Bx=-8.
+		  Cx=1.
+		  DDx=1./60.	
+	putin2(0:i1,0:j1,0:k1)=putin
+	Vvel2=Vvel  
+	if (.false.) then !lateral inflow and outflow is specifically wanted sometimes, therefore lines below switched off... LdW 11-8-2015
+	if ((periodicy.eq.0..or.periodicy.eq.2).and.rank.eq.0) then !! make vvel2 zero at lateral boundaries to keep sediment inside with waves
+    	  j=0
+	  do i=0,i1
+	    do k=0,k1
+	      Vvel2(i,j,k)=0.
+	    enddo
+	  enddo
+	elseif ((periodicy.eq.0.or.periodicy.eq.2).and.rank.eq.px-1) then
+    	  j=je
+	  do i=0,i1
+	    do k=0,k1
+	      Vvel2(i,j,k)=0.
+	    enddo
+	  enddo
+	endif
+	endif
+
+
+c get stuff from other CPU's
+	  call shiftf2(putin,pbf)
+	  call shiftb2(putin,pbb) 
+
+	if (periodicy.eq.0.or.periodicy.eq.2) then
+	  if (rank.eq.0) then
+		do k=1,ke
+		   do i=1,ie
+		   putin2(i,-1,k) = putin(i,0,k)
+		   putin2(i,j1+1,k) =pbb(i,k)
+		   enddo
+		enddo
+	  elseif (rank.eq.px-1) then
+		do k=1,ke
+		   do i=1,ie
+		   putin2(i,-1,k) = pbf(i,k)
+		   putin2(i,j1+1,k) =putin(i,j1,k)
+		   enddo
+		enddo
+	  else 
+		do k=1,ke
+		   do i=1,ie
+		   putin2(i,-1,k) = pbf(i,k)
+		   putin2(i,j1+1,k) =pbb(i,k)
+		   enddo
+		enddo
+	  endif
+	else 
+		do k=1,ke
+		   do i=1,ie
+		   putin2(i,-1,k) = pbf(i,k)
+		   putin2(i,j1+1,k) =pbb(i,k)
+		   enddo
+		enddo
+	endif
+	  call shiftf3(putin,pbf)
+	  call shiftb3(putin,pbb) 
+
+	if (periodicy.eq.0.or.periodicy.eq.2) then
+	  if (rank.eq.0) then
+		do k=1,ke
+		   do i=1,ie
+		   putin2(i,-2,k) = putin(i,0,k)
+		   putin2(i,j1+2,k) =pbb(i,k)
+		   enddo
+		enddo
+	  elseif (rank.eq.px-1) then
+		do k=1,ke
+		   do i=1,ie
+		   putin2(i,-2,k) = pbf(i,k)
+		   putin2(i,j1+2,k) =putin(i,j1,k)
+		   enddo
+		enddo
+	  else 
+		do k=1,ke
+		   do i=1,ie
+		   putin2(i,-2,k) = pbf(i,k)
+		   putin2(i,j1+2,k) =pbb(i,k)
+		   enddo
+		enddo
+	  endif
+	else 
+		do k=1,ke
+		   do i=1,ie
+		   putin2(i,-2,k) = pbf(i,k)
+		   putin2(i,j1+2,k) =pbb(i,k)
+		   enddo
+		enddo
+	endif
+	if (periodicx.eq.0) then
+		putin2(-2,0:j1,0:k1)=putin(0,0:j1,0:k1)
+		putin2(-1,0:j1,0:k1)=putin(0,0:j1,0:k1)
+		putin2(i1+1,0:j1,0:k1)=putin(ie,0:j1,0:k1)
+		putin2(i1+2,0:j1,0:k1)=putin(ie,0:j1,0:k1)
+	else 
+		putin2(-2,0:j1,0:k1)=putin(ie-2,0:j1,0:k1)
+		putin2(-1,0:j1,0:k1)=putin(ie-1,0:j1,0:k1)
+		putin2(i1+1,0:j1,0:k1)=putin(2,0:j1,0:k1)
+		putin2(i1+2,0:j1,0:k1)=putin(3,0:j1,0:k1)
+	endif
+
+	putin2(0:i1,0:j1,-2)=putin(0:i1,0:j1,0)
+	putin2(0:i1,0:j1,-1)=putin(0:i1,0:j1,0)
+	putin2(0:i1,0:j1,k1+1)=putin(0:i1,0:j1,ke)
+	putin2(0:i1,0:j1,k1+2)=putin(0:i1,0:j1,ke)
+
+
+
+c
+c     -------------------------------------------start i-loop
+      do 100 i=ib,ie
+c
+      ip=i+1
+      im=i-1
+      imm=im
+      ipp=ip
+      if (periodicx.eq.0) then
+        if (i.eq.1) imm=i
+        if (i.eq.ie) ipp=i
+      endif
+      Rpdr_i=1./(Rp2(i)*dr(i))
+	  Rpdr_ip=1./(Rp2(ip)*dr(ip))
+      iip=i+1
+      iim=i-1
+	  iipp=i+2
+	  iippp=i+3
+	  iimm=i-2
+	  iimmm=i-3	  
+c     -------------------------------------------start j-loop
+        do 200 j=jb,je
+c
+        jp=j+1
+        jm=j-1
+		jmm=jm
+		jpp=jp
+        if ((periodicy.eq.0.or.periodicy.eq.2).and.rank.eq.0) then
+		if (j.eq.1) jmm=j
+		endif
+        if ((periodicy.eq.0.or.periodicy.eq.2).and.rank.eq.px-1) then
+		if (j.eq.je) jpp=j
+		endif
+		Rpdphi_i=1./(Rp2(i)*(phiv(j)-phiv(jm)))
+		Rpdphi_ip=1./(Rp2(i)*(phiv(jp)-phiv(j)))
+		jjp=j+1
+        jjm=j-1
+		jjpp=j+2
+		jjppp=j+3
+		jjmm=j-2
+	    jjmmm=j-3
+c
+c     -------------------------------------------start k-loop
+	  do 300 k=kb,ke
+c
+	  kp=k+1
+	  km=k-1
+	  kmm=km
+	  kpp=kp
+	  if (k.eq.1) kmm=k
+	  if (k.eq.ke) kpp=k
+      kkp=k+1
+      kkm=k-1
+	  kkpp=k+2
+	  kkppp=k+3
+	  kkmm=k-2
+	  kkmmm=k-3	  
+	IF (Uvel(i,j,k).ge.0.) THEN
+	  cD=putin2(ip,j,k)
+	  cC=putin2(i ,j,k)
+	  cU=putin2(im,j,k)
+	  del = (cD-cU)
+	  phic=(cC-cU)/del
+	  IF (ABS(del)<eps.or.phic.gt.1.or.phic.lt.0.) THEN
+	    putout(i,j,k) = putout(i,j,k) - Ru(i)*Uvel(i ,j,k)*cC*Rpdr_i !UPW 
+		putout(ip,j,k)= putout(ip,j,k)+ Ru(i)*Uvel(i ,j,k)*cC*Rpdr_ip !UPW 
+	  ELSE
+		cfl = (dt*(Uvel(i ,j,k))/(Rp2(ip)-Rp2(i )))
+		cF = 
+     1 DDx*(Ax*(putin2(i,j,k)+putin2(iip,j,k))+Bx*(putin2(iim,j,k)+putin2(iipp,j,k))+Cx*(putin2(iimm,j,k)+putin2(iippp,j,k))) -		! pos velocity minus numdif
+     1 numdif*(10.*(-putin2(i,j,k)+putin2(iip,j,k))-5.*(-putin2(iim,j,k)+putin2(iipp,j,k))+(-putin2(iimm,j,k)+putin2(iippp,j,k)))
+		phif = (cF-cU)/del
+		phif = (1.-cfl)*phif+cfl*phic
+		phif = max(phif,phic)
+		phif = min(phif,1.)
+	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		cF = phif*del+cU
+        putout(i,j,k)  = putout(i,j,k)  - Ru(i)*Uvel(i ,j,k)*cF*Rpdr_i
+	    putout(ip,j,k) = putout(ip,j,k) + Ru(i)*Uvel(i ,j,k)*cF*Rpdr_ip		
+	  ENDIF
+	ELSE
+	  cD=putin2(i    ,j,k)
+	  cC=putin2(ip   ,j,k)
+	  cU=putin2(ipp+1,j,k)
+	  del = (cD-cU)
+	  phic=(cC-cU)/del
+	  IF (ABS(del)<eps.or.phic.gt.1.or.phic.lt.0.) THEN
+	    putout(i,j,k)  = putout(i ,j,k) - Ru(i)*Uvel(i ,j,k)*cC*Rpdr_i  !UPW 
+	    putout(ip,j,k) = putout(ip,j,k) + Ru(i)*Uvel(i ,j,k)*cC*Rpdr_ip	 !UPW 	
+	  ELSE
+		cfl = (dt*ABS(Uvel(i ,j,k))/(Rp2(ip)-Rp2(i )))
+		cF = 
+     1 DDx*(Ax*(putin2(i,j,k)+putin2(iip,j,k))+Bx*(putin2(iim,j,k)+putin2(iipp,j,k))+Cx*(putin2(iimm,j,k)+putin2(iippp,j,k))) +		! neg velocity plus numdif
+     1 numdif*(10.*(-putin2(i,j,k)+putin2(iip,j,k))-5.*(-putin2(iim,j,k)+putin2(iipp,j,k))+(-putin2(iimm,j,k)+putin2(iippp,j,k)))
+		phif = (cF-cU)/del
+		phif = (1.-cfl)*phif+cfl*phic
+		phif = max(phif,phic)
+		phif = min(phif,1.)
+	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		cF = phif*del+cU
+	    putout(i,j,k)  = putout(i ,j,k) - Ru(i)*Uvel(i ,j,k)*cF*Rpdr_i
+	    putout(ip,j,k) = putout(ip,j,k) + Ru(i)*Uvel(i ,j,k)*cF*Rpdr_ip		
+	  ENDIF	
+	ENDIF
+	IF (i.eq.1) THEN
+	IF (Uvel(im,j,k).ge.0.) THEN
+	  cD=putin2(i,j,k)
+	  cC=putin2(im ,j,k)
+	  cU=putin2(imm-1,j,k)
+	  del = (cD-cU)
+	  phic=(cC-cU)/del
+	  IF (ABS(del)<eps.or.phic.gt.1.or.phic.lt.0.) THEN
+	    putout(i,j,k) = putout(i,j,k) + Ru(im)*Uvel(im,j,k)*cC*Rpdr_i !UPW
+	  ELSE
+		cfl = (dt*(Uvel(im,j,k))/(Rp2(i)-Rp2(im)))
+		cF = 
+     1 DDx*(Ax*(putin2(iim,j,k)+putin2(i,j,k))+Bx*(putin2(iimm,j,k)+putin2(iip,j,k))+Cx*(putin2(iimmm,j,k)+putin2(iipp,j,k))) -		! pos velocity minus numdif
+     1 numdif*(10.*(-putin2(iim,j,k)+putin2(i,j,k))-5.*(-putin2(iimm,j,k)+putin2(iip,j,k))+(-putin2(iimmm,j,k)+putin2(iipp,j,k)))
+		phif = (cF-cU)/del
+		phif = (1.-cfl)*phif+cfl*phic
+		phif = max(phif,phic)
+		phif = min(phif,1.)
+	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		cF = phif*del+cU
+		putout(i,j,k) = putout(i,j,k) + Ru(im)*Uvel(im,j,k)*cF*Rpdr_i
+	  ENDIF
+	ELSE
+	  cD=putin2(im,j,k)
+	  cC=putin2(i   ,j,k)
+	  cU=putin2(ip,j,k)
+	  del = (cD-cU)
+	  phic=(cC-cU)/del
+	  IF (ABS(del)<eps.or.phic.gt.1.or.phic.lt.0.) THEN
+	    putout(i,j,k) = putout(i,j,k) + Ru(im)*Uvel(im,j,k)*cC*Rpdr_i !UPW 
+	  ELSE
+		cfl = (dt*ABS(Uvel(im,j,k))/(Rp2(i)-Rp2(im)))
+		cF = 
+     1 DDx*(Ax*(putin2(iim,j,k)+putin2(i,j,k))+Bx*(putin2(iimm,j,k)+putin2(iip,j,k))+Cx*(putin2(iimmm,j,k)+putin2(iipp,j,k))) +		! neg velocity plus numdif
+     1 numdif*(10.*(-putin2(iim,j,k)+putin2(i,j,k))-5.*(-putin2(iimm,j,k)+putin2(iip,j,k))+(-putin2(iimmm,j,k)+putin2(iipp,j,k)))
+		phif = (cF-cU)/del
+		phif = (1.-cfl)*phif+cfl*phic
+
+		phif = max(phif,phic)
+		phif = min(phif,1.)
+	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		cF = phif*del+cU
+		putout(i,j,k) = putout(i,j,k) + Ru(im)*Uvel(im,j,k)*cF*Rpdr_i
+	  ENDIF		
+	ENDIF
+	ENDIF
+
+	IF (Vvel(i,j ,k).ge.0.) THEN
+	  cD=putin2(i,jp,k)
+	  cC=putin2(i ,j,k)
+	  cU=putin2(i,jm,k)
+	  del = (cD-cU)
+	  phic=(cC-cU)/del
+	  IF (ABS(del)<eps.or.phic.gt.1.or.phic.lt.0.) THEN
+	    putout(i,j,k) = putout(i,j,k) - Vvel2(i,j ,k)*cC*Rpdphi_i !UPW
+		putout(i,jp,k)= putout(i,jp,k)+ Vvel2(i,j ,k)*cC*Rpdphi_ip !UPW
+	  ELSE
+		cfl = dt*(Vvel2(i,j ,k))/(Rp(i)*(phipt2(rank*je+jp)-phipt2(rank*je+j)))
+		cF = 
+     1 DDy*(Ay*(putin2(i,j,k)+putin2(i,jjp,k))+By*(putin2(i,jjm,k)+putin2(i,jjpp,k))+Cy*(putin2(i,jjmm,k)+putin2(i,jjppp,k))) -		! pos velocity minus numdif
+     1 numdif*(10.*(-putin2(i,j,k)+putin2(i,jjp,k))-5.*(-putin2(i,jjm,k)+putin2(i,jjpp,k))+(-putin2(i,jjmm,k)+putin2(i,jjppp,k)))
+		phif = (cF-cU)/del
+		phif = (1.-cfl)*phif+cfl*phic
+
+		phif = max(phif,phic)
+		phif = min(phif,1.)
+	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		cF = phif*del+cU
+		putout(i,j,k) = putout(i,j,k) - Vvel2(i,j ,k)*cF*Rpdphi_i 
+		putout(i,jp,k)= putout(i,jp,k)+ Vvel2(i,j ,k)*cF*Rpdphi_ip 
+	  ENDIF
+	ELSE
+	  cD=putin2(i, j,k)
+	  cC=putin2(i ,jp,k)
+	  cU=putin2(i,jpp+1,k)
+	  del = (cD-cU)
+	  phic=(cC-cU)/del
+	  IF (ABS(del)<eps.or.phic.gt.1.or.phic.lt.0.) THEN
+	    putout(i,j,k) = putout(i,j,k) - Vvel2(i,j ,k)*cC*Rpdphi_i !UPW
+		putout(i,jp,k)= putout(i,jp,k)+ Vvel2(i,j ,k)*cC*Rpdphi_ip !UPW
+	  ELSE
+		cfl = dt*ABS(Vvel2(i,j ,k))/(Rp(i)*(phipt2(rank*je+jp)-phipt2(rank*je+j)))
+		cF = 
+     1 DDy*(Ay*(putin2(i,j,k)+putin2(i,jjp,k))+By*(putin2(i,jjm,k)+putin2(i,jjpp,k))+Cy*(putin2(i,jjmm,k)+putin2(i,jjppp,k))) +		! neg velocity plus numdif
+     1 numdif*(10.*(-putin2(i,j,k)+putin2(i,jjp,k))-5.*(-putin2(i,jjm,k)+putin2(i,jjpp,k))+(-putin2(i,jjmm,k)+putin2(i,jjppp,k)))
+		phif = (cF-cU)/del
+		phif = (1.-cfl)*phif+cfl*phic
+		
+		phif = max(phif,phic)
+		phif = min(phif,1.)
+	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		cF = phif*del+cU
+		putout(i,j,k) = putout(i,j,k) - Vvel2(i,j ,k)*cF*Rpdphi_i 
+	    putout(i,jp,k) = putout(i,jp,k) + Vvel2(i,j ,k)*cF*Rpdphi_ip 	  
+	  ENDIF
+	ENDIF
+	IF (j.eq.1) THEN
+	IF (Vvel(i,jm,k).ge.0.) THEN
+	  cD=putin2(i ,j,k)
+	  cC=putin2(i ,jm,k)
+	  cU=putin2(i ,jmm-1,k)
+	  del = (cD-cU)
+	  phic=(cC-cU)/del
+	  IF (ABS(del)<eps.or.phic.gt.1.or.phic.lt.0.) THEN
+	    putout(i,j,k) = putout(i,j,k) + Vvel2(i,jm,k)*cC*Rpdphi_i !UPW
+	  ELSE
+		cfl = dt*(Vvel2(i,jm,k))/(Rp(i)*(phipt2(rank*je+j)-phipt2(rank*je+jm)))
+		cF = 
+     1 DDy*(Ay*(putin2(i,jjm,k)+putin2(i,j,k))+By*(putin2(i,jjmm,k)+putin2(i,jjp,k))+Cy*(putin2(i,jjmmm,k)+putin2(i,jjpp,k))) -		! pos velocity minus numdif
+     1 numdif*(10.*(-putin2(i,jjm,k)+putin2(i,j,k))-5.*(-putin2(i,jjmm,k)+putin2(i,jjp,k))+(-putin2(i,jjmmm,k)+putin2(i,jjpp,k)))
+		phif = (cF-cU)/del
+		phif = (1.-cfl)*phif+cfl*phic
+
+		phif = max(phif,phic)
+		phif = min(phif,1.)
+	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		cF = phif*del+cU
+		putout(i,j,k) = putout(i,j,k) + Vvel2(i,jm,k)*cF*Rpdphi_i 
+	  ENDIF
+	ELSE
+	  cD=putin2(i, jm,k)
+	  cC=putin2(i ,j ,k)
+	  cU=putin2(i ,jp,k)
+	  del = (cD-cU)
+	  phic=(cC-cU)/del
+	  IF (ABS(del)<eps.or.phic.gt.1.or.phic.lt.0.) THEN
+	    putout(i,j,k) = putout(i,j,k) + Vvel2(i,jm,k)*cC*Rpdphi_i !UPW
+	  ELSE
+		cfl = dt*ABS(Vvel2(i,jm,k))/(Rp(i)*(phipt2(rank*je+j)-phipt2(rank*je+jm)))
+		cF = 
+     1 DDy*(Ay*(putin2(i,jjm,k)+putin2(i,j,k))+By*(putin2(i,jjmm,k)+putin2(i,jjp,k))+Cy*(putin2(i,jjmmm,k)+putin2(i,jjpp,k))) +		! neg velocity plus numdif
+     1 numdif*(10.*(-putin2(i,jjm,k)+putin2(i,j,k))-5.*(-putin2(i,jjmm,k)+putin2(i,jjp,k))+(-putin2(i,jjmmm,k)+putin2(i,jjpp,k)))
+		phif = (cF-cU)/del
+		phif = (1.-cfl)*phif+cfl*phic
+
+		phif = max(phif,phic)
+		phif = min(phif,1.)
+	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		cF = phif*del+cU
+		putout(i,j,k) = putout(i,j,k) + Vvel2(i,jm,k)*cF*Rpdphi_i 
+	  ENDIF
+	ENDIF	
+	ENDIF
+
+	IF (Wvel(i,j,k ).ge.0.) THEN
+	  cD=putin2(i,j ,kp)
+	  cC=putin2(i ,j,k )
+	  cU=putin2(i,j ,km)
+	  del = (cD-cU)
+	  phic=(cC-cU)/del
+	  IF (ABS(del)<eps.or.phic.gt.1.or.phic.lt.0.) THEN
+	    putout(i,j,k) = putout(i,j,k) - Wvel(i,j,k )*cC*dz_i 
+		putout(i,j,kp)= putout(i,j,kp)+ Wvel(i,j,k )*cC*dz_i 
+	  ELSE
+		cfl = dt*(Wvel(i,j,k ))*dz_i
+		cF = 
+     1 DDz*(Az*(putin2(i,j,k)+putin2(i,j,kkp))+Bz*(putin2(i,j,kkm)+putin2(i,j,kkpp))+Cz*(putin2(i,j,kkmm)+putin2(i,j,kkppp)))-		! pos velocity minus numdif
+     1 numdif*(10.*(-putin2(i,j,k)+putin2(i,j,kkp))-5.*(-putin2(i,j,kkm)+putin2(i,j,kkpp))+(-putin2(i,j,kkmm)+putin2(i,j,kkppp)))
+		phif = (cF-cU)/del
+		phif = (1.-cfl)*phif+cfl*phic
+
+		phif = max(phif,phic)
+		phif = min(phif,1.)
+	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		cF = phif*del+cU
+		putout(i,j,k) = putout(i,j,k) - Wvel(i,j,k )*cF*dz_i 
+		putout(i,j,kp)= putout(i,j,kp)+ Wvel(i,j,k )*cF*dz_i 
+	  ENDIF
+	  
+	ELSE
+	  cD=putin2(i,j ,k )
+	  cC=putin2(i ,j,kp)
+	  cU=putin2(i,j ,kpp+1)
+	  del = (cD-cU)
+	  phic=(cC-cU)/del
+	  IF (ABS(del)<eps.or.phic.gt.1.or.phic.lt.0.) THEN
+	    putout(i,j,k) = putout(i,j,k) - Wvel(i,j,k )*cC*dz_i 
+		putout(i,j,kp)= putout(i,j,kp)+ Wvel(i,j,k )*cC*dz_i 
+	  ELSE
+		cfl = dt*ABS(Wvel(i,j,k ))*dz_i
+		cF = 
+     1 DDz*(Az*(putin2(i,j,k)+putin2(i,j,kkp))+Bz*(putin2(i,j,kkm)+putin2(i,j,kkpp))+Cz*(putin2(i,j,kkmm)+putin2(i,j,kkppp))) +		! neg velocity plus numdif
+     1 numdif*(10.*(-putin2(i,j,k)+putin2(i,j,kkp))-5.*(-putin2(i,j,kkm)+putin2(i,j,kkpp))+(-putin2(i,j,kkmm)+putin2(i,j,kkppp)))
+		phif = (cF-cU)/del
+		phif = (1.-cfl)*phif+cfl*phic
+
+		phif = max(phif,phic)
+		phif = min(phif,1.)
+	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		cF = phif*del+cU
+		putout(i,j,k) = putout(i,j,k) - Wvel(i,j,k )*cF*dz_i 
+		putout(i,j,kp)= putout(i,j,kp)+ Wvel(i,j,k )*cF*dz_i
+	  ENDIF
+	ENDIF
+	IF (k.eq.1) THEN
+	IF (Wvel(i,j,km).ge.0.) THEN
+	  cD=putin2(i,j ,k )
+	  cC=putin2(i ,j,km)
+	  cU=putin2(i,j ,kmm-1)
+	  del = (cD-cU)
+	  phic=(cC-cU)/del
+	  IF (ABS(del)<eps.or.phic.gt.1.or.phic.lt.0.) THEN
+	    putout(i,j,k) = putout(i,j,k) + Wvel(i,j,km )*cC*dz_i 
+	  ELSE
+		cfl = dt*(Wvel(i,j,km ))*dz_i
+		cF = 
+     1 DDz*(Az*(putin2(i,j,kkm)+putin2(i,j,k))+Bz*(putin2(i,j,kkmm)+putin2(i,j,kkp))+Cz*(putin2(i,j,kkmmm)+putin2(i,j,kkpp)))-		! pos velocity minus numdif
+     1 numdif*(10.*(-putin2(i,j,kkm)+putin2(i,j,k))-5.*(-putin2(i,j,kkmm)+putin2(i,j,kkp))+(-putin2(i,j,kkmmm)+putin2(i,j,kkpp)))
+		phif = (cF-cU)/del
+		phif = (1.-cfl)*phif+cfl*phic
+
+		phif = max(phif,phic)
+		phif = min(phif,1.)
+	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		cF = phif*del+cU
+		putout(i,j,k) = putout(i,j,k) + Wvel(i,j,km )*cF*dz_i 
+	  ENDIF	  
+	ELSE
+	  cD=putin2(i,j ,km )
+	  cC=putin2(i ,j,k)
+	  cU=putin2(i,j ,kp)
+	  del = (cD-cU)
+	  phic=(cC-cU)/del
+	  IF (ABS(del)<eps.or.phic.gt.1.or.phic.lt.0.) THEN
+	    putout(i,j,k) = putout(i,j,k) + Wvel(i,j,km )*cC*dz_i 
+	  ELSE
+		cfl = dt*ABS(Wvel(i,j,km ))*dz_i
+		cF = 
+     1 DDz*(Az*(putin2(i,j,kkm)+putin2(i,j,k))+Bz*(putin2(i,j,kkmm)+putin2(i,j,kkp))+Cz*(putin2(i,j,kkmmm)+putin2(i,j,kkpp))) +		! neg velocity plus numdif
+     1 numdif*(10.*(-putin2(i,j,kkm)+putin2(i,j,k))-5.*(-putin2(i,j,kkmm)+putin2(i,j,kkp))+(-putin2(i,j,kkmmm)+putin2(i,j,kkpp)))
+		phif = (cF-cU)/del
+		phif = (1.-cfl)*phif+cfl*phic
+
+		phif = max(phif,phic)
+		phif = min(phif,1.)
+	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		cF = phif*del+cU
+		putout(i,j,k) = putout(i,j,k) + Wvel(i,j,km )*cF*dz_i 
+	  ENDIF	  
+	ENDIF
+	ENDIF
+
+c
+300       continue
+c     -------------------------------------------end i-loop
+200     continue
+c     -------------------------------------------end j-loop
+100   continue
+c     -------------------------------------------end k-loop
+c
+      return
+      end
+
 	subroutine advecc_NVD(putout,putin,Uvel,Vvel,Wvel,rho,Ru,Rp,dr,phiv,phipt,dz,
      +                  i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)
       implicit none
-!	Advection scheme according to NVD is similar to TVD, but manner of expression is different
-!	See for example Hirsch Chap 8.4. The only real difference I could find is the cfl dependent
-!	limiter phif = min(phif,phic/cfl) which I cannot find a TVD equivalent for
-!	test results for NVD alpha scheme are same for TVD alpha scheme, but TVD has advantage to
-!	deal with non-regular grids in proper manner; therefore I stay on the TVD track, LdW 25-11-15
+!	Face-wise advection scheme according to NVD is similar to TVD, but manner of expression is different
+!	See for example:
+!	# Hirsch Chap 8.4.
+!	# Darwish 1994, Normalized Variable and Space Formulation Methodology for High-Resolution Schemes
+!	# Leonard 1991, The ULTIMATE conservative difference scheme applied to unsteady one-dimensional advection
+!	The only real difference I could find is the cfl dependent limiter phif = min(phif,phic/(cfl+eps2)) 
+!	which I cannot find a TVD equivalent for and which is crucial to the NVD succes to give no under/overshoot
+!   it turned out to be necessary to include an extra limiter phif = min(phif,2.*phic) which corresponds to Sweby TVD 2r 
+!	in practice TUDflow3d needs 2r limiter in TVD (and not 2r/cfl as theory claims) and also NVD needs this extra limiter min(phif,2.*phic) in practice!
+!	20-11-2017 in matlab NVD FROMM or QUICK scheme with proper NVD limiters give stable results with EE1 time integration 
+!   with less diffusion then TVD, and no under or overshoot. FROMM shape is slightly better than QUICK, and NVD Fromm gave best results in diagonal edge and diagonal square tests TUDflow3d
+!	(<diff than Superbee, vLeer, Arora, NVD-upw5 and smallest waviness edge of all just like vLeer) therefore: 22-11-2017 NVD scheme is switched to NVD-FROMM
 ! can be called by nerd-option advec_conc='NVD'
 c
 c********************************************************************
@@ -1067,10 +1648,13 @@ c********************************************************************
 	  real  vary_grid_Rpos,vary_grid_Rneg,vary_grid_Lpos,vary_grid_Lneg,phipt2(-1:je*px+2)
 	real  dt,Vvel2(0:i1,0:j1,0:k1)
 	real*8 pbb(0:i1,0:k1),pbf(0:i1,0:k1)
-	real xD,xC,xU,xF,cD,cC,cU,cF,phic,phif,eps,xxf,xxc,cfl,alpha
+	real xD,xC,xU,xF,cD,cC,cU,cF,phic,phif,eps,xxf,xxc,cfl,alpha,del,Rpdr_ip,Rpdphi_ip,eps2
 
       dz_i=1./dz
-	  eps=1.e-8
+	  eps=1.e-6
+	  eps2=1.e-2
+	  
+	  putout(ib:ie,jb:je,kb:ke)=0.
 
 	Rp2(0:i1)=Rp
 	Rp2(-1)=Rp(0)-(Rp(2)-Rp(1)) !needed for periodicx sim
@@ -1146,7 +1730,526 @@ c get stuff from other CPU's
 		enddo
 	endif
 
+c
+c     -------------------------------------------start i-loop
+      do 100 i=ib,ie
+c
+      ip=i+1
+      im=i-1
+      imm=im
+      ipp=ip
+      if (periodicx.eq.0) then
+        if (i.eq.1) imm=i
+        if (i.eq.ie) ipp=i
+      endif
+      Rpdr_i=1./(Rp2(i)*dr(i))
+	  Rpdr_ip=1./(Rp2(ip)*dr(ip))
 
+c     -------------------------------------------start j-loop
+        do 200 j=jb,je
+c
+        jp=j+1
+        jm=j-1
+	jmm=jm
+	jpp=jp
+        if ((periodicy.eq.0.or.periodicy.eq.2).and.rank.eq.0) then
+	  if (j.eq.1) jmm=j
+	endif
+        if ((periodicy.eq.0.or.periodicy.eq.2).and.rank.eq.px-1) then
+	  if (j.eq.je) jpp=j
+	endif
+      Rpdphi_i=1./(Rp2(i)*(phiv(j)-phiv(jm)))
+	  Rpdphi_ip=1./(Rp2(i)*(phiv(jp)-phiv(j)))
+c
+c     -------------------------------------------start k-loop
+	  do 300 k=kb,ke
+c
+	  kp=k+1
+	  km=k-1
+	  kmm=km
+	  kpp=kp
+	  if (k.eq.1) kmm=k
+	  if (k.eq.ke) kpp=k
+	IF (Uvel(i,j,k).ge.0.) THEN
+	  cD=putin2(ip,j,k)
+	  cC=putin2(i ,j,k)
+	  cU=putin2(im,j,k)
+	  del = (cD-cU)
+	  phic=(cC-cU)/del
+	  IF (ABS(del)<eps.or.phic.gt.1.or.phic.lt.0.) THEN
+	    putout(i,j,k) = putout(i,j,k) - Ru(i)*Uvel(i ,j,k)*cC*Rpdr_i !UPW 
+		putout(ip,j,k)= putout(ip,j,k)+ Ru(i)*Uvel(i ,j,k)*cC*Rpdr_ip !UPW 
+	  ELSE
+	    xD=Rp2(ip)
+	    xC=Rp2(i )
+	    xU=Rp2(im)
+		xF=Ru (i)		
+	    xxf  = (xF-xU)/(xD-xU) 
+		xxc  = (xC-xU)/(xD-xU)
+		cfl = (dt*(Uvel(i ,j,k))/(Rp2(ip)-Rp2(i )))
+	    phif = phic + (1.-cfl)*(xxf-xxc) !FROMM on non-equidistant grid (Darwish 1994) for time dependent problems
+		!phif = phic + xxf-xxc !FROMM on non-equidistant grid (Darwish 1994) --> need to be combined with phif=(1-cfl)*phif+cfl*phic
+		!phif = xxf + (xxf*(xxf-1.))/(xxc*(xxc-1.))*(phic-xxc) !QUICK on non-equidistant grid (Darwish 1994) --> need to be combined with phif=(1-cfl)*phif+cfl*phic
+		!phif = (1.-cfl)*phif+cfl*phic
+		phif = max(phif,phic)
+		phif = min(phif,1.)
+	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		cF = phif*del+cU
+        putout(i,j,k)  = putout(i,j,k)  - Ru(i)*Uvel(i ,j,k)*cF*Rpdr_i
+	    putout(ip,j,k) = putout(ip,j,k) + Ru(i)*Uvel(i ,j,k)*cF*Rpdr_ip		
+	  ENDIF
+	ELSE
+	  cD=putin2(i    ,j,k)
+	  cC=putin2(ip   ,j,k)
+	  cU=putin2(ipp+1,j,k)
+	  del = (cD-cU)
+	  phic=(cC-cU)/del
+	  IF (ABS(del)<eps.or.phic.gt.1.or.phic.lt.0.) THEN
+	    putout(i,j,k)  = putout(i ,j,k) - Ru(i)*Uvel(i ,j,k)*cC*Rpdr_i  !UPW 
+	    putout(ip,j,k) = putout(ip,j,k) + Ru(i)*Uvel(i ,j,k)*cC*Rpdr_ip	 !UPW 	
+	  ELSE
+	    xD=Rp2(i )
+	    xC=Rp2(ip)
+	    xU=Rp2(ipp+1)
+		xF=Ru (i)		
+	    xxf  = (xF-xU)/(xD-xU) 
+		xxc  = (xC-xU)/(xD-xU)
+		cfl = (dt*ABS(Uvel(i ,j,k))/(Rp2(ip)-Rp2(i )))
+	    phif = phic + (1.-cfl)*(xxf-xxc) !FROMM on non-equidistant grid (Darwish 1994) for time dependent problems
+		!phif = phic + xxf-xxc !FROMM on non-equidistant grid (Darwish 1994) --> need to be combined with phif=(1-cfl)*phif+cfl*phic
+		!phif = xxf + (xxf*(xxf-1.))/(xxc*(xxc-1.))*(phic-xxc) !QUICK on non-equidistant grid (Darwish 1994) --> need to be combined with phif=(1-cfl)*phif+cfl*phic
+		!phif = (1.-cfl)*phif+cfl*phic
+		phif = max(phif,phic)
+		phif = min(phif,1.)
+	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		cF = phif*del+cU
+	    putout(i,j,k)  = putout(i ,j,k) - Ru(i)*Uvel(i ,j,k)*cF*Rpdr_i
+	    putout(ip,j,k) = putout(ip,j,k) + Ru(i)*Uvel(i ,j,k)*cF*Rpdr_ip		
+	  ENDIF	
+	ENDIF
+	IF (i.eq.1) THEN
+	IF (Uvel(im,j,k).ge.0.) THEN
+	  cD=putin2(i,j,k)
+	  cC=putin2(im ,j,k)
+	  cU=putin2(imm-1,j,k)
+	  del = (cD-cU)
+	  phic=(cC-cU)/del
+	  IF (ABS(del)<eps.or.phic.gt.1.or.phic.lt.0.) THEN
+	    putout(i,j,k) = putout(i,j,k) + Ru(im)*Uvel(im,j,k)*cC*Rpdr_i !UPW
+	  ELSE
+	    xD=Rp2(i)
+	    xC=Rp2(im )
+	    xU=Rp2(imm-1)
+		xF=Ru (im)		
+	    xxf  = (xF-xU)/(xD-xU) 
+		xxc  = (xC-xU)/(xD-xU)
+		cfl = (dt*(Uvel(im,j,k))/(Rp2(i)-Rp2(im)))
+	    phif = phic + (1.-cfl)*(xxf-xxc) !FROMM on non-equidistant grid (Darwish 1994) for time dependent problems
+		!phif = phic + xxf-xxc !FROMM on non-equidistant grid (Darwish 1994) --> need to be combined with phif=(1-cfl)*phif+cfl*phic
+		!phif = xxf + (xxf*(xxf-1.))/(xxc*(xxc-1.))*(phic-xxc) !QUICK on non-equidistant grid (Darwish 1994) --> need to be combined with phif=(1-cfl)*phif+cfl*phic
+		!phif = (1.-cfl)*phif+cfl*phic
+		phif = max(phif,phic)
+		phif = min(phif,1.)
+	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		cF = phif*del+cU
+		putout(i,j,k) = putout(i,j,k) + Ru(im)*Uvel(im,j,k)*cF*Rpdr_i
+	  ENDIF
+	ELSE
+	  cD=putin2(im,j,k)
+	  cC=putin2(i   ,j,k)
+	  cU=putin2(ip,j,k)
+	  del = (cD-cU)
+	  phic=(cC-cU)/del
+	  IF (ABS(del)<eps.or.phic.gt.1.or.phic.lt.0.) THEN
+	    putout(i,j,k) = putout(i,j,k) + Ru(im)*Uvel(im,j,k)*cC*Rpdr_i !UPW 
+	  ELSE
+	    xD=Rp2(im)
+	    xC=Rp2(i )
+	    xU=Rp2(ip)
+		xF=Ru (im)		
+	    xxf  = (xF-xU)/(xD-xU) 
+		xxc  = (xC-xU)/(xD-xU)
+		cfl = (dt*ABS(Uvel(im,j,k))/(Rp2(i)-Rp2(im)))
+	    phif = phic + (1.-cfl)*(xxf-xxc) !FROMM on non-equidistant grid (Darwish 1994) for time dependent problems
+		!phif = phic + xxf-xxc !FROMM on non-equidistant grid (Darwish 1994) --> need to be combined with phif=(1-cfl)*phif+cfl*phic
+		!phif = xxf + (xxf*(xxf-1.))/(xxc*(xxc-1.))*(phic-xxc) !QUICK on non-equidistant grid (Darwish 1994) --> need to be combined with phif=(1-cfl)*phif+cfl*phic
+		!phif = (1.-cfl)*phif+cfl*phic
+		phif = max(phif,phic)
+		phif = min(phif,1.)
+	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		cF = phif*del+cU
+		putout(i,j,k) = putout(i,j,k) + Ru(im)*Uvel(im,j,k)*cF*Rpdr_i
+	  ENDIF		
+	ENDIF
+	ENDIF
+
+	IF (Vvel(i,j ,k).ge.0.) THEN
+	  cD=putin2(i,jp,k)
+	  cC=putin2(i ,j,k)
+	  cU=putin2(i,jm,k)
+	  del = (cD-cU)
+	  phic=(cC-cU)/del
+	  IF (ABS(del)<eps.or.phic.gt.1.or.phic.lt.0.) THEN
+	    putout(i,j,k) = putout(i,j,k) - Vvel2(i,j ,k)*cC*Rpdphi_i !UPW
+		putout(i,jp,k)= putout(i,jp,k)+ Vvel2(i,j ,k)*cC*Rpdphi_ip !UPW
+	  ELSE
+	    xD=Rp2(i)*phipt2(rank*je+jp)
+	    xC=Rp2(i)*phipt2(rank*je+j )
+	    xU=Rp2(i)*phipt2(rank*je+jm)
+		xF=Rp2(i)*phiv(j )
+	    xxf  = (xF-xU)/(xD-xU) 
+		xxc  = (xC-xU)/(xD-xU)
+		cfl = dt*(Vvel2(i,j ,k))/(Rp(i)*(phipt2(rank*je+jp)-phipt2(rank*je+j)))
+	    phif = phic + (1.-cfl)*(xxf-xxc) !FROMM on non-equidistant grid (Darwish 1994) for time dependent problems
+		!phif = phic + xxf-xxc !FROMM on non-equidistant grid (Darwish 1994) --> need to be combined with phif=(1-cfl)*phif+cfl*phic
+		!phif = xxf + (xxf*(xxf-1.))/(xxc*(xxc-1.))*(phic-xxc) !QUICK on non-equidistant grid (Darwish 1994) --> need to be combined with phif=(1-cfl)*phif+cfl*phic
+		!phif = (1.-cfl)*phif+cfl*phic
+		phif = max(phif,phic)
+		phif = min(phif,1.)
+	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		cF = phif*del+cU
+		putout(i,j,k) = putout(i,j,k) - Vvel2(i,j ,k)*cF*Rpdphi_i 
+		putout(i,jp,k)= putout(i,jp,k)+ Vvel2(i,j ,k)*cF*Rpdphi_ip 
+	  ENDIF
+	ELSE
+	  cD=putin2(i, j,k)
+	  cC=putin2(i ,jp,k)
+	  cU=putin2(i,jpp+1,k)
+	  del = (cD-cU)
+	  phic=(cC-cU)/del
+	  IF (ABS(del)<eps.or.phic.gt.1.or.phic.lt.0.) THEN
+	    putout(i,j,k) = putout(i,j,k) - Vvel2(i,j ,k)*cC*Rpdphi_i !UPW
+		putout(i,jp,k)= putout(i,jp,k)+ Vvel2(i,j ,k)*cC*Rpdphi_ip !UPW
+	  ELSE
+	    xD=Rp2(i)*phipt2(rank*je+j)
+	    xC=Rp2(i)*phipt2(rank*je+jp )
+	    xU=Rp2(i)*phipt2(rank*je+jpp+1)
+		xF=Rp2(i)*phiv(j )
+	    xxf  = (xF-xU)/(xD-xU) 
+		xxc  = (xC-xU)/(xD-xU)
+		cfl = dt*ABS(Vvel2(i,j ,k))/(Rp(i)*(phipt2(rank*je+jp)-phipt2(rank*je+j)))
+	    phif = phic + (1.-cfl)*(xxf-xxc) !FROMM on non-equidistant grid (Darwish 1994) for time dependent problems
+		!phif = phic + xxf-xxc !FROMM on non-equidistant grid (Darwish 1994) --> need to be combined with phif=(1-cfl)*phif+cfl*phic
+		!phif = xxf + (xxf*(xxf-1.))/(xxc*(xxc-1.))*(phic-xxc) !QUICK on non-equidistant grid (Darwish 1994) --> need to be combined with phif=(1-cfl)*phif+cfl*phic
+		!phif = (1.-cfl)*phif+cfl*phic
+		phif = max(phif,phic)
+		phif = min(phif,1.)
+	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		cF = phif*del+cU
+		putout(i,j,k) = putout(i,j,k) - Vvel2(i,j ,k)*cF*Rpdphi_i 
+		putout(i,jp,k) = putout(i,jp,k) + Vvel2(i,j ,k)*cF*Rpdphi_ip 	  
+	  ENDIF
+	ENDIF
+	IF (j.eq.1) THEN
+	IF (Vvel(i,jm,k).ge.0.) THEN
+	  cD=putin2(i ,j,k)
+	  cC=putin2(i ,jm,k)
+	  cU=putin2(i ,jmm-1,k)
+	  del = (cD-cU)
+	  phic=(cC-cU)/del
+	  IF (ABS(del)<eps.or.phic.gt.1.or.phic.lt.0.) THEN
+	    putout(i,j,k) = putout(i,j,k) + Vvel2(i,jm,k)*cC*Rpdphi_i !UPW
+	  ELSE
+	    xD=Rp2(i)*phipt2(rank*je+j)
+	    xC=Rp2(i)*phipt2(rank*je+jm )
+	    xU=Rp2(i)*phipt2(rank*je+jmm-1)
+		xF=Rp2(i)*phiv(jm)
+	    xxf  = (xF-xU)/(xD-xU) 
+		xxc  = (xC-xU)/(xD-xU)
+		cfl = dt*(Vvel2(i,jm,k))/(Rp(i)*(phipt2(rank*je+j)-phipt2(rank*je+jm)))
+	    phif = phic + (1.-cfl)*(xxf-xxc) !FROMM on non-equidistant grid (Darwish 1994) for time dependent problems
+		!phif = phic + xxf-xxc !FROMM on non-equidistant grid (Darwish 1994) --> need to be combined with phif=(1-cfl)*phif+cfl*phic
+		!phif = xxf + (xxf*(xxf-1.))/(xxc*(xxc-1.))*(phic-xxc) !QUICK on non-equidistant grid (Darwish 1994) --> need to be combined with phif=(1-cfl)*phif+cfl*phic
+		!phif = (1.-cfl)*phif+cfl*phic
+		phif = max(phif,phic)
+		phif = min(phif,1.)
+	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		cF = phif*del+cU
+		putout(i,j,k) = putout(i,j,k) + Vvel2(i,jm,k)*cF*Rpdphi_i 
+	  ENDIF
+	ELSE
+	  cD=putin2(i, jm,k)
+	  cC=putin2(i ,j ,k)
+	  cU=putin2(i ,jp,k)
+	  del = (cD-cU)
+	  phic=(cC-cU)/del
+	  IF (ABS(del)<eps.or.phic.gt.1.or.phic.lt.0.) THEN
+	    putout(i,j,k) = putout(i,j,k) + Vvel2(i,jm,k)*cC*Rpdphi_i !UPW
+	  ELSE
+	    xD=Rp2(i)*phipt2(rank*je+jm)
+	    xC=Rp2(i)*phipt2(rank*je+j )
+	    xU=Rp2(i)*phipt2(rank*je+jp)
+		xF=Rp2(i)*phiv(jm)
+	    xxf  = (xF-xU)/(xD-xU) 
+		xxc  = (xC-xU)/(xD-xU)
+		cfl = dt*ABS(Vvel2(i,jm,k))/(Rp(i)*(phipt2(rank*je+j)-phipt2(rank*je+jm)))
+	    phif = phic + (1.-cfl)*(xxf-xxc) !FROMM on non-equidistant grid (Darwish 1994) for time dependent problems
+		!phif = phic + xxf-xxc !FROMM on non-equidistant grid (Darwish 1994) --> need to be combined with phif=(1-cfl)*phif+cfl*phic
+		!phif = xxf + (xxf*(xxf-1.))/(xxc*(xxc-1.))*(phic-xxc) !QUICK on non-equidistant grid (Darwish 1994) --> need to be combined with phif=(1-cfl)*phif+cfl*phic
+		!phif = (1.-cfl)*phif+cfl*phic
+		phif = max(phif,phic)
+		phif = min(phif,1.)
+	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		cF = phif*del+cU
+		putout(i,j,k) = putout(i,j,k) + Vvel2(i,jm,k)*cF*Rpdphi_i 
+	  ENDIF
+	ENDIF	
+	ENDIF
+
+	IF (Wvel(i,j,k ).ge.0.) THEN
+	  cD=putin2(i,j ,kp)
+	  cC=putin2(i ,j,k )
+	  cU=putin2(i,j ,km)
+	  del = (cD-cU)
+	  phic=(cC-cU)/del
+	  IF (ABS(del)<eps.or.phic.gt.1.or.phic.lt.0.) THEN
+	    putout(i,j,k) = putout(i,j,k) - Wvel(i,j,k )*cC*dz_i 
+		putout(i,j,kp)= putout(i,j,kp)+ Wvel(i,j,k )*cC*dz_i 
+	  ELSE
+		cfl = dt*(Wvel(i,j,k ))*dz_i
+	    phif = phic + (1.-cfl)*0.25 !FROMM on equidistant grid (Darwish 1994) for time dependent problems
+		!phif = phic + 0.25 !FROMM on equidistant grid (Darwish 1994) --> need to be combined with phif=(1-cfl)*phif+cfl*phic
+		!phif = 0.375+0.75*phic	!QUICK on equidistant grid --> need to be combined with phif=(1-cfl)*phif+cfl*phic
+		!phif = (1.-cfl)*phif+cfl*phic
+		phif = max(phif,phic)
+		phif = min(phif,1.)
+	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		cF = phif*del+cU
+		putout(i,j,k) = putout(i,j,k) - Wvel(i,j,k )*cF*dz_i 
+		putout(i,j,kp)= putout(i,j,kp)+ Wvel(i,j,k )*cF*dz_i 
+	  ENDIF
+	  
+	ELSE
+	  cD=putin2(i,j ,k )
+	  cC=putin2(i ,j,kp)
+	  cU=putin2(i,j ,kpp+1)
+	  del = (cD-cU)
+	  phic=(cC-cU)/del
+	  IF (ABS(del)<eps.or.phic.gt.1.or.phic.lt.0.) THEN
+	    putout(i,j,k) = putout(i,j,k) - Wvel(i,j,k )*cC*dz_i 
+		putout(i,j,kp)= putout(i,j,kp)+ Wvel(i,j,k )*cC*dz_i 
+	  ELSE
+		cfl = dt*ABS(Wvel(i,j,k ))*dz_i
+	    phif = phic + (1.-cfl)*0.25 !FROMM on equidistant grid (Darwish 1994) for time dependent problems
+		!phif = phic + 0.25 !FROMM on equidistant grid (Darwish 1994) --> need to be combined with phif=(1-cfl)*phif+cfl*phic
+		!phif = 0.375+0.75*phic	!QUICK on equidistant grid --> need to be combined with phif=(1-cfl)*phif+cfl*phic
+		!phif = (1.-cfl)*phif+cfl*phic
+		phif = max(phif,phic)
+		phif = min(phif,1.)
+	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		cF = phif*del+cU
+		putout(i,j,k) = putout(i,j,k) - Wvel(i,j,k )*cF*dz_i 
+		putout(i,j,kp)= putout(i,j,kp)+ Wvel(i,j,k )*cF*dz_i
+	  ENDIF
+	ENDIF
+	IF (k.eq.1) THEN
+	IF (Wvel(i,j,km).ge.0.) THEN
+	  cD=putin2(i,j ,k )
+	  cC=putin2(i ,j,km)
+	  cU=putin2(i,j ,kmm-1)
+	  del = (cD-cU)
+	  phic=(cC-cU)/del
+	  IF (ABS(del)<eps.or.phic.gt.1.or.phic.lt.0.) THEN
+	    putout(i,j,k) = putout(i,j,k) + Wvel(i,j,km )*cC*dz_i 
+	  ELSE
+		cfl = dt*(Wvel(i,j,km ))*dz_i
+	    phif = phic + (1.-cfl)*0.25 !FROMM on equidistant grid (Darwish 1994) for time dependent problems
+		!phif = phic + 0.25 !FROMM on equidistant grid (Darwish 1994) --> need to be combined with phif=(1-cfl)*phif+cfl*phic
+		!phif = 0.375+0.75*phic	!QUICK on equidistant grid --> need to be combined with phif=(1-cfl)*phif+cfl*phic
+		!phif = (1.-cfl)*phif+cfl*phic
+		phif = max(phif,phic)
+		phif = min(phif,1.)
+	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		cF = phif*del+cU
+		putout(i,j,k) = putout(i,j,k) + Wvel(i,j,km )*cF*dz_i 
+	  ENDIF	  
+	ELSE
+	  cD=putin2(i,j ,km )
+	  cC=putin2(i ,j,k)
+	  cU=putin2(i,j ,kp)
+	  del = (cD-cU)
+	  phic=(cC-cU)/del
+	  IF (ABS(del)<eps.or.phic.gt.1.or.phic.lt.0.) THEN
+	    putout(i,j,k) = putout(i,j,k) + Wvel(i,j,km )*cC*dz_i 
+	  ELSE
+		cfl = dt*ABS(Wvel(i,j,km ))*dz_i
+	    phif = phic + (1.-cfl)*0.25 !FROMM on equidistant grid (Darwish 1994) for time dependent problems
+		!phif = phic + 0.25 !FROMM on equidistant grid (Darwish 1994) --> need to be combined with phif=(1-cfl)*phif+cfl*phic
+		!phif = 0.375+0.75*phic	!QUICK on equidistant grid --> need to be combined with phif=(1-cfl)*phif+cfl*phic
+		!phif = (1.-cfl)*phif+cfl*phic
+		phif = max(phif,phic)
+		phif = min(phif,1.)
+	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		cF = phif*del+cU
+		putout(i,j,k) = putout(i,j,k) + Wvel(i,j,km )*cF*dz_i 
+	  ENDIF	  
+	ENDIF
+	ENDIF
+
+c
+300       continue
+c     -------------------------------------------end i-loop
+200     continue
+c     -------------------------------------------end j-loop
+100   continue
+c     -------------------------------------------end k-loop
+c
+      return
+      end
+	  
+	  	subroutine advecc_NVDold2(putout,putin,Uvel,Vvel,Wvel,rho,Ru,Rp,dr,phiv,phipt,dz,
+     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)
+      implicit none
+!	Cell-wise advection scheme according to NVD is similar to TVD, but manner of expression is different
+!	See for example:
+!	# Hirsch Chap 8.4.
+!	# Darwish 1994, Normalized Variable and Space Formulation Methodology for High-Resolution Schemes
+!	# Leonard 1991, The ULTIMATE conservative difference scheme applied to unsteady one-dimensional advection
+!	The only real difference I could find is the cfl dependent
+!	limiter phif = min(phif,phic/(cfl+eps2)) which I cannot find a TVD equivalent for and which is crucial to the NVD succes to give no under/overshoot!!
+!	test results for NVD alpha scheme are same for TVD alpha scheme, but TVD has advantage to
+!	deal with non-regular grids in proper manner; therefore I stay on the TVD track, LdW 25-11-15
+!	20-11-2017 in matlab NVD FROMM or QUICK scheme with proper NVD limiters give stable results with EE1 time integration without need for (1-cfl) LW term
+!   hence much less diffusion then TVD, no under or overshoot in matlab, but artificial steepening of sine wave is visible
+!   20-11-2017 NVD scheme is switched to NVD-QUICK
+! can be called by nerd-option advec_conc='NVD'
+c
+c********************************************************************
+c
+c     advecc calculates the advection for a scalar variable, which is
+c     situated in the center point of the grid cell.
+c
+c     In formula:
+c
+c         1 d(ruC)     1 d(vC)     d(wC)
+c    - (  - ------  +  - -----  +  -----  )
+c         r   dr       r  dphi      dz
+c
+c      on input :
+c
+c          putout            : "empty" (initialised to zero)
+c          putin             : variable for which the advection has
+c                              to be calculated
+c          Uvel,Vvel,Wvel    : contain velocities at former timestep
+c          putinn            : contains subgrid energy at oldest timestep
+c          dr,phiv,dz        : grid spacing in r, phi and z-direction
+c          i1,j1,k1          : parameters for array-dimensions
+c          ib,ie,jb,je,kb,ke : range of gridpoints for which the
+c                              advection has to be calculated
+c          Ru,Rp             : radial positions of the U-velocity
+c                              component and the pressure location
+c                              respectively
+c
+c      on output :
+c
+c          putout            : advection part
+c          other parameters  : all unchanged
+c
+c********************************************************************
+      integer  i,j,k,im,ip,jm,jp,km,kp,i1,j1,k1,ib,ie,jb,je,kb,ke
+	  integer kmm,kpp,imm,ipp,jmm,jpp,rank,px,periodicx,periodicy
+      real     putout(0:i1,0:j1,0:k1),putin(0:i1,0:j1,0:k1),
+     +         Uvel(0:i1,0:j1,0:k1),rho(0:i1,0:j1,0:k1),
+     +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
+     +         dr(0:i1),phiv(0:j1),phipt(0:je*px+1),dz,Ru(0:i1),Rp(0:i1),
+     +         noemer,rRpos,rRneg,rLpos,rLneg,cRpos,cRneg,cLpos,cLneg,limiter,
+     +         rho_p,rho_m,putin2(-1:i1+1,-1:j1+1,0:k1),Rp2(-1:i1+1)
+      
+      real 	dz_i,Rpdr_i,Rpdphi_i,varx_grid_Rpos,varx_grid_Rneg,varx_grid_Lpos,varx_grid_Lneg
+	  real  vary_grid_Rpos,vary_grid_Rneg,vary_grid_Lpos,vary_grid_Lneg,phipt2(-1:je*px+2)
+	real  dt,Vvel2(0:i1,0:j1,0:k1)
+	real*8 pbb(0:i1,0:k1),pbf(0:i1,0:k1)
+	real xD,xC,xU,xF,cD,cC,cU,cF,phic,phif,eps,xxf,xxc,cfl,alpha,del,eps2
+
+      dz_i=1./dz
+	  eps=1.e-6
+	  eps2=1.e-4
+
+	Rp2(0:i1)=Rp
+	Rp2(-1)=Rp(0)-(Rp(2)-Rp(1)) !needed for periodicx sim
+ 	Rp2(i1+1)=Rp(i1)+(Rp(i1)-Rp(i1-1)) !needed for periodicx sim
+	
+	phipt2(0:je*px+1)=phipt
+	phipt2(-1)=phipt(0)-(phipt(1)-phipt(0)) !needed for periodicy sim
+ 	phipt2(je*px+1+1)=phipt(je*px+1)+(phipt(je*px+1)-phipt(je*px+1-1)) !needed for periodicy sim
+	
+
+	putin2(0:i1,0:j1,0:k1)=putin
+	Vvel2=Vvel  
+	if (.false.) then !lateral inflow and outflow is specifically wanted sometimes, therefore lines below switched off... LdW 11-8-2015
+	if ((periodicy.eq.0..or.periodicy.eq.2).and.rank.eq.0) then !! make vvel2 zero at lateral boundaries to keep sediment inside with waves
+    	  j=0
+	  do i=0,i1
+	    do k=0,k1
+	      Vvel2(i,j,k)=0.
+	    enddo
+	  enddo
+	elseif ((periodicy.eq.0.or.periodicy.eq.2).and.rank.eq.px-1) then
+    	  j=je
+	  do i=0,i1
+	    do k=0,k1
+	      Vvel2(i,j,k)=0.
+	    enddo
+	  enddo
+	endif
+	endif
+
+
+
+	if (periodicx.eq.0) then
+		putin2(-1,0:j1,0:k1)=putin(0,0:j1,0:k1)
+		putin2(i1+1,0:j1,0:k1)=putin(ie,0:j1,0:k1)
+	else 
+		putin2(-1,0:j1,0:k1)=putin(ie-1,0:j1,0:k1)
+		putin2(i1+1,0:j1,0:k1)=putin(2,0:j1,0:k1)
+	endif
+c get stuff from other CPU's
+	  call shiftf2(putin,pbf)
+	  call shiftb2(putin,pbb) 
+
+	if (periodicy.eq.0.or.periodicy.eq.2) then
+	  if (rank.eq.0) then
+		do k=1,ke
+		   do i=1,ie
+		   putin2(i,-1,k) = putin(i,0,k)
+		   putin2(i,j1+1,k) =pbb(i,k)
+		   enddo
+		enddo
+	  elseif (rank.eq.px-1) then
+		do k=1,ke
+		   do i=1,ie
+		   putin2(i,-1,k) = pbf(i,k)
+		   putin2(i,j1+1,k) =putin(i,j1,k)
+		   enddo
+		enddo
+	  else 
+		do k=1,ke
+		   do i=1,ie
+		   putin2(i,-1,k) = pbf(i,k)
+		   putin2(i,j1+1,k) =pbb(i,k)
+		   enddo
+		enddo
+	  endif
+	else 
+		do k=1,ke
+		   do i=1,ie
+		   putin2(i,-1,k) = pbf(i,k)
+		   putin2(i,j1+1,k) =pbb(i,k)
+		   enddo
+		enddo
+	endif
 c
 c     -------------------------------------------start i-loop
       do 100 i=ib,ie
@@ -1194,8 +2297,9 @@ c
 	  cD=putin2(ip,j,k)
 	  cC=putin2(i ,j,k)
 	  cU=putin2(im,j,k)
-	  phic=(cC-cU)/(cD-cU)
-	  IF (ABS(cD-cU)<eps.or.phic.ge.1.or.phic.le.0.) THEN
+	  del = (cD-cU)
+	  phic=(cC-cU)/del
+	  IF (ABS(del)<eps.or.phic.gt.1.or.phic.lt.0.) THEN
 	    putout(i,j,k) = - Ru(i)*Uvel(i ,j,k)*cC*Rpdr_i !UPW 
 	  ELSE
 	    xD=Rp2(ip)
@@ -1204,23 +2308,25 @@ c
 		xF=Ru (i)		
 	    xxf  = (xF-xU)/(xD-xU) 
 		xxc  = (xC-xU)/(xD-xU)
-		cfl = (dt*(Uvel(i ,j,k))/(Rp2(ip)-Rp2(i )))+eps
-	    !phif = phic + (1.-cfl)*(xxf-xxc) !FROMM on non-equidistant grid (Darwish 1994) and without CFL correction --> this gave best results in matlab tests and less CPU
+		cfl = (dt*(Uvel(i ,j,k))/(Rp2(ip)-Rp2(i )))
+	    phif = phic + (1.-cfl)*(xxf-xxc) !FROMM on non-equidistant grid (Darwish 1994) with CFL correction --> this gave best results in matlab tests and less CPU
+		!phif = phic + xxf-xxc !FROMM on non-equidistant grid (Darwish 1994) and without CFL correction --> this gave best results in matlab tests and less CPU
 		!phif = xxf + (xxf*(xxf-1.))/(xxc*(xxc-1.))*(phic-xxc) !QUICK on non-equidistant grid (Darwish 1994) and without CFL correction
-		alpha=0.6667-0.3333*cfl
-		phif=max(0.,min(min((1.5-alpha)*phic+0.5*alpha,2.*phic),1.)) !Third order alpha scheme with CFL dependence; no correction for variable grid
-		!!phif = max(phif,phic)
-		!phif = min(phif,1.)
-	    !phif = min(phif,phic/cfl)  
-		cF = phif*(cD-cU)+cU
+		!alpha=0.6667-0.3333*cfl
+		!phif=max(0.,min(min((1.5-alpha)*phic+0.5*alpha,2.*phic),1.)) !Third order alpha scheme with CFL dependence; no correction for variable grid
+		phif = max(phif,phic)
+		phif = min(phif,1.)
+	    phif = min(phif,phic/(cfl+eps2))  
+		cF = phif*del+cU
 		putout(i,j,k) = - Ru(i)*Uvel(i ,j,k)*cF*Rpdr_i
 	  ENDIF
 	ELSE
 	  cD=putin2(i    ,j,k)
 	  cC=putin2(ip   ,j,k)
 	  cU=putin2(ipp+1,j,k)
-	  phic=(cC-cU)/(cD-cU)
-	  IF (ABS(cD-cU)<eps.or.phic.ge.1.or.phic.le.0.) THEN
+	  del = (cD-cU)
+	  phic=(cC-cU)/del
+	  IF (ABS(del)<eps.or.phic.gt.1.or.phic.lt.0.) THEN
 	    putout(i,j,k) = - Ru(i)*Uvel(i ,j,k)*cC*Rpdr_i !UPW 
 	  ELSE
 	    xD=Rp2(i )
@@ -1229,15 +2335,16 @@ c
 		xF=Ru (i)		
 	    xxf  = (xF-xU)/(xD-xU) 
 		xxc  = (xC-xU)/(xD-xU)
-		cfl = (dt*ABS(Uvel(i ,j,k))/(Rp2(ip)-Rp2(i )))+eps
-	    !phif = phic + (1.-cfl)*(xxf-xxc) !FROMM on non-equidistant grid (Darwish 1994) and without CFL correction --> this gave best results in matlab tests and less CPU!
+		cfl = (dt*ABS(Uvel(i ,j,k))/(Rp2(ip)-Rp2(i )))
+		phif = phic + (1.-cfl)*(xxf-xxc) !FROMM on non-equidistant grid (Darwish 1994) with CFL correction --> this gave best results in matlab tests and less CPU
+		!phif = phic + xxf-xxc !FROMM on non-equidistant grid (Darwish 1994) and without CFL correction --> this gave best results in matlab tests and less CPU
 		!phif = xxf + (xxf*(xxf-1.))/(xxc*(xxc-1.))*(phic-xxc) !QUICK on non-equidistant grid (Darwish 1994) and without CFL correction
-		alpha=0.6667-0.3333*cfl
-		phif=max(0.,min(min((1.5-alpha)*phic+0.5*alpha,2.*phic),1.)) !Third order alpha scheme with CFL dependence; no correction for variable grid
-		!!phif = max(phif,phic)
-		!phif = min(phif,1.)
-	    !phif = min(phif,phic/cfl) 
-		cF = phif*(cD-cU)+cU
+		!alpha=0.6667-0.3333*cfl
+		!phif=max(0.,min(min((1.5-alpha)*phic+0.5*alpha,2.*phic),1.)) !Third order alpha scheme with CFL dependence; no correction for variable grid
+		phif = max(phif,phic)
+		phif = min(phif,1.)
+	    phif = min(phif,phic/(cfl+eps2)) 
+		cF = phif*del+cU
 		putout(i,j,k) = - Ru(i)*Uvel(i ,j,k)*cF*Rpdr_i
 	  ENDIF		  
 	ENDIF
@@ -1245,8 +2352,9 @@ c
 	  cD=putin2(i,j,k)
 	  cC=putin2(im ,j,k)
 	  cU=putin2(imm-1,j,k)
-	  phic=(cC-cU)/(cD-cU)
-	  IF (ABS(cD-cU)<eps.or.phic.ge.1.or.phic.le.0.) THEN
+	  del = (cD-cU)
+	  phic=(cC-cU)/del
+	  IF (ABS(del)<eps.or.phic.gt.1.or.phic.lt.0.) THEN
 	    putout(i,j,k) = putout(i,j,k) + Ru(im)*Uvel(im,j,k)*cC*Rpdr_i !UPW
 	  ELSE
 	    xD=Rp2(i)
@@ -1255,15 +2363,16 @@ c
 		xF=Ru (im)		
 	    xxf  = (xF-xU)/(xD-xU) 
 		xxc  = (xC-xU)/(xD-xU)
-		cfl = (dt*(Uvel(im,j,k))/(Rp2(i)-Rp2(im)))+eps
-	    !phif = phic + (1.-cfl)*(xxf-xxc) !FROMM on non-equidistant grid (Darwish 1994) and without CFL correction --> this gave best results in matlab tests and less CPU
+		cfl = (dt*(Uvel(im,j,k))/(Rp2(i)-Rp2(im)))
+		phif = phic + (1.-cfl)*(xxf-xxc) !FROMM on non-equidistant grid (Darwish 1994) with CFL correction --> this gave best results in matlab tests and less CPU
+		!phif = phic + xxf-xxc !FROMM on non-equidistant grid (Darwish 1994) and without CFL correction --> this gave best results in matlab tests and less CPU
 		!phif = xxf + (xxf*(xxf-1.))/(xxc*(xxc-1.))*(phic-xxc) !QUICK on non-equidistant grid (Darwish 1994) and without CFL correction
-		alpha=0.6667-0.3333*cfl
-		phif=max(0.,min(min((1.5-alpha)*phic+0.5*alpha,2.*phic),1.)) !Third order alpha scheme with CFL dependence; no correction for variable grid
-		!!phif = max(phif,phic)
-		!phif = min(phif,1.)
-	    !phif = min(phif,phic/cfl) 
-		cF = phif*(cD-cU)+cU
+		!alpha=0.6667-0.3333*cfl
+		!phif=max(0.,min(min((1.5-alpha)*phic+0.5*alpha,2.*phic),1.)) !Third order alpha scheme with CFL dependence; no correction for variable grid
+		phif = max(phif,phic)
+		phif = min(phif,1.)
+	    phif = min(phif,phic/(cfl+eps2)) 
+		cF = phif*del+cU
 		putout(i,j,k) = putout(i,j,k) + Ru(im)*Uvel(im,j,k)*cF*Rpdr_i
 	  ENDIF		  
 		  
@@ -1271,8 +2380,9 @@ c
 	  cD=putin2(im,j,k)
 	  cC=putin2(i   ,j,k)
 	  cU=putin2(ip,j,k)
-	  phic=(cC-cU)/(cD-cU)
-	  IF (ABS(cD-cU)<eps.or.phic.ge.1.or.phic.le.0.) THEN
+	  del = (cD-cU)
+	  phic=(cC-cU)/del
+	  IF (ABS(del)<eps.or.phic.gt.1.or.phic.lt.0.) THEN
 	    putout(i,j,k) = putout(i,j,k) + Ru(im)*Uvel(im,j,k)*cC*Rpdr_i !UPW 
 	  ELSE
 	    xD=Rp2(im)
@@ -1281,15 +2391,16 @@ c
 		xF=Ru (im)		
 	    xxf  = (xF-xU)/(xD-xU) 
 		xxc  = (xC-xU)/(xD-xU)
-		cfl = (dt*ABS(Uvel(im,j,k))/(Rp2(i)-Rp2(im)))+eps
-	    !phif = phic + (1.-cfl)*(xxf-xxc) !FROMM on non-equidistant grid (Darwish 1994) and without CFL correction --> this gave best results in matlab tests and less CPU
+		cfl = (dt*ABS(Uvel(im,j,k))/(Rp2(i)-Rp2(im)))
+	    phif = phic + (1.-cfl)*(xxf-xxc) !FROMM on non-equidistant grid (Darwish 1994) with CFL correction --> this gave best results in matlab tests and less CPU
+		!phif = phic + xxf-xxc !FROMM on non-equidistant grid (Darwish 1994) and without CFL correction --> this gave best results in matlab tests and less CPU
 		!phif = xxf + (xxf*(xxf-1.))/(xxc*(xxc-1.))*(phic-xxc) !QUICK on non-equidistant grid (Darwish 1994) and without CFL correction
-		alpha=0.6667-0.3333*cfl
-		phif=max(0.,min(min((1.5-alpha)*phic+0.5*alpha,2.*phic),1.)) !Third order alpha scheme with CFL dependence; no correction for variable grid
-		!!phif = max(phif,phic)
-		!phif = min(phif,1.)
-	    !phif = min(phif,phic/cfl) 
-		cF = phif*(cD-cU)+cU
+		!alpha=0.6667-0.3333*cfl
+		!phif=max(0.,min(min((1.5-alpha)*phic+0.5*alpha,2.*phic),1.)) !Third order alpha scheme with CFL dependence; no correction for variable grid
+		phif = max(phif,phic)
+		phif = min(phif,1.)
+	    phif = min(phif,phic/(cfl+eps2)) 
+		cF = phif*del+cU
 		putout(i,j,k) = putout(i,j,k) + Ru(im)*Uvel(im,j,k)*cF*Rpdr_i
 	  ENDIF		  
 	  
@@ -1299,8 +2410,9 @@ c
 	  cD=putin2(i,jp,k)
 	  cC=putin2(i ,j,k)
 	  cU=putin2(i,jm,k)
-	  phic=(cC-cU)/(cD-cU)
-	  IF (ABS(cD-cU)<eps.or.phic.ge.1.or.phic.le.0.) THEN
+	  del = (cD-cU)
+	  phic=(cC-cU)/del
+	  IF (ABS(del)<eps.or.phic.gt.1.or.phic.lt.0.) THEN
 	    putout(i,j,k) = putout(i,j,k) - Vvel2(i,j ,k)*cC*Rpdphi_i !UPW
 	  ELSE
 	    xD=Rp2(i)*phipt2(rank*je+jp)
@@ -1309,15 +2421,16 @@ c
 		xF=Rp2(i)*phiv(j )
 	    xxf  = (xF-xU)/(xD-xU) 
 		xxc  = (xC-xU)/(xD-xU)
-		cfl = (dt*(Vvel2(i,j ,k))*Rpdphi_i)+eps
-	    !phif = phic + (1.-cfl)*(xxf-xxc) !FROMM on non-equidistant grid (Darwish 1994) and without CFL correction --> this gave best results in matlab tests and less CPU
+		cfl = dt*(Vvel2(i,j ,k))/(Rp(i)*(phipt2(rank*je+jp)-phipt2(rank*je+j)))
+	    phif = phic + (1.-cfl)*(xxf-xxc) !FROMM on non-equidistant grid (Darwish 1994) with CFL correction --> this gave best results in matlab tests and less CPU
+		!phif = phic + xxf-xxc !FROMM on non-equidistant grid (Darwish 1994) and without CFL correction --> this gave best results in matlab tests and less CPU
 		!phif = xxf + (xxf*(xxf-1.))/(xxc*(xxc-1.))*(phic-xxc) !QUICK on non-equidistant grid (Darwish 1994) and without CFL correction
-		alpha=0.6667-0.3333*cfl
-		phif=max(0.,min(min((1.5-alpha)*phic+0.5*alpha,2.*phic),1.)) !Third order alpha scheme with CFL dependence; no correction for variable grid
-		!!phif = max(phif,phic)
-		!phif = min(phif,1.)
-	    !phif = min(phif,phic/cfl)  
-		cF = phif*(cD-cU)+cU
+		!alpha=0.6667-0.3333*cfl
+		!phif=max(0.,min(min((1.5-alpha)*phic+0.5*alpha,2.*phic),1.)) !Third order alpha scheme with CFL dependence; no correction for variable grid
+		phif = max(phif,phic)
+		phif = min(phif,1.)
+	    phif = min(phif,phic/(cfl+eps2))  
+		cF = phif*del+cU
 		putout(i,j,k) = putout(i,j,k) - Vvel2(i,j ,k)*cF*Rpdphi_i 
 	  ENDIF
 	  
@@ -1325,8 +2438,9 @@ c
 	  cD=putin2(i, j,k)
 	  cC=putin2(i ,jp,k)
 	  cU=putin2(i,jpp+1,k)
-	  phic=(cC-cU)/(cD-cU)
-	  IF (ABS(cD-cU)<eps.or.phic.ge.1.or.phic.le.0.) THEN
+	  del = (cD-cU)
+	  phic=(cC-cU)/del
+	  IF (ABS(del)<eps.or.phic.gt.1.or.phic.lt.0.) THEN
 	    putout(i,j,k) = putout(i,j,k) - Vvel2(i,j ,k)*cC*Rpdphi_i !UPW
 	  ELSE
 	    xD=Rp2(i)*phipt2(rank*je+j)
@@ -1335,15 +2449,16 @@ c
 		xF=Rp2(i)*phiv(j )
 	    xxf  = (xF-xU)/(xD-xU) 
 		xxc  = (xC-xU)/(xD-xU)
-		cfl = (dt*ABS(Vvel2(i,j ,k))*Rpdphi_i)+eps
-	    !phif = phic + (1.-cfl)*(xxf-xxc) !FROMM on non-equidistant grid (Darwish 1994) and without CFL correction --> this gave best results in matlab tests and less CPU
+		cfl = dt*ABS(Vvel2(i,j ,k))/(Rp(i)*(phipt2(rank*je+jp)-phipt2(rank*je+j)))
+	    phif = phic + (1.-cfl)*(xxf-xxc) !FROMM on non-equidistant grid (Darwish 1994) with CFL correction --> this gave best results in matlab tests and less CPU
+		!phif = phic + xxf-xxc !FROMM on non-equidistant grid (Darwish 1994) and without CFL correction --> this gave best results in matlab tests and less CPU		
 		!phif = xxf + (xxf*(xxf-1.))/(xxc*(xxc-1.))*(phic-xxc) !QUICK on non-equidistant grid (Darwish 1994) and without CFL correction
-		alpha=0.6667-0.3333*cfl
-		phif=max(0.,min(min((1.5-alpha)*phic+0.5*alpha,2.*phic),1.)) !Third order alpha scheme with CFL dependence; no correction for variable grid
-		!!phif = max(phif,phic)
-		!phif = min(phif,1.)
-	    !phif = min(phif,phic/cfl)  
-		cF = phif*(cD-cU)+cU
+		!alpha=0.6667-0.3333*cfl
+		!phif=max(0.,min(min((1.5-alpha)*phic+0.5*alpha,2.*phic),1.)) !Third order alpha scheme with CFL dependence; no correction for variable grid
+		phif = max(phif,phic)
+		phif = min(phif,1.)
+	    phif = min(phif,phic/(cfl+eps2))  
+		cF = phif*del+cU
 		putout(i,j,k) = putout(i,j,k) - Vvel2(i,j ,k)*cF*Rpdphi_i 
 	  ENDIF
 
@@ -1353,8 +2468,9 @@ c
 	  cD=putin2(i ,j,k)
 	  cC=putin2(i ,jm,k)
 	  cU=putin2(i ,jmm-1,k)
-	  phic=(cC-cU)/(cD-cU)
-	  IF (ABS(cD-cU)<eps.or.phic.ge.1.or.phic.le.0.) THEN
+	  del = (cD-cU)
+	  phic=(cC-cU)/del
+	  IF (ABS(del)<eps.or.phic.gt.1.or.phic.lt.0.) THEN
 	    putout(i,j,k) = putout(i,j,k) + Vvel2(i,jm,k)*cC*Rpdphi_i !UPW
 	  ELSE
 	    xD=Rp2(i)*phipt2(rank*je+j)
@@ -1363,23 +2479,25 @@ c
 		xF=Rp2(i)*phiv(jm)
 	    xxf  = (xF-xU)/(xD-xU) 
 		xxc  = (xC-xU)/(xD-xU)
-		cfl = (dt*(Vvel2(i,jm,k))*Rpdphi_i)+eps
-	    !phif = phic + (1.-cfl)*(xxf-xxc) !FROMM on non-equidistant grid (Darwish 1994) and without CFL correction --> this gave best results in matlab tests and less CPU
+		cfl = dt*(Vvel2(i,jm,k))/(Rp(i)*(phipt2(rank*je+j)-phipt2(rank*je+jm)))
+	    phif = phic + (1.-cfl)*(xxf-xxc) !FROMM on non-equidistant grid (Darwish 1994) with CFL correction --> this gave best results in matlab tests and less CPU
+		!phif = phic + xxf-xxc !FROMM on non-equidistant grid (Darwish 1994) and without CFL correction --> this gave best results in matlab tests and less CPU
 		!phif = xxf + (xxf*(xxf-1.))/(xxc*(xxc-1.))*(phic-xxc) !QUICK on non-equidistant grid (Darwish 1994) and without CFL correction
-		alpha=0.6667-0.3333*cfl
-		phif=max(0.,min(min((1.5-alpha)*phic+0.5*alpha,2.*phic),1.)) !Third order alpha scheme with CFL dependence; no correction for variable grid
-		!!phif = max(phif,phic)
-		!phif = min(phif,1.)
-	    !phif = min(phif,phic/cfl) 
-		cF = phif*(cD-cU)+cU
+		!alpha=0.6667-0.3333*cfl
+		!phif=max(0.,min(min((1.5-alpha)*phic+0.5*alpha,2.*phic),1.)) !Third order alpha scheme with CFL dependence; no correction for variable grid
+		phif = max(phif,phic)
+		phif = min(phif,1.)
+	    phif = min(phif,phic/(cfl+eps2)) 
+		cF = phif*del+cU
 		putout(i,j,k) = putout(i,j,k) + Vvel2(i,jm,k)*cF*Rpdphi_i 
 	  ENDIF
 	ELSE
 	  cD=putin2(i, jm,k)
 	  cC=putin2(i ,j ,k)
 	  cU=putin2(i ,jp,k)
-	  phic=(cC-cU)/(cD-cU)
-	  IF (ABS(cD-cU)<eps.or.phic.ge.1.or.phic.le.0.) THEN
+	  del = (cD-cU)
+	  phic=(cC-cU)/del
+	  IF (ABS(del)<eps.or.phic.gt.1.or.phic.lt.0.) THEN
 	    putout(i,j,k) = putout(i,j,k) + Vvel2(i,jm,k)*cC*Rpdphi_i !UPW
 	  ELSE
 	    xD=Rp2(i)*phipt2(rank*je+jm)
@@ -1388,15 +2506,16 @@ c
 		xF=Rp2(i)*phiv(jm)
 	    xxf  = (xF-xU)/(xD-xU) 
 		xxc  = (xC-xU)/(xD-xU)
-		cfl = (dt*ABS(Vvel2(i,jm,k))*Rpdphi_i)+eps
-	    !phif = phic + (1.-cfl)*(xxf-xxc) !FROMM on non-equidistant grid (Darwish 1994) and without CFL correction --> this gave best results in matlab tests and less CPU
+		cfl = dt*ABS(Vvel2(i,jm,k))/(Rp(i)*(phipt2(rank*je+j)-phipt2(rank*je+jm)))
+	    phif = phic + (1.-cfl)*(xxf-xxc) !FROMM on non-equidistant grid (Darwish 1994) with CFL correction --> this gave best results in matlab tests and less CPU
+		!phif = phic + xxf-xxc !FROMM on non-equidistant grid (Darwish 1994) and without CFL correction --> this gave best results in matlab tests and less CPU
 		!phif = xxf + (xxf*(xxf-1.))/(xxc*(xxc-1.))*(phic-xxc) !QUICK on non-equidistant grid (Darwish 1994) and without CFL correction
-		alpha=0.6667-0.3333*cfl
-		phif=max(0.,min(min((1.5-alpha)*phic+0.5*alpha,2.*phic),1.)) !Third order alpha scheme with CFL dependence; no correction for variable grid
-		!!phif = max(phif,phic)
-		!phif = min(phif,1.)
-	    !phif = min(phif,phic/cfl) 
-		cF = phif*(cD-cU)+cU
+		!alpha=0.6667-0.3333*cfl
+		!phif=max(0.,min(min((1.5-alpha)*phic+0.5*alpha,2.*phic),1.)) !Third order alpha scheme with CFL dependence; no correction for variable grid
+		phif = max(phif,phic)
+		phif = min(phif,1.)
+	    phif = min(phif,phic/(cfl+eps2)) 
+		cF = phif*del+cU
 		putout(i,j,k) = putout(i,j,k) + Vvel2(i,jm,k)*cF*Rpdphi_i 
 	  ENDIF
 	  
@@ -1406,20 +2525,23 @@ c
 	  cD=putin2(i,j ,kp)
 	  cC=putin2(i ,j,k )
 	  cU=putin2(i,j ,km)
-	  phic=(cC-cU)/(cD-cU)
-	  IF (ABS(cD-cU)<eps.or.phic.ge.1.or.phic.le.0.) THEN
+	  del = (cD-cU)
+	  phic=(cC-cU)/del
+	  IF (ABS(del)<eps.or.phic.gt.1.or.phic.lt.0.) THEN
 	    putout(i,j,k) = putout(i,j,k) - Wvel(i,j,k )*cC*dz_i 
 	  ELSE
-		cfl = dt*(Wvel(i,j,k ))*dz_i+eps
-	    !phif = phic + (1.-cfl)*0.25 !FROMM on non-equidistant grid (Darwish 1994) and without CFL correction --> this gave best results in matlab tests and less CPU
+		cfl = dt*(Wvel(i,j,k ))*dz_i
+	    phif = phic + (1.-cfl)*0.25 !FROMM on equidistant grid (Darwish 1994) with CFL correction --> this gave best results in matlab tests and less CPU
+		!phif = phic + 0.25 !FROMM on equidistant grid (Darwish 1994) and without CFL correction --> this gave best results in matlab tests and less CPU
 		!phif = xxf + (xxf*(xxf-1.))/(xxc*(xxc-1.))*(phic-xxc) !QUICK on non-equidistant grid (Darwish 1994) and without CFL correction
+		!phif = 0.375+0.75*phic	! QUICK on equidistant grid without CFL correction
 		!phif = max(phif,phic)
-		alpha=0.6667-0.3333*cfl
-		phif=max(0.,min(min((1.5-alpha)*phic+0.5*alpha,2.*phic),1.)) !Third order alpha scheme with CFL dependence; no correction for variable grid
-		!!phif = max(phif,phic)
-		!phif = min(phif,1.)
-	    !phif = min(phif,phic/cfl) 
-		cF = phif*(cD-cU)+cU
+		!alpha=0.6667-0.3333*cfl
+		!phif=max(0.,min(min((1.5-alpha)*phic+0.5*alpha,2.*phic),1.)) !Third order alpha scheme with CFL dependence; no correction for variable grid
+		phif = max(phif,phic)
+		phif = min(phif,1.)
+	    phif = min(phif,phic/(cfl+eps2)) 
+		cF = phif*del+cU
 		putout(i,j,k) = putout(i,j,k) - Wvel(i,j,k )*cF*dz_i 
 	  ENDIF
 	  
@@ -1427,20 +2549,23 @@ c
 	  cD=putin2(i,j ,k )
 	  cC=putin2(i ,j,kp)
 	  cU=putin2(i,j ,kpp+1)
-	  phic=(cC-cU)/(cD-cU)
-	  IF (ABS(cD-cU)<eps.or.phic.ge.1.or.phic.le.0.) THEN
+	  del = (cD-cU)
+	  phic=(cC-cU)/del
+	  IF (ABS(del)<eps.or.phic.gt.1.or.phic.lt.0.) THEN
 	    putout(i,j,k) = putout(i,j,k) - Wvel(i,j,k )*cC*dz_i 
 	  ELSE
-		cfl = dt*ABS(Wvel(i,j,k ))*dz_i+eps
-	    !phif = phic + (1.-cfl)*0.25 !FROMM on non-equidistant grid (Darwish 1994) and without CFL correction --> this gave best results in matlab tests and less CPU
+		cfl = dt*ABS(Wvel(i,j,k ))*dz_i
+	    phif = phic + (1.-cfl)*0.25 !FROMM on equidistant grid (Darwish 1994) with CFL correction --> this gave best results in matlab tests and less CPU
+		!phif = phic + 0.25 !FROMM on equidistant grid (Darwish 1994) and without CFL correction --> this gave best results in matlab tests and less CPU
 		!phif = xxf + (xxf*(xxf-1.))/(xxc*(xxc-1.))*(phic-xxc) !QUICK on non-equidistant grid (Darwish 1994) and without CFL correction
+		!phif = 0.375+0.75*phic	! QUICK on equidistant grid without CFL correction
 		!phif = max(phif,phic)
-		alpha=0.6667-0.3333*cfl
-		phif=max(0.,min(min((1.5-alpha)*phic+0.5*alpha,2.*phic),1.)) !Third order alpha scheme with CFL dependence; no correction for variable grid
-		!!phif = max(phif,phic)
-		!phif = min(phif,1.)
-	    !phif = min(phif,phic/cfl) 
-		cF = phif*(cD-cU)+cU
+		!alpha=0.6667-0.3333*cfl
+		!phif=max(0.,min(min((1.5-alpha)*phic+0.5*alpha,2.*phic),1.)) !Third order alpha scheme with CFL dependence; no correction for variable grid
+		phif = max(phif,phic)
+		phif = min(phif,1.)
+	    phif = min(phif,phic/(cfl+eps2)) 
+		cF = phif*del+cU
 		putout(i,j,k) = putout(i,j,k) - Wvel(i,j,k )*cF*dz_i 
 	  ENDIF
 	  
@@ -1449,38 +2574,46 @@ c
 	  cD=putin2(i,j ,k )
 	  cC=putin2(i ,j,km)
 	  cU=putin2(i,j ,kmm-1)
-	  phic=(cC-cU)/(cD-cU)
-	  IF (ABS(cD-cU)<eps.or.phic.ge.1.or.phic.le.0.) THEN
+	  del = (cD-cU)
+	  phic=(cC-cU)/del
+	  IF (ABS(del)<eps.or.phic.gt.1.or.phic.lt.0.) THEN
 	    putout(i,j,k) = putout(i,j,k) + Wvel(i,j,km )*cC*dz_i 
 	  ELSE
-		cfl = dt*(Wvel(i,j,km ))*dz_i+eps
-	    !phif = phic + (1.-cfl)*0.25 !FROMM on non-equidistant grid (Darwish 1994) and without CFL correction --> this gave best results in matlab tests and less CPU
+		cfl = dt*(Wvel(i,j,km ))*dz_i
+	    phif = phic + (1.-cfl)*0.25 !FROMM on equidistant grid (Darwish 1994) with CFL correction --> this gave best results in matlab tests and less CPU
+		!phif = phic + 0.25 !FROMM on equidistant grid (Darwish 1994) and without CFL correction --> this gave best results in matlab tests and less CPU
 		!phif = xxf + (xxf*(xxf-1.))/(xxc*(xxc-1.))*(phic-xxc) !QUICK on non-equidistant grid (Darwish 1994) and without CFL correction
-		alpha=0.6667-0.3333*cfl
-		phif=max(0.,min(min((1.5-alpha)*phic+0.5*alpha,2.*phic),1.)) !Third order alpha scheme with CFL dependence; no correction for variable grid
-		!!phif = max(phif,phic)
-		!phif = min(phif,1.)
-	    !phif = min(phif,phic/cfl) 
-		cF = phif*(cD-cU)+cU
+		!phif = 0.375+0.75*phic	! QUICK on equidistant grid without CFL correction
+		!phif = max(phif,phic)
+		!alpha=0.6667-0.3333*cfl
+		!phif=max(0.,min(min((1.5-alpha)*phic+0.5*alpha,2.*phic),1.)) !Third order alpha scheme with CFL dependence; no correction for variable grid
+		phif = max(phif,phic)
+		phif = min(phif,1.)
+	    phif = min(phif,phic/(cfl+eps2)) 
+		cF = phif*del+cU
 		putout(i,j,k) = putout(i,j,k) + Wvel(i,j,km )*cF*dz_i 
 	  ENDIF	  
 	ELSE
 	  cD=putin2(i,j ,km )
 	  cC=putin2(i ,j,k)
 	  cU=putin2(i,j ,kp)
-	  phic=(cC-cU)/(cD-cU)
-	  IF (ABS(cD-cU)<eps.or.phic.ge.1.or.phic.le.0.) THEN
+	  del = (cD-cU)
+	  phic=(cC-cU)/del
+	  IF (ABS(del)<eps.or.phic.gt.1.or.phic.lt.0.) THEN
 	    putout(i,j,k) = putout(i,j,k) + Wvel(i,j,km )*cC*dz_i 
 	  ELSE
-		cfl = dt*ABS(Wvel(i,j,km ))*dz_i+eps
-	    !phif = phic + (1.-cfl)*0.25 !FROMM on non-equidistant grid (Darwish 1994) and without CFL correction --> this gave best results in matlab tests and less CPU
+		cfl = dt*ABS(Wvel(i,j,km ))*dz_i
+	    phif = phic + (1.-cfl)*0.25 !FROMM on equidistant grid (Darwish 1994) with CFL correction --> this gave best results in matlab tests and less CPU
+		!phif = phic + 0.25 !FROMM on equidistant grid (Darwish 1994) and without CFL correction --> this gave best results in matlab tests and less CPU
 		!phif = xxf + (xxf*(xxf-1.))/(xxc*(xxc-1.))*(phic-xxc) !QUICK on non-equidistant grid (Darwish 1994) and without CFL correction
-		alpha=0.6667-0.3333*cfl
-		phif=max(0.,min(min((1.5-alpha)*phic+0.5*alpha,2.*phic),1.)) !Third order alpha scheme with CFL dependence; no correction for variable grid
-		!!phif = max(phif,phic)
-		!phif = min(phif,1.)
-	    !phif = min(phif,phic/cfl) 
-		cF = phif*(cD-cU)+cU
+		!phif = 0.375+0.75*phic	! QUICK on equidistant grid without CFL correction
+		!phif = max(phif,phic)
+		!alpha=0.6667-0.3333*cfl
+		!phif=max(0.,min(min((1.5-alpha)*phic+0.5*alpha,2.*phic),1.)) !Third order alpha scheme with CFL dependence; no correction for variable grid
+		phif = max(phif,phic)
+		phif = min(phif,1.)
+	    phif = min(phif,phic/(cfl+eps2)) 
+		cF = phif*del+cU
 		putout(i,j,k) = putout(i,j,k) + Wvel(i,j,km )*cF*dz_i 
 	  ENDIF	  
 	ENDIF
@@ -1494,7 +2627,6 @@ c     -------------------------------------------end k-loop
 c
       return
       end
-
 
 	  
 
@@ -1952,14 +3084,15 @@ c
 
       real function limiter2(r,cfl)
       real r,cfl,alpha
-! Alpha limiter = third order accurate (with cfl=0 equal to Koren limiter) CFL dependent limiter from Arora and Roe 1997
-	  alpha=0.6667-0.3333*cfl
-!	limiter2=MAX(0.,MIN(MIN(2.*r,alpha*r+1.-alpha),2.))					!advised for non-linear systems a more restrictive TVD constraints
-	!limiter2=MAX(0.,MIN(MIN(2./cfl*r,alpha*r+1.-alpha),2./(1.-cfl)))		!less restrictive TVD constraints with CFL dependance 
-	limiter2=MAX(0.,MIN(2./(MAX(cfl,1e-12)*MAX(r,1e-12)),alpha*r+1.-alpha,2./(1.-cfl)))		!less restrictive TVD constraints with CFL dependance 
+! limiter = third order accurate (with cfl=0 equal to Koren limiter) CFL dependent limiter from Arora and Roe 1997
+	alpha=(1.+cfl)/3.
+!	limiter2=MAX(0.,MIN(MIN(2./MAX(cfl,1e-12)*r,1.+alpha*(r-1.)),2./(1.-cfl))) !looser TVD contstraints gives in TUDflow3d e-7 undershoot, therefore not advised...
+	limiter2=MAX(0.,MIN(MIN(2.*r,1.+alpha*(r-1.)),2.)) !advised for non-linear systems a more restrictive TVD constraints, gives no undershoot in matlab and TUDflow3d but more numerical diff... 18-11-17 SWITCHED THIS ON
+	
+  
 	
 	!limiter2=(r+ABS(r))/MAX(1.+r,1.) 	! Van Leer limiter
-
+!	limiter2=MAX(0.,MIN(2.*r,1.),MIN(r,2.))	! Superbee limiter
       return
       end
 	  

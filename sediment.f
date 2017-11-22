@@ -33,9 +33,24 @@
 
 	DO n=1,nfrac
 	  Re_p=ABS(frac(n)%ws)*frac(n)%dfloc/(ekm_mol/rho_b)
+	  
+	  ! hindered_settling = 1	!Hindered settling formula [-] 1=Rowe (1987) (smooth Ri-Za org) (default); 2=Garside (1977); 3=Di Felice (1999)
+	  IF (hindered_settling.eq.1) THEN
 !	hindered settling function acc. to Rowe (1987), 
 !	is the smoothed representation of the original Richardson and Zaki (1954) relations:
+!	determined for 0.04<c<0.55 and 0.001<Rep<3e4
 	  frac(n)%n=(4.7+0.41*Re_p**0.75)/(1.+0.175*Re_p**0.75) 
+	  ELSEIF (hindered_settling.eq.2) THEN
+!	hindered settling function acc. to Garside (1977), 
+!	higher value of n than Rowe (1987)
+!	determined for 0.04<c<0.55 and 0.2<Rep<1e3
+	  frac(n)%n=(5.1+0.27*Re_p**0.9)/(1.+0.1*Re_p**0.9)
+	  ELSEIF (hindered_settling.eq.3) THEN
+!	hindered settling function acc. to Di Felice (1999), 
+!	much higher value of n than Rowe (1987) and Garside (1977)
+!	determined for 0<c<0.05 and 0.01<Rep<1e3
+	  frac(n)%n=(6.5+0.3*Re_p**0.74)/(1.+0.1*Re_p**0.74)
+	  ENDIF
 	ENDDO
 
 	rhocorr_air_z=1.
@@ -221,7 +236,7 @@
 	REAL erosionf(nfrac),depositionf(nfrac),erosion_avg(nfrac)
 	REAL zb_all(0:i1,0:j1),maxbedslope(0:i1,0:j1),sl1,sl2,sl3,sl4
 	REAL d_cbotnew(nfrac,0:i1,0:j1),dbed,dl,dbed_allowed,dbed_adjust,dz_botlayer,c_adjust
-	REAL*8 cbf(nfrac,0:i1),cbb(nfrac,0:i1),zbf(0:i1),zbb(0:i1)
+	REAL*8 cbf(nfrac,0:i1),cbb(nfrac,0:i1),zbf(0:i1),zbb(0:i1),reduced_sed
 	INTEGER itrgt,jtrgt
 	erosion=0.
 	deposition=0.
@@ -532,7 +547,12 @@
 					TT=0.
 					phip = 0.  ! general pickup function					
 				ENDIF
-				
+				IF (reduction_sedimentation_shields>0) THEN ! PhD thesis vRhee p146 eq 7.74
+					reduced_sed = 1.-(ust*ust/(delta*ABS(gz)*d50))/reduction_sedimentation_shields
+					reduced_sed = MAX(reduced_sed,0.)
+				ELSE
+					reduced_sed  = 1.
+				ENDIF
 
 				
 				DO n1=1,nfr_sand
@@ -546,7 +566,7 @@
 						erosionf(n) = 0.
 					ENDIF
 					erosionf(n) = MIN(erosionf(n),(cbotcfd(n,i,j)+Clivebed(n,i,j,kbed(i,j)))*dz) ! m3/m2, not more material can be eroded than there was in top layer cbotcfd+c in top cel bed
-					depositionf(n) = ccfd(n,i,j,kplus)*MIN(0.,Wsed(n,i,j,kbed(i,j)))*ddt*bednotfixed_depo(i,j,kbed(i,j)) ! m --> dep is negative due to negative wsed
+					depositionf(n) = ccfd(n,i,j,kplus)*MIN(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))*ddt*bednotfixed_depo(i,j,kbed(i,j)) ! m --> dep is negative due to negative wsed
 					ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus)+(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-]
 					cbotnew(n,i,j)=cbotnew(n,i,j)-(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-]
 					cbotnewtot=cbotnewtot+cbotnew(n,i,j)

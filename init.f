@@ -735,6 +735,7 @@ C ...  Locals
 	INTEGER*2 j_inPpunt2_dummy((k1+1)*(j1+1)*px),j_inVpunt2_dummy((k1+1)*(j1+1)*px)
 	INTEGER*2 k_inPpunt2_dummy((k1+1)*(j1+1)*px),k_inVpunt2_dummy((k1+1)*(j1+1)*px)
 	LOGICAL in
+	REAL rr,jetcorr
 
       
       r_orifice2=radius_j**2
@@ -748,9 +749,10 @@ C ...  Locals
 	
 	
 	if (radius_j>0.) then
+		Aplume=0.
       do i=0,i1  
 	in=.false.
-        do j=jmax*px+1,0,-1 ! first search in all partitions
+        do j=jmax*px,1,-1 ! first search in all partitions
 	  xx=Rp(i)*cos_ut(j)-schuif_x
 	  yy=Rp(i)*sin_ut(j)
 	  if ((xx*xx+yy*yy).le.r_orifice2.and.(xx*xx+yy*yy).gt.radius_inner_j**2 ) then
@@ -759,6 +761,14 @@ C ...  Locals
 	    tel1=tel1+1
 	    i_inPpunt_dummy(tel1)=i ! Ppunt is U
 	    j_inPpunt_dummy(tel1)=j
+		
+		if (Q_j>0.or.plumeQtseriesfile.ne.'') THEN
+			jetcorr=pi/(2.*pi*(1/(1./W_j_powerlaw+1)-1./(1./W_j_powerlaw+2.))) !=1.22449 for W_j_powerlaw=7
+			rr=1.-sqrt((xx**2+yy**2)/MAX(radius_j**2,1.e-12))
+			rr=MAX(rr,0.)
+			Aplume=Aplume+vol_V(i,j)/dz*jetcorr*rr**(1./W_j_powerlaw) !m2 inflow area weighted with inflow velocity profile --> W_j==Q_j/Aplume
+		endif
+
 	    if (in) then ! rand Vpunt niet binnen jet buisje, dus alleen zodra al een ppunt gevonden is dan vpunt ook vinden
 	    	tel2=tel2+1
 		i_inVpunt_dummy(tel2)=i ! Vpunt is V
@@ -772,6 +782,7 @@ C ...  Locals
 	   endif
 	  endif
 	enddo
+
 	!laatste Ppunt is ook rand punt:
 	if (tel1>0) then
 	  tel3=tel3+1
@@ -782,6 +793,18 @@ C ...  Locals
       tmax_inPpunt=tel1
       tmax_inVpunt=tel2
 
+	IF (Q_j>0.or.plumeQtseriesfile.ne.'') THEN
+		IF (Aplume.le.0.) THEN
+			write(*,*),'WARNING no plume inflow cells are found, but Q_j or plumeQtseriesfile is defined'
+		ENDIF
+		IF (Q_j>0.and.plumeQtseriesfile.eq.'') THEN
+			W_j=-Q_j/Aplume
+		ELSE
+			W_j=0.			
+		ENDIF
+	ENDIF
+	
+	  
       tel1=0
       do t=1,tmax_inPpunt ! now search for all local j-indices between 0 and j1:
 	if ((j_inPpunt_dummy(t)-rank*jmax).ge.0.and.(j_inPpunt_dummy(t)-rank*jmax).le.j1) then

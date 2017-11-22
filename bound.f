@@ -1086,7 +1086,7 @@ c
       real zzz,Ujet2,z2,val2,jetcorr
 
 !      real  Ubound2(0:i1,0:j1,0:k1),Vbound2(0:i1,0:j1,0:k1),Wbound2(0:i1,0:j1,0:k1)
-      real  Ubound2(-1:i1+1,-1:j1+1,0:k1),Vbound2(-1:i1+1,-1:j1+1,0:k1),Wbound2(0:i1,0:j1,0:k1)
+      real  Ubound2(-1:i1+1,-1:j1+1,0:k1),Vbound2(-1:i1+1,-1:j1+1,0:k1),Wbound2(0:i1,0:j1,0:k1),rho2(-1:i1+1,-1:j1+1,0:k1),rr1,rr2
 c
 c
 c*************************************************************
@@ -1344,17 +1344,22 @@ c get stuff from other CPU's
 	Ubound2(0:i1,0:j1,0:k1)=Ubound
 	Vbound2(0:i1,0:j1,0:k1)=Vbound
 	Wbound2(0:i1,0:j1,0:k1)=Wbound
+	rho2(0:i1,0:j1,0:k1)=rho
 	! fill Ubound2,Vbound2 with one extra row positive and negative in i,j direction for shear stress 
 	if (periodicx.eq.0) then
 		Ubound2(-1,0:j1,0:k1)=Ubound(0,0:j1,0:k1)
 		Ubound2(i1+1,0:j1,0:k1)=Ubound(imax,0:j1,0:k1)
 		Vbound2(-1,0:j1,0:k1)=Vbound(0,0:j1,0:k1)
 		Vbound2(i1+1,0:j1,0:k1)=Vbound(imax,0:j1,0:k1)
+		rho2(-1,0:j1,0:k1)=rho(0,0:j1,0:k1)		
+		rho2(i1+1,0:j1,0:k1)=rho(imax,0:j1,0:k1)
 	else 
 		Ubound2(-1,0:j1,0:k1)=Ubound(imax-1,0:j1,0:k1)
-		Ubound2(i1+1,0:j1,0:k1)=Ubound(1,0:j1,0:k1)
+		Ubound2(i1+1,0:j1,0:k1)=Ubound(2,0:j1,0:k1)
 		Vbound2(-1,0:j1,0:k1)=Vbound(imax-1,0:j1,0:k1)
-		Vbound2(i1+1,0:j1,0:k1)=Vbound(1,0:j1,0:k1)
+		Vbound2(i1+1,0:j1,0:k1)=Vbound(2,0:j1,0:k1)
+		rho2(-1,0:j1,0:k1)=rho(imax-1,0:j1,0:k1)
+		rho2(i1+1,0:j1,0:k1)=rho(2,0:j1,0:k1)		
 	endif
 
 c get stuff from other CPU's
@@ -1362,6 +1367,8 @@ c get stuff from other CPU's
 	  call shiftb2(Ubound,ubb) 
 	  call shiftf2(Vbound,vbf)
 	  call shiftb2(Vbound,vbb)
+	  call shiftf2(rho,wbf)
+	  call shiftb2(rho,wbb)	  
 	if (periodicy.eq.0.or.periodicy.eq.2) then
 	  if (rank.eq.0) then
 		do k=0,k1
@@ -1370,6 +1377,8 @@ c get stuff from other CPU's
 		   Ubound2(i,j1+1,k) =Ubb(i,k)
 		   Vbound2(i,-1,k) = Vbound(i,0,k)
 		   Vbound2(i,j1+1,k) =Vbb(i,k)
+		   rho2(i,-1,k) = rho(i,0,k)
+		   rho2(i,j1+1,k) =wbb(i,k)		   
 		   enddo
 		enddo
 	  elseif (rank.eq.px-1) then
@@ -1379,6 +1388,8 @@ c get stuff from other CPU's
 		   Ubound2(i,j1+1,k) =Ubound(i,j1,k)
 		   Vbound2(i,-1,k) = Vbf(i,k)
 		   Vbound2(i,j1+1,k) =Vbound(i,j1,k)
+		   rho2(i,-1,k) = wbf(i,k)
+		   rho2(i,j1+1,k) =rho(i,j1,k)		   
 		   enddo
 		enddo
 	  else 
@@ -1388,6 +1399,8 @@ c get stuff from other CPU's
 		   Ubound2(i,j1+1,k) =Ubb(i,k)
 		   Vbound2(i,-1,k) = Vbf(i,k)
 		   Vbound2(i,j1+1,k) =Vbb(i,k)
+		   rho2(i,-1,k) = wbf(i,k)
+		   rho2(i,j1+1,k) =wbb(i,k)		   
 		   enddo
 		enddo
 	  endif
@@ -1398,6 +1411,8 @@ c get stuff from other CPU's
 		   Ubound2(i,j1+1,k) =Ubb(i,k)
 		   Vbound2(i,-1,k) = Vbf(i,k)
 		   Vbound2(i,j1+1,k) =Vbb(i,k)
+		   rho2(i,-1,k) = wbf(i,k)
+		   rho2(i,j1+1,k) =wbb(i,k)		   
 		   enddo
 		enddo
 	endif
@@ -1405,31 +1420,33 @@ c get stuff from other CPU's
 
        do j=0,j1 ! boundaries in k-direction
         do i=0,i1
-         if (botstress.ge.1) then  !((botstress.eq.1.and.LOA>0.).or.(botstress.eq.1.and.periodicx.eq.1)) then ! with ship or periodic apply shear stress at seabed:
+         if (botstress.ge.1.and.(kjet.eq.0.or.LOA>0.)) then  !((botstress.eq.1.and.LOA>0.).or.(botstress.eq.1.and.periodicx.eq.1)) then ! with ship or periodic apply shear stress at seabed:
 			!! First Ubot_TSHD and Vbot_TSHD is subtracted to determine tau 
 			!! only over ambient velocities not over U_TSHD
 			!! Then Ubound,Vbound are reduced by tau, 
 			!! now Ubot_TSHD and Vbot_TSHD are added again to get correct total velocity
-			uu1=Ubound(i,j,kbedt(i,j)+1)-Ubot_TSHD(j)*rho(i,j,kbedt(i,j)+1)
+			rr1=0.5*(rho2(i,j,kbedt(i,j)+1)+rho2(i+1,j,kbedt(i,j)+1)) !at U-gridpoint
+			rr2=0.5*(rho2(i,j,kbedt(i,j)+1)+rho2(i,j+1,kbedt(i,j)+1)) !at V-gridpoint
+			uu1=Ubound(i,j,kbedt(i,j)+1)-Ubot_TSHD(j)*rr1
 			vv1=0.25*(Vbound2(i,j,kbedt(i,j)+1)+Vbound2(i+1,j,kbedt(i,j)+1)+Vbound2(i,j-1,kbedt(i,j)+1)
-     &                      +Vbound2(i+1,j-1,kbedt(i,j)+1))-Vbot_TSHD(j)*rho(i,j,kbedt(i,j)+1)
+     &                      +Vbound2(i+1,j-1,kbedt(i,j)+1))-Vbot_TSHD(j)*rr1
 			uu2=0.25*(Ubound2(i,j,kbedt(i,j)+1)+Ubound2(i,j+1,kbedt(i,j)+1)+Ubound2(i-1,j,kbedt(i,j)+1)
-     &                      +Ubound2(i-1,j+1,kbedt(i,j)+1))-Ubot_TSHD(j)*rho(i,j,kbedt(i,j)+1)
-			vv2=Vbound(i,j,kbedt(i,j)+1)-Vbot_TSHD(j)*rho(i,j,kbedt(i,j)+1)
-			call wall_fun_rho(uu1,vv1
-     &  ,rho(i,j,1),dz,dt,kn,kappa,(depth-bc_obst_h),U_b,nu_mol)
-			call wall_fun_rho(vv2,uu2
-     &  ,rho(i,j,1),dz,dt,kn,kappa,(depth-bc_obst_h),U_b,nu_mol)
-			Ubound(i,j,kbedt(i,j)+1)=uu1+Ubot_TSHD(j)*rho(i,j,kbedt(i,j)+1)
-			Vbound(i,j,kbedt(i,j)+1)=vv2+Vbot_TSHD(j)*rho(i,j,kbedt(i,j)+1)
+     &                      +Ubound2(i-1,j+1,kbedt(i,j)+1))-Ubot_TSHD(j)*rr2
+			vv2=Vbound(i,j,kbedt(i,j)+1)-Vbot_TSHD(j)*rr2
+			call wall_fun_rho(uu1,vv1,rr1,dz,dt,kn,kappa,nu_mol)
+			call wall_fun_rho(vv2,uu2,rr2,dz,dt,kn,kappa,nu_mol)
+			Ubound(i,j,kbedt(i,j)+1)=uu1+Ubot_TSHD(j)*rr1
+			Vbound(i,j,kbedt(i,j)+1)=vv2+Vbot_TSHD(j)*rr2
 	   elseif (botstress.ge.1.and.kjet>0.and.LOA<0.) then ! with flat plate shear stress must be applied:
 !	    call wall_fun_rho(Vbound(i,j,kmax-kjet-1),Ubound(i,j,kmax-kjet-1),rho(i,j,kmax-kjet-1),dz,dt,kn,kappa,(depth-bc_obst_h),U_b,nu_mol)
 !	    call wall_fun_rho(Ubound(i,j,kmax-kjet-1),Vbound(i,j,kmax-kjet-1),rho(i,j,kmax-kjet-1),dz,dt,kn,kappa,(depth-bc_obst_h),U_b,nu_mol)
+			rr1=0.5*(rho2(i,j,kmax-kjet-1)+rho2(i+1,j,kmax-kjet-1)) !at U-gridpoint
+			rr2=0.5*(rho2(i,j,kmax-kjet-1)+rho2(i,j+1,kmax-kjet-1)) !at V-gridpoint
 		uu2=0.25*(Ubound2(i,j,kmax-kjet-1)+Ubound2(i,j+1,kmax-kjet-1)+Ubound2(i-1,j,kmax-kjet-1)+Ubound2(i-1,j+1,kmax-kjet-1))
 		vv2=0.25*(Vbound2(i,j,kmax-kjet-1)+Vbound2(i+1,j,kmax-kjet-1)+Vbound2(i,j-1,kmax-kjet-1)+Vbound2(i+1,j-1,kmax-kjet-1))
 
-	    call wall_fun_rho(Vbound(i,j,kmax-kjet-1),uu2,rho(i,j,kmax-kjet-1),dz,dt,kn,kappa,(depth-bc_obst_h),U_b,nu_mol)
-	    call wall_fun_rho(Ubound(i,j,kmax-kjet-1),vv2,rho(i,j,kmax-kjet-1),dz,dt,kn,kappa,(depth-bc_obst_h),U_b,nu_mol)
+	    call wall_fun_rho(Vbound(i,j,kmax-kjet-1),uu2,rr2,dz,dt,kn,kappa,nu_mol)
+	    call wall_fun_rho(Ubound(i,j,kmax-kjet-1),vv2,rr1,dz,dt,kn,kappa,nu_mol)
 
 	   endif
 	
@@ -1533,9 +1550,11 @@ c get stuff from other CPU's
  	    i=i_inVpunt_tauTSHD(t)
  	    j=j_inVpunt_tauTSHD(t)		
  	    k=k_inVpunt_tauTSHD(t)
-	    uu2=0.25*(Ubound2(i,j,k)+Ubound2(i,j+1,k)+Ubound2(i-1,j,k)+Ubound2(i-1,j+1,k))		
+	    uu2=0.25*(Ubound2(i,j,k)+Ubound2(i,j+1,k)+Ubound2(i-1,j,k)+Ubound2(i-1,j+1,k))	
+		rr2=0.5*(rho2(i,j,k)+rho2(i,j+1,k)) !at V-gridpoint		
+		
 !	    call wall_fun_rho(Vbound(i,j,k),Ubound2(i,j,k),rho(i,j,k),dz,dt,kn_TSHD,kappa,(depth-bc_obst_h),U_b,nu_mol)
-	    call wall_fun_rho(Vbound(i,j,k),uu2,rho(i,j,k),dz,dt,kn_TSHD,kappa,(depth-bc_obst_h),U_b,nu_mol)
+	    call wall_fun_rho(Vbound(i,j,k),uu2,rr2,dz,dt,kn_TSHD,kappa,nu_mol)
 	   enddo
 	  endif
 	  !if (botstress.ge.1) then !if kn_TSHD>0 then tauTSHD independent of botstress
@@ -1545,8 +1564,9 @@ c get stuff from other CPU's
  	    j=j_inUpunt_tauTSHD(t)		
  	    k=k_inUpunt_tauTSHD(t)		
 	    vv2=0.25*(Vbound2(i,j,k)+Vbound2(i+1,j,k)+Vbound2(i,j-1,k)+Vbound2(i+1,j-1,k))
+		rr1=0.5*(rho2(i,j,k)+rho2(i+1,j,k)) !at U-gridpoint
 !	    call wall_fun_rho(Ubound(i,j,k),Vbound2(i,j,k),rho(i,j,k),dz,dt,kn_TSHD,kappa,(depth-bc_obst_h),U_b,nu_mol)
-	    call wall_fun_rho(Ubound(i,j,k),vv2,rho(i,j,k),dz,dt,kn_TSHD,kappa,(depth-bc_obst_h),U_b,nu_mol)
+	    call wall_fun_rho(Ubound(i,j,k),vv2,rr1,dz,dt,kn_TSHD,kappa,nu_mol)
 	   enddo
 	  endif
 	  do t=1,tmax_inVpunt_rudder ! apply rudder 
@@ -1723,7 +1743,8 @@ c get stuff from other CPU's
 	! apply boundary conditions for Vbound again to fix small inconsistency in Vbound(:,j1,:) made in jet, jet2 and rudder
 	call shiftf(Vbound,vbf) 
 	call shiftb(Vbound,vbb) 
-
+	call shiftf(Ubound,ubf) 
+	call shiftb(Ubound,ubb) 
 	if (periodicy.eq.0.or.periodicy.eq.2) then
 	  if (rank.eq.0) then ! boundaries in j-direction
 
@@ -1734,6 +1755,8 @@ c get stuff from other CPU's
 		   do i=1,imax
 		   Vbound(i,0,k) = Vbf(i,k)
 		   Vbound(i,j1,k) =Vbb(i,k)
+		   Ubound(i,0,k) = Ubf(i,k)
+		   Ubound(i,j1,k) =Ubb(i,k)		   
 		   enddo
 		enddo
 	  endif
@@ -1742,6 +1765,8 @@ c get stuff from other CPU's
 	   do i=1,imax
 	     Vbound(i,0,k) = Vbf(i,k)
 	     Vbound(i,j1,k) =Vbb(i,k)
+	     Ubound(i,0,k) = Ubf(i,k)
+	     Ubound(i,j1,k) =Ubb(i,k)		 
 	   enddo
 	  enddo
 	endif
@@ -2236,7 +2261,7 @@ c get stuff from other CPU's
 
 		end		
 		
-	subroutine wall_fun(uu,vv,rr,dz,dt,kn,kappa,depth,U_b,nu_mol)
+	subroutine wall_fun(uu,vv,rr,dz,dt,kn,kappa,nu_mol)
 		
 	implicit none
 
@@ -2245,7 +2270,7 @@ c	Wall function
 c	Determine tau-wall with sqrt(uu**2,vv**2) and adapt uu	
 c	Subtract tau_wall/rho*dt*dx*dy/(dx*dy*dz) from uu (m/s)
 c*************************************************************
-	real uu,vv,rr,dz,dt,absU,ust,z0,kn,kappa,yplus,tau,depth,U_b,nu_mol
+	real uu,vv,rr,dz,dt,absU,ust,z0,kn,kappa,yplus,tau,nu_mol
 	integer tel
 
 	absU=sqrt((uu)**2+(vv)**2)
@@ -2291,7 +2316,7 @@ c*************************************************************
 	uu = uu / (1. + tau*dt/dz/MAX(absU,1.e-12)) 	!! only uu is adjusted !! implicit = more stable
 	end
 
-	subroutine wall_fun_rho(uu,vv,rr,dz,dt,kn,kappa,depth,U_b,nu_mol)
+	subroutine wall_fun_rho(uu,vv,rr,dz,dt,kn,kappa,nu_mol)
 		
 	implicit none
 
@@ -2300,7 +2325,7 @@ c	Wall function
 c	Determine tau-wall with sqrt(uu**2,vv**2) and adapt uu	
 c	Subtract tau_wall*dt*dx*dy/(dx*dy*dz) from uu (kg/m3*m/s)
 c*************************************************************
-	real uu,vv,rr,dz,dt,absU,ust,z0,kn,kappa,yplus,tau,depth,U_b,nu_mol
+	real uu,vv,rr,dz,dt,absU,ust,z0,kn,kappa,yplus,tau,nu_mol
 	integer tel
 
 	absU=sqrt((uu/rr)**2+(vv/rr)**2)
@@ -2382,7 +2407,7 @@ c*************************************************************
 		  enddo
 		 enddo
 		enddo	  
-		 if (bp(n2)%volncells.le.0.) then
+		 if (bp(n2)%volncells.le.0.and.tt<bp(n2)%t_end) then
 		   write(*,*),'WARNING, no cells found for bedplume number: ',n2,bp(n2)%volncells,rank
 		   write(*,*),'In case a sedflux or Q has been defined the code will crash because of division by a zero volncells'
 		 endif
@@ -2391,6 +2416,49 @@ c*************************************************************
 	
 	end
 	
+	subroutine update_QSc_bedplume(tt)
+	
+	USE nlist
+	
+	implicit none
+	
+	real tt
+	integer n2,inout,n3
+	real interpseries
+	
+	DO n2=1,nbedplume
+		  IF (bp(n2).Q_tseriesfile.ne.'') THEN
+			bp(n2)%Q=interpseries(bp(n2)%Q_tseries,bp(n2)%Q_series,bp(n2)%Q_seriesloc,tt)
+		  ENDIF
+		  IF (bp(n2).S_tseriesfile.ne.'') THEN
+			CALL interpseries3(bp(n2)%S_tseries,bp(n2)%S_series(1:nfrac,:),bp(n2)%S_seriesloc,tt,nfrac,bp(n2)%sedflux(1:nfrac))
+		  ENDIF	
+		  IF (bp(n2).c_tseriesfile.ne.'') THEN
+			CALL interpseries3(bp(n2)%c_tseries,bp(n2)%c_series(1:nfrac,:),bp(n2)%c_seriesloc,tt,nfrac,bp(n2)%c(1:nfrac))
+		  ENDIF			  
+	ENDDO	
+	
+	end
+	
+	subroutine update_Qc_plume(tt)
+	
+	USE nlist
+	
+	implicit none
+	
+	real tt
+	integer n2,inout,n3
+	real interpseries,Qplume
+	
+		  IF (plumeQtseriesfile.ne.'') THEN
+			Q_j=interpseries(plumeQtseries,plumeQseries,plumeQseriesloc,tt)
+			W_j=-Q_j/Aplume
+		  ENDIF
+		  IF (plumectseriesfile.ne.'') THEN
+			CALL interpseries3(plumectseries,plumecseries(1:nfrac,:),plumecseriesloc,tt,nfrac,frac(1:nfrac)%c)
+		  ENDIF			  
+	
+	end	
 	
 	REAL function interpseries(tseries,series,sloc,tt)
 
@@ -2404,14 +2472,28 @@ c*************************************************************
 !	write(*,*)'sloc,tseries(sloc),tseries(sloc+1)',sloc,tseries(sloc),tseries(sloc+1)
 !	write(*,*)'series(sloc),series(sloc+1),interpval',series(sloc),series(sloc+1),
 !     & (tt-tseries(sloc))/(tseries(sloc+1)-tseries(sloc))*(series(sloc+1)-series(sloc))+series(sloc)
-
-
 	interpseries=(tt-tseries(sloc))/(tseries(sloc+1)-tseries(sloc))*(series(sloc+1)-series(sloc))+series(sloc)	
 
-
-
 	end function interpseries	
-	  
+
+	subroutine interpseries3(tseries,series,sloc,tt,nfrac,output)
+	implicit none
+
+	REAL tseries(1:10000),series(1:nfrac,1:10000),tt,fac 
+	REAL output(1:nfrac)
+	INTEGER sloc,nfrac,n
+
+	IF (tt>tseries(sloc+1)) THEN
+		sloc=sloc+1
+	ENDIF
+	fac=(tt-tseries(sloc))/(tseries(sloc+1)-tseries(sloc))
+	DO n=1,nfrac
+		output(n)=fac*(series(n,sloc+1)-series(n,sloc))+series(n,sloc)	
+	ENDDO
+
+	end	
+	
+	
 	subroutine shiftb(UT,UP)
 
       USE nlist

@@ -38,7 +38,7 @@
       INTEGER tmax_inPpuntTSHD,tmax_inUpuntTSHD,tmax_inVpuntTSHD,tmax_inWpuntTSHD
       INTEGER tmax_inUpunt_tauTSHD,tmax_inVpunt_tauTSHD,tmax_inVpunt_rudder
       INTEGER tmax_inWpunt2,tmax_inVpunt2,tmax_inPpunt2,tmax_inWpunt_suction
-      INTEGER nfrac,slipvel,interaction_bed,nobst,kbed_bc,nbedplume,continuity_solver
+      INTEGER nfrac,slipvel,interaction_bed,nobst,kbed_bc,nbedplume,continuity_solver,hindered_settling
       INTEGER nfr_silt,nfr_sand,nfr_air
       CHARACTER*256 hisfile,restart_dir,inpfile,plumetseriesfile,bcfile,plumetseriesfile2,bedlevelfile
       CHARACTER*3 time_int,advec_conc,cutter
@@ -46,20 +46,22 @@
       CHARACTER*4 damping_drho_dz
 	  CHARACTER*11 pickup_formula
       REAL damping_a1,damping_b1,damping_a2,damping_b2,cfixedbed
-      REAL plumetseries(1:100000) 
-      REAL plumeUseries(1:100000)
-      REAL plumetseries2(1:100000) 
-      REAL plumeUseries2(1:100000),c_bed(100)
-      INTEGER plumeseriesloc,plumeseriesloc2
+      REAL plumetseries(1:10000) 
+      REAL plumeUseries(1:10000)
+      REAL plumetseries2(1:10000) 
+      REAL plumeUseries2(1:10000),c_bed(100)
+      INTEGER plumeseriesloc,plumeseriesloc2,plumeQseriesloc,plumecseriesloc
       INTEGER nr_HPfilter
       REAL timeAB_real(1:4),dpdx,dpdy,kn_d50_multiplier,avalanche_slope,dpdx1,dpdy1,Uavold,Vavold
       INTEGER periodicx,periodicy,wallup
-      REAL U_b3,V_b3,surf_layer
+      REAL U_b3,V_b3,surf_layer,reduction_sedimentation_shields
       INTEGER ksurf_bc,kmaxTSHD_ind,nair
       INTEGER poissolver,nm1
       INTEGER iparm(64)
-      
-
+      CHARACTER*256 plumeQtseriesfile,plumectseriesfile      
+      REAL Q_j,plumeQseries(1:10000),plumeQtseries(1:10000),plumectseries(1:10000),plumecseries(30,1:10000) !c(30) matches with size frac_init
+      REAL Aplume
+	  
       CHARACTER*4 convection,diffusion
       REAL numdiff,comp_filter_a
       INTEGER comp_filter_n
@@ -154,10 +156,11 @@
 	    REAL ::	x(4),y(4),height,zbottom,ero,depo
 	end type bed_obstacles
 	type bed_plumes
-	    REAL ::	x(4),y(4),height,u,v,w,c(100),t0,t_end,zbottom,Q,sedflux(100),volncells,changesedsuction !c(100) matches with size frac_init
+	    REAL ::	x(4),y(4),height,u,v,w,c(30),t0,t_end,zbottom,Q,sedflux(30),volncells,changesedsuction !c(30) matches with size frac_init
 		REAL :: h_tseries(10000),h_series(10000),zb_tseries(10000),zb_series(10000)
-	    INTEGER :: forever,h_seriesloc,zb_seriesloc
-		CHARACTER*256 :: h_tseriesfile,zb_tseriesfile
+		REAL :: Q_tseries(10000),c_tseries(10000),S_tseries(10000),Q_series(10000),c_series(30,10000),S_series(30,10000)
+	    INTEGER :: forever,h_seriesloc,zb_seriesloc,Q_seriesloc,S_seriesloc,c_seriesloc
+		CHARACTER*256 :: h_tseriesfile,zb_tseriesfile,Q_tseriesfile,S_tseriesfile,c_tseriesfile
 	end type bed_plumes
 	TYPE(fractions), DIMENSION(:), ALLOCATABLE :: frac
 	TYPE(bed_obstacles), DIMENSION(:), ALLOCATABLE :: ob,obst
@@ -181,9 +184,9 @@
 	  real :: ws,c,rho,dpart,dfloc,tau_d,tau_e,M,kn_sed,ws_dep,zair_ref_belowsurf
 	  integer :: type
 	end type frac_init
-	TYPE(frac_init), DIMENSION(100) :: fract
+	TYPE(frac_init), DIMENSION(30) :: fract
 
-	ALLOCATE(bedplume(1000)) !temporary array to read namelist with unknown size
+	ALLOCATE(bedplume(30)) !temporary array to read namelist with unknown size
 	ALLOCATE(obst(1000)) !temporary array to read namelist with unknown size
 ! 	TYPE(gridtype), DIMENSION(1) :: grid
 
@@ -197,10 +200,10 @@
      & U_bSEM,V_bSEM,U_w,V_w,c_bed,cfixedbed
 	NAMELIST /plume/W_j,plumetseriesfile,Awjet,Aujet,Avjet,Strouhal,azi_n,kjet,radius_j,Sc,slipvel,outflow_overflow_down,
      & U_j2,plumetseriesfile2,Awjet2,Aujet2,Avjet2,Strouhal2,azi_n2,radius_j2,zjet2,bedplume,radius_inner_j,xj,yj,W_j_powerlaw,
-     & plume_z_outflow_belowsurf
+     & plume_z_outflow_belowsurf,hindered_settling,Q_j,plumeQtseriesfile,plumectseriesfile
 	NAMELIST /LESmodel/sgs_model,Cs,Lmix_type,nr_HPfilter,damping_drho_dz,damping_a1,damping_b1,damping_a2,damping_b2
 	NAMELIST /constants/kappa,gx,gy,gz,ekm_mol,calibfac_sand_pickup,pickup_formula,kn_d50_multiplier,avalanche_slope,
-     &	calibfac_Shields_cr
+     &	calibfac_Shields_cr,reduction_sedimentation_shields
 	NAMELIST /fractions_in_plume/fract
 	NAMELIST /ship/U_TSHD,LOA,Lfront,Breadth,Draught,Lback,Hback,xfront,yfront,kn_TSHD,nprop,Dprop,xprop,yprop,zprop,
      &   Pprop,rudder,rot_prop,draghead,Dsp,xdh,perc_dh_suction,softnose,Hfront,cutter
@@ -303,6 +306,12 @@
 	!! plume
 	W_j = -999.
 	plumetseriesfile=''
+	plumetseries=-99999.
+	plumeQtseries=-99999.
+	plumectseries=-99999.
+	Q_j = -999.
+	plumeQtseriesfile=''
+	plumectseriesfile=''
 	Awjet = -999.
 	Aujet = -999.
 	Avjet = -999.
@@ -321,9 +330,12 @@
 	yj(3) = 1.e12
 	yj(4) = 1.e12
 	Sc = -999.
+	slipvel = -999
+	hindered_settling = 1 !! hindered_settling = 1	!Hindered settling formula [-] 1=Rowe (1987) (smooth Ri-Za org) (default); 2=Garside (1977); 3=Di Felice (1999)
 	outflow_overflow_down = 0
 	U_j2 = -999.
 	plumetseriesfile2=''
+	plumetseries2=-99999.
 	Awjet2 = -999.
 	Aujet2 = -999.
 	Avjet2 = -999.
@@ -350,13 +362,27 @@
 	bedplume(:)%h_seriesloc=1	
 	bedplume(:)%zb_tseriesfile=''
 	bedplume(:)%zb_seriesloc=1
+	bedplume(:)%Q_tseriesfile=''
+	bedplume(:)%Q_seriesloc=1
+	bedplume(:)%S_tseriesfile=''
+	bedplume(:)%S_seriesloc=1
+	bedplume(:)%c_tseriesfile=''
+	bedplume(:)%c_seriesloc=1	
 	DO i=1,10000
 		bedplume(:)%h_tseries(i)=-99999.
 		bedplume(:)%h_series(i)=-99999.
 		bedplume(:)%zb_tseries(i)=-99999.
 		bedplume(:)%zb_series(i)=-99999.
+		bedplume(:)%Q_tseries(i)=-99999.
+		bedplume(:)%Q_series(i)=-99999.
+		bedplume(:)%S_tseries(i)=-99999.
+		bedplume(:)%c_tseries(i)=-99999.
+		DO j=1,30
+			bedplume(:)%S_series(j,i)=-99999.
+			bedplume(:)%c_series(j,i)=-99999.		
+		ENDDO
 	ENDDO
-	DO i=1,100
+	DO i=1,30
 		bedplume(:)%c(i) = 0.
 		bedplume(:)%sedflux(i) = 0. 
 	ENDDO
@@ -402,6 +428,7 @@
 	pickup_formula = 'vanrijn1984' !default
 	kn_d50_multiplier = 2. !default, kn=2*d50 defined in paper Van Rijn 1984
 	avalanche_slope = 0. !default vertical slopes are allowed
+	reduction_sedimentation_shields = 0. ! default no reduction in sedimentation by shear stresss (shields) ! PhD thesis vRhee p146 eq 7.74
 	!! ship
 	U_TSHD=-999.
 	LOA=-999.
@@ -583,7 +610,8 @@
 	IF (kjet<0) CALL writeerror(64)
 	IF (radius_j<0.) CALL writeerror(66)
 	IF (Sc<0.) CALL writeerror(67)
-	IF (slipvel<0.) CALL writeerror(68)
+	IF (slipvel.ne.0.and.slipvel.ne.1.and.slipvel.ne.2) CALL writeerror(68)
+	IF (hindered_settling.ne.1.and.hindered_settling.ne.2.and.hindered_settling.ne.3) CALL writeerror(280)
 
 	IF (U_j2.eq.999.and.radius_j2>0.) CALL writeerror(260)
 	IF (U_j2>-999.and.Awjet2<0.) CALL writeerror(261)
@@ -744,15 +772,140 @@
 	  bp(n)%h_series=bedplume(n)%h_series
 	  bp(n)%zb_series=bedplume(n)%zb_series
 	  
+	  bp(n)%Q_tseriesfile=bedplume(n)%Q_tseriesfile
+	  bp(n)%S_tseriesfile=bedplume(n)%S_tseriesfile
+	  bp(n)%c_tseriesfile=bedplume(n)%c_tseriesfile
+	  bp(n)%Q_seriesloc=bedplume(n)%Q_seriesloc
+	  bp(n)%S_seriesloc=bedplume(n)%S_seriesloc
+	  bp(n)%c_seriesloc=bedplume(n)%c_seriesloc
+	  bp(n)%Q_tseries=bedplume(n)%Q_tseries
+	  bp(n)%S_tseries=bedplume(n)%S_tseries
+	  bp(n)%c_tseries=bedplume(n)%c_tseries
+	  bp(n)%Q_series=bedplume(n)%Q_series
+	  bp(n)%S_series=bedplume(n)%S_series
+	  bp(n)%c_series=bedplume(n)%c_series
+
+
+	IF (bp(n)%Q_tseriesfile.eq.'') THEN
+	ELSE
+	   call readtseries2(bp(n)%Q_tseriesfile,bp(n)%Q_tseries,bp(n)%Q_series)
+	   bp(n)%Q_seriesloc=1
+	   n3=0
+	   DO WHILE (bp(n)%Q_tseries(n3+1).NE.-99999.)
+		n3=n3+1
+	   END DO	  
+	   IF (bp(n)%Q_tseries(n3).lt.t_end) THEN
+				write(*,*),' Bedplume:',n
+				write(*,*),' time series shorter than t_end'
+				write(*,*),' series file:',bp(n)%Q_tseriesfile
+				CALL writeerror(279)
+		ENDIF	   
+	ENDIF	  
+	IF (bp(n)%S_tseriesfile.eq.'') THEN
+	ELSE
+	   call readtseries3(bp(n)%S_tseriesfile,bp(n)%S_tseries,bp(n)%S_series(1:nfrac,:),nfrac)
+	   bp(n)%S_seriesloc=1
+	   n3=0
+	   DO WHILE (bp(n)%S_tseries(n3+1).NE.-99999.)
+		n3=n3+1
+	   END DO	  
+	   IF (bp(n)%S_tseries(n3).lt.t_end) THEN
+				write(*,*),' Bedplume:',n
+				write(*,*),' time series shorter than t_end'
+				write(*,*),' series file:',bp(n)%S_tseriesfile
+				CALL writeerror(279)
+		ENDIF
+	   
+	   DO i=1,nfrac
+		 DO j=1,n3
+			IF (bp(n)%S_series(i,j)<0) THEN
+				write(*,*),' Bedplume:',n
+				write(*,*),' Sediment fraction,# in serie:',i,j
+				write(*,*),' value:',bp(n)%S_series(i,j)
+				write(*,*),' series file:',bp(n)%S_tseriesfile
+				CALL writeerror(271)
+		    ENDIF
+		  ENDDO
+		ENDDO	   
+	ENDIF
+	IF (bp(n)%c_tseriesfile.eq.'') THEN
+	ELSE
+	   call readtseries3(bp(n)%c_tseriesfile,bp(n)%c_tseries,bp(n)%c_series(1:nfrac,:),nfrac)
+	   bp(n)%c_seriesloc=1
+	   n3=0
+	   DO WHILE (bp(n)%c_tseries(n3+1).NE.-99999.)
+		n3=n3+1
+	   END DO	  
+	   IF (bp(n)%c_tseries(n3).lt.t_end) THEN
+				write(*,*),' Bedplume:',n
+				write(*,*),' time series shorter than t_end'
+				write(*,*),' series file:',bp(n)%c_tseriesfile
+				CALL writeerror(279)
+		ENDIF	   
+	   !write(*,*) 'bp_cseries 8', bp(n)%c_series(8,1:10)
+	   DO i=1,nfrac
+		 DO j=1,n3
+			IF (bp(n)%c_series(i,j)<0) THEN
+				write(*,*),' Bedplume:',n
+				write(*,*),' Sediment fraction, # n series:',i,j
+				write(*,*),' value:',bp(n)%c_series(i,j)
+				write(*,*),' series file:',bp(n)%c_tseriesfile
+				CALL writeerror(271)
+		    ENDIF
+		  ENDDO
+		ENDDO
+	ENDIF	
+	IF (bp(n)%c_tseriesfile.ne.''.and.bp(n)%S_tseriesfile.ne.'') THEN
+		write(*,*),' Bedplume:',n
+		write(*,*),' series file:',bp(n)%c_tseriesfile
+		write(*,*),' series file:',bp(n)%S_tseriesfile
+		write(*,*),' should not be both defined'
+		CALL writeerror(277)
+	ENDIF
+	IF (bp(n)%c_tseriesfile.ne.''.and.MAXVAL(bp(n)%sedflux(1:nfrac))>0.) THEN
+		write(*,*),' Bedplume:',n
+		write(*,*),' series file:',bp(n)%c_tseriesfile
+		write(*,*),' sedflux:',bp(n)%sedflux
+		write(*,*),' should not be both defined'
+		CALL writeerror(277)
+	ENDIF
+	IF (MAXVAL(bp(n)%c(1:nfrac))>0.and.bp(n)%S_tseriesfile.ne.'') THEN
+		write(*,*),' Bedplume:',n
+		write(*,*),' series file:',bp(n)%S_tseriesfile
+		write(*,*),' c:',bp(n)%c
+		write(*,*),' should not be both defined'
+		CALL writeerror(277)
+	ENDIF
+		
 	IF (bp(n)%h_tseriesfile.eq.'') THEN
 	ELSE
 	   call readtseries2(bp(n)%h_tseriesfile,bp(n)%h_tseries,bp(n)%h_series)
 	   bp(n)%h_seriesloc=1
+	   n3=0
+	   DO WHILE (bp(n)%h_tseries(n3+1).NE.-99999.)
+		n3=n3+1
+	   END DO	  
+	   IF (bp(n)%h_tseries(n3).lt.t_end) THEN
+				write(*,*),' Bedplume:',n
+				write(*,*),' time series shorter than t_end'
+				write(*,*),' series file:',bp(n)%h_tseriesfile
+				CALL writeerror(279)
+		ENDIF	   
 	ENDIF	  
 	IF (bp(n)%zb_tseriesfile.eq.'') THEN
 	ELSE
 	   call readtseries2(bp(n)%zb_tseriesfile,bp(n)%zb_tseries,bp(n)%zb_series)
 	   bp(n)%zb_seriesloc=1
+	   n3=0
+	   DO WHILE (bp(n)%zb_tseries(n3+1).NE.-99999.)
+		n3=n3+1
+	   END DO	  
+	   IF (bp(n)%zb_tseries(n3).lt.t_end) THEN
+				write(*,*),' Bedplume:',n
+				write(*,*),' time series shorter than t_end'
+				write(*,*),' series file:',bp(n)%zb_tseriesfile
+				CALL writeerror(279)
+		ENDIF	   
 	ENDIF
 	  DO i=1,4
 	    IF (bp(n)%x(i).eq.-99999.or.bp(n)%y(i).eq.-99999) THEN
@@ -859,11 +1012,68 @@
 	ELSE
 	   call readtseries(plumetseriesfile,plumetseries,plumeUseries)
 	   plumeseriesloc=1
+	   n3=0
+	   DO WHILE (plumetseries(n3+1).NE.-99999.)
+		n3=n3+1
+	   END DO	  
+	   IF (plumetseries(n3).lt.t_end) THEN
+				write(*,*),' time series shorter than t_end'
+				write(*,*),' series file:',plumetseriesfile
+				CALL writeerror(279)
+		ENDIF	   
 	ENDIF
+	IF (plumeQtseriesfile.eq.'') THEN
+	ELSE
+	   call readtseries(plumeQtseriesfile,plumeQtseries,plumeQseries)
+	   plumeQseriesloc=1
+	   n3=0
+	   DO WHILE (plumeQtseries(n3+1).NE.-99999.)
+		n3=n3+1
+	   END DO	  
+	   IF (plumeQtseries(n3).lt.t_end) THEN
+				write(*,*),' time series shorter than t_end'
+				write(*,*),' series file:',plumetseriesfile
+				CALL writeerror(279)
+		ENDIF	   
+	ENDIF
+	IF (plumectseriesfile.eq.'') THEN
+	ELSE
+	   call readtseries3(plumectseriesfile,plumectseries,plumecseries(1:nfrac,:),nfrac)
+	   plumecseriesloc=1
+	   n3=0
+	   DO WHILE (plumectseries(n3+1).NE.-99999.)
+		n3=n3+1
+	   END DO	  
+	   IF (plumectseries(n3).lt.t_end) THEN
+				write(*,*),' time series shorter than t_end'
+				write(*,*),' series file:',plumectseriesfile
+				CALL writeerror(279)
+		ENDIF	   
+	   DO i=1,nfrac
+		 DO j=1,n3
+			IF (plumecseries(i,j)<0) THEN
+				write(*,*),' Sediment fraction, plume inflow c # n series:',i,j
+				write(*,*),' value:',plumecseries(i,j)
+				write(*,*),' series file:',plumectseriesfile
+				CALL writeerror(271)
+		    ENDIF
+		  ENDDO
+		ENDDO
+	ENDIF	
+	
 	IF (plumetseriesfile2.eq.'') THEN
 	ELSE
 	   call readtseries(plumetseriesfile2,plumetseries2,plumeUseries2)
 	   plumeseriesloc2=1
+	   n3=0
+	   DO WHILE (plumetseries2(n3+1).NE.-99999.)
+		n3=n3+1
+	   END DO	  
+	   IF (plumetseries2(n3).lt.t_end) THEN
+				write(*,*),' time series shorter than t_end'
+				write(*,*),' series file:',plumetseriesfile2
+				CALL writeerror(279)
+		ENDIF	   
 	ENDIF
 
 	END SUBROUTINE read_namelist
@@ -1233,7 +1443,7 @@
 !	Lynyrd de Wit, October 2010
 
 	CHARACTER*256 seriesfile
-	REAL tseries(1:100000),series(1:100000)
+	REAL tseries(1:10000),series(1:10000)
 	REAL begintime,timestep,endtime
 	INTEGER i,k,p,ios
 
@@ -1302,4 +1512,41 @@
 
 	END SUBROUTINE readtseries2
 
+	
+		SUBROUTINE readtseries3(seriesfile,tseries,series,nfrac)
+!	SUBROUTINE readtseries(seriesfile,tseries,series)
+!	reads a time series from seriesfile
+!	Lynyrd de Wit, October 2010
+
+	CHARACTER*256 seriesfile
+	REAL tseries(1:10000),series(1:nfrac,1:10000)
+	REAL begintime,timestep,endtime
+	INTEGER i,k,p,ios,nfrac
+
+	NAMELIST /timeseries/begintime,timestep,endtime,series
+	series=-9999.
+	OPEN(10,FILE=seriesfile,IOSTAT=ios,ACTION='read')
+
+		write(*,*) 'File :', seriesfile,'reading'
+
+	IF (ios/=0) THEN
+		write(*,*) 'File :', seriesfile
+		CALL writeerror(1001)
+	END IF
+	READ (UNIT=10,NML=timeseries,IOSTAT=ios)
+	IF (ios/=0) THEN
+		write(*,*) 'File :', seriesfile
+		CALL writeerror(1002)
+	END IF
+	CLOSE(10)
+	
+	k=1
+	DO WHILE (series(1,k).NE.-9999)
+		tseries(k)=begintime+REAL(k)*timestep-timestep
+		k=k+1
+	END DO
+
+
+	END SUBROUTINE readtseries3
+	
 	END MODULE nlist

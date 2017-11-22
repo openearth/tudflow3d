@@ -165,6 +165,8 @@
       time_n=0.
       time_np=dt
 	  call update_nvol_bedplume(time_n)
+	  call update_QSc_bedplume(time_n)
+	  call update_Qc_plume(time_n)
 
 !      call fillps 
 !      CALL SOLVEpois(p) !,Ru,Rp,DPHI,dz,rank,imax,jmax,kmax,px)
@@ -219,6 +221,8 @@
 		endif
 		call bound_rhoU(dUdt,dVdt,dWdt,drdt,slip_bot,time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
 		call update_nvol_bedplume(time_np)
+		call update_QSc_bedplume(time_np)
+		call update_Qc_plume(time_np)
 
 		if (comp_filter_n>0) then
 			if (mod(istep,comp_filter_n).eq.0) then

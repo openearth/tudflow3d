@@ -814,8 +814,8 @@ c get stuff from other CPU's
 	else 
 		putin2(-2,0:j1,0:k1)=putin(ie-2,0:j1,0:k1)
 		putin2(-1,0:j1,0:k1)=putin(ie-1,0:j1,0:k1)
-		putin2(i1+1,0:j1,0:k1)=putin(1,0:j1,0:k1)
-		putin2(i1+2,0:j1,0:k1)=putin(2,0:j1,0:k1)
+		putin2(i1+1,0:j1,0:k1)=putin(2,0:j1,0:k1)
+		putin2(i1+2,0:j1,0:k1)=putin(3,0:j1,0:k1)
 	endif
 
 	putin2(0:i1,0:j1,-2)=putin(0:i1,0:j1,0)

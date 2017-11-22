@@ -92,8 +92,11 @@ V_w = 0.3			! V velocity [m/s] used for waves in fixed x,y coordinate system (po
 /
 
 &plume
-W_j = -2.			! Inflow velocity plume [m/s]
-plumetseriesfile='' 		!
+W_j = -2.			! Inflow velocity plume (negative means inflow!) [m/s]
+plumetseriesfile='' 		! file with timeseries of W_j inflow velocity plume [m/s], overules W_j (default '')
+Q_j = 2.			! Inflow discharge plume (positive is inflow); determines correct inflow using velocity shape from W_j_powerlaw to arrive exactly at Q_j [m3/s] (Q_j overules W_j)
+plumeQtseriesfile='' 		! file containing timeseries of Q_j inflow Q plume [m3/s], overules W_j and Q_j (default '')
+plumectseriesfile='' 		! file containing timeseries of volume fractions inflow plume [-] (optional overrules fract(.)%c, default '')
 Awjet = 0.			! Azimuthal factor Wjet [-]
 Aujet = 0.			! Azimuthal factor Ujet [-]
 Avjet = 0.			! Azimuthal factor Vjet [-]
@@ -108,6 +111,7 @@ W_j_powerlaw = 7.		! powerlaw for plume velocity profile (default 7. = 1/7 power
 plume_z_outflow_belowsurf = 6. ! depth flow surface at which plume flows downward, only need to define when different from Draught TSHD [m]
 Sc = 0.7			! Schmidt number used to determine Diff. coeff from viscosity [-]
 slipvel = 0			! 0 = no slip velocity, 1 = hindered settling RiZa, 2 = settling with frac(n)%ws
+hindered_settling = 1	!Hindered settling formula [-] 1=Rowe (1987) (smooth Ri-Za org) (default); 2=Garside (1977); 3=Di Felice (1999)
 outflow_overflow_down = 0       ! 1 = outflow velocity bc at keel TSHD 0 = outflow velocity bc at top overflow pipe (default 0)
 U_j2 = 2.			! Inflow velocity plume horizontal at i=0 [m/s]
 Aujet2 = 0.1			! Azimuthal factor Ujet2 [-]
@@ -127,11 +131,14 @@ bedplume(1)%u = 0.5            		! Initial U velocity inside bedplume [m/s] (if 
 bedplume(1)%v = 0.5            		! Initial V velocity inside bedplume [m/s] (if not defined then vertical profile based on V_b is used)
 bedplume(1)%w = 0.5            		! Initial W velocity inside bedplume [m/s] (if not defined then W_b is used)
 bedplume(1)%c = 0.1 0.1 0.1    		! Initial volume fractions inside bedplume [-] (length vector must be nfrac large)
+bedplume(1)%c_tseriesfile = './inputfiles/Inflow_C.asc'		! file containing timeseries of volume fractions [-] (optional overrules bedplume(.)%c, default '')
 bedplume(1)%forever = 0        		! 1 is bedplume put in place every timestep, 0 is only initial bedplume (default 0)
 bedplume(1)%t0 = 0.        			! bedplume is started after t0 seconds (default 0. s) 
 bedplume(1)%t_end = 0.        		! bedplume ends after t_end seconds (default t_end of simulation) 
 bedplume(1)%Q = 2.5 				! Fluid flux [m3/s] (divided evenly over all cells within bedplume) 
+bedplume(1)%Q_tseriesfile = './inputfiles/Inflow_Q.asc'		! file containing timeseries of Q [m3/s] (optional overrules bedplume(.)%Q, default '')
 bedplume(1)%sedflux = 6.625 59.625  ! Sediment flux [kg/s] (divided evenly over all cells within bedplume, length vector must be nfrac large)
+bedplume(1)%S_tseriesfile = './inputfiles/Inflow_S.asc'		! file containing timeseries of sediment flux [kg/s] (optional overrules bedplume(.)%sedflux, default '')
 bedplume(1)%changesedsuction = 1.   ! 0. is no sediment is removed from suction domain in case bedplume%Q negative (default 1.=sediment is sucked out of domain) 
 /
 
@@ -170,7 +177,7 @@ calibfac_Shields_cr = 1. ! Calibration factor to adjust Shields_cr curve for sta
 pickup_formula = 'nielsen1992' !options are 'vanrijn1984' (default),'nielsen1992','okayasu2010'
 kn_d50_multiplier = 2. 	! Defines Nikuradse bedroughness for sand pickup function (not for flow shear stress), default 2.; kn=2*d50 defined in paper Van Rijn 1984
 avalanche_slope = 2. ! Max bedslope 1:as; all slopes steeper avalanche towards 1:as (0=vertical slope, wet sand=30deg=1.7--15deg=3.7)
-
+reduction_sedimentation_shields = 0. ! Reduction of sedimentation at the bed by shear or perhaps grain-grain interactions (sheet flow) default 0. no reduction, value should be 4-5 PhD thesis vRhee p146 eq 7.74
 /
 
 &ship

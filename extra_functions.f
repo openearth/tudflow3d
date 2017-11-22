@@ -115,7 +115,7 @@
 			du = 0.
 		endif
 		Uavold = Uav
-		Tadapt = 100.*depth/sqrt(U_b**2+V_b**2) !for test just take a value
+		Tadapt = 100.*depth/sqrt(U_b**2+V_b**2+1.e-18) !for test just take a value
 		duu = Tadapt*du/dt !30 seconds worked
 		Uav = Uav + duu 
 		dpdx1 = dpdx1 + ABS(U_b)*(U_b-Uav)*rho_b/depth*dt/Tadapt 
@@ -144,7 +144,7 @@
 			du = 0.
 		endif
 		Vavold = Vav
-		Tadapt = 100.*depth/sqrt(U_b**2+V_b**2) !for test just take a value
+		Tadapt = 100.*depth/sqrt(U_b**2+V_b**2+1.e-18) !for test just take a value
 		duu = Tadapt*du/dt !30 seconds worked
 		Vav = Vav + duu 
 		dpdy1 = dpdy1 + ABS(V_b)*(V_b-Vav)*rho_b/depth*dt/Tadapt 
@@ -172,32 +172,10 @@
       divmax1 = 0.0
       divbar2 = 0.0
       divmax2 = 0.0
+	  
       do k=2,kmax-1
          do j=2,jmax-1
-            do i=2,imax-1
-!       rhoip =0.5*(drdt(i,j,k)+drdt(i+1,j,k))
-!       rhoim =0.5*(drdt(i,j,k)+drdt(i-1,j,k))
-!       rhojp =0.5*(drdt(i,j,k)+drdt(i,j+1,k))
-!       rhojm =0.5*(drdt(i,j,k)+drdt(i,j-1,k))
-!       rhokp =0.5*(drdt(i,j,k)+drdt(i,j,k+1))
-!       rhokm =0.5*(drdt(i,j,k)+drdt(i,j,k-1))
-!       div = (Ru(i)*Unew(i,j,k)*rhoip-Ru(i-1)*Unew(i-1,j,k)*rhoim)*dphi*dz   +
-!      +      (      Vnew(i,j,k)*rhojp-        Vnew(i,j-1,k)*rhojm)*dr(i)*dz  +
-!      +      (      Wnew(i,j,k)*rhokp-        Wnew(i,j,k-1)*rhokm)*Rp(i)*dphi*dr(i)+
-!      +  ((3*drdt(i,j,k)-4*rnew(i,j,k)+rold(i,j,k))/(2*dt))*rp(i)*dr(i)*dphi*dz
-
-!       rhoip =0.5*(drdt(i,j,k)+drdt(i+1,j,k))
-!       rhoim =0.5*(drdt(i,j,k)+drdt(i-1,j,k))
-!       rhojp =0.5*(drdt(i,j,k)+drdt(i,j+1,k))
-!       rhojm =0.5*(drdt(i,j,k)+drdt(i,j-1,k))
-!       rhokp =0.5*(drdt(i,j,k)+drdt(i,j,k+1))
-!       rhokm =0.5*(drdt(i,j,k)+drdt(i,j,k-1))
-
-!       div = (Ru(i)*Unew(i,j,k)*rhoip-Ru(i-1)*Unew(i-1,j,k)*rhoim)/(rp(i)*dr(i))   +
-!      +      (      Vnew(i,j,k)*rhojp-        Vnew(i,j-1,k)*rhojm)/(rp(i)*dphi)  +
-!      +      (      Wnew(i,j,k)*rhokp-        Wnew(i,j,k-1)*rhokm)/dz+
-!      +  ((3*drdt(i,j,k)-4*rnew(i,j,k)+rold(i,j,k))/(2*dt))
-
+            do i=2,imax-1		
 	div1 =
      1  ( Ru(i)*dUdt(i,j,k) - Ru(i-1)*dUdt(i-1,j,k) ) / ( Rp(i)*dr(i) )
      +              +
@@ -223,6 +201,7 @@
            enddo
          enddo
       enddo
+	  
       call mpi_allreduce(divbar1,divbar_tot1,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
       call mpi_allreduce(divmax1,divmax_tot1,1,mpi_real8,mpi_max,mpi_comm_world,ierr)
       call mpi_allreduce(divbar2,divbar_tot2,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
@@ -281,57 +260,58 @@
 ! 	include 'param.txt'
 ! 	include 'common.txt'
 
-	REAL uu,vv,ww,uudt,vvdt,wwdt
+	!REAL uu,vv,ww,uudt,vvdt,wwdt
+	REAL uu(1:imax,1:jmax,1:kmax),vv(1:imax,1:jmax,1:kmax),ww(1:imax,1:jmax,1:kmax)
+	REAL uudt(1:imax,1:jmax,1:kmax),vvdt(1:imax,1:jmax,1:kmax),wwdt(1:imax,1:jmax,1:kmax)
 	INTEGER n
-
 
 	stat_count=stat_count+1
 	stat_time_count=stat_time_count+dt
-	! expensive subroutine: 20-30% extra CPU time when avg/rms is determined within this loop; unclear why it so expensive
-	do i=1,imax
-	  do j=1,jmax
-	    do k=1,kmax
-		  uu=0.5*(Unew(i,j,k)+Unew(i-1,j,k))*cos_u(j)-0.5*(Vnew(i,j,k)+Vnew(i,j-1,k))*sin_u(j)
-		  vv=0.5*(Vnew(i,j,k)+Vnew(i,j-1,k))*cos_u(j)+0.5*(Unew(i,j,k)+Unew(i-1,j,k))*sin_u(j)
-		  ww=0.5*(Wnew(i,j,k)+Wnew(i,j,k-1))
+	
+	! below is 3x faster than elementwise within filling AVG and sig2 arrays within do-loop: now RMS takes 10% instead of 30% CPU time!
+		do i=1,imax
+		  do j=1,jmax
+			do k=1,kmax
+			  uu(i,j,k)=0.5*(Unew(i,j,k)+Unew(i-1,j,k))*cos_u(j)-0.5*(Vnew(i,j,k)+Vnew(i,j-1,k))*sin_u(j)
+			  vv(i,j,k)=0.5*(Vnew(i,j,k)+Vnew(i,j-1,k))*cos_u(j)+0.5*(Unew(i,j,k)+Unew(i-1,j,k))*sin_u(j)
+			  ww(i,j,k)=0.5*(Wnew(i,j,k)+Wnew(i,j,k-1))
+			  do n=1,nfrac
+				Cmax(n,i,j,k) = MAX(Cmax(n,i,j,k),Cnew(n,i,j,k))
+				Cmin(n,i,j,k) = MIN(Cmin(n,i,j,k),Cnew(n,i,j,k))
+			  enddo		  
+			enddo
+		  enddo
+		enddo		  
 		  uudt=uu*dt
 		  vvdt=vv*dt
 		  wwdt=ww*dt
-                !  uu=(U(i,j,k))*cos_u(j)-(V(i,j,k))*sin_v(j)
-                !  vv=(V(i,j,k))*cos_v(j)+(U(i,j,k))*sin_u(j)
-                !  ww=W(i,j,k)
 
-		  sigU2(i,j,k) = sigU2(i,j,k) + uu*uudt
-		  sigV2(i,j,k) = sigV2(i,j,k) + vv*vvdt
-		  sigW2(i,j,k) = sigW2(i,j,k) + ww*wwdt
-		  sigR2(i,j,k) = sigR2(i,j,k) + Rnew(i,j,k)*Rnew(i,j,k)*dt
-		  sigUV(i,j,k) = sigUV(i,j,k) + uu*vvdt
-		  sigUW(i,j,k) = sigUW(i,j,k) + uu*wwdt
-		  sigVW(i,j,k) = sigVW(i,j,k) + vv*wwdt
+		  sigU2 = sigU2 + uu*uudt
+		  sigV2 = sigV2 + vv*vvdt
+		  sigW2 = sigW2 + ww*wwdt
+		  sigR2 = sigR2 + Rnew(1:imax,1:jmax,1:kmax)*Rnew(1:imax,1:jmax,1:kmax)*dt
+		  sigUV = sigUV + uu*vvdt
+		  sigUW = sigUW + uu*wwdt
+		  sigVW = sigVW + vv*wwdt
 
-		  Uavg(i,j,k)  = Uavg(i,j,k) + uudt
-		  Vavg(i,j,k)  = Vavg(i,j,k) + vvdt
-		  Wavg(i,j,k)  = Wavg(i,j,k) + wwdt
-		  Ravg(i,j,k)  = Ravg(i,j,k) + Rnew(i,j,k)*dt
-		  Pavg(i,j,k)  = Pavg(i,j,k) + (p(i,j,k)+pold(i,j,k))*dt
-		  muavg(i,j,k) = muavg(i,j,k) + ekm(i,j,k)*dt
-		do n=1,nfrac
-		  Cavg(n,i,j,k)  = Cavg(n,i,j,k) + Cnew(n,i,j,k)*dt
-		  sigC2(n,i,j,k) = sigC2(n,i,j,k) + Cnew(n,i,j,k)*Cnew(n,i,j,k)*dt
-		  sigUC(n,i,j,k) = sigUC(n,i,j,k) + Cnew(n,i,j,k)*uudt
-		  sigVC(n,i,j,k) = sigVC(n,i,j,k) + Cnew(n,i,j,k)*vvdt
-		  sigWC(n,i,j,k) = sigWC(n,i,j,k) + Cnew(n,i,j,k)*wwdt
-		  Cmax(n,i,j,k) = MAX(Cmax(n,i,j,k),Cnew(n,i,j,k))
-		  Cmin(n,i,j,k) = MIN(Cmin(n,i,j,k),Cnew(n,i,j,k))
-		enddo
+		  Uavg  = Uavg + uudt
+		  Vavg  = Vavg + vvdt
+		  Wavg  = Wavg + wwdt
+		  Ravg  = Ravg + Rnew(1:imax,1:jmax,1:kmax)*dt
+		  Pavg  = Pavg + (p(1:imax,1:jmax,1:kmax)+pold(1:imax,1:jmax,1:kmax))*dt
+		  muavg = muavg + ekm(1:imax,1:jmax,1:kmax)*dt
+		  Cavg  = Cavg + Cnew(1:nfrac,1:imax,1:jmax,1:kmax)*dt
+		  do n=1,nfrac
+			  sigC2(n,:,:,:) = sigC2(n,:,:,:) + Cnew(n,1:imax,1:jmax,1:kmax)*Cnew(n,1:imax,1:jmax,1:kmax)*dt
+			  sigUC(n,:,:,:) = sigUC(n,:,:,:) + Cnew(n,1:imax,1:jmax,1:kmax)*uudt
+			  sigVC(n,:,:,:) = sigVC(n,:,:,:) + Cnew(n,1:imax,1:jmax,1:kmax)*vvdt
+			  sigWC(n,:,:,:) = sigWC(n,:,:,:) + Cnew(n,1:imax,1:jmax,1:kmax)*wwdt
+		  enddo
+	
 !!! Favre average results in differences of <1 promille for Umean and <1% for U' between Favre and Reynolds avg
 !!! for CO2 plume simulation (Wang et al. 2008), this is not important for dredge plumes, thus only Reynolds avg is calculated from now on
 !		  fUavg(i,j,k) = fUavg(i,j,k) + uu*R(i,j,k)
 !		  sigfU2(i,j,k) = sigfU2(i,j,k) + uu*uu*R(i,j,k)
-	    enddo
-	  enddo
-	enddo
-!	write(*,*),'stat_count,sigU2(1,1,1)',stat_count,sigU2(1,1,1),Uavg(1,1,1)
 	end
 
 	MODULE history_array
