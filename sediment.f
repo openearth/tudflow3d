@@ -598,7 +598,7 @@
 					!kbed(i,j)=MAX(kbed(i,j)-1,0)  !update bed level at end		
 					kbed(i,j)=kbed(i,j)-1
 				ELSEIF (ctot_firstcel.ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.
-     &             SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed) THEN
+     &             (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed.or.kbed(i,j).eq.0)) THEN !if kbed=0 then sedimentation can happen even if Clivebed empty
 !     &				.and.(SUM(erosionf(1:nfrac))+SUM(depositionf(1:nfrac))).lt.0.) THEN ! sedimentation of 1 layer dz each time because ctot in fluid already above threshold of bed, only if erosion is less than deposition::
 					kbed(i,j)=kbed(i,j)+1
 					drdt(i,j,kbed(i,j))=rho_b
@@ -614,7 +614,7 @@
 						rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density						
 					ENDDO
 				ELSEIF ((cbotnewtot+ctot_firstcel).ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.cbotnewtot.gt.1.e-12.and.
-     &             SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed) THEN
+     &             (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed.or.kbed(i,j).eq.0)) THEN !if kbed=0 then sedimentation can happen even if Clivebed empty
 !     &				.and.(SUM(erosionf(1:nfrac))+SUM(depositionf(1:nfrac))).lt.0.) THEN ! sedimentation of 1 layer dz each time, only if erosion is less than deposition:
 					kbed(i,j)=kbed(i,j)+1
 					drdt(i,j,kbed(i,j))=rho_b
@@ -630,10 +630,11 @@
 						rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 						rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density						
 					ENDDO
-				ELSEIF (cbotnewtot.gt.1.e-12.and.SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).lt.cfixedbed) THEN
+				ELSEIF (cbotnewtot.gt.1.e-12.and.SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).lt.cfixedbed.and.kbed(i,j).gt.0) THEN
 					! add sediment to Clivebed to bring it to cfixedbed again 
 					DO n=1,nfrac ! also cbotnew(n,i,j) is le 0:
-						c_adjust=MIN(cfixedbed-SUM(Clivebed(1:nfrac,i,j,kbed(i,j)))/cbotnewtot,1.)*cbotnew(n,i,j)
+						!c_adjust=MIN(cfixedbed-SUM(Clivebed(1:nfrac,i,j,kbed(i,j)))/cbotnewtot,1.)*cbotnew(n,i,j) !fout?
+						c_adjust=MIN((cfixedbed-SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cbotnewtot,1.)*cbotnew(n,i,j)
 						cbotnew(n,i,j)=cbotnew(n,i,j)-c_adjust
 						Clivebed(n,i,j,kbed(i,j))=Clivebed(n,i,j,kbed(i,j))+c_adjust
 					ENDDO				

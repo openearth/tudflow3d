@@ -78,6 +78,6 @@ solve.o: solve.f makefile
 	$(F77) $(FLAGS) -c solve.f
 
 clean:
-	$(RM) a.out core *.mod $(PROGRAM) $(OBJS)
+	$(RM) a.out core *.mod *.o $(PROGRAM) $(OBJS)
 
 version: $(VR1) $(VR2) 

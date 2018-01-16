@@ -116,6 +116,9 @@ c********************************************************************
       call advecu_HYB6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecu_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+	elseif(convection.eq.'uTVD') then
+      call advecu_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
+     & ,periodicx,periodicy,istep)	  
 	endif
 
 	if (diffusion.eq.'CDS2') then
@@ -155,6 +158,9 @@ c********************************************************************
       call advecv_HYB6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecv_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+	elseif(convection.eq.'uTVD') then
+      call advecv_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
+     & ,periodicx,periodicy,istep)	  
 	endif
 
 	if (diffusion.eq.'CDS2') then
@@ -193,6 +199,9 @@ c********************************************************************
       call advecw_HYB6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecw_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+	elseif(convection.eq.'uTVD') then
+      call advecw_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
+     & ,periodicx,periodicy,istep)	  
 	endif
 
 	if (diffusion.eq.'CDS2') then
@@ -396,6 +405,9 @@ c********************************************************************
       call advecu_HYB6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecu_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+	elseif(convection.eq.'uTVD') then
+      call advecu_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
+     & ,periodicx,periodicy,istep)	  
 	endif
 
 	if (diffusion.eq.'CDS2') then
@@ -438,6 +450,9 @@ c********************************************************************
       call advecv_HYB6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecv_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+	elseif(convection.eq.'uTVD') then
+      call advecv_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
+     & ,periodicx,periodicy,istep)	  
 	endif
 
 	if (diffusion.eq.'CDS2') then
@@ -476,6 +491,9 @@ c********************************************************************
       call advecw_HYB6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecw_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+	elseif(convection.eq.'uTVD') then
+      call advecw_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
+     & ,periodicx,periodicy,istep)	  
 	endif
 
 	if (diffusion.eq.'CDS2') then
@@ -800,6 +818,9 @@ c********************************************************************
       call advecu_HYB6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecu_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+	elseif(convection.eq.'uTVD') then
+      call advecu_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
+     & ,periodicx,periodicy,istep)		  
 	endif
 
 	if (diffusion.eq.'CDS2') then
@@ -841,6 +862,9 @@ c********************************************************************
       call advecv_HYB6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecv_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+	elseif(convection.eq.'uTVD') then
+      call advecv_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
+     & ,periodicx,periodicy,istep)	  
 	endif
 
 	if (diffusion.eq.'CDS2') then
@@ -880,6 +904,9 @@ c********************************************************************
       call advecw_HYB6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecw_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+	elseif(convection.eq.'uTVD') then
+      call advecw_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
+     & ,periodicx,periodicy,istep)	  
 	endif
 
 	if (diffusion.eq.'CDS2') then
@@ -1307,6 +1334,9 @@ c********************************************************************
       call advecu_HYB6(k1u,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecu_C4A6(k1u,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+	elseif(convection.eq.'uTVD') then
+      call advecu_TVD(k1u,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
+     & ,periodicx,periodicy,istep)	  
 	endif
 	if (diffusion.eq.'CDS2') then
       call diffu_CDS2 (k1u,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
@@ -1326,6 +1356,9 @@ c********************************************************************
       call advecv_HYB6(k1v,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecv_C4A6(k1v,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+	elseif(convection.eq.'uTVD') then
+      call advecv_TVD(k1v,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
+     & ,periodicx,periodicy,istep)		  
 	endif
 	if (diffusion.eq.'CDS2') then
       call diffv_CDS2 (k1v,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
@@ -1345,6 +1378,9 @@ c********************************************************************
       call advecw_HYB6(k1w,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecw_C4A6(k1w,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+	elseif(convection.eq.'uTVD') then
+      call advecw_TVD(k1w,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
+     & ,periodicx,periodicy,istep)		  
 	endif
 	if (diffusion.eq.'CDS2') then
       call diffw_CDS2 (k1w,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
@@ -1747,6 +1783,9 @@ c********************************************************************
       call advecu_HYB6(k2u,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecu_C4A6(k2u,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+	elseif(convection.eq.'uTVD') then
+      call advecu_TVD(k2u,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
+     & ,periodicx,periodicy,istep)	  
 	endif
 	if (diffusion.eq.'CDS2') then
       call diffu_CDS2 (k2u,dUdt,dVdt,dWdt,ib,ie,jb,je,kb,ke)
@@ -1766,6 +1805,9 @@ c********************************************************************
       call advecv_HYB6(k2v,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecv_C4A6(k2v,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+	elseif(convection.eq.'uTVD') then
+      call advecv_TVD(k2v,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
+     & ,periodicx,periodicy,istep)	  
 	endif
 	if (diffusion.eq.'CDS2') then
       call diffv_CDS2 (k2v,dUdt,dVdt,dWdt,ib,ie,jb,je,kb,ke)
@@ -1785,6 +1827,9 @@ c********************************************************************
       call advecw_HYB6(k2w,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecw_C4A6(k2w,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+	elseif(convection.eq.'uTVD') then
+      call advecw_TVD(k2w,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
+     & ,periodicx,periodicy,istep)	  
 	endif
 	if (diffusion.eq.'CDS2') then
       call diffw_CDS2 (k2w,dUdt,dVdt,dWdt,ib,ie,jb,je,kb,ke)
@@ -2200,6 +2245,9 @@ c********************************************************************
       call advecu_HYB6(k3u,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecu_C4A6(k3u,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+	elseif(convection.eq.'uTVD') then
+      call advecu_TVD(k3u,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
+     & ,periodicx,periodicy,istep)	  
 	endif
 
 	if (diffusion.eq.'CDS2') then
@@ -2220,6 +2268,9 @@ c********************************************************************
       call advecv_HYB6(k3v,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecv_C4A6(k3v,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+	elseif(convection.eq.'uTVD') then
+      call advecv_TVD(k3v,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
+     & ,periodicx,periodicy,istep)	  
 	endif
 	if (diffusion.eq.'CDS2') then
       call diffv_CDS2 (k3v,dUdt,dVdt,dWdt,ib,ie,jb,je,kb,ke)
@@ -2239,6 +2290,9 @@ c********************************************************************
       call advecw_HYB6(k3w,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecw_C4A6(k3w,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+	elseif(convection.eq.'uTVD') then
+      call advecw_TVD(k3w,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
+     & ,periodicx,periodicy,istep)	  
 	endif
 	if (diffusion.eq.'CDS2') then
       call diffw_CDS2 (k3w,dUdt,dVdt,dWdt,ib,ie,jb,je,kb,ke)
@@ -2455,16 +2509,19 @@ c
       implicit none
 !       include 'param.txt'
 !       include 'common.txt'
-      integer  ib,ie,jb,je,kb,ke,n,t
+      integer  ib,ie,jb,je,kb,ke,n,t,kpp,kp,km
       real     doldc(nfrac,0:i1,0:j1,0:k1),dnewc(nfrac,0:i1,0:j1,0:k1)
       real     dold(0:i1,0:j1,0:k1),dnew(0:i1,0:j1,0:k1)
-      real     wsed(nfrac,0:i1,0:j1,0:k1),wfluid(0:i1,0:j1,0:k1)
+	  real     wsed(nfrac,0:i1,0:j1,0:k1),wfluid(0:i1,0:j1,0:k1),W_km_sum(0:i1,0:j1,0:k1),c_sum(0:i1,0:j1,0:k1)
 	real*8 pplus(imax,kmax)
+	real dnewcbot(nfrac,0:i1,0:j1)	
+	real aaa(0:k1),bbb(0:k1),ccc(0:k1),ekm_min,ekm_plus,rhss(0:k1)
+	real utr(0:i1,0:j1,0:k1),vtr(0:i1,0:j1,0:k1),wtr(0:i1,0:j1,0:k1)	
 	
 
-!	real     Diffcof(0:i1,0:j1,0:k1)
-
-!	Diffcof=ekm/Sc/Rnew 
+	dcdt = 0.
+	Wfluid = 0.
+	dnewc=0.
 c********************************************************************
 c     CALCULATE slipvelocity
 c********************************************************************
@@ -2483,7 +2540,7 @@ c********************************************************************
 		if (LOA>0.and.outflow_overflow_down.eq.1) then
 		 do n=1,nfrac
 	    	  do k=kmax-kjet+1,kmax 
-		 	Wsed(n,i,j,k)=Wnew(i,j,k)
+			Wsed(n,i,j,k)=Wnew(i,j,k)
 		  enddo
 		 enddo	
 		endif
@@ -2493,24 +2550,99 @@ c********************************************************************
 		wsed(n,:,:,:)=wnew
 	    enddo
 	  endif
+
 c********************************************************************
 c     CALCULATE advection, diffusion Concentration
 c********************************************************************
+!	  do n=1,nfrac
+!	      call advecc_TVD2(dnewc(n,:,:,:),cnew(n,:,:,:),Unew,Vnew,Wsed(n,:,:,:),rnew,Ru,Rp,dr,phiv,phipt,dz,
+!     +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)
+!	      call diffc_CDS2 (dnewc(n,:,:,:),Cnew(n,:,:,:),Diffcof,
+!     +            ib,ie,jb,je,kb,ke)
+
+!!		dcdt(n,:,:,:) =cnew(n,:,:,:) + dt*(1.5*dnewc(n,:,:,:)-0.5*cc(n,:,:,:)) !AB2
+!		dcdt(n,:,:,:) =cnew(n,:,:,:) + dt*dnewc(n,:,:,:)                       !EE1
+!		call bound_c(dcdt(n,:,:,:),frac(n)%c,n) ! bc for intermediate dcdt
+!		cc(n,:,:,:)=dnewc(n,:,:,:)
+!	  enddo
+
 	  do n=1,nfrac
-	      call advecc_TVD2(dnewc(n,:,:,:),cnew(n,:,:,:),Unew,Vnew,Wsed(n,:,:,:),rnew,Ru,Rp,dr,phiv,phipt,dz,
+	      utr=Unew
+	      vtr=Vnew
+	      wtr=Wsed(n,:,:,:)
+	      call make_UtransC_zeroIBM(utr,vtr,wtr)
+		  if (advec_conc.eq.'NVD') then
+	      call advecc_NVD(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
+     +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)	 
+          elseif (advec_conc.eq.'VLE') then	 
+	      call advecc_TVD(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)
+		  else
+	      call advecc_TVD2(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
+     +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)	 
+          endif
+		
 	      call diffc_CDS2 (dnewc(n,:,:,:),Cnew(n,:,:,:),Diffcof,
      +            ib,ie,jb,je,kb,ke)
-		dcdt(n,:,:,:) =cnew(n,:,:,:) + dt*(dnewc(n,:,:,:)) !euler_expl
-		call bound_c(dcdt(n,:,:,:),frac(n)%c,n,dt) ! bc for intermediate dcdt EE1
-	  enddo
-	  call state(dcdt,drdt) ! determine drdt
+		dcdt(n,:,:,:) =cnew(n,:,:,:) + dt*(dnewc(n,:,:,:)) !update in time with EE1 for TVD
+			  if(interaction_bed.eq.4.or.interaction_bed.eq.5) then
+			    dcdtbot(n,:,:)=cnewbot(n,:,:)	
+			  else
+		    !! advec concentration in bed with velocity TSHD:
+	      	    call adveccbot_TVD(dnewcbot(n,:,:),cnewbot(n,:,:),Ubot_TSHD,Vbot_TSHD,Ru,Rp,dr,phiv,phipt,dz,
+     +            	i1,j1,ib,ie,jb,je,dt,rank,px,periodicx,periodicy)
+		    dcdtbot(n,:,:)= cnewbot(n,:,:) + dt*dnewcbot(n,:,:) ! time update			  
+	      	  endif
+           IF (CNdiffz.eq.1) THEN !CN semi implicit treatment diff-z:
+	     call bound_c(dcdt(n,:,:,:),frac(n)%c,n,0.) ! bc start CN-diffz ABv
+	     do k=k1,k1 !-kjet,k1
+	       do t=1,tmax_inPpunt
+	         i=i_inPpunt(t)
+	         j=j_inPpunt(t)
+	         dcdt(n,i,j,k) = dcdt(n,i,j,kmax) ! No diffusion over vertical inflow boundary, this line is needed for exact influx
+	       enddo
+	     enddo
+             do j=1,jmax
+               do i=1,imax
+                 do k=0,k1
+	           km=MAX(0,k-1)
+	           kp=MIN(k1,k+1)
+	           kpp=MIN(k1,k+2)
+	           ekm_min=0.5*(Diffcof(i,j,km)+Diffcof(i,j,k))
+	           ekm_plus=0.5*(Diffcof(i,j,kp)+Diffcof(i,j,k))
+	           aaa(k)=-0.5*ekm_min*dt/dz**2
+	           bbb(k)=1.+0.5*(ekm_min+ekm_plus)*dt/dz**2
+	           ccc(k)=-0.5*ekm_plus*dt/dz**2
+                 enddo
+		 aaa(0)=0.
+		 aaa(k1)=0.
+		 ccc(0)=0.
+		 ccc(k1)=0.
+		 bbb(0)=1.
+		 bbb(k1)=1.
+	         rhss=dcdt(n,i,j,0:k1)
+	         CALL solve_tridiag(dcdt(n,i,j,0:k1),aaa,bbb,ccc,rhss,k1+1) 
+               enddo
+             enddo
+	   ENDIF
+          enddo
+      	  if (interaction_bed>0) then
+	    call slipvelocity(cnew,wnew,wsed,rnew,0,0,wfluid,dt,dz) !driftflux_force must be calculated with settling velocity at k=0
+	    CALL erosion_deposition(dcdt,dcdtbot,unew,vnew,wnew,rnew,cnew,cnewbot,dt,dz) !first two vars are adjusted
+	    !! erosion_deposition must be after advecc_TVD and after dcdt update, because cnew and dcdt are two separate vars
+	    do n=1,nfrac 
+	        call bound_cbot(dcdtbot(n,:,:))
+	    enddo
+      	  endif
+	    do n=1,nfrac 
+		call bound_c(dcdt(n,:,:,:),frac(n)%c,n,dt) ! bc after erosion_deposition ABv
+	    enddo
+	  call state(dcdt,drdt) ! determine drdt with intermediate dcdt
 	endif
 
 	if (diffusion.eq.'COM4') then
 		call stress_terms(Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
 	endif
-
 c********************************************************************
 c     CALCULATE advection, diffusion and Force U-velocity
 c********************************************************************
@@ -2526,6 +2658,9 @@ c********************************************************************
       call advecu_HYB6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecu_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+	elseif(convection.eq.'uTVD') then
+      call advecu_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
+     & ,periodicx,periodicy,istep)		  
 	endif
 
 	if (diffusion.eq.'CDS2') then
@@ -2533,17 +2668,20 @@ c********************************************************************
 	elseif(diffusion.eq.'COM4') then
       call diffu_com4(dnew,Srr,Spr,Szr,Spp,Ru,Rp,dr,phipt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	endif
+
+
       do k=1,kmax
          do j=1,jmax
             do i=1,imax
+	    dnew(i,j,k)=dnew(i,j,k)-(gx*cos_u(j)+gy*sin_u(j))*(0.5*(rnew(i,j,k)+rnew(i+1,j,k))-rho_b)
+     1     +Ppropx(i,j,k) 
             dUdt(i,j,k)=Unew(i,j,k)*0.5*(rnew(i,j,k)+rnew(i+1,j,k))+
-     1      dt*dnew(i,j,k)
-     1      -(gx*cos_u(j)+gy*sin_u(j))*dt*(0.5*(rnew(i,j,k)+rnew(i+1,j,k))-rho_b)  
-!     1     +Ppropx(i,j,k)/(MAX(1.e-2,(ABS(Unew(i,j,k)))))*dt 
-     1     +Ppropx(i,j,k)*dt
+     1     dt*dnew(i,j,k)
+
             enddo
          enddo
       enddo
+
 c********************************************************************
 c     CALCULATE advection, diffusion and Force V-velocity
 c********************************************************************
@@ -2559,6 +2697,9 @@ c********************************************************************
       call advecv_HYB6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecv_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+	elseif(convection.eq.'uTVD') then
+      call advecv_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
+     & ,periodicx,periodicy,istep)	  
 	endif
 
 	if (diffusion.eq.'CDS2') then
@@ -2566,14 +2707,14 @@ c********************************************************************
 	elseif(diffusion.eq.'COM4') then
       call diffv_com4(dnew,Spr,Spp,Spz,Ru,Rp,dr,phipt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	endif
+
       do k=1,kmax
          do j=1,jmax
             do i=1,imax
+	    dnew(i,j,k)=dnew(i,j,k)-(-gx*sin_v(j)+gy*cos_v(j))*(0.5*(rnew(i,j,k)+rnew(i,j+1,k))-rho_b)
+     1     +Ppropy(i,j,k) 
             dVdt(i,j,k)=Vnew(i,j,k)*0.5*(rnew(i,j,k)+rnew(i,j+1,k))+
-     1      dt*dnew(i,j,k) 
-     1      -(-gx*sin_v(j)+gy*cos_v(j))*dt*(0.5*(rnew(i,j,k)+rnew(i,j+1,k))-rho_b)
-!     1     +Ppropy(i,j,k)/(MAX(1.e-2,(ABS(Vnew(i,j,k)))))*dt 
-     1     +Ppropy(i,j,k)*dt
+     1     dt*dnew(i,j,k)
             enddo
          enddo
       enddo
@@ -2592,6 +2733,9 @@ c********************************************************************
       call advecw_HYB6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecw_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+	elseif(convection.eq.'uTVD') then
+      call advecw_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
+     & ,periodicx,periodicy,istep)	  
 	endif
 
 	if (diffusion.eq.'CDS2') then
@@ -2599,22 +2743,103 @@ c********************************************************************
 	elseif(diffusion.eq.'COM4') then
       call diffw_com4(dnew,Szr,Spz,Szz,Ru,Rp,dr,phipt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	endif
-	if (slipvel.eq.1.or.slipvel.eq.2) then
-	do n=1,nfrac
-	  call advecw_driftfluxCDS2(dnew,wsed(n,:,:,:)-Wnew,
-     &  cnew(n,:,:,:)*frac(n)%rho,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke)
-	enddo
+	if ((slipvel.eq.1.or.slipvel.eq.2).and.nfrac>0) then
+	 W_km_sum=0.
+	 c_sum=0.
+	 do n=1,nfrac
+	  W_km_sum=W_km_sum+cnew(n,:,:,:)*frac(n)%rho*(wsed(n,:,:,:)-Wnew)
+	  c_sum=c_sum+cnew(n,:,:,:)
+	 enddo 
+	 W_km_sum=W_km_sum+(1.-c_sum)*rho_b*Wfluid !Wfluid is difference with Ucfd 
+	 W_km_sum=W_km_sum/rnew
+	 call advecw_driftfluxCDS2(dnew,W_km_sum,
+     &   rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke)
 	endif
+	
+
       do k=1,kmax
          do j=1,jmax
             do i=1,imax
+	    dnew(i,j,k)=dnew(i,j,k)-gz*(0.5*(rnew(i,j,k)+rnew(i,j,k+1))-rho_b)
+     1     +Ppropz(i,j,k)
             dWdt(i,j,k)=Wnew(i,j,k)*0.5*(rnew(i,j,k)+rnew(i,j,k+1))+
-     1      dt*dnew(i,j,k) 
-     1      -gz*dt*(0.5*(rnew(i,j,k)+rnew(i,j,k+1))-rho_b)
+     1     dt*dnew(i,j,k)
             enddo
          enddo
       enddo
 
+      IF (CNdiffz.eq.1) THEN !CN semi implicit treatment diff-z:
+      call bound_rhoU(dUdt,dVdt,dWdt,dRdt,0,time_np,Ub1new,Vb1new,
+     & Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
+       do j=1,jmax
+         do i=1,imax
+            do k=0,k1
+	    km=MAX(0,k-1)
+	    kp=MIN(k1,k+1)
+	    kpp=MIN(k1,k+2)
+	    ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i+1,j,k)+ekm(i+1,j,km))
+	    ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i+1,j,k)+ekm(i+1,j,kp))
+	    aaa(k)=-0.5*ekm_min*dt/dz**2/(0.5*(drdt(i,j,km)+drdt(i+1,j,km)))
+	    bbb(k)=1.+0.5*(ekm_min+ekm_plus)*dt/dz**2/(0.5*(drdt(i,j,k)+drdt(i+1,j,k)))
+	    ccc(k)=-0.5*ekm_plus*dt/dz**2/(0.5*(drdt(i,j,kp)+drdt(i+1,j,kp)))
+            enddo
+	    aaa(0)=0.
+	    aaa(k1)=0.
+	    ccc(0)=0.
+	    ccc(k1)=0.
+	    bbb(0)=1.
+	    bbb(k1)=1.
+	    rhss=dUdt(i,j,0:k1)
+	    CALL solve_tridiag(dUdt(i,j,0:k1),aaa,bbb,ccc,rhss,k1+1) 
+         enddo
+      enddo
+       do j=1,jmax
+         do i=1,imax
+            do k=0,k1
+	    km=MAX(0,k-1)
+	    kp=MIN(k1,k+1)
+	    kpp=MIN(k1,k+2)
+	    ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i,j+1,k)+ekm(i,j+1,km))
+	    ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i,j+1,k)+ekm(i,j+1,kp))
+	    aaa(k)=-0.5*ekm_min*dt/dz**2/(0.5*(drdt(i,j,km)+drdt(i,j+1,km)))
+	    bbb(k)=1.+0.5*(ekm_min+ekm_plus)*dt/dz**2/(0.5*(drdt(i,j,k)+drdt(i,j+1,k)))
+	    ccc(k)=-0.5*ekm_plus*dt/dz**2/(0.5*(drdt(i,j,kp)+drdt(i,j+1,kp)))
+            enddo
+	    aaa(0)=0.
+	    aaa(k1)=0.
+	    ccc(0)=0.
+	    ccc(k1)=0.
+	    bbb(0)=1.
+	    bbb(k1)=1.
+	    rhss=dVdt(i,j,0:k1)
+	    CALL solve_tridiag(dVdt(i,j,0:k1),aaa,bbb,ccc,rhss,k1+1) 
+         enddo
+      enddo
+
+       do j=1,jmax
+         do i=1,imax
+            do k=0,k1
+	    km=MAX(0,k-1)
+	    kp=MIN(k1,k+1)
+	    kpp=MIN(k1,k+2)
+	    ekm_min=ekm(i,j,k)
+	    ekm_plus=ekm(i,j,kp)
+	    aaa(k)=-0.5*ekm_min*dt/dz**2/(0.5*(drdt(i,j,km)+drdt(i+1,j,k)))
+	    bbb(k)=1.+0.5*(ekm_min+ekm_plus)*dt/dz**2/(0.5*(drdt(i,j,k)+drdt(i+1,j,kp)))
+	    ccc(k)=-0.5*ekm_plus*dt/dz**2/(0.5*(drdt(i,j,kp)+drdt(i+1,j,kpp)))
+            enddo
+	    aaa(0)=0.
+	    aaa(k1)=0.
+	    ccc(0)=0.
+	    ccc(k1)=0.
+	    bbb(0)=1.
+	    bbb(k1)=1.
+	    rhss=dWdt(i,j,0:k1)
+	    CALL solve_tridiag(dWdt(i,j,0:k1),aaa,bbb,ccc,rhss,k1+1) 
+         enddo
+       enddo
+       ENDIF
+	  
 	pold=p+pold    !what is called p here was dp in reality, now p is 
       call pshiftb(pold,pplus) !,rank,imax,jmax,kmax,px)
 c********************************************************************
@@ -2649,7 +2874,6 @@ c********************************************************************
           enddo
         enddo
       enddo
-
 	if (periodicy.eq.1) then
               do k=1,kmax
         	do i=1,imax
@@ -2672,6 +2896,7 @@ c********************************************************************
           enddo
         enddo
       enddo
+
 
       return
       end

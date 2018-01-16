@@ -77,6 +77,7 @@
 	call mpi_allreduce(dtmp,dt,1,mpi_double_precision,mpi_min,mpi_comm_world,ierr)	
 
 	  dt=MIN(dt,dtold*1.1) !change in time step never more than +10% in one timestep for extra stability
+
 	  
 	if (isnan(dt)) stop 'ERROR, QUITING DFLOW3D: "dt" is a NaN'
 	if (dt<1.e-12) stop 'ERROR, QUITING DFLOW3D: "dt" is smaller than 1e-12'

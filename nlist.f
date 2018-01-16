@@ -505,7 +505,7 @@
 	READ (UNIT=1,NML=num_scheme,IOSTAT=ios)
 	!! check input num_scheme
 	IF (convection.ne.'CDS2'.AND.convection.ne.'CDS6'.AND.convection.ne.'COM4'.AND.convection.ne.'HYB4'
-     &      .AND.convection.ne.'HYB6'.AND.convection.ne.'C4A6' ) CALL writeerror(401) 
+     &      .AND.convection.ne.'HYB6'.AND.convection.ne.'C4A6'.AND.convection.ne.'uTVD' ) CALL writeerror(401) 
 	IF (numdiff<0.or.numdiff>1.) CALL writeerror(402)
 	IF (diffusion.ne.'CDS2'.AND.diffusion.ne.'COM4') CALL writeerror(403) 
 	IF (comp_filter_a<0.or.comp_filter_a>0.5) CALL writeerror(404)

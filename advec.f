@@ -1017,7 +1017,7 @@ c
 
 	  
 
-	subroutine advecc_NVD_upw5(putout,putin,Uvel,Vvel,Wvel,rho,Ru,Rp,dr,phiv,phipt,dz,
+	subroutine advecc_NVD(putout,putin,Uvel,Vvel,Wvel,rho,Ru,Rp,dr,phiv,phipt,dz,
      +                  i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)
       implicit none
 !	Face-wise advection scheme according to NVD is similar to TVD, but manner of expression is different
@@ -1293,7 +1293,8 @@ c
 		phif = max(phif,phic)
 		phif = min(phif,1.)
 	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
-		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for NVD and TVD needed in practice to avoid <0)
+		phif = min((1.-cfl)*(1-phic)+phic,phif) ! this limiter corresponds to Sweby TVD 2 (for TVD needed in practice)
 		cF = phif*del+cU
         putout(i,j,k)  = putout(i,j,k)  - Ru(i)*Uvel(i ,j,k)*cF*Rpdr_i
 	    putout(ip,j,k) = putout(ip,j,k) + Ru(i)*Uvel(i ,j,k)*cF*Rpdr_ip		
@@ -1317,7 +1318,8 @@ c
 		phif = max(phif,phic)
 		phif = min(phif,1.)
 	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
-		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for NVD and TVD needed in practice to avoid <0)
+		phif = min((1.-cfl)*(1-phic)+phic,phif) ! this limiter corresponds to Sweby TVD 2 (for TVD needed in practice)
 		cF = phif*del+cU
 	    putout(i,j,k)  = putout(i ,j,k) - Ru(i)*Uvel(i ,j,k)*cF*Rpdr_i
 	    putout(ip,j,k) = putout(ip,j,k) + Ru(i)*Uvel(i ,j,k)*cF*Rpdr_ip		
@@ -1342,7 +1344,8 @@ c
 		phif = max(phif,phic)
 		phif = min(phif,1.)
 	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
-		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for NVD and TVD needed in practice to avoid <0)
+		phif = min((1.-cfl)*(1-phic)+phic,phif) ! this limiter corresponds to Sweby TVD 2 (for TVD needed in practice)
 		cF = phif*del+cU
 		putout(i,j,k) = putout(i,j,k) + Ru(im)*Uvel(im,j,k)*cF*Rpdr_i
 	  ENDIF
@@ -1365,7 +1368,8 @@ c
 		phif = max(phif,phic)
 		phif = min(phif,1.)
 	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
-		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for NVD and TVD needed in practice to avoid <0)
+		phif = min((1.-cfl)*(1-phic)+phic,phif) ! this limiter corresponds to Sweby TVD 2 (for TVD needed in practice)
 		cF = phif*del+cU
 		putout(i,j,k) = putout(i,j,k) + Ru(im)*Uvel(im,j,k)*cF*Rpdr_i
 	  ENDIF		
@@ -1392,7 +1396,8 @@ c
 		phif = max(phif,phic)
 		phif = min(phif,1.)
 	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
-		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for NVD and TVD needed in practice to avoid <0)
+		phif = min((1.-cfl)*(1-phic)+phic,phif) ! this limiter corresponds to Sweby TVD 2 (for TVD needed in practice)
 		cF = phif*del+cU
 		putout(i,j,k) = putout(i,j,k) - Vvel2(i,j ,k)*cF*Rpdphi_i 
 		putout(i,jp,k)= putout(i,jp,k)+ Vvel2(i,j ,k)*cF*Rpdphi_ip 
@@ -1417,7 +1422,8 @@ c
 		phif = max(phif,phic)
 		phif = min(phif,1.)
 	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
-		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for NVD and TVD needed in practice to avoid <0)
+		phif = min((1.-cfl)*(1-phic)+phic,phif) ! this limiter corresponds to Sweby TVD 2 (for TVD needed in practice)
 		cF = phif*del+cU
 		putout(i,j,k) = putout(i,j,k) - Vvel2(i,j ,k)*cF*Rpdphi_i 
 	    putout(i,jp,k) = putout(i,jp,k) + Vvel2(i,j ,k)*cF*Rpdphi_ip 	  
@@ -1443,7 +1449,8 @@ c
 		phif = max(phif,phic)
 		phif = min(phif,1.)
 	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
-		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for NVD and TVD needed in practice to avoid <0)
+		phif = min((1.-cfl)*(1-phic)+phic,phif) ! this limiter corresponds to Sweby TVD 2 (for TVD needed in practice)
 		cF = phif*del+cU
 		putout(i,j,k) = putout(i,j,k) + Vvel2(i,jm,k)*cF*Rpdphi_i 
 	  ENDIF
@@ -1466,7 +1473,8 @@ c
 		phif = max(phif,phic)
 		phif = min(phif,1.)
 	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
-		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for NVD and TVD needed in practice to avoid <0)
+		phif = min((1.-cfl)*(1-phic)+phic,phif) ! this limiter corresponds to Sweby TVD 2 (for TVD needed in practice)
 		cF = phif*del+cU
 		putout(i,j,k) = putout(i,j,k) + Vvel2(i,jm,k)*cF*Rpdphi_i 
 	  ENDIF
@@ -1493,7 +1501,8 @@ c
 		phif = max(phif,phic)
 		phif = min(phif,1.)
 	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
-		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for NVD and TVD needed in practice to avoid <0)
+		phif = min((1.-cfl)*(1-phic)+phic,phif) ! this limiter corresponds to Sweby TVD 2 (for TVD needed in practice)
 		cF = phif*del+cU
 		putout(i,j,k) = putout(i,j,k) - Wvel(i,j,k )*cF*dz_i 
 		putout(i,j,kp)= putout(i,j,kp)+ Wvel(i,j,k )*cF*dz_i 
@@ -1519,7 +1528,8 @@ c
 		phif = max(phif,phic)
 		phif = min(phif,1.)
 	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
-		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for NVD and TVD needed in practice to avoid <0)
+		phif = min((1.-cfl)*(1-phic)+phic,phif) ! this limiter corresponds to Sweby TVD 2 (for TVD needed in practice)
 		cF = phif*del+cU
 		putout(i,j,k) = putout(i,j,k) - Wvel(i,j,k )*cF*dz_i 
 		putout(i,j,kp)= putout(i,j,kp)+ Wvel(i,j,k )*cF*dz_i
@@ -1545,7 +1555,8 @@ c
 		phif = max(phif,phic)
 		phif = min(phif,1.)
 	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
-		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for NVD and TVD needed in practice to avoid <0)
+		phif = min((1.-cfl)*(1-phic)+phic,phif) ! this limiter corresponds to Sweby TVD 2 (for TVD needed in practice)
 		cF = phif*del+cU
 		putout(i,j,k) = putout(i,j,k) + Wvel(i,j,km )*cF*dz_i 
 	  ENDIF	  
@@ -1568,7 +1579,8 @@ c
 		phif = max(phif,phic)
 		phif = min(phif,1.)
 	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
-		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for NVD and TVD needed in practice to avoid <0)
+		phif = min((1.-cfl)*(1-phic)+phic,phif) ! this limiter corresponds to Sweby TVD 2 (for TVD needed in practice)
 		cF = phif*del+cU
 		putout(i,j,k) = putout(i,j,k) + Wvel(i,j,km )*cF*dz_i 
 	  ENDIF	  
@@ -1586,7 +1598,7 @@ c
       return
       end
 
-	subroutine advecc_NVD(putout,putin,Uvel,Vvel,Wvel,rho,Ru,Rp,dr,phiv,phipt,dz,
+	subroutine advecc_NVD_fromm(putout,putin,Uvel,Vvel,Wvel,rho,Ru,Rp,dr,phiv,phipt,dz,
      +                  i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)
       implicit none
 !	Face-wise advection scheme according to NVD is similar to TVD, but manner of expression is different
@@ -1794,7 +1806,7 @@ c
 		phif = max(phif,phic)
 		phif = min(phif,1.)
 	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
-		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for NVD and TVD needed in practice to avoid <0)
 		cF = phif*del+cU
         putout(i,j,k)  = putout(i,j,k)  - Ru(i)*Uvel(i ,j,k)*cF*Rpdr_i
 	    putout(ip,j,k) = putout(ip,j,k) + Ru(i)*Uvel(i ,j,k)*cF*Rpdr_ip		
@@ -1823,7 +1835,7 @@ c
 		phif = max(phif,phic)
 		phif = min(phif,1.)
 	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
-		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for NVD and TVD needed in practice to avoid <0)
 		cF = phif*del+cU
 	    putout(i,j,k)  = putout(i ,j,k) - Ru(i)*Uvel(i ,j,k)*cF*Rpdr_i
 	    putout(ip,j,k) = putout(ip,j,k) + Ru(i)*Uvel(i ,j,k)*cF*Rpdr_ip		
@@ -1853,7 +1865,7 @@ c
 		phif = max(phif,phic)
 		phif = min(phif,1.)
 	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
-		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for NVD and TVD needed in practice to avoid <0)
 		cF = phif*del+cU
 		putout(i,j,k) = putout(i,j,k) + Ru(im)*Uvel(im,j,k)*cF*Rpdr_i
 	  ENDIF
@@ -1880,7 +1892,7 @@ c
 		phif = max(phif,phic)
 		phif = min(phif,1.)
 	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
-		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for NVD and TVD needed in practice to avoid <0)
 		cF = phif*del+cU
 		putout(i,j,k) = putout(i,j,k) + Ru(im)*Uvel(im,j,k)*cF*Rpdr_i
 	  ENDIF		
@@ -1911,7 +1923,7 @@ c
 		phif = max(phif,phic)
 		phif = min(phif,1.)
 	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
-		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for NVD and TVD needed in practice to avoid <0)
 		cF = phif*del+cU
 		putout(i,j,k) = putout(i,j,k) - Vvel2(i,j ,k)*cF*Rpdphi_i 
 		putout(i,jp,k)= putout(i,jp,k)+ Vvel2(i,j ,k)*cF*Rpdphi_ip 
@@ -1940,7 +1952,7 @@ c
 		phif = max(phif,phic)
 		phif = min(phif,1.)
 	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
-		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for NVD and TVD needed in practice to avoid <0)
 		cF = phif*del+cU
 		putout(i,j,k) = putout(i,j,k) - Vvel2(i,j ,k)*cF*Rpdphi_i 
 		putout(i,jp,k) = putout(i,jp,k) + Vvel2(i,j ,k)*cF*Rpdphi_ip 	  
@@ -1970,7 +1982,7 @@ c
 		phif = max(phif,phic)
 		phif = min(phif,1.)
 	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
-		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for NVD and TVD needed in practice to avoid <0)
 		cF = phif*del+cU
 		putout(i,j,k) = putout(i,j,k) + Vvel2(i,jm,k)*cF*Rpdphi_i 
 	  ENDIF
@@ -1997,7 +2009,7 @@ c
 		phif = max(phif,phic)
 		phif = min(phif,1.)
 	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
-		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for NVD and TVD needed in practice to avoid <0)
 		cF = phif*del+cU
 		putout(i,j,k) = putout(i,j,k) + Vvel2(i,jm,k)*cF*Rpdphi_i 
 	  ENDIF
@@ -2022,7 +2034,7 @@ c
 		phif = max(phif,phic)
 		phif = min(phif,1.)
 	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
-		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for NVD and TVD needed in practice to avoid <0)
 		cF = phif*del+cU
 		putout(i,j,k) = putout(i,j,k) - Wvel(i,j,k )*cF*dz_i 
 		putout(i,j,kp)= putout(i,j,kp)+ Wvel(i,j,k )*cF*dz_i 
@@ -2046,7 +2058,7 @@ c
 		phif = max(phif,phic)
 		phif = min(phif,1.)
 	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
-		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for NVD and TVD needed in practice to avoid <0)
 		cF = phif*del+cU
 		putout(i,j,k) = putout(i,j,k) - Wvel(i,j,k )*cF*dz_i 
 		putout(i,j,kp)= putout(i,j,kp)+ Wvel(i,j,k )*cF*dz_i
@@ -2070,7 +2082,7 @@ c
 		phif = max(phif,phic)
 		phif = min(phif,1.)
 	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
-		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for NVD and TVD needed in practice to avoid <0)
 		cF = phif*del+cU
 		putout(i,j,k) = putout(i,j,k) + Wvel(i,j,km )*cF*dz_i 
 	  ENDIF	  
@@ -2091,7 +2103,7 @@ c
 		phif = max(phif,phic)
 		phif = min(phif,1.)
 	    phif = min(phif,phic/(cfl+eps2))  ! this limiter corresponds to Sweby TVD 2r/cfl (for TVD scheme also not stable)
-		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for TVD needed in practice)
+		phif = min(phif,2.*phic)  ! this limiter corresponds to Sweby TVD 2r (for NVD and TVD needed in practice to avoid <0)
 		cF = phif*del+cU
 		putout(i,j,k) = putout(i,j,k) + Wvel(i,j,km )*cF*dz_i 
 	  ENDIF	  
@@ -3064,7 +3076,214 @@ c
       return
       end
 
-
+!	subroutine adveccbot3d_TVD(putout,putin,Uvel,Vvel,Ru,Rp,dr,phiv,phipt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)
+!      implicit none
+!c
+!c********************************************************************
+!c
+!c     advecc calculates the advection for a scalar variable in i,j dir (in bot), which is
+!c     situated in the center point of the grid cell.
+!c
+!c     In formula:
+!c
+!c         1 d(ruC)     1 d(vC)     
+!c    - (  - ------  +  - -----  )
+!c         r   dr       r  dphi     
+!c
+!c      on input :
+!c
+!c          putout            : "empty" (initialised to zero)
+!c          putin             : variable for which the advection has
+!c                              to be calculated
+!c          Uvel,Vvel,Wvel    : contain velocities at former timestep
+!c          putinn            : contains subgrid energy at oldest timestep
+!c          dr,phiv,dz        : grid spacing in r, phi and z-direction
+!c          i1,j1,k1          : parameters for array-dimensions
+!c          ib,ie,jb,je,kb,ke : range of gridpoints for which the
+!c                              advection has to be calculated
+!c          Ru,Rp             : radial positions of the U-velocity
+!c                              component and the pressure location
+!c                              respectively
+!c
+!c      on output :
+!c
+!c          putout            : advection part
+!c          other parameters  : all unchanged
+!c
+!c********************************************************************
+!      integer  i,j,k,im,ip,jm,jp,km,kp,kb,ke,k1,i1,j1,ib,ie,jb,je
+!	  integer imm,ipp,jmm,jpp,rank,px,periodicx,periodicy
+!      real     putout(0:i1,0:j1,0:k1),putin(0:i1,0:j1,0:k1),putin2(-1:i1+1,-1:j1+1,0:k1),
+!     +         Uvel(0:j1),Vvel(0:j1),
+!     +         dr(0:i1),phiv(0:j1),phipt(0:je*px+1),dz,Ru(0:i1),Rp(0:i1),Rp2(-1:i1+1),
+!     +         noemer,rRpos,rRneg,rLpos,rLneg,cRpos,cRneg,cLpos,cLneg,limiter,
+!     +         rho_p,rho_m
+!      
+!      real 	dz_i,Rpdr_i,Rpdphi_i,varx_grid_Rpos,varx_grid_Rneg,varx_grid_Lpos,varx_grid_Lneg
+!	  real  vary_grid_Rpos,vary_grid_Rneg,vary_grid_Lpos,vary_grid_Lneg,phipt2(-1:je*px+2)
+!	real  dt,cflL,cflR
+!	  real*8 pbb(0:i1,0:k1),pbf(0:i1,0:k1)
+!
+!
+!	Rp2(0:i1)=Rp
+!	Rp2(-1)=Rp(0)-(Rp(2)-Rp(1)) !needed for periodicx sim
+! 	Rp2(i1+1)=Rp(i1)+(Rp(i1)-Rp(i1-1)) !needed for periodicx sim
+!	
+!	phipt2(0:je*px+1)=phipt
+!	phipt2(-1)=phipt(0)-(phipt(1)-phipt(0)) !needed for periodicy sim
+! 	phipt2(je*px+1+1)=phipt(je*px+1)+(phipt(je*px+1)-phipt(je*px+1-1)) !needed for periodicy sim
+!
+!
+!	putin2(0:i1,0:j1,0:k1)=putin
+!
+!	if (periodicx.eq.0) then
+!		putin2(-1,0:j1,0:k1)=putin(0,0:j1,0:k1)
+!		putin2(i1+1,0:j1,0:k1)=putin(ie,0:j1,0:k1)
+!	else 
+!		putin2(-1,0:j1,0:k1)=putin(ie-1,0:j1,0:k1)
+!		putin2(i1+1,0:j1,0:k1)=putin(2,0:j1,0:k1)
+!	endif
+!c get stuff from other CPU's
+!	  call shiftf2(putin,pbf)
+!	  call shiftb2(putin,pbb) 
+!
+!	if (periodicy.eq.0.or.periodicy.eq.2) then
+!	  if (rank.eq.0) then
+!		do k=1,ke
+!		   do i=1,ie
+!		   putin2(i,-1,k) = putin(i,0,k)
+!		   putin2(i,j1+1,k) =pbb(i,k)
+!		   enddo
+!		enddo
+!	  elseif (rank.eq.px-1) then
+!		do k=1,ke
+!		   do i=1,ie
+!		   putin2(i,-1,k) = pbf(i,k)
+!		   putin2(i,j1+1,k) =putin(i,j1,k)
+!		   enddo
+!		enddo
+!	  else 
+!		do k=1,ke
+!		   do i=1,ie
+!		   putin2(i,-1,k) = pbf(i,k)
+!		   putin2(i,j1+1,k) =pbb(i,k)
+!		   enddo
+!		enddo
+!	  endif
+!	else 
+!		do k=1,ke
+!		   do i=1,ie
+!		   putin2(i,-1,k) = pbf(i,k)
+!		   putin2(i,j1+1,k) =pbb(i,k)
+!		   enddo
+!		enddo
+!	endif
+!
+!
+!
+!      dz_i=1./dz
+!
+!c
+!c     -------------------------------------------start i-loop
+!      do 100 i=ib,ie
+!c
+!      ip=i+1
+!      im=i-1
+!      imm=im
+!      ipp=ip
+!      if (periodicx.eq.0) then
+!        if (i.eq.1) imm=i
+!        if (i.eq.ie) ipp=i
+!      endif
+!      varx_grid_Rpos=(Rp2(ip)-Rp2(i))/(Rp2(i)-Rp2(im))
+!      varx_grid_Rneg=(Rp2(ipp)-Rp2(i))/(Rp2(ipp+1)-Rp2(ipp))
+!      varx_grid_Lpos=(Rp2(i)-Rp2(imm))/(Rp2(imm)-Rp2(imm-1))
+!      varx_grid_Lneg=(Rp2(i)-Rp2(im))/(Rp2(ip)-Rp2(i))
+!      Rpdr_i=1./(Rp2(i)*dr(i))
+!    
+!c     -------------------------------------------start j-loop
+!        do 200 j=jb,je
+!c
+!        jp=j+1
+!        jm=j-1
+!	jmm=jm
+!	jpp=jp
+!        if ((periodicy.eq.0.or.periodicy.eq.2).and.rank.eq.0) then
+!	  if (j.eq.1) jmm=j
+!	endif
+!        if ((periodicy.eq.0.or.periodicy.eq.2).and.rank.eq.px-1) then
+!	  if (j.eq.je) jpp=j
+!	endif
+!	
+!      vary_grid_Rpos=(phipt2(rank*je+jp) -phipt2(rank*je+j))  /(phipt2(rank*je+j)    -phipt2(rank*je+jm))
+!      vary_grid_Rneg=(phipt2(rank*je+jpp)-phipt2(rank*je+j))  /(phipt2(rank*je+jpp+1)-phipt2(rank*je+jpp))
+!      vary_grid_Lpos=(phipt2(rank*je+j)  -phipt2(rank*je+jmm))/(phipt2(rank*je+jmm)  -phipt2(rank*je+jmm-1))
+!      vary_grid_Lneg=(phipt2(rank*je+j)  -phipt2(rank*je+jm)) /(phipt2(rank*je+jp)   -phipt2(rank*je+j))	
+!      Rpdphi_i=1./(Rp2(i)*(phiv(j)-phiv(jm)))
+!	  
+!	noemer = putin2(ip,j)-putin2(i,j)
+!        noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
+!
+!
+!	rRpos = (putin2(i,j)-putin2(im,j))/noemer *varx_grid_Rpos
+!  	rRneg = (putin2(ipp+1,j)-putin2(ip,j))/noemer *varx_grid_Rneg
+!	noemer = putin2(i,j)-putin2(im,j)
+!	noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
+!
+!	rLneg = (putin2(ip,j)-putin2(i,j))/noemer *varx_grid_Lneg
+!	rLpos = (putin2(im,j)-putin2(imm-1,j))/noemer *varx_grid_Lpos
+!	cflR = dt*ABS(Uvel(j))/(Rp(ip)-Rp(i))
+!	cflL = dt*ABS(Uvel(j))/(Rp(i)-Rp(im))
+!!	cRpos = putin2(i ,j) + 0.5*limiter2(rRpos,cflR)*(putin2(ip,j) - putin2(i ,j))*(1.-cflR)
+!!	cLpos = putin2(im,j) + 0.5*limiter2(rLpos,cflL)*(putin2( i,j) - putin2(im,j))*(1.-cflL)
+!!	cRneg = putin2(ip,j) + 0.5*limiter2(rRneg,cflR)*(putin2( i,j) - putin2(ip,j))*(1.-cflR)
+!!	cLneg = putin2(i ,j) + 0.5*limiter2(rLneg,cflL)*(putin2(im,j) - putin2(i ,j))*(1.-cflL)
+!	cRpos = putin2(i ,j) + 0.5*limiter(rRpos)*(putin2(ip,j) - putin2(i ,j))*(1.-cflR)
+!	cLpos = putin2(im,j) + 0.5*limiter(rLpos)*(putin2( i,j) - putin2(im,j))*(1.-cflL)
+!	cRneg = putin2(ip,j) + 0.5*limiter(rRneg)*(putin2( i,j) - putin2(ip,j))*(1.-cflR)
+!	cLneg = putin2(i ,j) + 0.5*limiter(rLneg)*(putin2(im,j) - putin2(i ,j))*(1.-cflL)
+!      putout(i,j) = - (
+!     &   Ru(i)  * ( 0.5*(Uvel(j)+ABS(Uvel(j)))*cRpos + 0.5*(Uvel(j)-ABS(Uvel(j)))*cRneg ) -
+!     &   Ru(im) * ( 0.5*(Uvel(j)+ABS(Uvel(j)))*cLpos + 0.5*(Uvel(j)-ABS(Uvel(j)))*cLneg ) )
+!     &  *Rpdr_i !/ ( Rp(i) * dr(i) ) 
+!
+!	noemer = putin2(i,jp)-putin2(i,j)
+!	noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
+!		
+!	rRpos = (putin2(i,j)-putin2(i,jm))/noemer*vary_grid_Rpos
+!	rRneg = (putin2(i,jpp+1)-putin2(i,jp))/noemer*vary_grid_Rneg 
+!
+!	noemer = putin2(i,j)-putin2(i,jm)
+!	noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
+!	
+!	rLneg = (putin2(i,jp)-putin2(i,j))/noemer *vary_grid_Lneg
+!	rLpos = (putin2(i,jm)-putin2(i,jmm-1))/noemer*vary_grid_Lpos
+!	cflL = dt*ABS(Vvel(jm))*Rpdphi_i
+!	cflR = dt*ABS(Vvel(j ))*Rpdphi_i
+!
+!!	cRpos = putin2(i ,j) + 0.5*limiter2(rRpos,cflR)*(putin2(i,jp) - putin2(i ,j))*(1.-cflR)
+!!	cLpos = putin2(i,jm) + 0.5*limiter2(rLpos,cflL)*(putin2( i,j) - putin2(i,jm))*(1.-cflL)
+!!	cRneg = putin2(i,jp) + 0.5*limiter2(rRneg,cflR)*(putin2( i,j) - putin2(i,jp))*(1.-cflR)
+!!	cLneg = putin2(i,j ) + 0.5*limiter2(rLneg,cflL)*(putin2(i,jm) - putin2(i,j ))*(1.-cflL)
+!	cRpos = putin2(i ,j) + 0.5*limiter(rRpos)*(putin2(i,jp) - putin2(i ,j))*(1.-cflR)
+!	cLpos = putin2(i,jm) + 0.5*limiter(rLpos)*(putin2( i,j) - putin2(i,jm))*(1.-cflL)
+!	cRneg = putin2(i,jp) + 0.5*limiter(rRneg)*(putin2( i,j) - putin2(i,jp))*(1.-cflR)
+!	cLneg = putin2(i,j ) + 0.5*limiter(rLneg)*(putin2(i,jm) - putin2(i,j ))*(1.-cflL)
+!
+!	putout(i,j) = putout(i,j) - (
+!     &   (  0.5*(Vvel(j )+ABS(Vvel(j )))*cRpos + 0.5*(Vvel(j )-ABS(Vvel(j )))*cRneg )  -
+!     &   (  0.5*(Vvel(jm)+ABS(Vvel(jm)))*cLpos + 0.5*(Vvel(jm)-ABS(Vvel(jm)))*cLneg ) )
+!     &  *Rpdphi_i !/ ( Rp(i) * dphi ) 
+!
+!200     continue
+!c     -------------------------------------------end j-loop
+!100   continue
+!c     -------------------------------------------end i-loop
+!c
+!      return
+!      end
+	  
+	  
       real function limiter(r)
       real r
 
@@ -3078,21 +3297,24 @@ c
 !	limiter=MAX(0.,MIN(2.*r,1.),MIN(r,2.))	! Superbee limiter
 !       limiter=MAX(0.,MIN(5.*r,1.),MIN(r,2.))  ! Superbee-4 limiter non-TVD, less dissipation than Superbee, in matlab test okay
 
-
       return
       end
 
       real function limiter2(r,cfl)
       real r,cfl,alpha
 ! limiter = third order accurate (with cfl=0 equal to Koren limiter) CFL dependent limiter from Arora and Roe 1997
-	alpha=(1.+cfl)/3.
-!	limiter2=MAX(0.,MIN(MIN(2./MAX(cfl,1e-12)*r,1.+alpha*(r-1.)),2./(1.-cfl))) !looser TVD contstraints gives in TUDflow3d e-7 undershoot, therefore not advised...
-	limiter2=MAX(0.,MIN(MIN(2.*r,1.+alpha*(r-1.)),2.)) !advised for non-linear systems a more restrictive TVD constraints, gives no undershoot in matlab and TUDflow3d but more numerical diff... 18-11-17 SWITCHED THIS ON
+	!alpha=(1.+cfl)/3.
+	!limiter2=MAX(0.,MIN(MIN(2./MAX(cfl,1e-12)*r,1.+alpha*(r-1.)),1.99/(1.-cfl))) !looser TVD contstraints gives in TUDflow3d e-7 undershoot, therefore not advised...
+	!limiter2=MAX(0.,MIN(MIN(1.99/MAX(cfl,1e-12)*r,1.+alpha*(r-1.)),2.)) !looser TVD contstraints gives in TUDflow3d e-7 undershoot, therefore not advised...
+!	limiter2=MAX(0.,MIN(MIN(2.*r,1.+alpha*(r-1.)),2.)) !advised for non-linear systems a more restrictive TVD constraints, gives no undershoot in matlab and TUDflow3d but more numerical diff... 18-11-17 SWITCHED THIS ON
 	
   
 	
 	!limiter2=(r+ABS(r))/MAX(1.+r,1.) 	! Van Leer limiter
-!	limiter2=MAX(0.,MIN(2.*r,1.),MIN(r,2.))	! Superbee limiter
+	!limiter2=MAX(0.,MIN(2.*r,1.),MIN(r,2.))	! Superbee limiter
+	limiter2=MAX(0.,MIN(1.99*r/MAX(cfl**0.2,1.e-6),1.),MIN(r,1.99/(1.-cfl)))	! Superbee limiter loosened CFL-dependent restrictions --> in matlab good; not stable here...
+	! power 0.1;0.2 no undershoot; 0.3;0.5 undershoot
+	!limiter2=MAX(0.,MIN(2.*r,1.),MIN(r,1.99/(1.-cfl)))	! Superbee limiter loosened CFL-dependent restrictions --> in matlab good; not stable here...
       return
       end
 	  
