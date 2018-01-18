@@ -222,7 +222,7 @@
        implicit none
 
 	real     wsed(nfrac,0:i1,0:j1,0:k1),erosion,deposition,uu,vv,absU,z0,ust,yplus,tau !local variables
-	integer n,tel,kplus,n1
+	integer n,tel,kplus,n1,k2,kk
 	REAL     ccnew(nfrac,0:i1,0:j1,0:k1),cbotnew(nfrac,0:i1,0:j1)  ! output
 	REAL     ccfd(nfrac,0:i1,0:j1,0:k1),cbotcfd(nfrac,0:i1,0:j1)  ! input
 	REAL	 ddt,dz ! input
@@ -580,7 +580,11 @@
 					DO n=1,nfrac ! also cbotnew(n,i,j) is le 0:
 						cbotnew(n,i,j)=cbotnew(n,i,j)+0.5*Clivebed(n,i,j,kbed(i,j)) 
 						Clivebed(n,i,j,kbed(i,j))=0.5*Clivebed(n,i,j,kbed(i,j)) 
-					ENDDO			
+					ENDDO	
+						IF (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).gt.cfixedbed+1e-8) THEN
+						write(*,*),'A rank,i,j,kbed(i,j),Clb',rank,i,j,kbed(i,j),SUM(Clivebed(1:nfrac,i,j,kbed(i,j))),
+     ^						Clivebed(1,i,j,kbed(i,j)),Clivebed(2,i,j,kbed(i,j)),Clivebed(3,i,j,kbed(i,j))
+						ENDIF										
 				ELSEIF (cbotnewtot.lt.0.and.(kbed(i,j)-1).ge.0) THEN !erosion of 1 layer dz:
 					kplus = MIN(kbed(i,j)+1,k1)
 					drdt(i,j,kbed(i,j))=rho_b
@@ -597,26 +601,38 @@
 					ENDDO
 					!kbed(i,j)=MAX(kbed(i,j)-1,0)  !update bed level at end		
 					kbed(i,j)=kbed(i,j)-1
-				ELSEIF (ctot_firstcel.ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.
-     &             (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed.or.kbed(i,j).eq.0)) THEN !if kbed=0 then sedimentation can happen even if Clivebed empty
-!     &				.and.(SUM(erosionf(1:nfrac))+SUM(depositionf(1:nfrac))).lt.0.) THEN ! sedimentation of 1 layer dz each time because ctot in fluid already above threshold of bed, only if erosion is less than deposition::
+					kbedt(i,j)=kbed(i,j)
+						IF (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).gt.cfixedbed+1e-8) THEN
+						write(*,*),'B rank,i,j,kbed(i,j),Clb',rank,i,j,kbed(i,j),SUM(Clivebed(1:nfrac,i,j,kbed(i,j))),
+     ^						Clivebed(1,i,j,kbed(i,j)),Clivebed(2,i,j,kbed(i,j)),Clivebed(3,i,j,kbed(i,j))
+						ENDIF										
+!				ELSEIF (ctot_firstcel.ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.
+!     &             (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed.or.kbed(i,j).eq.0)) THEN !if kbed=0 then sedimentation can happen even if Clivebed empty
+!! this elseif is unstable for a test, don't know why!!
+!					kbed(i,j)=kbed(i,j)+1
+!					kbedt(i,j)=kbed(i,j)
+!					drdt(i,j,kbed(i,j))=rho_b
+!					rnew(i,j,kbed(i,j))=rho_b
+!					rold(i,j,kbed(i,j))=rho_b						
+!					DO n=1,nfrac 
+!						Clivebed(n,i,j,kbed(i,j))=ccnew(n,i,j,kbed(i,j))+
+!     &						(cfixedbed-ctot_firstcel)*ccnew(n,i,j,kbed(i,j))/MAX(ctot_firstcel,1.e-12)  ! reduce ccnew to arrive at ctot = cfixedbed
+!						cbotnew(n,i,j)=cbotnew(n,i,j)-(cfixedbed-ctot_firstcel)*ccnew(n,i,j,kbed(i,j))/MAX(ctot_firstcel,1.e-12)
+!						ccnew(n,i,j,kbed(i,j))=0. 
+!						drdt(i,j,kbed(i,j)) = drdt(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!						rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!						rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density						
+!					ENDDO
+!						IF (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).gt.cfixedbed+1e-8) THEN
+!						write(*,*),'C rank,i,j,kbed(i,j),Clb',rank,i,j,kbed(i,j),SUM(Clivebed(1:nfrac,i,j,kbed(i,j))),
+!     ^						Clivebed(1,i,j,kbed(i,j)),Clivebed(2,i,j,kbed(i,j)),Clivebed(3,i,j,kbed(i,j))
+!						ENDIF										
+!				ELSEIF ((cbotnewtot+ctot_firstcel).ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.cbotnewtot.gt.1.e-12.and.
+!     &             (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed.or.kbed(i,j).eq.0)) THEN !if kbed=0 then sedimentation can happen even if Clivebed empty
+				ELSEIF (cbotnewtot.ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.cbotnewtot.gt.1.e-12.and.
+     &             (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed.or.kbed(i,j).eq.0)) THEN !if kbed=0 then sedimentation can happen even if Clivebed empty	 
 					kbed(i,j)=kbed(i,j)+1
-					drdt(i,j,kbed(i,j))=rho_b
-					rnew(i,j,kbed(i,j))=rho_b
-					rold(i,j,kbed(i,j))=rho_b						
-					DO n=1,nfrac 
-						Clivebed(n,i,j,kbed(i,j))=ccnew(n,i,j,kbed(i,j))+
-     &						(cfixedbed-ctot_firstcel)*ccnew(n,i,j,kbed(i,j))/MAX(ctot_firstcel,1.e-12)  ! reduce ccnew to arrive at ctot = cfixedbed
-						cbotnew(n,i,j)=cbotnew(n,i,j)-(cfixedbed-ctot_firstcel)*ccnew(n,i,j,kbed(i,j))/MAX(ctot_firstcel,1.e-12)
-						ccnew(n,i,j,kbed(i,j))=0. !Clivebed(n,i,j,kbed(i,j)) ! to have correct density in this cell, this doesn't give incorrect sediment balance as soon as a bed cel becomes fluid again then ccnew is restarted with (ero+depo) and this old concentration is forgotten
-						drdt(i,j,kbed(i,j)) = drdt(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-						rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-						rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density						
-					ENDDO
-				ELSEIF ((cbotnewtot+ctot_firstcel).ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.cbotnewtot.gt.1.e-12.and.
-     &             (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed.or.kbed(i,j).eq.0)) THEN !if kbed=0 then sedimentation can happen even if Clivebed empty
-!     &				.and.(SUM(erosionf(1:nfrac))+SUM(depositionf(1:nfrac))).lt.0.) THEN ! sedimentation of 1 layer dz each time, only if erosion is less than deposition:
-					kbed(i,j)=kbed(i,j)+1
+					kbedt(i,j)=kbed(i,j)
 					drdt(i,j,kbed(i,j))=rho_b
 					rnew(i,j,kbed(i,j))=rho_b
 					rold(i,j,kbed(i,j))=rho_b						
@@ -625,19 +641,27 @@
 						Clivebed(n,i,j,kbed(i,j))=ccnew(n,i,j,kbed(i,j))+
      &						(cfixedbed-ctot_firstcel)*cbotnew(n,i,j)/MAX(cbotnewtot,1.e-12)  ! apply sedimentation ratio between fractions new sediment concentration of cells within bed
 						cbotnew(n,i,j)=cbotnew(n,i,j)-(cfixedbed-ctot_firstcel)*cbotnew(n,i,j)/MAX(cbotnewtot,1.e-12)
-						ccnew(n,i,j,kbed(i,j))=0. !Clivebed(n,i,j,kbed(i,j)) ! to have correct density in this cell, this doesn't give incorrect sediment balance as soon as a bed cel becomes fluid again then ccnew is restarted with (ero+depo) and this old concentration is forgotten
+						ccnew(n,i,j,kbed(i,j))=0. 
 						drdt(i,j,kbed(i,j)) = drdt(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 						rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 						rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density						
 					ENDDO
-				ELSEIF (cbotnewtot.gt.1.e-12.and.SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).lt.cfixedbed.and.kbed(i,j).gt.0) THEN
+						IF (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).gt.cfixedbed+1e-8) THEN
+						write(*,*),'D rank,i,j,kbed(i,j),Clb',rank,i,j,kbed(i,j),SUM(Clivebed(1:nfrac,i,j,kbed(i,j))),
+     ^						Clivebed(1,i,j,kbed(i,j)),Clivebed(2,i,j,kbed(i,j)),Clivebed(3,i,j,kbed(i,j))
+						ENDIF										
+				ELSEIF (cbotnewtot.gt.1.e-12.and.SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).lt.cfixedbed.and.kbed(i,j).gt.0) THEN !only allowed if kbed>0, because Clivebed(:,:,0)=0
 					! add sediment to Clivebed to bring it to cfixedbed again 
+					c_adjust=MIN((cfixedbed-SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cbotnewtot,1.)				
 					DO n=1,nfrac ! also cbotnew(n,i,j) is le 0:
-						!c_adjust=MIN(cfixedbed-SUM(Clivebed(1:nfrac,i,j,kbed(i,j)))/cbotnewtot,1.)*cbotnew(n,i,j) !fout?
-						c_adjust=MIN((cfixedbed-SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cbotnewtot,1.)*cbotnew(n,i,j)
-						cbotnew(n,i,j)=cbotnew(n,i,j)-c_adjust
-						Clivebed(n,i,j,kbed(i,j))=Clivebed(n,i,j,kbed(i,j))+c_adjust
+						Clivebed(n,i,j,kbed(i,j))=Clivebed(n,i,j,kbed(i,j))+c_adjust*cbotnew(n,i,j)	
+						cbotnew(n,i,j)=cbotnew(n,i,j)-c_adjust*cbotnew(n,i,j)
 					ENDDO				
+						IF (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).gt.cfixedbed+1e-8) THEN
+						write(*,*),'E rank,i,j,kbed(i,j),Clb',rank,i,j,kbed(i,j),nfrac,SUM(Clivebed(1:nfrac,i,j,kbed(i,j))),
+     ^						Clivebed(1,i,j,kbed(i,j)),Clivebed(2,i,j,kbed(i,j)),Clivebed(3,i,j,kbed(i,j)),
+     ^						Clivebed(1,i,j,kbed(i,j))+Clivebed(2,i,j,kbed(i,j))+Clivebed(3,i,j,kbed(i,j))
+						ENDIF					
 				ENDIF
 			ENDIF
 		  ENDDO
@@ -764,7 +788,8 @@
 								rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 								rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density					
 							ENDDO	
-							kbed(i,j)=kbed(i,j)-1  !update bed level at end							
+							kbed(i,j)=kbed(i,j)-1  !update bed level at end	
+							kbedt(i,j)=kbed(i,j)							
 						ENDIF
 					ENDIF
 				ENDDO
@@ -828,7 +853,128 @@
 	
       END SUBROUTINE erosion_deposition
 
+       subroutine advec_update_Clivebed(ccnew,cbotnew,ddtt)
 
+       implicit none
+
+	integer n,ib,ie,jb,je,kb,ke,k2,kk
+	REAL ccnew(1:nfrac,0:i1,0:j1,0:k1),cbotnew(1:nfrac,0:i1,0:j1),Cadvec(0:i1,0:j1,0:k1),ddtt
+	REAL c_adjust,cbotnewtot
+
+	 IF (interaction_bed.eq.4.and.ABS(U_TSHD).gt.1e-12) THEN ! bring Clivebed to lowest possible gridcell to adjust for advected with U_TSHD	
+	ib=1
+	ie=imax
+	jb=1
+	je=jmax
+	kb=1
+	ke=kmax
+	DO n=1,nfrac
+		Cadvec=0.
+		call adveccbot3d_TVD(Cadvec(:,:,:),Clivebed(n,:,:,:),Ubot_TSHD,Vbot_TSHD,Ru,Rp,dr,phiv,phipt,dz,
+     +            	i1,j1,k1,ib,ie,jb,je,kb,ke,ddtt,rank,px,periodicx,periodicy)
+		 DO i=1,imax
+		   DO j=1,jmax
+			 DO k=1,kmax !kbed(i,j)
+				Clivebed(n,i,j,k)= Clivebed(n,i,j,k) + ddtt*Cadvec(i,j,k) ! time update EE1 (stable and conserving TVD advec scheme)
+			 ENDDO
+		  ENDDO
+		ENDDO
+	ENDDO
+
+		 DO i=1,imax
+		   DO j=1,jmax
+			 DO k=1,kmax !kbed(i,j)
+				DO k2=k+1,kmax
+				  c_adjust= MAX(MIN(cfixedbed-SUM(Clivebed(1:nfrac,i,j,k)),SUM(Clivebed(1:nfrac,i,j,k2))),0.)
+     &					/(MAX(SUM(Clivebed(1:nfrac,i,j,k2)),1e-18))
+				  DO n=1,nfrac
+					Clivebed(n,i,j,k)=Clivebed(n,i,j,k)+c_adjust*Clivebed(n,i,j,k2)      !top op Clivebed(k) up to cfixedbed from all above cells
+					Clivebed(n,i,j,k2)=Clivebed(n,i,j,k2)-c_adjust*Clivebed(n,i,j,k2)
+				  ENDDO
+				ENDDO
+			 ENDDO
+		 
+			 IF (SUM(Clivebed(1:nfrac,i,j,1)).ge.cfixedbed) THEN
+			  DO k=1,kmax
+			   IF (SUM(Clivebed(1:nfrac,i,j,k)).ge.cfixedbed.and.SUM(Clivebed(1:nfrac,i,j,k+1)).lt.cfixedbed) THEN
+!			   IF (SUM(Clivebed(1:nfrac,i,j,k))+SUM(cbotnew(1:nfrac,i,j)).ge.cfixedbed.and.
+!     &			   SUM(Clivebed(1:nfrac,i,j,k+1))+SUM(cbotnew(1:nfrac,i,j)).lt.cfixedbed) THEN 
+			   
+			      IF (k>kbed(i,j)) THEN
+				    DO n=1,nfrac
+					  cbotnew(n,i,j)=cbotnew(n,i,j)+SUM(ccnew(n,i,j,kbed(i,j):k))  ! add all suspended sediment of fluidcells now covered inside bed to cbotnew
+					  ccnew(n,i,j,kbed(i,j):k)=0.
+					ENDDO
+					drdt(i,j,kbed(i,j):k) = rho_b  ! prevent large source in pres-corr by sudden increase in density
+					rnew(i,j,kbed(i,j):k) = rho_b  ! prevent large source in pres-corr by sudden increase in density
+					rold(i,j,kbed(i,j):k) = rho_b  ! prevent large source in pres-corr by sudden increase in density						
+				  ENDIF
+				  DO n=1,nfrac
+				    cbotnew(n,i,j)=cbotnew(n,i,j)+SUM(Clivebed(n,i,j,k+1:kmax))! add all partially filled bed-cells above the bed to cbotnew
+					Clivebed(n,i,j,k+1:kmax)=0.
+				  ENDDO
+			      kbed(i,j)=k ! adjust kbed
+				  kbedt(i,j)=k
+				  EXIT
+			   ENDIF
+			  ENDDO
+			 ELSE
+			  DO n=1,nfrac
+				  cbotnew(n,i,j)=cbotnew(n,i,j)+SUM(Clivebed(n,i,j,1:kmax))! add all partially filled bed-cells above the bed to cbotnew
+				  Clivebed(n,i,j,1:kmax)=0.					  
+			  ENDDO
+			  kbed(i,j)=0 
+			  kbedt(i,j)=0
+			 ENDIF
+ 			 DO k=1,kbed(i,j)
+			   c_adjust= MIN(cfixedbed-SUM(Clivebed(1:nfrac,i,j,k)),0.) !negative in case Clivebed contains too much sediment otherwise zero
+     &					/(SUM(Clivebed(1:nfrac,i,j,k)))			 
+			   DO n=1,nfrac
+					cbotnew(n,i,j)=cbotnew(n,i,j)-c_adjust*Clivebed(n,i,j,k) 
+					Clivebed(n,i,j,k)=Clivebed(n,i,j,k)+c_adjust*Clivebed(n,i,j,k)       
+			   ENDDO
+			 ENDDO 
+
+!			 IF (SUM(cbotnew(1:nfrac,i,j)).ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.
+!     &			 (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed.or.kbed(i,j).eq.0)) THEN
+			  DO WHILE (SUM(cbotnew(1:nfrac,i,j)).ge.cfixedbed-1e-12.and.kbed(i,j)+1.le.kmax.and.
+     &			 (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed-1e-12.or.kbed(i,j).eq.0))
+				kbed(i,j)=kbed(i,j)+1
+				kbedt(i,j)=kbed(i,j)
+					drdt(i,j,kbed(i,j))=rho_b
+					rnew(i,j,kbed(i,j))=rho_b
+					rold(i,j,kbed(i,j))=rho_b						
+					cbotnewtot=SUM(cbotnew(1:nfrac,i,j))
+					DO n=1,nfrac 
+						c_adjust=cfixedbed/cbotnewtot*cbotnew(n,i,j)
+						Clivebed(n,i,j,kbed(i,j))=c_adjust !Clivebed was zero
+						cbotnew(n,i,j)=cbotnew(n,i,j)-c_adjust
+					ENDDO
+!				write(*,*),'WHILE rank,i,j,kbed',rank,i,j,kbed(i,j),SUM(Clivebed(1:nfrac,i,j,kbed(i,j))),SUM(cbotnew(1:nfrac,i,j))	
+			  ENDDO
+			 !ENDIF
+
+			 !IF (kbed(i,j)>1) THEN
+			 IF (SUM(cbotnew(1:nfrac,i,j))>cfixedbed) THEN
+				  write(*,*),'rank,i,j,kbed',rank,i,j,kbed(i,j),SUM(Clivebed(1:nfrac,i,j,kbed(i,j))),SUM(cbotnew(1:nfrac,i,j))
+				  DO kk=1,kbed(i,j)+1
+				   write(*,*)'Cb',kk,SUM(Clivebed(1:nfrac,i,j,kk))
+				  ENDDO
+			 ENDIF
+		  ENDDO
+		ENDDO
+		call bound_cbot_integer(kbed) ! apply correct boundary conditions for updated kbed	
+		DO i=0,i1
+			DO j=0,j1
+				zbed(i,j)=REAL(kbed(i,j))*dz
+			ENDDO
+		ENDDO		
+	 ENDIF	
+	 
+
+
+	end subroutine advec_update_Clivebed
+	
        subroutine air_bubbles_free_surface
 
        implicit none

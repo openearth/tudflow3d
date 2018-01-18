@@ -1037,12 +1037,12 @@ c get stuff from other CPU's
 		DO i=0,i1 !1,imax
 			DO j=0,j1 !1,jmax
 				DO k=0,kbed(i,j)
-					Ubound(i,j,k)=0.
-					Vbound(i,j,k)=0.
+					Ubound(i,j,k)=Ubot_TSHD(j) !0.
+					Vbound(i,j,k)=Vbot_TSHD(j) !0.
 					im=MAX(i-1,0)
 					jm=MAX(j-1,0)
-					Ubound(im,j,k)=0.
-					Vbound(i,jm,k)=0.
+					Ubound(im,j,k)=Ubot_TSHD(j) !0.
+					Vbound(i,jm,k)=Vbot_TSHD(jm) !0.
 					Wbound(i,j,k)=0.
 				ENDDO
 			ENDDO
@@ -1775,12 +1775,12 @@ c get stuff from other CPU's
 		DO i=0,i1
 			DO j=0,j1
 				DO k=0,kbed(i,j)
-					Ubound(i,j,k)=0.
-					Vbound(i,j,k)=0.
+					Ubound(i,j,k)=Ubot_TSHD(j)*rho(i,j,k) !0.
+					Vbound(i,j,k)=Vbot_TSHD(j)*rho(i,j,k) !0.
 					im=MAX(i-1,0)
 					jm=MAX(j-1,0)
-					Ubound(im,j,k)=0.
-					Vbound(i,jm,k)=0.					
+					Ubound(im,j,k)=Ubot_TSHD(j)*rho(im,j,k) !0.
+					Vbound(i,jm,k)=Vbot_TSHD(jm)*rho(i,jm,k) !0.					
 					Wbound(i,j,k)=0.
 				ENDDO
 			ENDDO
@@ -1861,12 +1861,12 @@ c get stuff from other CPU's
 		DO i=0,i1
 			DO j=0,j1
 				DO k=0,kbed(i,j)
-					Ubound(i,j,k)=0.
-					Vbound(i,j,k)=0.
+					Ubound(i,j,k)=0. !Ubot_TSHD(j) ! 0.
+					Vbound(i,j,k)=0. !Vbot_TSHD(j) ! 0.
 					im=MAX(i-1,0)
 					jm=MAX(j-1,0)
-					Ubound(im,j,k)=0.
-					Vbound(i,jm,k)=0.					
+					Ubound(im,j,k)=0. !Ubot_TSHD(j) !0.
+					Vbound(i,jm,k)=0. !Vbot_TSHD(jm) !0.					
 					Wbound(i,j,k)=0.
 				ENDDO
 			ENDDO

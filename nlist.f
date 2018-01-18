@@ -187,7 +187,7 @@
 	TYPE(frac_init), DIMENSION(30) :: fract
 
 	ALLOCATE(bedplume(30)) !temporary array to read namelist with unknown size
-	ALLOCATE(obst(1000)) !temporary array to read namelist with unknown size
+	ALLOCATE(obst(10000)) !temporary array to read namelist with unknown size
 ! 	TYPE(gridtype), DIMENSION(1) :: grid
 
 	NAMELIST /simulation/px,imax,jmax,kmax,imax_grid,dr_grid,Rmin,schuif_x,dy,depth,hisfile,restart_dir
