@@ -119,13 +119,12 @@
 	        ccc(n) = 0.5*(csed2(n,i,j,k) + csed2(n,i,j,kp))	
 	        ws(n)=ws_basis(n)
 		! ws is positive downward, wsed is positive upward 
-  		sum_c_ws=sum_c_ws+ws(n)*ccc(n)*frac(n)%rho/(0.5*(rr2(i,j,k)+rr2(i,j,kp)))
-!		sum_c_ws=sum_c_ws+ws(n)*0.5*(csed(n,i,j,k)*frac(n)%rho/rr(i,j,k)+csed(n,i,j,kp)*frac(n)%rho/rr(i,j,kp))
+			sum_c_ws=sum_c_ws+ws(n)*ccc(n)*frac(n)%rho/(0.5*(rr2(i,j,k)+rr2(i,j,kp)))
 		! According to drift velocity literature the drift flux is calculated using the mass-fraction in stead of volume-fraction,
 		! therefore an extra frac(n)%rho/rho_mix is included
 	      ENDDO
 	      DO n=1,nfrac
-		wsed(n,i,j,k)=Wcfd(i,j,k)+sum_c_ws-ws(n) ! wsed is positive upward
+			wsed(n,i,j,k)=Wcfd(i,j,k)+sum_c_ws-ws(n) ! wsed is positive upward
 	      ENDDO
 	      Wfluid(i,j,k)=sum_c_ws !Wcfd(i,j,k) left out 
 	    ENDDO
@@ -213,6 +212,8 @@
 	       ENDDO
 	     ENDDO
 	   ENDDO
+	   Wsed(:,:,:,0)=0.
+	   Wfluid(:,:,0)=0.
 	ENDIF
 
       END SUBROUTINE slipvelocity

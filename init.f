@@ -2845,9 +2845,9 @@ c get stuff from other CPU's
 		   if (slip_bot.eq.1) then
 			    do ii=1,10
 			      z0_U=0.11*nu_mol/MAX(ust_U_b,1.e-9)+kn/30
-			      ust_U_b=correction*ABS(U_b)*kappa/(log((depth-zbed(i,j))/z0_U)-1);
+			      ust_U_b=correction*ABS(U_b)*kappa/(log(MAX(depth-zbed(i,j),1.e-12)/z0_U)-1);
 			      z0_V=0.11*nu_mol/MAX(ust_V_b,1.e-9)+kn/30
-			      ust_V_b=correction*ABS(V_b)*kappa/(log((depth-zbed(i,j))/z0_V)-1);
+			      ust_V_b=correction*ABS(V_b)*kappa/(log(MAX(depth-zbed(i,j),1.e-12)/z0_V)-1);
 			    enddo
 		   endif
 		    if (k.gt.kbed(i,j)) then
@@ -2880,9 +2880,9 @@ c get stuff from other CPU's
 		    if (slip_bot.eq.1) then
 			    do ii=1,10
 			      z0_U=0.11*nu_mol/MAX(ABS(ust_U_b),1.e-9)+kn/30
-			      ust_U_b=correction*U_b*kappa/(log((depth-zbed(i,j))/z0_U)-1);
+			      ust_U_b=correction*U_b*kappa/(log(MAX(depth-zbed(i,j),1.e-12)/z0_U)-1);
 			      z0_V=0.11*nu_mol/MAX(ABS(ust_V_b),1.e-9)+kn/30
-			      ust_V_b=correction*V_b*kappa/(log((depth-zbed(i,j))/z0_V)-1);
+			      ust_V_b=correction*V_b*kappa/(log(MAX(depth-zbed(i,j),1.e-12)/z0_V)-1);
 			    enddo
 		    endif
 		      if (k.le.(kmax-kjet).and.k.gt.kbed(i,j)) then
@@ -2921,9 +2921,9 @@ c get stuff from other CPU's
 		   if (slip_bot.eq.1) then
 		    do ii=1,10
 		      z0_U=0.11*nu_mol/MAX(ust_U_b,1.e-9)+kn/30
-		      ust_U_b=correction*ABS(U_b)*kappa/(log((depth-zbed(i,j))/z0_U)-1);
+		      ust_U_b=correction*ABS(U_b)*kappa/(log(MAX(depth-zbed(i,j),1.e-12)/z0_U)-1);
 		      z0_V=0.11*nu_mol/MAX(ust_V_b,1.e-9)+kn/30
-		      ust_V_b=correction*ABS(V_b)*kappa/(log((depth-zbed(i,j))/z0_V)-1);
+		      ust_V_b=correction*ABS(V_b)*kappa/(log(MAX(depth-zbed(i,j),1.e-12)/z0_V)-1);
 		    enddo
 		   endif
 		    if (k.gt.kbed(i,j)) then
@@ -2957,9 +2957,9 @@ c get stuff from other CPU's
 		   if (slip_bot.eq.1) then
 		    do ii=1,10
 		      z0_U=0.11*nu_mol/MAX(ABS(ust_U_b),1.e-9)+kn/30
-		      ust_U_b=correction*U_b*kappa/(log((depth-zbed(i,j))/z0_U)-1);
+		      ust_U_b=correction*U_b*kappa/(log(MAX(depth-zbed(i,j),1.e-12)/z0_U)-1);
 		      z0_V=0.11*nu_mol/MAX(ABS(ust_V_b),1.e-9)+kn/30
-		      ust_V_b=correction*V_b*kappa/(log((depth-zbed(i,j))/z0_V)-1);
+		      ust_V_b=correction*V_b*kappa/(log(MAX(depth-zbed(i,j),1.e-12)/z0_V)-1);
 		    enddo
 		   endif
 		      if (k.le.(kmax-kjet).and.k.gt.kbed(i,j)) then

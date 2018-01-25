@@ -758,8 +758,7 @@ c********************************************************************
 		    !! advec concentration in bed with velocity TSHD:
 	      	    call adveccbot_TVD(dnewcbot(n,:,:),cnewbot(n,:,:),Ubot_TSHD,Vbot_TSHD,Ru,Rp,dr,phiv,phipt,dz,
      +            	i1,j1,ib,ie,jb,je,dt,rank,px,periodicx,periodicy)
-		    dcdtbot(n,:,:)= cnewbot(n,:,:) + dt*dnewcbot(n,:,:) ! time update			  
-	      	  !endif
+		    dcdtbot(n,:,:)= cnewbot(n,:,:) + dt*dnewcbot(n,:,:) ! time update	
            IF (CNdiffz.eq.1) THEN !CN semi implicit treatment diff-z:
 	     call bound_c(dcdt(n,:,:,:),frac(n)%c,n,0.) ! bc start CN-diffz ABv
 	     do k=k1,k1 !-kjet,k1
@@ -4707,8 +4706,8 @@ c  J --> direction      (yrt)
 ! 	include 'param.txt'
       real c(nfrac,0:i1,0:j1,0:k1)
       real rho(0:i1,0:j1,0:k1)
-      integer n
-	real xTSHD(4),yTSHD(4),phi	  
+      integer n,n2,inout,ierr
+	real xTSHD(4),yTSHD(4),phi,xx,yy
       
       do k=0,k1
 	do j=0,j1
@@ -4826,7 +4825,7 @@ C     to Qt(i,j,k) node distributed in theta.
         INCLUDE 'mpif.h'
 	integer N
 !         parameter (nr=imax,mt=jmax,nx=kmax,mx=kmax/px,NT=jmax*px)
-	integer nr,mt,nx,mx,nt
+	integer nr,mt,nx,mx,nt,ierr
 ! 	real*8  Q(Nr,Nt,Mx),Qt(Nr,Mt,Nx)
 	real*8  Q(imax,jmax*px,kmax/px),Qt(imax,jmax,kmax)
 
@@ -4885,7 +4884,7 @@ C     to Qt(i,j,k) node distributed in theta.
         INCLUDE 'mpif.h'
 	integer N
 !         parameter (nr=imax,mt=jmax,nx=kmax,mx=kmax/px,NT=jmax*px)
-	integer nr,mt,nx,mx,nt
+	integer nr,mt,nx,mx,nt,ierr
 ! 	real*8  Q(Nr,Nt,Mx),Qt(Nr,Mt,Nx)
 	real*8  Q(imax+1,jmax*px,kmax/px),Qt(imax+1,jmax,kmax)
 
@@ -4942,7 +4941,7 @@ C     to (j,k,i) node distributed in x.
 !         INCLUDE 'param.txt'
         INCLUDE 'mpif.h'
 !         parameter (nr=imax,mt=jmax,nx=kmax,mx=kmax/px,NT=jmax*px)
-	integer nr,mt,nx,mx,nt
+	integer nr,mt,nx,mx,nt,ierr
 	integer N
 !         real*8 Q(Nr,Mt,Nx),Qt(Nr,Nt,Mx)
 	real*8 Q(imax,jmax,kmax),Qt(imax,jmax*px,kmax/px)
@@ -5000,7 +4999,7 @@ C     to (j,k,i) node distributed in x.
 !         INCLUDE 'param.txt'
         INCLUDE 'mpif.h'
 !         parameter (nr=imax,mt=jmax,nx=kmax,mx=kmax/px,NT=jmax*px)
-	integer nr,mt,nx,mx,nt
+	integer nr,mt,nx,mx,nt,ierr
 	integer N
 !         real*8 Q(Nr,Mt,Nx),Qt(Nr,Nt,Mx)
 	real*8 Q(imax+1,jmax,kmax),Qt(imax+1,jmax*px,kmax/px)

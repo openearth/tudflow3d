@@ -262,6 +262,7 @@ c get stuff from other CPU's
 	if (periodicx.eq.0) then
           do k=1,kmax ! boundaries in i-direction
            do j=0,j1
+		    Wbc2=0.
 		    if (bcfile.ne.'') then
 			Ubc2(j,k)=Ubcoarse2(j,k)
 			Vbc2(j,k)=Vbcoarse2(j,k)
@@ -697,6 +698,7 @@ c get stuff from other CPU's
 	if (periodicx.eq.0) then
 	      do k=1,kmax ! boundaries in i-direction
          	do j=0,j1
+			Wbc2=0.
 		    if (bcfile.ne.'') then
 			Ubc2(j,k)=Ubcoarse2(j,k)
 			Vbc2(j,k)=Vbcoarse2(j,k)
@@ -1300,6 +1302,7 @@ c get stuff from other CPU's
 	if (periodicx.eq.0) then	
       	   do k=1,kmax ! boundaries in i-direction
 	   	do j=0,j1
+			Wbc2=0.
 		    if (bcfile.ne.'') then
 			Ubc2(j,k)=Ubcoarse2(j,k)
 			Vbc2(j,k)=Vbcoarse2(j,k)
@@ -2384,7 +2387,13 @@ c*************************************************************
 	real tt
 	integer n2,inout
 	real xTSHD(4),yTSHD(4),phi,interpseries,xx,yy
-	
+
+	! rotation ship for ambient side current
+	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
+	  phi=atan2(V_b,1.e-12)
+	else
+	  phi=atan2(V_b,(U_TSHD-U_b))
+	endif	
 	DO n2=1,nbedplume
 		IF (bp(n2).h_tseriesfile.ne.''.or.bp(n2).zb_tseriesfile.ne.'') THEN !necessary to update volncells!
 		  IF (bp(n2).h_tseriesfile.ne.'') THEN
