@@ -2791,7 +2791,7 @@ c get stuff from other CPU's
 	       enddo
 	      enddo
 
-		IF (interaction_bed.ge.4) THEN   
+		IF (interaction_bed.eq.4.or.interaction_bed.eq.6) THEN   
 			do j=0,j1 
 				do i=0,i1 !imax !including i1 strangely gives crash (13/4/15) !1,imax !0,i1
 					do k=1,kbed(i,j) ! assign initial bed concentrations; k=0 remains empty

@@ -316,7 +316,7 @@ c
       real     dold(0:i1,0:j1,0:k1),dnew(0:i1,0:j1,0:k1)
       real     wsed(nfrac,0:i1,0:j1,0:k1),wfluid(0:i1,0:j1,0:k1),W_km_sum(0:i1,0:j1,0:k1)
 	real*8 pplus(imax,kmax)
-	real dnewcbot(nfrac,0:i1,0:j1)
+	real dnewcbot(nfrac,0:i1,0:j1),c_sum(0:i1,0:j1,0:k1)
 	
 
 !	real     Diffcof(0:i1,0:j1,0:k1)
@@ -376,7 +376,7 @@ c********************************************************************
 	    call slipvelocity(cnew,wnew,wsed,rnew,0,0,wfluid,dt,dz) !driftflux_force must be calculated with settling velocity at k=0
 	    CALL erosion_deposition(dcdt,dcdtbot,unew,vnew,wnew,rnew,cnew,cnewbot,dt,dz) !first two vars are adjusted
 	    !! for kn1: erosion_deposition must be after advecc_TVD and after dcdt update, because cnew and dcdt are two separate vars
-		if (interaction_bed.eq.4) then
+		if (interaction_bed.eq.4.or.interaction_bed.eq.6) then
 			call advec_update_Clivebed(dcdt,dcdtbot,dt) 
 		endif	
 	    do n=1,nfrac 
@@ -506,10 +506,14 @@ c********************************************************************
 	endif
 	if ((slipvel.eq.1.or.slipvel.eq.2).and.nfrac>0) then
 	 W_km_sum=0.
+	 c_sum=0.
 	 do n=1,nfrac
 	  W_km_sum=W_km_sum+wsed(n,:,:,:)-Wnew
+	  c_sum=c_sum+cnew(n,:,:,:)
 	 enddo 
-	 W_km_sum=W_km_sum+Wfluid !Wfluid is difference with Ucfd 
+	 c_sum=MIN(c_sum,1.)
+ 	 W_km_sum=W_km_sum+(1.-c_sum)*rho_b*Wfluid !Wfluid is difference with Ucfd 
+	 W_km_sum=W_km_sum/rnew
 	 call advecw_driftfluxCDS2(dnew,W_km_sum,
      &   rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke)
 	endif
@@ -793,7 +797,7 @@ c********************************************************************
 	    call slipvelocity(cnew,wnew,wsed,rnew,0,0,wfluid,dt,dz) !driftflux_force must be calculated with settling velocity at k=0
 	    CALL erosion_deposition(dcdt,dcdtbot,unew,vnew,wnew,rnew,cnew,cnewbot,dt,dz) !first two vars are adjusted
 	    !! erosion_deposition must be after advecc_TVD and after dcdt update, because cnew and dcdt are two separate vars
-		if (interaction_bed.eq.4) then
+		if (interaction_bed.eq.4.or.interaction_bed.eq.6) then
 			call advec_update_Clivebed(dcdt,dcdtbot,dt) 
 		endif		
 	    do n=1,nfrac 
@@ -927,6 +931,7 @@ c********************************************************************
 	  W_km_sum=W_km_sum+cnew(n,:,:,:)*frac(n)%rho*(wsed(n,:,:,:)-Wnew)
 	  c_sum=c_sum+cnew(n,:,:,:)
 	 enddo 
+	 c_sum=MIN(c_sum,1.)
 	 W_km_sum=W_km_sum+(1.-c_sum)*rho_b*Wfluid !Wfluid is difference with Ucfd 
 	 W_km_sum=W_km_sum/rnew
 	 call advecw_driftfluxCDS2(dnew,W_km_sum,
@@ -1315,7 +1320,7 @@ c********************************************************************
 	    call slipvelocity(cnew,wnew,wsed,rnew,0,0,wfluid,cn1*dt,dz) !driftflux_force must be calculated with settling velocity at k=0
 	    CALL erosion_deposition(dcdt,dcdt1bot,unew,vnew,wnew,rnew,cnew,cnewbot,cn1*dt,dz) !first two vars are adjusted
 	    !! for kn1: erosion_deposition must be after advecc_TVD and after dcdt update, because cnew and dcdt are two separate vars
-		if (interaction_bed.eq.4) then
+		if (interaction_bed.eq.4.or.interaction_bed.eq.6) then
 			call advec_update_Clivebed(dcdt,dcdt1bot,cn1*dt) 	
 		endif			
 	    do n=1,nfrac 
@@ -1403,6 +1408,7 @@ c********************************************************************
 	  W_km_sum=W_km_sum+cnew(n,:,:,:)*frac(n)%rho*(wsed(n,:,:,:)-Wnew)
 	  c_sum=c_sum+cnew(n,:,:,:)
 	 enddo 
+	 c_sum=MIN(c_sum,1.)
 	 W_km_sum=W_km_sum+(1.-c_sum)*rho_b*Wfluid !Wfluid is difference with Ucfd 
 	 W_km_sum=W_km_sum/rnew
 	 call advecw_driftfluxCDS2(k1w,W_km_sum,
@@ -1767,7 +1773,7 @@ c********************************************************************
 	    call slipvelocity(dcdt2,dwdt,wsed,drdt,0,0,wfluid,cn2*dt,dz) !get wfluid and wsed at k=0 for driftflux_force 
 	    CALL erosion_deposition(dcdt,dcdt2bot,dudt,dvdt,dwdt,drdt,dcdt2,dcdt1bot,cn2*dt,dz) !first two vars are adjusted 
  	    !! for kn2: variable dcdt2 made
-		if (interaction_bed.eq.4) then
+		if (interaction_bed.eq.4.or.interaction_bed.eq.6) then
 			call advec_update_Clivebed(dcdt,dcdt2bot,cn2*dt) 
 		endif			
 	    do n=1,nfrac
@@ -1856,6 +1862,7 @@ c********************************************************************
 	  W_km_sum=W_km_sum+dcdt(n,:,:,:)*frac(n)%rho*(wsed(n,:,:,:)-dWdt)
 	  c_sum=c_sum+dcdt(n,:,:,:)
 	 enddo
+	 c_sum=MIN(c_sum,1.)
 	 W_km_sum=W_km_sum+(1.-c_sum)*rho_b*Wfluid  !Wfluid is difference with Ucfd
 	 W_km_sum=W_km_sum/drdt
 	 call advecw_driftfluxCDS2(k2w,W_km_sum,
@@ -2232,7 +2239,7 @@ c********************************************************************
 	    CALL erosion_deposition(dcdt,dcdtbot,dudt,dvdt,dwdt,drdt,dcdt2,dcdt2bot,cn3*dt,dz) !first two vars are adjusted
 		    !! for kn3: extra var dcdt2 is used
 	    ! should correct dwdt(n,:,:,0) with (1.-tau/frac(n)%tau_d), but this correction almost always is zero, for now leave
-		if (interaction_bed.eq.4) then
+		if (interaction_bed.eq.4.or.interaction_bed.eq.6) then
 			call advec_update_Clivebed(dcdt,dcdtbot,cn3*dt) 
 		endif		
 	    do n=1,nfrac
@@ -2321,6 +2328,7 @@ c********************************************************************
 	  W_km_sum=W_km_sum+dcdt(n,:,:,:)*frac(n)%rho*(wsed(n,:,:,:)-dWdt)
 	  c_sum=c_sum+dcdt(n,:,:,:)
 	 enddo
+	 c_sum=MIN(c_sum,1.)
 	 W_km_sum=W_km_sum+(1.-c_sum)*rho_b*Wfluid  !Wfluid is difference with Ucfd
 	 W_km_sum=W_km_sum/drdt
 	 call advecw_driftfluxCDS2(k3w,W_km_sum,
@@ -2645,7 +2653,7 @@ c********************************************************************
 	    call slipvelocity(cnew,wnew,wsed,rnew,0,0,wfluid,dt,dz) !driftflux_force must be calculated with settling velocity at k=0
 	    CALL erosion_deposition(dcdt,dcdtbot,unew,vnew,wnew,rnew,cnew,cnewbot,dt,dz) !first two vars are adjusted
 	    !! erosion_deposition must be after advecc_TVD and after dcdt update, because cnew and dcdt are two separate vars
-		if (interaction_bed.eq.4) then
+		if (interaction_bed.eq.4.or.interaction_bed.eq.6) then
 			call advec_update_Clivebed(dcdt,dcdtbot,dt) 
 		endif		
 	    do n=1,nfrac 
@@ -2768,6 +2776,7 @@ c********************************************************************
 	  W_km_sum=W_km_sum+cnew(n,:,:,:)*frac(n)%rho*(wsed(n,:,:,:)-Wnew)
 	  c_sum=c_sum+cnew(n,:,:,:)
 	 enddo 
+	 c_sum=MIN(c_sum,1.)
 	 W_km_sum=W_km_sum+(1.-c_sum)*rho_b*Wfluid !Wfluid is difference with Ucfd 
 	 W_km_sum=W_km_sum/rnew
 	 call advecw_driftfluxCDS2(dnew,W_km_sum,

@@ -1007,6 +1007,22 @@ c get stuff from other CPU's
 	  Wbound(i,j,k)=Wjetbc
        enddo
 
+	IF (interaction_bed.ge.4.or.bedlevelfile.ne.'') THEN ! dynamic bed update, IBM bed re-defined every timestep:
+		DO i=0,i1 !1,imax
+			DO j=0,j1 !1,jmax
+				DO k=1,kbed(i,j)
+					Ubound(i,j,k)=Ubot_TSHD(j) !0.
+					Vbound(i,j,k)=Vbot_TSHD(j) !0.
+					im=MAX(i-1,0)
+					jm=MAX(j-1,0)
+					Ubound(im,j,k)=Ubot_TSHD(j) !0.
+					Vbound(i,jm,k)=Vbot_TSHD(jm) !0.
+					Wbound(i,j,k)=0.
+				ENDDO
+			ENDDO
+		ENDDO
+	ENDIF
+	
 	! apply boundary conditions for Vbound again to fix small inconsistency in Vbound(:,j1,:) made in rudder
 	call shiftf(Vbound,vbf) 
 	call shiftb(Vbound,vbb) 
@@ -1033,21 +1049,7 @@ c get stuff from other CPU's
 	  enddo
 	endif
  
-	IF (interaction_bed.ge.4.or.bedlevelfile.ne.'') THEN ! dynamic bed update, IBM bed re-defined every timestep:
-		DO i=0,i1 !1,imax
-			DO j=0,j1 !1,jmax
-				DO k=0,kbed(i,j)
-					Ubound(i,j,k)=Ubot_TSHD(j) !0.
-					Vbound(i,j,k)=Vbot_TSHD(j) !0.
-					im=MAX(i-1,0)
-					jm=MAX(j-1,0)
-					Ubound(im,j,k)=Ubot_TSHD(j) !0.
-					Vbound(i,jm,k)=Vbot_TSHD(jm) !0.
-					Wbound(i,j,k)=0.
-				ENDDO
-			ENDDO
-		ENDDO
-	ENDIF
+
 	
 
       end
@@ -1739,6 +1741,22 @@ c get stuff from other CPU's
 	  Wbound(i,j,k)=Wjetbc*0.5*(rho(i,j,k)+rho(i,j,k+1))
        enddo
 
+	IF (interaction_bed.ge.4.or.bedlevelfile.ne.'') THEN ! dynamic bed update, IBM bed re-defined every timestep:
+		DO i=0,i1
+			DO j=0,j1
+				DO k=1,kbed(i,j)
+					Ubound(i,j,k)=Ubot_TSHD(j)*rho(i,j,k) !0.
+					Vbound(i,j,k)=Vbot_TSHD(j)*rho(i,j,k) !0.
+					im=MAX(i-1,0)
+					jm=MAX(j-1,0)
+					Ubound(im,j,k)=Ubot_TSHD(j)*rho(im,j,k) !0.
+					Vbound(i,jm,k)=Vbot_TSHD(jm)*rho(i,jm,k) !0.					
+					Wbound(i,j,k)=0.
+				ENDDO
+			ENDDO
+		ENDDO
+	ENDIF	
+	
 
 	! apply boundary conditions for Vbound again to fix small inconsistency in Vbound(:,j1,:) made in jet, jet2 and rudder
 	call shiftf(Vbound,vbf) 
@@ -1771,21 +1789,6 @@ c get stuff from other CPU's
 	  enddo
 	endif
 
-	IF (interaction_bed.ge.4.or.bedlevelfile.ne.'') THEN ! dynamic bed update, IBM bed re-defined every timestep:
-		DO i=0,i1
-			DO j=0,j1
-				DO k=0,kbed(i,j)
-					Ubound(i,j,k)=Ubot_TSHD(j)*rho(i,j,k) !0.
-					Vbound(i,j,k)=Vbot_TSHD(j)*rho(i,j,k) !0.
-					im=MAX(i-1,0)
-					jm=MAX(j-1,0)
-					Ubound(im,j,k)=Ubot_TSHD(j)*rho(im,j,k) !0.
-					Vbound(i,jm,k)=Vbot_TSHD(jm)*rho(i,jm,k) !0.					
-					Wbound(i,j,k)=0.
-				ENDDO
-			ENDDO
-		ENDDO
-	ENDIF	 	
 
 
       end
@@ -1860,7 +1863,7 @@ c get stuff from other CPU's
 	IF (interaction_bed.ge.4.or.bedlevelfile.ne.'') THEN ! dynamic bed update, IBM bed re-defined every timestep:
 		DO i=0,i1
 			DO j=0,j1
-				DO k=0,kbed(i,j)
+				DO k=1,kbed(i,j)
 					Ubound(i,j,k)=0. !Ubot_TSHD(j) ! 0.
 					Vbound(i,j,k)=0. !Vbot_TSHD(j) ! 0.
 					im=MAX(i-1,0)
@@ -1871,8 +1874,8 @@ c get stuff from other CPU's
 				ENDDO
 			ENDDO
 		ENDDO
-	ENDIF	 	
-
+	ENDIF	 
+	
 	end
 
 	
@@ -2091,6 +2094,7 @@ c get stuff from other CPU's
 !			ENDDO
 !		ENDIF	
 		!! from 17-2-2017 bedlevelfile is dealt with via kbed, not via TSHD immersed boundary; with utr,vtr,wtr and diffcof zero for all sides of bed-cell concentration in bed should stay exactly zero and tricks like below to remove sediment from bed and add it to lowest fluid cell shouldn't be necessary
+		if (.false.) then !25-1-2018 switched off because not needed anymore and potentially dangerous
 	kcheck=kmax-(kjet-1) 
 	  do t=1,tmax_inPpuntTSHD ! when no TSHD then this loop is skipped
  	    k=k_inPpuntTSHD(t)		
@@ -2109,6 +2113,7 @@ c get stuff from other CPU's
             Cbound(i,j,k)=0.  ! remove sediment from hull, not only in lowest line of cells in hull
 			!endif
 	  enddo
+	  endif
       do t=1,tmax_inPpunt
 	i=i_inPpunt(t)
 	j=j_inPpunt(t)
