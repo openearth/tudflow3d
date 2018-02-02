@@ -389,9 +389,11 @@
 					ELSEIF (cbottot>0.) THEN
 						erosionf(n) = erosion_avg(n) * (cbotcfd(n,i,j)/cbottot) !erosion per fraction
 						erosionf(n) = MIN(erosionf(n),(cbotcfd(n,i,j)+Clivebed(n,i,j,kbed(i,j)))*dz) ! m3/m2, not more material can be eroded than there was in top layer cbotcfd+c in top cel bed
+						erosionf(n) = MAX(erosionf(n),0.)
 					ELSEIF (cbedtot>0.) THEN
 						erosionf(n) = erosion_avg(n) * (Clivebed(n,i,j,kbed(i,j))/cbedtot) !erosion per fraction
 						erosionf(n) = MIN(erosionf(n),(cbotcfd(n,i,j)+Clivebed(n,i,j,kbed(i,j)))*dz) ! m3/m2, not more material can be eroded than there was in top layer cbotcfd+c in top cel bed
+						erosionf(n) = MAX(erosionf(n),0.)
 					ELSE
 						erosionf(n) = 0.
 					ENDIF
@@ -589,9 +591,11 @@
 					ELSEIF (cbottot_sand>0.) THEN
 						erosionf(n) = erosion_avg(n) * (cbotcfd(n,i,j)/cbottot_sand) !erosion per fraction
 						erosionf(n) = MIN(erosionf(n),(cbotcfd(n,i,j)+Clivebed(n,i,j,kbed(i,j)))*dz) ! m3/m2, not more material can be eroded than there was in top layer cbotcfd+c in top cel bed
+						erosionf(n) = MAX(erosionf(n),0.)
 					ELSEIF (cbedtot_sand>0.) THEN
 						erosionf(n) = erosion_avg(n) * (Clivebed(n,i,j,kbed(i,j))/cbedtot_sand) !erosion per fraction
 						erosionf(n) = MIN(erosionf(n),(cbotcfd(n,i,j)+Clivebed(n,i,j,kbed(i,j)))*dz) ! m3/m2, not more material can be eroded than there was in top layer cbotcfd+c in top cel bed
+						erosionf(n) = MAX(erosionf(n),0.)
 					ELSE
 						erosionf(n) = 0.
 					ENDIF
