@@ -296,7 +296,7 @@ c******************************************************************
 	   enddo
 	endif
 	 ! boundaries in i-direction
-	if (periodicx.eq.0) then
+	if (periodicx.eq.0.or.periodicx.eq.2) then
          do j=0,j1
 		   vol_Vp(0,j)    =    vol_Vp(1,j)
 		   vol_Vp(i1,j)   =    vol_Vp(imax,j)
@@ -346,7 +346,7 @@ c******************************************************************
 	  phi=atan2(V_b,(U_TSHD-U_b))
 	endif
 
-	if (periodicx.eq.0) then
+	if (periodicx.eq.0.or.periodicx.eq.2) then
 		cnew =0.
 		cold =0.
 		dcdt=0.
@@ -2804,7 +2804,12 @@ c get stuff from other CPU's
 					enddo
 				enddo
 			enddo		  
-		ENDIF		   
+		ENDIF	
+
+		IF (U_TSHD>0.) THEN
+			kbedin(0:j1)=kbed(1,0:j1)
+		ENDIF
+	
       end
 
 	subroutine bedroughness_init
@@ -2982,13 +2987,15 @@ c get stuff from other CPU's
 		  endif
 		enddo
 	      enddo
-		  
+
+	
 	! called as last therefore now kbedt (used to apply tau wall) can be defined:
 	IF (wallup.eq.1) THEN
 	  kbedt=kmax-1 ! apply tau wall at upper boundary kmax
 	ELSE
 	  kbedt=kbed ! apply tau wall at lower boundary kbed
 	ENDIF
+	
 
 	end 
 

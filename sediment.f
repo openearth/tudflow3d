@@ -688,6 +688,22 @@
 	ENDIF		
 	
 	IF ((interaction_bed.eq.4.or.interaction_bed.eq.6).and.time_n.ge.tstart_morf) THEN
+		IF (U_TSHD>0.) THEN !reset "inflow" bedlevel
+			kbed(1,0:j1)=kbedin(0:j1)
+			kbedt(1,0:j1)=kbedin(0:j1)
+			kbed(0,0:j1)=kbedin(0:j1)
+			kbedt(0,0:j1)=kbedin(0:j1)			
+			do j=0,j1 
+				do i=0,1 
+					do k=1,kbed(i,j) ! assign initial bed concentrations; k=0 remains empty
+						do n=1,nfrac
+							Clivebed(n,i,j,k)=c_bed(n)
+							cbotnew(n,i,j)=0. !make buffer layer empty 
+						enddo
+					enddo
+				enddo
+			enddo		  			
+		ENDIF	
 		call bound_cbot_integer(kbed) ! apply correct boundary conditions for updated kbed	
 		DO i=0,i1
 			DO j=0,j1

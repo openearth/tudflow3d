@@ -188,6 +188,7 @@ c get stuff from other CPU's
  		   Ubound(i,j1,k) =Ubc*cos_u(j1)+Vbc*sin_u(j1) !Ubb(i,k)
 ! 		   Ubound(i,j1,k) =2.*(Ubc*cos_u(j1)+Vbc*sin_u(j1))-Ubound(i,jmax,k) !Ubb(i,k)
 		   Vbound(i,jmax,k) =-Ubc*sin_v(jmax)+Vbc*cos_v(jmax) !Vbb(i,k)
+		   Vbound(i,j1,k) = Vbound(i,jmax,k)
 !		   Vbound(i,jmax,k) =2.*(-Ubc*sin_v(jmax)+Vbc*cos_v(jmax))-Vbound(i,jmax-1,k) !Vbb(i,k)
 		   Wbound(i,j1,k) = Wbc !2.*Wbc-Wbound(i,jmax,k) !Wbb(i,k) 
 		   enddo
@@ -238,6 +239,7 @@ c get stuff from other CPU's
 		   Wbound(i,0,k) = Wbf(i,k)
  		   Ubound(i,j1,k) =Ubound(i,jmax,k)
 		   Vbound(i,jmax,k) = 0. 
+		   Vbound(i,j1,k) = 0.
 		   Wbound(i,j1,k) = Wbound(i,jmax,k) 
 		   enddo
 		enddo	
@@ -623,7 +625,7 @@ c get stuff from other CPU's
  		   Ubound(i,j1,k) =Ubc*cos_u(j1)+Vbc*sin_u(j1) !Ubb(i,k)
 ! 		   Ubound(i,j1,k) =2.*(Ubc*cos_u(j1)+Vbc*sin_u(j1))-Ubound(i,jmax,k) !Ubb(i,k)
 		   Vbound(i,jmax,k) =-Ubc*sin_v(jmax)+Vbc*cos_v(jmax) !Vbb(i,k)
-
+		   Vbound(i,j1,k) = Vbound(i,jmax,k)
 !		   Vbound(i,jmax,k) =2.*(-Ubc*sin_v(jmax)+Vbc*cos_v(jmax))-Vbound(i,jmax-1,k) !Vbb(i,k)
 
 		   Wbound(i,j1,k) = Wbc !2.*Wbc-Wbound(i,jmax,k) !Wbb(i,k) 
@@ -677,6 +679,7 @@ c get stuff from other CPU's
 		   Wbound(i,0,k) = Wbf(i,k)
  		   Ubound(i,j1,k) =Ubound(i,jmax,k)
 		   Vbound(i,jmax,k) = 0. 
+		   Vbound(i,j1,k) = Vbound(i,jmax,k)
 		   Wbound(i,j1,k) = Wbound(i,jmax,k) 
 		   enddo
 		enddo	
@@ -1229,7 +1232,7 @@ c get stuff from other CPU's
  		   Ubound(i,j1,k) =Ubc*cos_u(j1)+Vbc*sin_u(j1) !Ubb(i,k)
 ! 		   Ubound(i,j1,k) =2.*(Ubc*cos_u(j1)+Vbc*sin_u(j1))-Ubound(i,jmax,k) !Ubb(i,k)
 		   Vbound(i,jmax,k) =-Ubc*sin_v(jmax)+Vbc*cos_v(jmax) !Vbb(i,k)
-
+		   Vbound(i,j1,k) = Vbound(i,jmax,k)
 !		   Vbound(i,jmax,k) =2.*(-Ubc*sin_v(jmax)+Vbc*cos_v(jmax))-Vbound(i,jmax-1,k) !Vbb(i,k)
 		   Wbound(i,j1,k) =Wbc !2.*Wbc-Wbound(i,jmax,k) !Wbb(i,k) 
 
@@ -1281,6 +1284,7 @@ c get stuff from other CPU's
 		   Wbound(i,0,k) = Wbf(i,k)
  		   Ubound(i,j1,k) =Ubound(i,jmax,k)
 		   Vbound(i,jmax,k) = 0. 
+		   Vbound(i,j1,k) = Vbound(i,jmax,k)
 		   Wbound(i,j1,k) = Wbound(i,jmax,k) 
 		   enddo
 		enddo	

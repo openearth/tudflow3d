@@ -482,7 +482,7 @@ c*************************************************************
 	           enddo
 	        enddo
 	endif
-	if (periodicx.eq.0) then
+	if (periodicx.eq.0.or.periodicx.eq.2) then
 		do k=1,kmax ! boundaries in i-direction
 		        do j=0,j1
 		                ekm(0,j,k) = ekm(1,j,k)
@@ -751,7 +751,7 @@ c*************************************************************
 	           enddo
 	        enddo
 	endif
-	if (periodicx.eq.0) then
+	if (periodicx.eq.0.or.periodicx.eq.2) then
 		do k=1,kmax ! boundaries in i-direction
 		        do j=0,j1
 		                ekm(0,j,k) = ekm(1,j,k)
@@ -805,7 +805,7 @@ c*************************************************************
 	           enddo
 	        enddo
 	endif
-	if (periodicx.eq.0) then
+	if (periodicx.eq.0.or.periodicx.eq.2) then
 		do k=1,kmax ! boundaries in i-direction
 		        do j=0,j1
 		                Diffcof(0,j,k) = Diffcof(1,j,k)
@@ -932,7 +932,6 @@ c*************************************************************
       real     Uvel(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),rr(0:i1,0:j1,0:k1)
 
-	real ekm2(0:i1,0:j1,0:k1)
 	real dudx,dudy,dudz
 	real dvdx,dvdy,dvdz
 	real dwdx,dwdy,dwdz
@@ -1058,7 +1057,7 @@ c*************************************************************
 	           enddo
 	        enddo
 	endif
-	if (periodicx.eq.0) then
+	if (periodicx.eq.0.or.periodicx.eq.2) then
 		do k=1,kmax ! boundaries in i-direction
 		        do j=0,j1
 		                ekm(0,j,k) = ekm(1,j,k)
@@ -1082,16 +1081,6 @@ c*************************************************************
 
 
         ekm=ekm+ekm_mol
-	ekm2=ekm
-
-        do k=kmax-kjet+1,k1 ! laat ekm in buisje ongemoeid
-            do t=1,tmax_inPpunt
-              i=i_inPpunt(t)
-              j=j_inPpunt(t)
-              ekm(i,j,k)=ekm2(i,j,k)
-            enddo
-        enddo
-
 		Diffcof=ekm/Sc/rr        
         do k=kmax-kjet+1,k1 ! maak Diffcof rand buisje nul
           do t=1,tmax_inPpuntrand
@@ -1159,7 +1148,6 @@ c*************************************************************
       real     Uvel(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),rr(0:i1,0:j1,0:k1)
 
-	real ekm2(0:i1,0:j1,0:k1)
 	real dudx,dudy,dudz
 	real dvdx,dvdy,dvdz
 	real dwdx,dwdy,dwdz
@@ -1315,7 +1303,7 @@ c*************************************************************
 	           enddo
 	        enddo
 	endif
-	if (periodicx.eq.0) then
+	if (periodicx.eq.0.or.periodicx.eq.2) then
 		do k=1,kmax ! boundaries in i-direction
 		        do j=0,j1
 		                ekm(0,j,k) = ekm(1,j,k)
@@ -1338,16 +1326,6 @@ c*************************************************************
         enddo
 
         ekm=ekm+ekm_mol
-	ekm2=ekm
-
-        do k=kmax-kjet+1,k1 ! laat ekm in buisje ongemoeid
-            do t=1,tmax_inPpunt
-              i=i_inPpunt(t)
-              j=j_inPpunt(t)
-              ekm(i,j,k)=ekm2(i,j,k)
-            enddo
-        enddo
-
         Diffcof=ekm/Sc/rr
         do k=kmax-kjet+1,k1 ! maak Diffcof rand buisje nul
           do t=1,tmax_inPpuntrand
@@ -1415,7 +1393,6 @@ c*************************************************************
       real     Uvel(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),rr(0:i1,0:j1,0:k1)
 
-	real ekm2(0:i1,0:j1,0:k1)
 	real dudx,dudy,dudz
 	real dvdx,dvdy,dvdz
 	real dwdx,dwdy,dwdz
@@ -1633,7 +1610,7 @@ c*************************************************************
 	           enddo
 	        enddo
 	endif
-	if (periodicx.eq.0) then
+	if (periodicx.eq.0.or.periodicx.eq.2) then
 		do k=1,kmax ! boundaries in i-direction
 		        do j=0,j1
 		           Sd11(0,j,k) = Sd11(1,j,k) 
@@ -1857,7 +1834,7 @@ c*************************************************************
 	           enddo
 	        enddo
 	endif
-	if (periodicx.eq.0) then
+	if (periodicx.eq.0.or.periodicx.eq.2) then
 		do k=1,kmax ! boundaries in i-direction
 		        do j=0,j1
 		                ekm(0,j,k) = ekm(1,j,k)
@@ -1881,16 +1858,6 @@ c*************************************************************
 
 
         ekm=ekm+ekm_mol
-	ekm2=ekm
-
-        do k=kmax-kjet+1,k1 ! laat ekm in buisje ongemoeid
-            do t=1,tmax_inPpunt
-              i=i_inPpunt(t)
-              j=j_inPpunt(t)
-              ekm(i,j,k)=ekm2(i,j,k)
-            enddo
-        enddo
-
         Diffcof=ekm/Sc/rr
         do k=kmax-kjet+1,k1 ! maak Diffcof rand buisje nul
           do t=1,tmax_inPpuntrand
@@ -2335,8 +2302,9 @@ c get stuff from other CPU's
 !       parameter (modes=150)
 !       real Ub1new(0:i1,0:k1),Vb1new(0:i1,0:k1),Wb1new(0:i1,0:k1),Ub2new(0:j1,0:k1),Vb2new(0:j1+1,0:k1),Wb2new(0:j1,0:k1)
 !       real Ub1old(0:i1,0:k1),Vb1old(0:i1,0:k1),Wb1old(0:i1,0:k1),Ub2old(0:j1,0:k1),Vb2old(0:j1+1,0:k1),Wb2old(0:j1,0:k1)
-      integer ii,tt,t
+      integer ii,t
       real fun,uu,vv,ww,fac1,fac2,fac3,x,y,z,yymin,yymax,Vbox1,Vbox2,Vbox3,boxside_x,boxside_y,phi,uuu,vvv,www
+	  integer*2 tt
  	
       Ub1old=Ub1new
       Vb1old=Vb1new
@@ -2625,6 +2593,7 @@ c get stuff from other CPU's
 	enddo
 
 	!! SEM1 is at two lateral boundaries y:
+	llmax1=0
  	if (rank.eq.0) then       !! boundary at j=0
  	  call random_number(zSEM1) ! uniform distribution 0,1
  	  call random_number(xSEM1) ! uniform distribution 0,1

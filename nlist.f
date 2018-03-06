@@ -99,6 +99,7 @@
       INTEGER*8, DIMENSION(:,:),ALLOCATABLE :: kbed,kbedt,kbed2
       INTEGER, DIMENSION(:,:),ALLOCATABLE :: Xkk,Tii
       INTEGER, DIMENSION(:),ALLOCATABLE :: Xii,Tkk,nfrac_air,nfrac_silt,nfrac_sand,nfrac_air2
+	  INTEGER*8, DIMENSION(:),ALLOCATABLE :: kbedin
       REAL, DIMENSION(:),ALLOCATABLE :: cos_u,cos_v,sin_u,sin_v,cos_ut,sin_ut,cos_vt,sin_vt
       REAL, DIMENSION(:),ALLOCATABLE :: Ru,Rp,dr,phivt,phipt,dphi2t,phiv,phip,dphi2
       REAL*8, DIMENSION(:),ALLOCATABLE :: xSEM1,ySEM1,zSEM1,uSEM1
@@ -1158,6 +1159,7 @@
 	ALLOCATE(vol_V(1:imax,1:jmax*px))
 	ALLOCATE(vol_Vp(0:i1,0:j1))
 	ALLOCATE(kbed(0:i1,0:j1))
+	ALLOCATE(kbedin(0:j1))
 	ALLOCATE(kbed2(0:i1,0:px*jmax+1))
 	ALLOCATE(kbedt(0:i1,0:j1))
 	ALLOCATE(zbed(0:i1,0:j1))

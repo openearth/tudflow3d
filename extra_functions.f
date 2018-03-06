@@ -79,12 +79,12 @@
 	  dt=MIN(dt,dtold*1.1) !change in time step never more than +10% in one timestep for extra stability
 
 	  
-	if (isnan(dt)) stop 'ERROR, QUITING DFLOW3D: "dt" is a NaN'
-	if (dt<1.e-12) stop 'ERROR, QUITING DFLOW3D: "dt" is smaller than 1e-12'
+	if (isnan(dt)) stop 'ERROR, QUITING TUDFLOW3D: "dt" is a NaN'
+	if (dt<1.e-12) stop 'ERROR, QUITING TUDFLOW3D: "dt" is smaller than 1e-12'
 
 	if (time_int.eq.'AB2'.or.time_int.eq.'AB3') then 
 	  if (dt<dt_max) then
-		stop 'ERROR, QUITING DFLOW3D: "dt" is adjusted in AB2 or AB3, sign of instability try again with smaller dt'
+		stop 'ERROR, QUITING TUDFLOW3D: "dt" is adjusted in AB2 or AB3, sign of instability try again with smaller dt'
 	  endif
 	endif
 !! 	if AB2 or AB3 timestep must be fixed, if unfortunately initially a too large timestep has been chosen 

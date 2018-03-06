@@ -63,52 +63,36 @@ c********************************************************************
 
 	Uvel2(0:i1,0:j1,0:k1)=Uvel
 
-	if (periodicx.eq.0) then
-		Uvel2(-2,0:j1,0:k1)=Uvel(0,0:j1,0:k1)
-		Uvel2(-1,0:j1,0:k1)=Uvel(0,0:j1,0:k1)
-		Uvel2(i1+1,0:j1,0:k1)=Uvel(ie,0:j1,0:k1)
-		Uvel2(i1+2,0:j1,0:k1)=Uvel(ie,0:j1,0:k1)
-	else 
-		Uvel2(-2,0:j1,0:k1)=Uvel(ie-2,0:j1,0:k1)
-		Uvel2(-1,0:j1,0:k1)=Uvel(ie-1,0:j1,0:k1)
-		Uvel2(i1+1,0:j1,0:k1)=Uvel(2,0:j1,0:k1)
-		Uvel2(i1+2,0:j1,0:k1)=Uvel(3,0:j1,0:k1)
-	endif
-
-	Uvel2(0:i1,0:j1,-2)=Uvel(0:i1,0:j1,0)
-	Uvel2(0:i1,0:j1,-1)=Uvel(0:i1,0:j1,0)
-	Uvel2(0:i1,0:j1,k1+1)=Uvel(0:i1,0:j1,ke)
-	Uvel2(0:i1,0:j1,k1+2)=Uvel(0:i1,0:j1,ke)
 c get stuff from other CPU's
 	  call shiftf2(Uvel,ubf)
 	  call shiftb2(Uvel,ubb) 
 
 	if (periodicy.eq.0.or.periodicy.eq.2) then
 	  if (rank.eq.0) then
-		do k=1,ke
-		   do i=1,ie
+		do k=0,k1
+		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly 
 		   Uvel2(i,-1,k) = Uvel(i,0,k)
 		   Uvel2(i,j1+1,k) =Ubb(i,k)
 		   enddo
 		enddo
 	  elseif (rank.eq.px-1) then
-		do k=1,ke
-		   do i=1,ie
+		do k=0,k1
+		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
 		   Uvel2(i,-1,k) = Ubf(i,k)
 		   Uvel2(i,j1+1,k) =Uvel(i,j1,k)
 		   enddo
 		enddo
 	  else 
-		do k=1,ke
-		   do i=1,ie
+		do k=0,k1
+		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
 		   Uvel2(i,-1,k) = Ubf(i,k)
 		   Uvel2(i,j1+1,k) =Ubb(i,k)
 		   enddo
 		enddo
 	  endif
 	else 
-		do k=1,ke
-		   do i=1,ie
+		do k=0,k1
+		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
 		   Uvel2(i,-1,k) = Ubf(i,k)
 		   Uvel2(i,j1+1,k) =Ubb(i,k)
 		   enddo
@@ -119,35 +103,51 @@ c get stuff from other CPU's
 
 	if (periodicy.eq.0.or.periodicy.eq.2) then
 	  if (rank.eq.0) then
-		do k=1,ke
-		   do i=1,ie
+		do k=0,k1
+		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
 		   Uvel2(i,-2,k) = Uvel(i,0,k)
 		   Uvel2(i,j1+2,k) =Ubb(i,k)
 		   enddo
 		enddo
 	  elseif (rank.eq.px-1) then
-		do k=1,ke
-		   do i=1,ie
+		do k=0,k1
+		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
 		   Uvel2(i,-2,k) = Ubf(i,k)
 		   Uvel2(i,j1+2,k) =Uvel(i,j1,k)
 		   enddo
 		enddo
 	  else 
-		do k=1,ke
-		   do i=1,ie
+		do k=0,k1
+		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
 		   Uvel2(i,-2,k) = Ubf(i,k)
 		   Uvel2(i,j1+2,k) =Ubb(i,k)
 		   enddo
 		enddo
 	  endif
 	else 
-		do k=1,ke
-		   do i=1,ie
+		do k=0,k1
+		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
 		   Uvel2(i,-2,k) = Ubf(i,k)
 		   Uvel2(i,j1+2,k) =Ubb(i,k)
 		   enddo
 		enddo
 	endif
+	if (periodicx.eq.0.or.periodicx.eq.2) then
+		Uvel2(-1,-2:j1+2,0:k1)=  Uvel2(0,-2:j1+2,0:k1)
+		Uvel2(-2,-2:j1+2,0:k1)=  Uvel2(0,-2:j1+2,0:k1)
+		Uvel2(i1+1,-2:j1+2,0:k1)=Uvel2(i1,-2:j1+2,0:k1)
+		Uvel2(i1+2,-2:j1+2,0:k1)=Uvel2(i1,-2:j1+2,0:k1)
+	else
+		Uvel2(-1,-2:j1+2,0:k1)=  Uvel2(ie-1,-2:j1+2,0:k1)
+		Uvel2(-2,-2:j1+2,0:k1)=  Uvel2(ie-2,-2:j1+2,0:k1)
+		Uvel2(i1+1,-2:j1+2,0:k1)=Uvel2(2,-2:j1+2,0:k1)
+		Uvel2(i1+2,-2:j1+2,0:k1)=Uvel2(3,-2:j1+2,0:k1)
+	endif
+!	!22-12-2017: test bc bed Uvel=0 (if it works also at immersed boundary all is fine! and with U(i,j,-1)=U(i,j,0) wiggly time-avg results for periodic turb channel MKM near bed.
+	Uvel2(-2:i1+2,-2:j1+2,-1)=  Uvel2(-2:i1+2,-2:j1+2,0)
+	Uvel2(-2:i1+2,-2:j1+2,-2)=  Uvel2(-2:i1+2,-2:j1+2,0)
+	Uvel2(-2:i1+2,-2:j1+2,k1+1)=Uvel2(-2:i1+2,-2:j1+2,k1)
+	Uvel2(-2:i1+2,-2:j1+2,k1+2)=Uvel2(-2:i1+2,-2:j1+2,k1)
 
 
       do k=kb,ke
@@ -267,54 +267,37 @@ c********************************************************************
 
 	Vvel2(0:i1,0:j1,0:k1)=Vvel
 
-	if (periodicx.eq.0) then
-		Vvel2(-2,0:j1,0:k1)=Vvel(0,0:j1,0:k1)
-		Vvel2(-1,0:j1,0:k1)=Vvel(0,0:j1,0:k1)
-		Vvel2(i1+1,0:j1,0:k1)=Vvel(ie,0:j1,0:k1)
-		Vvel2(i1+2,0:j1,0:k1)=Vvel(ie,0:j1,0:k1)
-	else 
-		Vvel2(-2,0:j1,0:k1)=Vvel(ie-2,0:j1,0:k1)
-		Vvel2(-1,0:j1,0:k1)=Vvel(ie-1,0:j1,0:k1)
-		Vvel2(i1+1,0:j1,0:k1)=Vvel(2,0:j1,0:k1)
-		Vvel2(i1+2,0:j1,0:k1)=Vvel(3,0:j1,0:k1)
-	endif
-
-	Vvel2(0:i1,0:j1,-2)=Vvel(0:i1,0:j1,0)
-	Vvel2(0:i1,0:j1,-1)=Vvel(0:i1,0:j1,0)
-	Vvel2(0:i1,0:j1,k1+1)=Vvel(0:i1,0:j1,ke)
-	Vvel2(0:i1,0:j1,k1+2)=Vvel(0:i1,0:j1,ke)
-
 c get stuff from other CPU's
 	  call shiftf2(Vvel,ubf)
 	  call shiftb2(Vvel,ubb) 
 
 	if (periodicy.eq.0.or.periodicy.eq.2) then
 	  if (rank.eq.0) then
-		do k=1,ke
-		   do i=1,ie
+		do k=0,k1
+		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
 		   Vvel2(i,j1+1,k) =Ubb(i,k)
 		   Vvel2(i,-1,k) = Vvel(i,0,k)
 		   enddo
 		enddo
 	  elseif (rank.eq.px-1) then
-		do k=1,ke
-		   do i=1,ie
+		do k=0,k1
+		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
 		   Vvel2(i,j1,k) =Vvel(i,je,k)
 		   Vvel2(i,j1+1,k) =Vvel(i,je,k)
 		   Vvel2(i,-1,k) = Ubf(i,k)
 		   enddo
 		enddo
 	  else 
-		do k=1,ke
-		   do i=1,ie
+		do k=0,k1
+		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
 		   Vvel2(i,-1,k) = Ubf(i,k)
 		   Vvel2(i,j1+1,k) =Ubb(i,k)
 		   enddo
 		enddo
 	  endif
 	else
-		do k=1,ke
-		   do i=1,ie
+		do k=0,k1
+		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
 		   Vvel2(i,-1,k) = Ubf(i,k)
 		   Vvel2(i,j1+1,k) =Ubb(i,k)
 		   enddo
@@ -325,35 +308,52 @@ c get stuff from other CPU's
 
 	if (periodicy.eq.0.or.periodicy.eq.2) then
 	  if (rank.eq.0) then
-		do k=1,ke
-		   do i=1,ie
+		do k=0,k1
+		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
 		   Vvel2(i,-2,k) = Vvel(i,0,k)
 		   Vvel2(i,j1+2,k) =Ubb(i,k)
 		   enddo
 		enddo
 	  elseif (rank.eq.px-1) then
-		do k=1,ke
-		   do i=1,ie
+		do k=0,k1
+		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
 		   Vvel2(i,-2,k) = Ubf(i,k)
 		   Vvel2(i,j1+2,k) =Vvel(i,je,k)
 		   enddo
 		enddo
 	  else 
-		do k=1,ke
-		   do i=1,ie
+		do k=0,k1
+		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
 		   Vvel2(i,-2,k) = Ubf(i,k)
 		   Vvel2(i,j1+2,k) =Ubb(i,k)
 		   enddo
 		enddo
 	  endif
 	else 
-		do k=1,ke
-		   do i=1,ie
+		do k=0,k1
+		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
 		   Vvel2(i,-2,k) = Ubf(i,k)
 		   Vvel2(i,j1+2,k) =Ubb(i,k)
 		   enddo
 		enddo
 	endif
+
+	if (periodicx.eq.0.or.periodicx.eq.2) then
+		Vvel2(-1,-2:j1+2,0:k1)=  Vvel2(0,-2:j1+2,0:k1)
+		Vvel2(-2,-2:j1+2,0:k1)=  Vvel2(0,-2:j1+2,0:k1)
+		Vvel2(i1+1,-2:j1+2,0:k1)=Vvel2(i1,-2:j1+2,0:k1)
+		Vvel2(i1+2,-2:j1+2,0:k1)=Vvel2(i1,-2:j1+2,0:k1)
+	else
+		Vvel2(-1,-2:j1+2,0:k1)=  Vvel2(ie-1,-2:j1+2,0:k1)
+		Vvel2(-2,-2:j1+2,0:k1)=  Vvel2(ie-2,-2:j1+2,0:k1)
+		Vvel2(i1+1,-2:j1+2,0:k1)=Vvel2(2,-2:j1+2,0:k1)
+		Vvel2(i1+2,-2:j1+2,0:k1)=Vvel2(3,-2:j1+2,0:k1)
+	endif
+!	!22-12-2017: test bc bed Uvel=0 (if it works also at immersed boundary all is fine! and with U(i,j,-1)=U(i,j,0) wiggly time-avg results for periodic turb channel MKM near bed.
+	Vvel2(-2:i1+2,-2:j1+2,-1)=  Vvel2(-2:i1+2,-2:j1+2,0)
+	Vvel2(-2:i1+2,-2:j1+2,-2)=  Vvel2(-2:i1+2,-2:j1+2,0)
+	Vvel2(-2:i1+2,-2:j1+2,k1+1)=Vvel2(-2:i1+2,-2:j1+2,k1)
+	Vvel2(-2:i1+2,-2:j1+2,k1+2)=Vvel2(-2:i1+2,-2:j1+2,k1)
 
       do k=kb,ke
       	kp=k+1
@@ -483,55 +483,37 @@ c********************************************************************
 	integer kpp,kppp,kmm,kmmm,jpp,jppp,jmm,jmmm,ipp,ippp,imm,immm,rank,px,periodicx,periodicy
 	real*8 ubb(0:i1,0:k1),ubf(0:i1,0:k1),Wvel2(-2:i1+2,-2:j1+2,-2:k1+2)
 
-	Wvel2(0:i1,0:j1,0:k1)=Wvel
-
-	if (periodicx.eq.0) then
-		Wvel2(-2,0:j1,0:k1)=Wvel(0,0:j1,0:k1)
-		Wvel2(-1,0:j1,0:k1)=Wvel(0,0:j1,0:k1)
-		Wvel2(i1+1,0:j1,0:k1)=Wvel(ie,0:j1,0:k1)
-		Wvel2(i1+2,0:j1,0:k1)=Wvel(ie,0:j1,0:k1)
-	else 
-		Wvel2(-2,0:j1,0:k1)=Wvel(ie-2,0:j1,0:k1)
-		Wvel2(-1,0:j1,0:k1)=Wvel(ie-1,0:j1,0:k1)
-		Wvel2(i1+1,0:j1,0:k1)=Wvel(2,0:j1,0:k1)
-		Wvel2(i1+2,0:j1,0:k1)=Wvel(3,0:j1,0:k1)
-	endif
-
-	Wvel2(0:i1,0:j1,-2)=Wvel(0:i1,0:j1,0)
-	Wvel2(0:i1,0:j1,-1)=Wvel(0:i1,0:j1,0)
-	Wvel2(0:i1,0:j1,k1)=Wvel(0:i1,0:j1,ke)
-	Wvel2(0:i1,0:j1,k1+1)=Wvel(0:i1,0:j1,ke)
-	Wvel2(0:i1,0:j1,k1+2)=Wvel(0:i1,0:j1,ke)
+		Wvel2(0:i1,0:j1,0:k1)=Wvel
 
 c get stuff from other CPU's
 	  call shiftf2(Wvel,ubf)
 	  call shiftb2(Wvel,ubb) 
 	if (periodicy.eq.0.or.periodicy.eq.2) then
 	  if (rank.eq.0) then
-		do k=1,ke
-		   do i=1,ie
+		do k=0,k1
+		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
 		   Wvel2(i,j1+1,k) =Ubb(i,k)
 		   Wvel2(i,-1,k) = Wvel(i,0,k)
 		   enddo
 		enddo
 	  elseif (rank.eq.px-1) then
-		do k=1,ke
-		   do i=1,ie
+		do k=0,k1
+		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
 		   Wvel2(i,j1+1,k) =Wvel(i,j1,k)
 		   Wvel2(i,-1,k) = Ubf(i,k)
 		   enddo
 		enddo
 	  else 
-		do k=1,ke
-		   do i=1,ie
+		do k=0,k1
+		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
 		   Wvel2(i,-1,k) = Ubf(i,k)
 		   Wvel2(i,j1+1,k) =Ubb(i,k)
 		   enddo
 		enddo
 	  endif
 	else 
-		do k=1,ke
-		   do i=1,ie
+		do k=0,k1
+		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
 		   Wvel2(i,-1,k) = Ubf(i,k)
 		   Wvel2(i,j1+1,k) =Ubb(i,k)
 		   enddo
@@ -542,35 +524,51 @@ c get stuff from other CPU's
 
 	if (periodicy.eq.0.or.periodicy.eq.2) then
 	  if (rank.eq.0) then
-		do k=1,ke
-		   do i=1,ie
+		do k=0,k1
+		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
 		   Wvel2(i,j1+2,k) =Ubb(i,k)
 		   Wvel2(i,-2,k) = Wvel(i,0,k)
 		   enddo
 		enddo
 	  elseif (rank.eq.px-1) then
-		do k=1,ke
-		   do i=1,ie
+		do k=0,k1
+		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
 		   Wvel2(i,j1+2,k) =Wvel(i,j1,k)
 		   Wvel2(i,-2,k) = Ubf(i,k)
 		   enddo
 		enddo
 	  else 
-		do k=1,ke
-		   do i=1,ie
+		do k=0,k1
+		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
 		   Wvel2(i,-2,k) = Ubf(i,k)
 		   Wvel2(i,j1+2,k) =Ubb(i,k)
 		   enddo
 		enddo
 	  endif
 	else 
-		do k=1,ke
-		   do i=1,ie
+		do k=0,k1
+		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
 		   Wvel2(i,-2,k) = Ubf(i,k)
 		   Wvel2(i,j1+2,k) =Ubb(i,k)
 		   enddo
 		enddo
 	endif
+
+	if (periodicx.eq.0.or.periodicx.eq.2) then
+		Wvel2(-1,-2:j1+2,0:k1)=  Wvel2(0,-2:j1+2,0:k1)
+		Wvel2(-2,-2:j1+2,0:k1)=  Wvel2(0,-2:j1+2,0:k1)
+		Wvel2(i1+1,-2:j1+2,0:k1)=Wvel2(i1,-2:j1+2,0:k1)
+		Wvel2(i1+2,-2:j1+2,0:k1)=Wvel2(i1,-2:j1+2,0:k1)
+	else
+		Wvel2(-1,-2:j1+2,0:k1)=  Wvel2(ie-1,-2:j1+2,0:k1)
+		Wvel2(-2,-2:j1+2,0:k1)=  Wvel2(ie-2,-2:j1+2,0:k1)
+		Wvel2(i1+1,-2:j1+2,0:k1)=Wvel2(2,-2:j1+2,0:k1)
+		Wvel2(i1+2,-2:j1+2,0:k1)=Wvel2(3,-2:j1+2,0:k1)
+	endif
+	Wvel2(-2:i1+2,-2:j1+2,-1)=  Wvel2(-2:i1+2,-2:j1+2,0)
+	Wvel2(-2:i1+2,-2:j1+2,-2)=  Wvel2(-2:i1+2,-2:j1+2,0)
+	Wvel2(-2:i1+2,-2:j1+2,k1+1)=Wvel2(-2:i1+2,-2:j1+2,k1)
+	Wvel2(-2:i1+2,-2:j1+2,k1+2)=Wvel2(-2:i1+2,-2:j1+2,k1)
 
       do k=kb,ke
         kp=k+1
@@ -694,7 +692,7 @@ c********************************************************************
  	phipt2(je*px+1+1)=phipt(je*px+1)+(phipt(je*px+1)-phipt(je*px+1-1)) !needed for periodicy sim	
 
 	putin2(0:i1,0:j1,0:k1)=Uvel
-	if (periodicx.eq.0) then
+	if (periodicx.eq.0.or.periodicx.eq.2) then
 		putin2(-1,0:j1,0:k1)=Uvel(0,0:j1,0:k1)
 		putin2(i1+1,0:j1,0:k1)=Uvel(ie,0:j1,0:k1)
 	else 
@@ -765,7 +763,7 @@ c get stuff from other CPU's
 			  im=i-1
 			  imm=im
 			  ipp=ip
-			  if (periodicx.eq.0) then
+			  if (periodicx.eq.0.or.periodicx.eq.2) then
 				if (i.eq.1) imm=i
 				if (i.eq.ie) ipp=i
 			  endif
@@ -959,7 +957,7 @@ c********************************************************************
  	phivt2(je*px+1+1)=phivt(je*px+1)+(phivt(je*px+1)-phivt(je*px+1-1)) !needed for periodicy sim	
 
 	putin2(0:i1,0:j1,0:k1)=Vvel
-	if (periodicx.eq.0) then
+	if (periodicx.eq.0.or.periodicx.eq.2) then
 		putin2(-1,0:j1,0:k1)=Vvel(0,0:j1,0:k1)
 		putin2(i1+1,0:j1,0:k1)=Vvel(ie,0:j1,0:k1)
 	else 
@@ -1032,7 +1030,7 @@ c get stuff from other CPU's
 			  im=i-1
 			  imm=im
 			  ipp=ip
-			  if (periodicx.eq.0) then
+			  if (periodicx.eq.0.or.periodicx.eq.2) then
 				if (i.eq.1) imm=i
 				if (i.eq.ie) ipp=i
 			  endif
@@ -1228,7 +1226,7 @@ c********************************************************************
  	phipt2(je*px+1+1)=phipt(je*px+1)+(phipt(je*px+1)-phipt(je*px+1-1)) !needed for periodicy sim	
 
 	putin2(0:i1,0:j1,0:k1)=Wvel
-	if (periodicx.eq.0) then
+	if (periodicx.eq.0.or.periodicx.eq.2) then
 		putin2(-1,0:j1,0:k1)=Wvel(0,0:j1,0:k1)
 		putin2(i1+1,0:j1,0:k1)=Wvel(ie,0:j1,0:k1)
 	else 
@@ -1299,7 +1297,7 @@ c get stuff from other CPU's
 			  im=i-1
 			  imm=im
 			  ipp=ip
-			  if (periodicx.eq.0) then
+			  if (periodicx.eq.0.or.periodicx.eq.2) then
 				if (i.eq.1) imm=i
 				if (i.eq.ie) ipp=i
 			  endif

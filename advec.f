@@ -474,7 +474,7 @@ c********************************************************************
 
 
 
-	if (periodicx.eq.0) then
+	if (periodicx.eq.0.or.periodicx.eq.2) then
 		putin2(-1,0:j1,0:k1)=putin(0,0:j1,0:k1)
 		putin2(i1+1,0:j1,0:k1)=putin(ie,0:j1,0:k1)
 	else 
@@ -526,7 +526,7 @@ c
       im=i-1
       imm=im
       ipp=ip
-      if (periodicx.eq.0) then
+      if (periodicx.eq.0.or.periodicx.eq.2) then
         if (i.eq.1) imm=i
         if (i.eq.ie) ipp=i
       endif
@@ -761,7 +761,7 @@ c********************************************************************
 
 
 
-	if (periodicx.eq.0) then
+	if (periodicx.eq.0.or.periodicx.eq.2) then
 		putin2(-1,0:j1,0:k1)=putin(0,0:j1,0:k1)
 		putin2(i1+1,0:j1,0:k1)=putin(ie,0:j1,0:k1)
 	else 
@@ -813,7 +813,7 @@ c
       im=i-1
       imm=im
       ipp=ip
-      if (periodicx.eq.0) then
+      if (periodicx.eq.0.or.periodicx.eq.2) then
         if (i.eq.1) imm=i
         if (i.eq.ie) ipp=i
       endif
@@ -1198,7 +1198,7 @@ c get stuff from other CPU's
 		   enddo
 		enddo
 	endif
-	if (periodicx.eq.0) then
+	if (periodicx.eq.0.or.periodicx.eq.2) then
 		putin2(-2,0:j1,0:k1)=putin(0,0:j1,0:k1)
 		putin2(-1,0:j1,0:k1)=putin(0,0:j1,0:k1)
 		putin2(i1+1,0:j1,0:k1)=putin(ie,0:j1,0:k1)
@@ -1225,7 +1225,7 @@ c
       im=i-1
       imm=im
       ipp=ip
-      if (periodicx.eq.0) then
+      if (periodicx.eq.0.or.periodicx.eq.2) then
         if (i.eq.1) imm=i
         if (i.eq.ie) ipp=i
       endif
@@ -1699,7 +1699,7 @@ c********************************************************************
 
 
 
-	if (periodicx.eq.0) then
+	if (periodicx.eq.0.or.periodicx.eq.2) then
 		putin2(-1,0:j1,0:k1)=putin(0,0:j1,0:k1)
 		putin2(i1+1,0:j1,0:k1)=putin(ie,0:j1,0:k1)
 	else 
@@ -1750,7 +1750,7 @@ c
       im=i-1
       imm=im
       ipp=ip
-      if (periodicx.eq.0) then
+      if (periodicx.eq.0.or.periodicx.eq.2) then
         if (i.eq.1) imm=i
         if (i.eq.ie) ipp=i
       endif
@@ -2220,7 +2220,7 @@ c********************************************************************
 
 
 
-	if (periodicx.eq.0) then
+	if (periodicx.eq.0.or.periodicx.eq.2) then
 		putin2(-1,0:j1,0:k1)=putin(0,0:j1,0:k1)
 		putin2(i1+1,0:j1,0:k1)=putin(ie,0:j1,0:k1)
 	else 
@@ -2270,7 +2270,7 @@ c
       im=i-1
       imm=im
       ipp=ip
-      if (periodicx.eq.0) then
+      if (periodicx.eq.0.or.periodicx.eq.2) then
         if (i.eq.1) imm=i
         if (i.eq.ie) ipp=i
       endif
@@ -2706,7 +2706,7 @@ c********************************************************************
 	
 	putin2(0:i1,0:j1,0:k1)=putin
 
-	if (periodicx.eq.0) then
+	if (periodicx.eq.0.or.periodicx.eq.2) then
 		putin2(-1,0:j1,0:k1)=putin(0,0:j1,0:k1)
 		putin2(i1+1,0:j1,0:k1)=putin(ie,0:j1,0:k1)
 	else 
@@ -2758,7 +2758,7 @@ c
       im=i-1
       imm=im
       ipp=ip
-      if (periodicx.eq.0) then
+      if (periodicx.eq.0.or.periodicx.eq.2) then
         if (i.eq.1) imm=i
         if (i.eq.ie) ipp=i
       endif
@@ -2938,7 +2938,7 @@ c********************************************************************
 	
 	putin2(0:i1,0:j1)=putin
 
-	if (periodicx.eq.0) then
+	if (periodicx.eq.0.or.periodicx.eq.2) then
 		putin2(-1,0:j1)=putin(0,0:j1)
 		putin2(i1+1,0:j1)=putin(ie,0:j1)
 	else 
@@ -2984,7 +2984,7 @@ c
       im=i-1
       imm=im
       ipp=ip
-      if (periodicx.eq.0) then
+      if (periodicx.eq.0.or.periodicx.eq.2) then
         if (i.eq.1) imm=i
         if (i.eq.ie) ipp=i
       endif
@@ -3137,7 +3137,7 @@ c********************************************************************
 
 	putin2(0:i1,0:j1,0:k1)=putin
 
-	if (periodicx.eq.0) then
+	if (periodicx.eq.0.or.periodicx.eq.2) then
 		putin2(-1,0:j1,0:k1)=putin(0,0:j1,0:k1)
 		putin2(i1+1,0:j1,0:k1)=putin(ie,0:j1,0:k1)
 	else 
@@ -3192,7 +3192,7 @@ c
       im=i-1
       imm=im
       ipp=ip
-      if (periodicx.eq.0) then
+      if (periodicx.eq.0.or.periodicx.eq.2) then
         if (i.eq.1) imm=i
         if (i.eq.ie) ipp=i
       endif
