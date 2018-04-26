@@ -26,6 +26,7 @@ t0_output = 60.			! Start time output [s] (default 0)
 dt_output = 60.			! Time interval output [s]
 te_output = 360.		! End time output [s] (default >t_end)
 tstart_rms = 240.		! Start time avg/rms calc [s]
+te_rms = 240.			! End time avg/rms calc [s] (optional, default t_end simulation)
 dt_max = 0.04		! Max timestep [s] 
 time_int = 'RK3'		! Time integration 'RK3'
 CFL = 1.6			! CFL limit [-]

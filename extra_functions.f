@@ -298,6 +298,14 @@
 		  Uavg  = Uavg + uudt
 		  Vavg  = Vavg + vvdt
 		  Wavg  = Wavg + wwdt
+		  Umax  = MAX(Umax,ABS(uu))
+		  Vmax  = MAX(Vmax,ABS(vv))
+		  Wmax  = MAX(Wmax,ABS(ww))
+!		  Umin  = MIN(Umax,ABS(uu))
+!		  Vmin  = MIN(Vmax,ABS(vv))
+!		  Wmin  = MIN(Wmax,ABS(ww))	
+		  Uhormax  = MAX(Uhormax,SQRT(uu**2+vv**2))
+		  U3dmax  = MAX(U3dmax,SQRT(uu**2+vv**2+ww**2))
 		  Ravg  = Ravg + Rnew(1:imax,1:jmax,1:kmax)*dt
 		  Pavg  = Pavg + (p(1:imax,1:jmax,1:kmax)+pold(1:imax,1:jmax,1:kmax))*dt
 		  muavg = muavg + ekm(1:imax,1:jmax,1:kmax)*dt
@@ -308,7 +316,7 @@
 			  sigVC(n,:,:,:) = sigVC(n,:,:,:) + Cnew(n,1:imax,1:jmax,1:kmax)*vvdt
 			  sigWC(n,:,:,:) = sigWC(n,:,:,:) + Cnew(n,1:imax,1:jmax,1:kmax)*wwdt
 		  enddo
-	
+		
 !!! Favre average results in differences of <1 promille for Umean and <1% for U' between Favre and Reynolds avg
 !!! for CO2 plume simulation (Wang et al. 2008), this is not important for dredge plumes, thus only Reynolds avg is calculated from now on
 !		  fUavg(i,j,k) = fUavg(i,j,k) + uu*R(i,j,k)
@@ -626,3 +634,89 @@
 
 	END SUBROUTINE
     
+	SUBROUTINE writeprogress(time_np,t_end,istep,dt,cput1,cput10a,cput10b,cput11a,cput11b)
+	
+	implicit none
+	
+	real time_np,t_end,dt,cput1,cput10a,cput10b,cput11a,cput11b,secrunt,hrrunt 
+	integer istep 
+	integer,dimension(8) :: ttvalues
+	CHARACTER(len=3) :: mons(12)
+	INTEGER(2) :: monlen(12)
+	INTEGER(2) :: tmpyear, tmpmonth, tmpday, tmphour, tmpminute, tmpsecond
+	CHARACTER(len=2) :: dd, hh, mm
+	CHARACTER(len=4) :: yyyy
+	CHARACTER(len=17) :: datumtemp
+	
+		mons = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+		monlen = [31, 28,   31,   30,   31,    30,   31,  31,   30,   31,  30,    31]
+		
+		secrunt= ((1.-(time_np/t_end))/(time_np/t_end))*(cput10b-cput1) ! remaining run time in seconds
+		hrrunt=secrunt/3600.
+		
+		tmpyear = floor(secrunt/(365*24*3600))
+		IF (MOD(tmpyear, 4)==0) THEN
+			monlen(2) = 29
+		ENDIF			
+		secrunt = secrunt - tmpyear * 365*24*3600
+		tmpmonth = floor(secrunt/(30.25*24*3600))
+		secrunt = secrunt - tmpmonth * 30.25*24*3600
+		tmpday = floor(secrunt/(24*3600))
+		secrunt = secrunt - tmpday*24*3600
+		tmphour = floor(secrunt/3600)
+		secrunt = secrunt - tmphour*3600
+		tmpminute = floor(secrunt/60)
+		secrunt = secrunt - tmpminute*60
+		tmpsecond = secrunt
+		
+		CALL DATE_AND_TIME(VALUES=ttvalues)	
+		
+		tmpsecond = tmpsecond+ttvalues(7)
+		tmpminute = tmpminute+ttvalues(6)
+		tmphour = tmphour+ttvalues(5)
+		tmpday = tmpday+ttvalues(3)
+		tmpmonth = tmpmonth+ttvalues(2)
+		tmpyear = tmpyear+ttvalues(1)
+				
+		IF (tmpsecond > 59) THEN
+			tmpsecond = tmpsecond - 60
+			tmpminute = tmpminute+1
+		ENDIF
+		
+		IF (tmpminute > 59) THEN
+			tmpminute = tmpminute - 60
+			tmphour = tmphour+1
+		ENDIF
+		
+		IF (tmphour > 23) THEN
+			tmphour = tmphour - 24
+			tmpday = tmpday+1
+		ENDIF
+		
+		IF (tmpday > monlen(tmpmonth)) THEN
+			tmpday = tmpday - monlen(tmpmonth)
+			tmpmonth = tmpmonth+1
+		ENDIF
+		
+		IF (tmpmonth > 12) THEN
+			tmpmonth = tmpmonth - 12
+			tmpyear = tmpyear+1
+		ENDIF
+		
+		WRITE(yyyy,'(i4)') tmpyear
+		WRITE(dd,'(i2)') tmpday
+		WRITE(hh,'(i2.2)') tmphour
+		WRITE(mm,'(i2.2)') tmpminute
+		
+		datumtemp = dd//'-'//mons(tmpmonth)//'-'//yyyy//' '//hh//':'//mm
+	
+		write(*,'(a,f10.4,a,f10.4,a,f8.2,a)') ' # Time: ',time_np,' s. of ',t_end,' s ',100.*time_np/t_end,' %   #'
+		WRITE(*,'(a,i10.0,a,f9.6,a)') ' # Timestep: ',istep, ' dt : ',dt,' s            #' 			
+		write(*,'(a,f6.3,a,f6.3,a,f5.2,a)'),' # CPU t=',NINT((cput10b-cput10a)*1000.)/1000.,'s, 1x pois=',
+     &   NINT((cput11b-cput11a)*1000.)/1000.,'s = ',NINT(10000.*(cput11b-cput11a)/(cput10b-cput10a))/100.,
+     &'%          #'	
+		WRITE(*,'(a,f6.1,a,a,a)') ' # Remaining CPU: ',NINT(hrrunt*10.)/10., ' hr, ETA: ',datumtemp,' #' 			
+		
+	 END SUBROUTINE
+			
+			

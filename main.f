@@ -35,7 +35,6 @@
 	character(1024) :: svnurl
 		CHARACTER*20 username,hostname
 		INTEGER(4) istat,istat2,GETPID,HOSTNAM
-
 	
       include 'version.inc'
 
@@ -302,9 +301,12 @@
 
 	   	rold=rnew
 		rnew=drdt
-		if (time_np.ge.tstart_rms) then
+		if (time_np.ge.tstart_rms.and.time_np.le.te_rms) then
 			call statistics
 		endif
+		if (time_np.ge.te_rms.and.time_n.lt.te_rms) then ! write output statistics at te_rms to have them available also when simulation crashes after te_rms
+			call output_stat_nc(time_n)
+		endif		
 
 !		if (time_np.ge.t_output) then
 		if (time_np.ge.t_output.and.t_output.le.te_output+1.e-12) then
@@ -324,13 +326,9 @@
 		  call appendhis !(rank,istep,time_np,Unew,Vnew,Wnew,P,Cnew,Rnew)
 		endif
 		if (rank.eq.0) then
-			if (mod(istep,10) .eq.0) then   
-				write(*,'(a,f10.4,a,f10.4,a,f8.2,a)') ' # Time: ',time_np,' s. of ',t_end,' s ',100.*time_np/t_end,' %   #'
-				WRITE(*,'(a,i10.0,a,f9.6,a)') ' # Timestep: ',istep, ' dt : ',dt,' s,           #' 			
-				call cpu_time(cput10b)
-		write(*,'(a,f6.3,a,f6.3,a,f5.2,a)'),' # CPU t=',NINT((cput10b-cput10a)*1000.)/1000.,'s, 1x pois=',
-     &   NINT((cput11b-cput11a)*1000.)/1000.,'s = ',NINT(10000.*(cput11b-cput11a)/(cput10b-cput10a))/100.,
-     &'%          #'				
+			if (mod(istep,10) .eq.0) then  
+				call cpu_time(cput10b)			
+				CALL writeprogress(time_np,t_end,istep,dt,cput1,cput10a,cput10b,cput11a,cput11b)
 			endif
 		endif
 		time_nm = time_n
@@ -346,7 +344,7 @@
 !	   call output(istep_output,time_n)
 !	endif
 
-	if (time_n.ge.tstart_rms) then
+	if (time_n.ge.tstart_rms.and.te_rms.gt.t_end) then ! write output statistics only when not already written
 		call output_stat_nc(time_n)
 	endif
 		if (hisfile.ne.'') then

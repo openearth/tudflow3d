@@ -157,7 +157,7 @@ c get stuff from other CPU's
 		Uvel2(i1+2,-2:j1+2,0:k1)=Uvel2(3,-2:j1+2,0:k1)
 	endif
 !	!22-12-2017: test bc bed Uvel=0 (if it works also at immersed boundary all is fine! and with U(i,j,-1)=U(i,j,0) wiggly time-avg results for periodic turb channel MKM near bed.
-	Uvel2(-2:i1+2,-2:j1+2,0) =0.
+	!Uvel2(-2:i1+2,-2:j1+2,0) =0.
 	Uvel2(-2:i1+2,-2:j1+2,-1)=  Uvel2(-2:i1+2,-2:j1+2,0)
 	Uvel2(-2:i1+2,-2:j1+2,-2)=  Uvel2(-2:i1+2,-2:j1+2,0)
 	!Uvel2(-2:i1+2,-2:j1+2,-1)=  2./3.*Uvel2(-2:i1+2,-2:j1+2,1)+1./3.*Uvel2(-2:i1+2,-2:j1+2,2)
@@ -251,7 +251,7 @@ c get stuff from other CPU's
 		Vvel2(i1+2,-2:j1+2,0:k1)=Vvel2(3,-2:j1+2,0:k1)
 	endif
 !	!22-12-2017: test bc bed Uvel=0 (if it works also at immersed boundary all is fine! and with U(i,j,-1)=U(i,j,0) wiggly time-avg results for periodic turb channel MKM near bed.
-	Vvel2(-2:i1+2,-2:j1+2,0) =0.
+	!Vvel2(-2:i1+2,-2:j1+2,0) =0.
 	Vvel2(-2:i1+2,-2:j1+2,-1)=  Vvel2(-2:i1+2,-2:j1+2,0)
 	Vvel2(-2:i1+2,-2:j1+2,-2)=  Vvel2(-2:i1+2,-2:j1+2,0)
 	!Vvel2(-2:i1+2,-2:j1+2,-1)=  2./3.*Vvel2(-2:i1+2,-2:j1+2,1)+1./3.*Vvel2(-2:i1+2,-2:j1+2,2)
@@ -440,13 +440,13 @@ c get stuff from other CPU's
 !      vvL=(Vvel(i,jm,k)+Vvel(ip,jm,k))*rhojm
 !      wwR=(Wvel(i,j,k)+Wvel(ip,j,k))*rhokp
 !      wwL=(Wvel(i,j,km)+Wvel(ip,j,km))*rhokm
-!		   if ((periodicx.eq.1.and.periodicy.eq.1.and.(k.le.3.or.k.ge.ke-2))
-!     &	   .or.((periodicx.eq.1.and.periodicy.ne.1).and.
-!     &           (k.le.3.or.k.ge.ke-2.or.(rank.eq.0.and.j.le.3).or.(rank.eq.px-1.and.j.ge.je-2))) 
-!     &     .or.((periodicy.eq.1.and.periodicx.ne.1).and.(i.le.3.or.i.ge.ie-2.or.k.le.3.or.k.ge.ke-2))
-!     &     .or.((periodicy.ne.1.and.periodicx.ne.1).and.
-!     &           (i.le.3.or.i.ge.ie-2.or.k.le.3.or.k.ge.ke-2.or.(rank.eq.0.and.j.le.3).or.(rank.eq.px-1.and.j.ge.je-2)))) then  !switch to cds2
-			if (.false.) then
+		   if ((periodicx.eq.1.and.periodicy.eq.1.and.(k.le.2.or.k.ge.ke-1))
+     &	   .or.((periodicx.eq.1.and.periodicy.ne.1).and.
+     &           (k.le.2.or.k.ge.ke-1.or.(rank.eq.0.and.j.le.2).or.(rank.eq.px-1.and.j.ge.je-1))) 
+     &     .or.((periodicy.eq.1.and.periodicx.ne.1).and.(i.le.2.or.i.ge.ie-1.or.k.le.2.or.k.ge.ke-1))
+     &     .or.((periodicy.ne.1.and.periodicx.ne.1).and.
+     &           (i.le.2.or.i.ge.ie-1.or.k.le.2.or.k.ge.ke-1.or.(rank.eq.0.and.j.le.2).or.(rank.eq.px-1.and.j.ge.je-1)))) then  !switch to cds2
+!			if (.false.) then
 			  Axa=1.
 			  Bxa=0.
 			  DDxa=1./(Axa+Bxa)
@@ -461,22 +461,21 @@ c get stuff from other CPU's
 			  DDxb2=1./(Axb2+Bxb2)	
 			  facA=1.
 			  facB=0.
-			  order4yes=0.
 		  else
-			  Axa=9.
-			  Bxa=-1.
+			  Axa=9. !1. !9.
+			  Bxa=-1. !0. !-1.
 			  DDxa=1./(Axa+Bxa)
-			  Axb=9.
-			  Bxb=-1.
+			  Axb=0. !9. !0. !9.
+			  Bxb=1. !-1. !1. !-1.
 			  DDxb=1./(Axb+Bxb)	
-			  Axa2=1. !9. !1.
-			  Bxa2=0. !-1. !0.
+			  Axa2=9. !9. !1. 
+			  Bxa2=-1. !-1. !0. 
 			  DDxa2=1./(Axa2+Bxa2)
-			  Axb2=0. !9. !0.
-			  Bxb2=1. !-1. !1.
+			  Axb2=0. 
+			  Bxb2=1. 
 			  DDxb2=1./(Axb2+Bxb2)				  
-			  facA=9./8.
-			  facB=-1./8.			  
+			  facA=1. !1.+MIN(1.,DBLE(k-1)/3.)*1./8. !9./8.
+			  facB=0. !MIN(1.,DBLE(k-1)/3.)*-1./8.    !-1./8.					  
 			  order4yes=0.
 		  endif	
 
@@ -736,7 +735,7 @@ c get stuff from other CPU's
 		Uvel2(i1+2,-2:j1+2,0:k1)=Uvel2(3,-2:j1+2,0:k1)
 	endif
 !	!22-12-2017: test bc bed Uvel=0 (if it works also at immersed boundary all is fine! and with U(i,j,-1)=U(i,j,0) wiggly time-avg results for periodic turb channel MKM near bed.
-	Uvel2(-2:i1+2,-2:j1+2,0) =0.
+!	Uvel2(-2:i1+2,-2:j1+2,0) =0.
 	Uvel2(-2:i1+2,-2:j1+2,-1)=  Uvel2(-2:i1+2,-2:j1+2,0)
 	Uvel2(-2:i1+2,-2:j1+2,-2)=  Uvel2(-2:i1+2,-2:j1+2,0)
 	!Uvel2(-2:i1+2,-2:j1+2,-1)=  2./3.*Uvel2(-2:i1+2,-2:j1+2,1)+1./3.*Uvel2(-2:i1+2,-2:j1+2,2)
@@ -830,7 +829,7 @@ c get stuff from other CPU's
 		Vvel2(i1+2,-2:j1+2,0:k1)=Vvel2(3,-2:j1+2,0:k1)
 	endif
 !	!22-12-2017: test bc bed Uvel=0 (if it works also at immersed boundary all is fine! and with U(i,j,-1)=U(i,j,0) wiggly time-avg results for periodic turb channel MKM near bed.
-	Vvel2(-2:i1+2,-2:j1+2,0) =0.
+!	Vvel2(-2:i1+2,-2:j1+2,0) =0.
 	Vvel2(-2:i1+2,-2:j1+2,-1)=  Vvel2(-2:i1+2,-2:j1+2,0)
 	Vvel2(-2:i1+2,-2:j1+2,-2)=  Vvel2(-2:i1+2,-2:j1+2,0)
 	!Vvel2(-2:i1+2,-2:j1+2,-1)=  2./3.*Vvel2(-2:i1+2,-2:j1+2,1)+1./3.*Vvel2(-2:i1+2,-2:j1+2,2)
@@ -1018,13 +1017,13 @@ c get stuff from other CPU's
 !      wwR=(Wvel(i,j,k)+Wvel(i,jp,k))*rhokp
 !      wwL=(Wvel(i,j,km)+Wvel(i,jp,km))*rhokm
 
-!		   if ((periodicx.eq.1.and.periodicy.eq.1.and.(k.le.3.or.k.ge.ke-2))
-!     &	   .or.((periodicx.eq.1.and.periodicy.ne.1).and.
-!     &           (k.le.3.or.k.ge.ke-2.or.(rank.eq.0.and.j.le.3).or.(rank.eq.px-1.and.j.ge.je-2))) 
-!     &     .or.((periodicy.eq.1.and.periodicx.ne.1).and.(i.le.3.or.i.ge.ie-2.or.k.le.3.or.k.ge.ke-2))
-!     &     .or.((periodicy.ne.1.and.periodicx.ne.1).and.
-!     &           (i.le.3.or.i.ge.ie-2.or.k.le.3.or.k.ge.ke-2.or.(rank.eq.0.and.j.le.3).or.(rank.eq.px-1.and.j.ge.je-2)))) then  !switch to cds2
-			if (.false.) then
+		   if ((periodicx.eq.1.and.periodicy.eq.1.and.(k.le.2.or.k.ge.ke-1))
+     &	   .or.((periodicx.eq.1.and.periodicy.ne.1).and.
+     &           (k.le.2.or.k.ge.ke-1.or.(rank.eq.0.and.j.le.2).or.(rank.eq.px-1.and.j.ge.je-1))) 
+     &     .or.((periodicy.eq.1.and.periodicx.ne.1).and.(i.le.2.or.i.ge.ie-1.or.k.le.2.or.k.ge.ke-1))
+     &     .or.((periodicy.ne.1.and.periodicx.ne.1).and.
+     &           (i.le.2.or.i.ge.ie-1.or.k.le.2.or.k.ge.ke-1.or.(rank.eq.0.and.j.le.2).or.(rank.eq.px-1.and.j.ge.je-1)))) then  !switch to cds2
+!			if (.false.) then
 			  Axa=1.
 			  Bxa=0.
 			  DDxa=1./(Axa+Bxa)
@@ -1039,22 +1038,21 @@ c get stuff from other CPU's
 			  DDxb2=1./(Axb2+Bxb2)	
 			  facA=1.
 			  facB=0.
-			  order4yes=0.
 		  else
-			  Axa=9.
-			  Bxa=-1.
+			  Axa=9. !1. !9.
+			  Bxa=-1. !0. !-1.
 			  DDxa=1./(Axa+Bxa)
-			  Axb=9.
-			  Bxb=-1.
+			  Axb=0. !9. !0. !9.
+			  Bxb=1. !-1. !1. !-1.
 			  DDxb=1./(Axb+Bxb)	
-			  Axa2=1. !9. !1.
-			  Bxa2=0. !-1. !0.
+			  Axa2=9. !9. !1. 
+			  Bxa2=-1. !-1. !0. 
 			  DDxa2=1./(Axa2+Bxa2)
-			  Axb2=0. !9. !0.
-			  Bxb2=1. !-1. !1.
+			  Axb2=0. 
+			  Bxb2=1. 
 			  DDxb2=1./(Axb2+Bxb2)				  
-			  facA=9./8.
-			  facB=-1./8.		
+			  facA=1. !1.+MIN(1.,DBLE(k-1)/3.)*1./8. !9./8.
+			  facB=0. !MIN(1.,DBLE(k-1)/3.)*-1./8.    !-1./8.							
 			  order4yes=0.
 		  endif	
 
@@ -1322,7 +1320,7 @@ c get stuff from other CPU's
 		Uvel2(i1+2,-2:j1+2,0:k1)=Uvel2(3,-2:j1+2,0:k1)
 	endif
 !	!22-12-2017: test bc bed Uvel=0 (if it works also at immersed boundary all is fine! and with U(i,j,-1)=U(i,j,0) wiggly time-avg results for periodic turb channel MKM near bed.
-	Uvel2(-2:i1+2,-2:j1+2,0) =0.
+!	Uvel2(-2:i1+2,-2:j1+2,0) =0.
 	Uvel2(-2:i1+2,-2:j1+2,-1)=  Uvel2(-2:i1+2,-2:j1+2,0)
 	Uvel2(-2:i1+2,-2:j1+2,-2)=  Uvel2(-2:i1+2,-2:j1+2,0)
 	!Uvel2(-2:i1+2,-2:j1+2,-1)=  2./3.*Uvel2(-2:i1+2,-2:j1+2,1)+1./3.*Uvel2(-2:i1+2,-2:j1+2,2)
@@ -1416,7 +1414,7 @@ c get stuff from other CPU's
 		Vvel2(i1+2,-2:j1+2,0:k1)=Vvel2(3,-2:j1+2,0:k1)
 	endif
 !	!22-12-2017: test bc bed Uvel=0 (if it works also at immersed boundary all is fine! and with U(i,j,-1)=U(i,j,0) wiggly time-avg results for periodic turb channel MKM near bed.
-	Vvel2(-2:i1+2,-2:j1+2,0) =0.
+!	Vvel2(-2:i1+2,-2:j1+2,0) =0.
 	Vvel2(-2:i1+2,-2:j1+2,-1)=  Vvel2(-2:i1+2,-2:j1+2,0)
 	Vvel2(-2:i1+2,-2:j1+2,-2)=  Vvel2(-2:i1+2,-2:j1+2,0)
 	!Vvel2(-2:i1+2,-2:j1+2,-1)=  2./3.*Vvel2(-2:i1+2,-2:j1+2,1)+1./3.*Vvel2(-2:i1+2,-2:j1+2,2)
@@ -1612,13 +1610,13 @@ c get stuff from other CPU's
 !    	    vvL=(Vvel(i,jm,k)+Vvel(i,jm,kp))*rhojm
 !    	    wwR=(Wvel(i,j,k)+Wvel(i,j,kp))*rho(i,j,kp)
 !   	    wwL=(Wvel(i,j,k)+Wvel(i,j,km))*rho(i,j,k)	
-!		   if ((periodicx.eq.1.and.periodicy.eq.1.and.(k.le.3.or.k.ge.ke-2))
-!     &	   .or.((periodicx.eq.1.and.periodicy.ne.1).and.
-!     &           (k.le.3.or.k.ge.ke-2.or.(rank.eq.0.and.j.le.3).or.(rank.eq.px-1.and.j.ge.je-2))) 
-!     &     .or.((periodicy.eq.1.and.periodicx.ne.1).and.(i.le.3.or.i.ge.ie-2.or.k.le.3.or.k.ge.ke-2))
-!     &     .or.((periodicy.ne.1.and.periodicx.ne.1).and.
-!     &           (i.le.3.or.i.ge.ie-2.or.k.le.3.or.k.ge.ke-2.or.(rank.eq.0.and.j.le.3).or.(rank.eq.px-1.and.j.ge.je-2)))) then  !switch to cds2
-			if (.false.) then
+		   if ((periodicx.eq.1.and.periodicy.eq.1.and.(k.le.2.or.k.ge.ke-1))
+     &	   .or.((periodicx.eq.1.and.periodicy.ne.1).and.
+     &           (k.le.2.or.k.ge.ke-1.or.(rank.eq.0.and.j.le.2).or.(rank.eq.px-1.and.j.ge.je-1))) 
+     &     .or.((periodicy.eq.1.and.periodicx.ne.1).and.(i.le.2.or.i.ge.ie-1.or.k.le.2.or.k.ge.ke-1))
+     &     .or.((periodicy.ne.1.and.periodicx.ne.1).and.
+     &           (i.le.2.or.i.ge.ie-1.or.k.le.2.or.k.ge.ke-1.or.(rank.eq.0.and.j.le.2).or.(rank.eq.px-1.and.j.ge.je-1)))) then  !switch to cds2
+!			if (.false.) then
 			  Axa=1.
 			  Bxa=0.
 			  DDxa=1./(Axa+Bxa)
@@ -1637,17 +1635,17 @@ c get stuff from other CPU's
 			  Axa=9. !1. !9.
 			  Bxa=-1. !0. !-1.
 			  DDxa=1./(Axa+Bxa)
-			  Axb=9. !0. !9.
-			  Bxb=-1. !1. !-1.
+			  Axb=0. !9. !0. !9.
+			  Bxb=1. !-1. !1. !-1.
 			  DDxb=1./(Axb+Bxb)	
-			  Axa2=1. !9. !1.
-			  Bxa2=0. !-1. !0.
+			  Axa2=9. !9. !1. 
+			  Bxa2=-1. !-1. !0. 
 			  DDxa2=1./(Axa2+Bxa2)
-			  Axb2=0. !9. !0.
-			  Bxb2=1. !-1. !1.
+			  Axb2=0. 
+			  Bxb2=1. 
 			  DDxb2=1./(Axb2+Bxb2)				  
-			  facA=9./8.
-			  facB=-1./8.	  
+			  facA=1. !1.+MIN(1.,DBLE(k-1)/3.)*1./8. !9./8.
+			  facB=0. !MIN(1.,DBLE(k-1)/3.)*-1./8.    !-1./8.				  
 		  endif	
 
 	  ! advection velocities:

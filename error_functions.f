@@ -115,7 +115,10 @@
 
 	CASE(035)
 		write(*,*) '# namelist &times                                #'			
-		write(*,*) '# CFL is not defined                             #'			
+		write(*,*) '# CFL is not defined                             #'	
+	CASE(036)
+		write(*,*) '# namelist &times                                #'			
+		write(*,*) '# te_rms must be >tstart_rms                     #'			
 	CASE(040)
 		write(*,*) '# namelist &ambient                              #'			
 		write(*,*) '# U_b is not defined                             #'	

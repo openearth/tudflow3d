@@ -439,7 +439,7 @@
 	   if (sgs_model.eq.'DSmag') then
          call check( nf90_def_var(ncid, "Cs", NF90_REAL, dimids, varid9) )
          call check( nf90_put_att(ncid, varid9, 'units', '-') )
-         call check( nf90_put_att(ncid, varid9, 'long_name', 'Smagorinsky constant from dynamic Germano-Lillly sgs model') )	   
+         call check( nf90_put_att(ncid, varid9, 'long_name', 'Smagorinsky constant from dynamic Germano-Lilly sgs model') )	   
        endif
        call check( nf90_def_var(ncid, "time", NF90_REAL, dimids3, varid8) )
        call check( nf90_put_att(ncid, varid8, 'units', 's') )
@@ -457,7 +457,11 @@
        ! data in one operation.
        call check( nf90_put_var(ncid, varid1, uu(1:imax,1:jmax,1:kmax)) )
        call check( nf90_put_var(ncid, varid2, vv(1:imax,1:jmax,1:kmax)) )
-       call check( nf90_put_var(ncid, varid3, Wnew(1:imax,1:jmax,1:kmax)) )
+	   !call check( nf90_put_var(ncid, varid3, Wnew(1:imax,1:jmax,1:kmax)) )
+	   ! Strange error for very large sims: line above goes wrong, 2 lines below (which basically do the same) goes OK....
+	   uu=Wnew(1:imax,1:jmax,1:kmax)
+	   call check( nf90_put_var(ncid, varid3, uu(1:imax,1:jmax,1:kmax)) )
+       
 
 	   
        if (nfrac>0) then
@@ -469,10 +473,16 @@
 		endif
 		  
 	endif
-       call check( nf90_put_var(ncid, varid5, rnew(1:imax,1:jmax,1:kmax)) )
-       call check( nf90_put_var(ncid, varid6, ekm(1:imax,1:jmax,1:kmax)) )
-       call check( nf90_put_var(ncid, varid7, p(1:imax,1:jmax,1:kmax)+pold(1:imax,1:jmax,1:kmax)) )
-	   !call check( nf90_put_var(ncid, varid7, p(1:imax,1:jmax,1:kmax)) ) !! changed for exact solver output,
+		uu=rnew(1:imax,1:jmax,1:kmax)
+		call check( nf90_put_var(ncid, varid5, uu(1:imax,1:jmax,1:kmax)) )
+		uu=ekm(1:imax,1:jmax,1:kmax)
+		call check( nf90_put_var(ncid, varid6, uu(1:imax,1:jmax,1:kmax)) )
+		uu=p(1:imax,1:jmax,1:kmax)+pold(1:imax,1:jmax,1:kmax)
+		call check( nf90_put_var(ncid, varid7, uu(1:imax,1:jmax,1:kmax)) )
+       !call check( nf90_put_var(ncid, varid5, rnew(1:imax,1:jmax,1:kmax)) )
+       !call check( nf90_put_var(ncid, varid6, ekm(1:imax,1:jmax,1:kmax)) )
+       !call check( nf90_put_var(ncid, varid7, p(1:imax,1:jmax,1:kmax)+pold(1:imax,1:jmax,1:kmax)) )
+	   !!!call check( nf90_put_var(ncid, varid7, p(1:imax,1:jmax,1:kmax)) ) !! changed for exact solver output,
 	   if (sgs_model.eq.'DSmag') then
 	     Csgrid=sqrt(Csgrid)
 	     call check( nf90_put_var(ncid, varid9, Csgrid(1:imax,1:jmax,1:kmax)) )
@@ -722,6 +732,7 @@
        integer :: ncid, varid1,varid2,varid3, varid4, varid5, varid6, varid7, varid8 
        integer :: varid9,varid10,varid11, varid12, varid13, varid14, varid15, varid16, varid17
        integer :: varid18,varid19,varid20,varid21,varid22,varid23,varid24,varid25
+	   integer :: varid26,varid27,varid28,varid29,varid30,varid31,varid32,varid33
        integer :: dimids(NDIMS), dimids2(NDIMS2),dimids3(NDIMS3)
        integer :: x_dimid, y_dimid, z_dimid, nfrac_dimid, par_dimid
 	character(1024) :: svnversion
@@ -816,7 +827,38 @@
        call check( nf90_def_var(ncid, "Wavg", NF90_REAL, dimids, varid6) )
        call check( nf90_put_att(ncid, varid6, 'units', 'm/s') )
        call check( nf90_put_att(ncid, varid6, 'long_name', 'Wavg velocity') )
+	   
+       call check( nf90_def_var(ncid, "Umax", NF90_REAL, dimids, varid26) )
+       call check( nf90_put_att(ncid, varid26, 'units', 'm/s') )
+       call check( nf90_put_att(ncid, varid26, 'long_name', 'Umax velocity') )
 
+       call check( nf90_def_var(ncid, "Vmax", NF90_REAL, dimids, varid27) )
+       call check( nf90_put_att(ncid, varid27, 'units', 'm/s') )
+       call check( nf90_put_att(ncid, varid27, 'long_name', 'Vmax velocity') )
+
+       call check( nf90_def_var(ncid, "Wmax", NF90_REAL, dimids, varid28) )
+       call check( nf90_put_att(ncid, varid28, 'units', 'm/s') )
+       call check( nf90_put_att(ncid, varid28, 'long_name', 'Wmax velocity') )	
+	   
+!       call check( nf90_def_var(ncid, "Umin", NF90_REAL, dimids, varid29) )
+!       call check( nf90_put_att(ncid, varid29, 'units', 'm/s') )
+!       call check( nf90_put_att(ncid, varid29, 'long_name', 'Umin velocity') )
+!
+!       call check( nf90_def_var(ncid, "Vmin", NF90_REAL, dimids, varid30) )
+!       call check( nf90_put_att(ncid, varid30, 'units', 'm/s') )
+!       call check( nf90_put_att(ncid, varid30, 'long_name', 'Vmin velocity') )
+!
+!       call check( nf90_def_var(ncid, "Wmin", NF90_REAL, dimids, varid31) )
+!       call check( nf90_put_att(ncid, varid31, 'units', 'm/s') )
+!       call check( nf90_put_att(ncid, varid31, 'long_name', 'Wmin velocity') )		
+
+       call check( nf90_def_var(ncid, "Uhormax", NF90_REAL, dimids, varid32) )
+       call check( nf90_put_att(ncid, varid32, 'units', 'm/s') )
+       call check( nf90_put_att(ncid, varid32, 'long_name', 'Uhor max velocity MAX of sqrt(uu^2+vv^2)') )
+	   call check( nf90_def_var(ncid, "U3dmax", NF90_REAL, dimids, varid33) )
+       call check( nf90_put_att(ncid, varid33, 'units', 'm/s') )
+       call check( nf90_put_att(ncid, varid33, 'long_name', 'U3d max velocity MAX of sqrt(uu^2+vv^2+ww^2)') )
+	   
        call check( nf90_def_var(ncid, "rho_rms", NF90_REAL, dimids, varid7) )
        call check( nf90_put_att(ncid, varid7, 'units', 'kg/m3') )
        call check( nf90_put_att(ncid, varid7, 'long_name', 'RMS Mixture density') )
@@ -911,6 +953,14 @@
        call check( nf90_put_var(ncid, varid4, Uavg(1:imax,1:jmax,1:kmax)) )
        call check( nf90_put_var(ncid, varid5, Vavg(1:imax,1:jmax,1:kmax)) )
        call check( nf90_put_var(ncid, varid6, Wavg(1:imax,1:jmax,1:kmax)) )
+       call check( nf90_put_var(ncid, varid26, Umax(1:imax,1:jmax,1:kmax)) )
+       call check( nf90_put_var(ncid, varid27, Vmax(1:imax,1:jmax,1:kmax)) )
+       call check( nf90_put_var(ncid, varid28, Wmax(1:imax,1:jmax,1:kmax)) )	   
+	   call check( nf90_put_var(ncid, varid32, Uhormax(1:imax,1:jmax,1:kmax)) )
+	   call check( nf90_put_var(ncid, varid33, U3dmax(1:imax,1:jmax,1:kmax)) )
+       !call check( nf90_put_var(ncid, varid29, Umin(1:imax,1:jmax,1:kmax)) )
+       !call check( nf90_put_var(ncid, varid30, Vmin(1:imax,1:jmax,1:kmax)) )
+       !call check( nf90_put_var(ncid, varid31, Wmin(1:imax,1:jmax,1:kmax)) )	   	   
        call check( nf90_put_var(ncid, varid7, Rrms(1:imax,1:jmax,1:kmax)) )
        call check( nf90_put_var(ncid, varid8, Ravg(1:imax,1:jmax,1:kmax)) )
        call check( nf90_put_var(ncid, varid9, uv_shear(1:imax,1:jmax,1:kmax)) )

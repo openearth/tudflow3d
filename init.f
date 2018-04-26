@@ -1009,7 +1009,7 @@ C ...  Locals
 
 	REAL xx,yy,zz,dxi,dxip
 	REAL xprop2(2),yprop2(2),xprop3(2),yprop3(2),phi,uprop0
-	INTEGER i_min(2),j_min(2),n,tel1,t,nprop2
+	INTEGER i_min(2),j_min(2),n,tel1,t,nprop2,found(2)
 	REAL Ua,YYY,Ax,Aphi,fbx,fbphi,fbx2,fby,fby2,fbz,km
 	REAL sum_profile,tel,dzz,dyy,dxi_min !,dyprop2_min(2)
 !	REAL*4 Ppropx_dummy(0:i1,0:px*jmax+1,0:k1)
@@ -1065,6 +1065,7 @@ C ...  Locals
 	tel1=0
 
 		nprop2=0
+		found=0
 	    do n=1,nprop
                 dxi_min=100000.*dz
 		do i=1,imax
@@ -1073,10 +1074,13 @@ C ...  Locals
 		    yy=Ru(i)*sin_ut(j)
 		    dxi=sqrt((xx-xprop2(n))**2+(yy-yprop2(n))**2)
 		    IF (dxi<dxi_min.and.dxi<3.*sqrt(dr(i)**2+(Rp(i)*dphi2t(j))**2)) THEN
-		        dxi_min=dxi
-			i_min(n)=i
-			j_min(n)=j
-			nprop2=nprop2+1
+			  IF (found(n).eq.0) THEN
+				nprop2=nprop2+1
+				found(n)=1
+			  ENDIF
+		      dxi_min=dxi
+			  i_min(nprop2)=i
+			  j_min(nprop2)=j			  
 		    ENDIF
 		  enddo
 		enddo
@@ -1145,7 +1149,7 @@ C ...  Locals
 			   Ppropz_dummy(i,j,k  )=Ppropz_dummy(i,j,k)+0.5*fbz
 			   Ppropz_dummy(i,j,k-1)=Ppropz_dummy(i,j,k-1)+0.5*fbz
 			  endif			   
-			enddo
+			enddo 
 		enddo
 	      enddo
 		  enddo
@@ -1236,7 +1240,7 @@ C ...  Locals
       	   call mpi_send(Ppropz_dummy(:,0+i*jmax:j1+i*jmax,:),(i1+1)*(j1+1)*(k1+1),MPI_REAL8,i,i+102,MPI_COMM_WORLD,status,ierr)
 	  enddo
 	  Ppropx(:,:,:)=Ppropx_dummy(:,0+rank*jmax:j1+rank*jmax,:)
-	  Ppropy(:,:,:)=Ppropy_dummy(:,0+rank*jmax:j1+rank*jmax,:)
+	  Ppropy(:,:,:)=Ppropy_dummy(:,0+rank*jmax:j1+rank*jmax,:) 
 	  Ppropz(:,:,:)=Ppropz_dummy(:,0+rank*jmax:j1+rank*jmax,:)
 	else
 		call mpi_recv(Ppropx(:,:,:),(i1+1)*(j1+1)*(k1+1),MPI_REAL8,0,rank+100,MPI_COMM_WORLD,status,ierr)

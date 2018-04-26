@@ -27,7 +27,7 @@
       INTEGER Lmix_type,slip_bot,SEM,azi_n,outflow_overflow_down,azi_n2
       REAL ekm_mol,nu_mol,pi,kappa,gx,gy,gz,Cs,Sc,calibfac_sand_pickup,calibfac_Shields_cr
       REAL dt,time_nm,time_n,time_np,t_end,t0_output,dt_output,te_output,dt_max,tstart_rms,CFL,dt_ini,tstart_morf
-      REAL dt_output_movie,t0_output_movie,te_output_movie
+      REAL dt_output_movie,t0_output_movie,te_output_movie,te_rms
       REAL U_b,V_b,W_b,rho_b,W_j,Awjet,Aujet,Avjet,Strouhal,radius_j,kn,W_ox,U_bSEM,V_bSEM,U_w,V_w
       REAL U_j2,Awjet2,Aujet2,Avjet2,Strouhal2,radius_j2,zjet2
       REAL xj(4),yj(4),radius_inner_j,W_j_powerlaw,plume_z_outflow_belowsurf
@@ -144,6 +144,7 @@
 	REAL, DIMENSION(:,:,:),ALLOCATABLE :: Coldbot,Cnewbot,dcdtbot,ccbot,ccoldbot
 	
         REAL, DIMENSION(:,:,:), ALLOCATABLE :: Uavg,Vavg,Wavg,Ravg,Pavg,muavg
+		REAL, DIMENSION(:,:,:), ALLOCATABLE :: Umax,Vmax,Wmax,Uhormax,U3dmax !,Umin,Vmin,Wmin
 	  REAL, DIMENSION(:,:,:), ALLOCATABLE :: sigU2,sigV2,sigW2,sigR2,sigUV,sigUW,sigVW
 	  REAL, DIMENSION(:,:,:,:), ALLOCATABLE :: sigC2,Cavg,sigUC,sigVC,sigWC,Cmax,Cmin
 	  INTEGER stat_count
@@ -194,7 +195,7 @@
 	NAMELIST /simulation/px,imax,jmax,kmax,imax_grid,dr_grid,Rmin,schuif_x,dy,depth,hisfile,restart_dir
      & ,lim_r_grid,fac_r_grid,jmax_grid,lim_y_grid,fac_y_grid,sym_grid_y,dy_grid
 	NAMELIST /times/t_end,t0_output,dt_output,te_output,tstart_rms,dt_max,dt_ini,time_int,CFL,
-     & t0_output_movie,dt_output_movie,te_output_movie,tstart_morf
+     & t0_output_movie,dt_output_movie,te_output_movie,tstart_morf,te_rms
 	NAMELIST /num_scheme/convection,numdiff,diffusion,comp_filter_a,comp_filter_n,CNdiffz,npresIBM,advec_conc,continuity_solver
 	NAMELIST /ambient/U_b,V_b,W_b,bcfile,rho_b,SEM,nmax2,nmax1,nmax3,lm_min,lm_min3,slip_bot,kn,interaction_bed,
      & periodicx,periodicy,dpdx,dpdy,W_ox,Hs,Tp,nx_w,ny_w,obst,bc_obst_h,U_b3,V_b3,surf_layer,wallup,bedlevelfile,
@@ -238,6 +239,7 @@
 	dt_output = -999.
 	te_output = 9.e18 ! if not defined than inf --> continue output towards end simulation
 	tstart_rms = 9.e18
+	te_rms = 1.e19
 	dt_max = -999.
 	dt_ini = -999.
 	time_int=''
@@ -488,6 +490,7 @@
 	IF (dt_output<0.) CALL writeerror(31)
 	IF (te_output<0.) CALL writeerror(31)
 	IF (tstart_rms<0.) CALL writeerror(32)
+	IF (te_rms<tstart_rms) CALL writeerror(36)
 	IF (dt_max<0.) CALL writeerror(33) 
 	IF (dt_ini<0.) THEN 
 	  dt_ini = dt_max
@@ -1407,7 +1410,10 @@
      1                sigUW(1:imax,1:jmax,1:kmax) ,
      1		      sigUC(nfrac,1:imax,1:jmax,1:kmax),sigVC(nfrac,1:imax,1:jmax,1:kmax),
      1                sigWC(nfrac,1:imax,1:jmax,1:kmax),Cmax(nfrac,1:imax,1:jmax,1:kmax),
-     1                Cmin(nfrac,1:imax,1:jmax,1:kmax))
+     1                Cmin(nfrac,1:imax,1:jmax,1:kmax),
+     1            Umax(1:imax,1:jmax,1:kmax),Vmax(1:imax,1:jmax,1:kmax),Wmax(1:imax,1:jmax,1:kmax),
+     1            Uhormax(1:imax,1:jmax,1:kmax),U3dmax(1:imax,1:jmax,1:kmax))
+!     1            Umin(1:imax,1:jmax,1:kmax),Vmin(1:imax,1:jmax,1:kmax),Wmin(1:imax,1:jmax,1:kmax))
  !    1 			,fUavg(1:imax,1:jmax,1:kmax),sigfU2(1:imax,1:jmax,1:kmax))
 
 		stat_count=0
@@ -1433,6 +1439,11 @@
 		Ravg=0.
 		Pavg=0.
 		muavg=0.
+		Umax=0.
+		Vmax=0.
+		Wmax=0.
+		Uhormax=0.
+		U3dmax=0.
 !		sigfU2=0.
 !		fUavg=0.
 	endif  

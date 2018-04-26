@@ -694,13 +694,22 @@
 			kbed(0,0:j1)=kbedin(0:j1)
 			kbedt(0,0:j1)=kbedin(0:j1)			
 			do j=0,j1 
-				do i=0,1 
+				do i=0,1
+					if (kbed(i,j).eq.0) then !if "inflow" bed is zero than force Clivebed and cbotnew to zero
+							Clivebed(n,i,j,0)=0.
+							cbotnew(n,i,j)=0. !make buffer layer empty 
+					endif
 					do k=1,kbed(i,j) ! assign initial bed concentrations; k=0 remains empty
 						do n=1,nfrac
 							Clivebed(n,i,j,k)=c_bed(n)
 							cbotnew(n,i,j)=0. !make buffer layer empty 
 						enddo
 					enddo
+					do k=kbed(i,j)+1,kmax ! remove all bed-sediment above new bed
+						do n=1,nfrac
+							Clivebed(n,i,j,k)=0.
+						enddo
+					enddo					
 				enddo
 			enddo		  			
 		ENDIF	
