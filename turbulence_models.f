@@ -1696,116 +1696,115 @@ c*************************************************************
         enddo
 		 
 		
-	if (.true.) then	
 	  do j=1,jmax
 	    do i=1,imax
 	     do k=1,kmax
-!			u1u1a=0.
-!		    u1u2a=0.
-!		    u1u3a=0.
-!		    u2u2a=0.
-!		    u2u3a=0.
-!		    u3u3a=0.
-!		    u1a  =0.
-!		    u2a  =0.
-!		    u3a  =0.
-!		    Sabsa=0.
-!		    Sd11a=0.
-!		    Sd12a=0.
-!		    Sd13a=0.
-!		    Sd22a=0.
-!		    Sd23a=0.
-!		    Sd33a=0.
-!			SabsSd11a=0.
-!			SabsSd12a=0.
-!			SabsSd13a=0.
-!			SabsSd22a=0.
-!			SabsSd23a=0.
-!		    SabsSd33a=0.	 
+			u1u1a=0.
+		    u1u2a=0.
+		    u1u3a=0.
+		    u2u2a=0.
+		    u2u3a=0.
+		    u3u3a=0.
+		    u1a  =0.
+		    u2a  =0.
+		    u3a  =0.
+		    Sabsa=0.
+		    Sd11a=0.
+		    Sd12a=0.
+		    Sd13a=0.
+		    Sd22a=0.
+		    Sd23a=0.
+		    Sd33a=0.
+			SabsSd11a=0.
+			SabsSd12a=0.
+			SabsSd13a=0.
+			SabsSd22a=0.
+			SabsSd23a=0.
+		    SabsSd33a=0.	 
 !		
 !		!kkk=(/k-1,k,k+1/)
 !		 ! the following 3x3x3 loop is very very expensive for very large simulations: with 55 milj cells on 2 16 core machines this loop alone gives 70% extra CPU time
 		 ! for smaller problems the total extra CPU time of DSMAG is in the order of 25%
 		 ! probably has to do with memory limitations, increasing KMP_STACKSIZE from 4g to 32g improved the overall simulation time with DSMAG with 25% and did nothing for sims with other sgs models
 		 ! rewriting it in SUM formulation gave some small increase in CPU speed
-!		   do ii=i-1,i+1
-!		     do jj=j-1,j+1
-!			   do kk=k-1,k+1
-!			     u1u1a=u1u1a+u1(ii,jj,kk)*u1(ii,jj,kk)
-!				 u1u2a=u1u2a+u1(ii,jj,kk)*u2(ii,jj,kk)
-!				 u1u3a=u1u3a+u1(ii,jj,kk)*u3(ii,jj,kk)
-!				 u2u2a=u2u2a+u2(ii,jj,kk)*u2(ii,jj,kk)
-!				 u2u3a=u2u3a+u2(ii,jj,kk)*u3(ii,jj,kk)
-!				 u3u3a=u3u3a+u3(ii,jj,kk)*u3(ii,jj,kk)
-!				 u1a  =u1a  +u1(ii,jj,kk)
-!				 u2a  =u2a  +u2(ii,jj,kk)
-!				 u3a  =u3a  +u3(ii,jj,kk)
-!				 Sabsa=Sabsa+Sabs(ii,jj,kk)
-!				 Sd11a=Sd11a+Sd11(ii,jj,kk)
-!				 Sd12a=Sd12a+Sd12(ii,jj,kk)
-!				 Sd13a=Sd13a+Sd13(ii,jj,kk)
-!				 Sd22a=Sd22a+Sd22(ii,jj,kk)
-!				 Sd23a=Sd23a+Sd23(ii,jj,kk)
-!				 Sd33a=Sd33a+Sd33(ii,jj,kk)
-!				 
-!				 SabsSd11a=SabsSd11a+Sabs(ii,jj,kk)*Sd11(ii,jj,kk)
-!				 SabsSd12a=SabsSd12a+Sabs(ii,jj,kk)*Sd12(ii,jj,kk)
-!				 SabsSd13a=SabsSd13a+Sabs(ii,jj,kk)*Sd13(ii,jj,kk)
-!				 SabsSd22a=SabsSd22a+Sabs(ii,jj,kk)*Sd22(ii,jj,kk)
-!				 SabsSd23a=SabsSd23a+Sabs(ii,jj,kk)*Sd23(ii,jj,kk)
-!				 SabsSd33a=SabsSd33a+Sabs(ii,jj,kk)*Sd33(ii,jj,kk)
-!		       enddo
-!		     enddo
-!		   enddo
-!	   
-!		   	u1u1a=u1u1a*inv27
-!		    u1u2a=u1u2a*inv27
-!		    u1u3a=u1u3a*inv27
-!		    u2u2a=u2u2a*inv27
-!		    u2u3a=u2u3a*inv27
-!		    u3u3a=u3u3a*inv27
-!		    u1a  =u1a  *inv27
-!		    u2a  =u2a  *inv27
-!		    u3a  =u3a  *inv27
-!		    Sabsa=Sabsa*inv27
-!		    Sd11a=Sd11a*inv27
-!		    Sd12a=Sd12a*inv27
-!		    Sd13a=Sd13a*inv27
-!		    Sd22a=Sd22a*inv27
-!		    Sd23a=Sd23a*inv27
-!		    Sd33a=Sd33a*inv27
-!			SabsSd11a=SabsSd11a*inv27
-!			SabsSd12a=SabsSd12a*inv27
-!			SabsSd13a=SabsSd13a*inv27
-!			SabsSd22a=SabsSd22a*inv27
-!			SabsSd23a=SabsSd23a*inv27
-!		    SabsSd33a=SabsSd33a*inv27
+		   do ii=i-1,i+1
+		     do jj=j-1,j+1
+			   do kk=k-1,k+1
+			     u1u1a=u1u1a+u1(ii,jj,kk)*u1(ii,jj,kk)
+				 u1u2a=u1u2a+u1(ii,jj,kk)*u2(ii,jj,kk)
+				 u1u3a=u1u3a+u1(ii,jj,kk)*u3(ii,jj,kk)
+				 u2u2a=u2u2a+u2(ii,jj,kk)*u2(ii,jj,kk)
+				 u2u3a=u2u3a+u2(ii,jj,kk)*u3(ii,jj,kk)
+				 u3u3a=u3u3a+u3(ii,jj,kk)*u3(ii,jj,kk)
+				 u1a  =u1a  +u1(ii,jj,kk)
+				 u2a  =u2a  +u2(ii,jj,kk)
+				 u3a  =u3a  +u3(ii,jj,kk)
+				 Sabsa=Sabsa+Sabs(ii,jj,kk)
+				 Sd11a=Sd11a+Sd11(ii,jj,kk)
+				 Sd12a=Sd12a+Sd12(ii,jj,kk)
+				 Sd13a=Sd13a+Sd13(ii,jj,kk)
+				 Sd22a=Sd22a+Sd22(ii,jj,kk)
+				 Sd23a=Sd23a+Sd23(ii,jj,kk)
+				 Sd33a=Sd33a+Sd33(ii,jj,kk)
+				 
+				 SabsSd11a=SabsSd11a+Sabs(ii,jj,kk)*Sd11(ii,jj,kk)
+				 SabsSd12a=SabsSd12a+Sabs(ii,jj,kk)*Sd12(ii,jj,kk)
+				 SabsSd13a=SabsSd13a+Sabs(ii,jj,kk)*Sd13(ii,jj,kk)
+				 SabsSd22a=SabsSd22a+Sabs(ii,jj,kk)*Sd22(ii,jj,kk)
+				 SabsSd23a=SabsSd23a+Sabs(ii,jj,kk)*Sd23(ii,jj,kk)
+				 SabsSd33a=SabsSd33a+Sabs(ii,jj,kk)*Sd33(ii,jj,kk)
+		       enddo
+		     enddo
+		   enddo
+	   
+		   	u1u1a=u1u1a*inv27
+		    u1u2a=u1u2a*inv27
+		    u1u3a=u1u3a*inv27
+		    u2u2a=u2u2a*inv27
+		    u2u3a=u2u3a*inv27
+		    u3u3a=u3u3a*inv27
+		    u1a  =u1a  *inv27
+		    u2a  =u2a  *inv27
+		    u3a  =u3a  *inv27
+		    Sabsa=Sabsa*inv27
+		    Sd11a=Sd11a*inv27
+		    Sd12a=Sd12a*inv27
+		    Sd13a=Sd13a*inv27
+		    Sd22a=Sd22a*inv27
+		    Sd23a=Sd23a*inv27
+		    Sd33a=Sd33a*inv27
+			SabsSd11a=SabsSd11a*inv27
+			SabsSd12a=SabsSd12a*inv27
+			SabsSd13a=SabsSd13a*inv27
+			SabsSd22a=SabsSd22a*inv27
+			SabsSd23a=SabsSd23a*inv27
+		    SabsSd33a=SabsSd33a*inv27
 
-		     iii=(/i-1,i,i+1/)
-		     jjj=(/j-1,j,j+1/)
-		     kkk=(/k-1,k,k+1/)			
-			 u1u1a=inv27*SUM(u1(iii,jjj,kkk)*u1(iii,jjj,kkk))
-			 u1u2a=inv27*SUM(u1(iii,jjj,kkk)*u2(iii,jjj,kkk))
-			 u1u3a=inv27*SUM(u1(iii,jjj,kkk)*u3(iii,jjj,kkk))
-			 u2u2a=inv27*SUM(u2(iii,jjj,kkk)*u2(iii,jjj,kkk))
-			 u2u3a=inv27*SUM(u2(iii,jjj,kkk)*u3(iii,jjj,kkk))
-			 u3u3a=inv27*SUM(u3(iii,jjj,kkk)*u3(iii,jjj,kkk))
-			 u1a  =inv27*SUM(u1(iii,jjj,kkk))
-			 u2a  =inv27*SUM(u2(iii,jjj,kkk))
-			 u3a  =inv27*SUM(u3(iii,jjj,kkk))
-			 Sabsa=inv27*SUM(Sabs(iii,jjj,kkk))
-			 Sd11a=inv27*SUM(Sd11(iii,jjj,kkk))
-			 Sd12a=inv27*SUM(Sd12(iii,jjj,kkk))
-			 Sd13a=inv27*SUM(Sd13(iii,jjj,kkk))
-			 Sd22a=inv27*SUM(Sd22(iii,jjj,kkk))
-			 Sd23a=inv27*SUM(Sd23(iii,jjj,kkk))
-			 Sd33a=inv27*SUM(Sd33(iii,jjj,kkk))
-			 SabsSd11a=inv27*SUM(Sabs(iii,jjj,kkk)*Sd11(iii,jjj,kkk))
-			 SabsSd12a=inv27*SUM(Sabs(iii,jjj,kkk)*Sd12(iii,jjj,kkk))
-			 SabsSd13a=inv27*SUM(Sabs(iii,jjj,kkk)*Sd13(iii,jjj,kkk))
-			 SabsSd22a=inv27*SUM(Sabs(iii,jjj,kkk)*Sd22(iii,jjj,kkk))
-			 SabsSd23a=inv27*SUM(Sabs(iii,jjj,kkk)*Sd23(iii,jjj,kkk))
-			 SabsSd33a=inv27*SUM(Sabs(iii,jjj,kkk)*Sd33(iii,jjj,kkk))		
+!		     iii=(/i-1,i,i+1/)
+!		     jjj=(/j-1,j,j+1/)
+!		     kkk=(/k-1,k,k+1/)			
+!			 u1u1a=inv27*SUM(u1(iii,jjj,kkk)*u1(iii,jjj,kkk))
+!			 u1u2a=inv27*SUM(u1(iii,jjj,kkk)*u2(iii,jjj,kkk))
+!			 u1u3a=inv27*SUM(u1(iii,jjj,kkk)*u3(iii,jjj,kkk))
+!			 u2u2a=inv27*SUM(u2(iii,jjj,kkk)*u2(iii,jjj,kkk))
+!			 u2u3a=inv27*SUM(u2(iii,jjj,kkk)*u3(iii,jjj,kkk))
+!			 u3u3a=inv27*SUM(u3(iii,jjj,kkk)*u3(iii,jjj,kkk))
+!			 u1a  =inv27*SUM(u1(iii,jjj,kkk))
+!			 u2a  =inv27*SUM(u2(iii,jjj,kkk))
+!			 u3a  =inv27*SUM(u3(iii,jjj,kkk))
+!			 Sabsa=inv27*SUM(Sabs(iii,jjj,kkk))
+!			 Sd11a=inv27*SUM(Sd11(iii,jjj,kkk))
+!			 Sd12a=inv27*SUM(Sd12(iii,jjj,kkk))
+!			 Sd13a=inv27*SUM(Sd13(iii,jjj,kkk))
+!			 Sd22a=inv27*SUM(Sd22(iii,jjj,kkk))
+!			 Sd23a=inv27*SUM(Sd23(iii,jjj,kkk))
+!			 Sd33a=inv27*SUM(Sd33(iii,jjj,kkk))
+!			 SabsSd11a=inv27*SUM(Sabs(iii,jjj,kkk)*Sd11(iii,jjj,kkk))
+!			 SabsSd12a=inv27*SUM(Sabs(iii,jjj,kkk)*Sd12(iii,jjj,kkk))
+!			 SabsSd13a=inv27*SUM(Sabs(iii,jjj,kkk)*Sd13(iii,jjj,kkk))
+!			 SabsSd22a=inv27*SUM(Sabs(iii,jjj,kkk)*Sd22(iii,jjj,kkk))
+!			 SabsSd23a=inv27*SUM(Sabs(iii,jjj,kkk)*Sd23(iii,jjj,kkk))
+!			 SabsSd33a=inv27*SUM(Sabs(iii,jjj,kkk)*Sd33(iii,jjj,kkk))		
 			
 			L11 = u1u1a - u1a*u1a
 			L12 = u1u2a - u1a*u2a
@@ -1831,7 +1830,6 @@ c*************************************************************
    	     enddo			
 	  enddo
 	enddo
-	endif 
 	
 !!      Boundary conditions Neumann
         call shiftf(ekm,ebf) 

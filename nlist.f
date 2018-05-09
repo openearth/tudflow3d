@@ -91,7 +91,7 @@
       INTEGER*2, DIMENSION(:),ALLOCATABLE :: i_inVpunt_tauTSHD,j_inVpunt_tauTSHD,k_inVpunt_tauTSHD
       INTEGER*2, DIMENSION(:),ALLOCATABLE :: i_inVpunt_rudder,j_inVpunt_rudder,k_inVpunt_rudder
       INTEGER*2, DIMENSION(:),ALLOCATABLE :: i_inWpunt_suction,j_inWpunt_suction,k_inWpunt_suction
-      REAL, DIMENSION(:),ALLOCATABLE :: Ubot_TSHD,Vbot_TSHD,facIBMu,facIBMv,facIBMw
+      REAL, DIMENSION(:),ALLOCATABLE :: Ubot_TSHD,Vbot_TSHD !,facIBMu,facIBMv,facIBMw
       INTEGER*8, DIMENSION(:),ALLOCATABLE :: pt,pt3
 
       INTEGER*2, DIMENSION(:,:,:),ALLOCATABLE :: llist1,llist2,llist3
@@ -1105,35 +1105,23 @@
 	ALLOCATE(k_inPpunt2(k1*j1))
 	ALLOCATE(j_inPpunt2(k1*j1))
 
-!	ii=(i1+1)*(j1+1)*(k1+1)
-!	ALLOCATE(i_inPpuntTSHD(ii))
-!	ALLOCATE(j_inPpuntTSHD(ii))
-!	ALLOCATE(k_inPpuntTSHD(ii))
-!	ALLOCATE(i_inUpuntTSHD(ii))
-!	ALLOCATE(j_inUpuntTSHD(ii))
-!	ALLOCATE(k_inUpuntTSHD(ii))
-!	ALLOCATE(i_inVpuntTSHD(ii))
-!	ALLOCATE(j_inVpuntTSHD(ii))
-!	ALLOCATE(k_inVpuntTSHD(ii))
-!	ALLOCATE(i_inWpuntTSHD(ii))
-!	ALLOCATE(j_inWpuntTSHD(ii))
-!	ALLOCATE(k_inWpuntTSHD(ii))
 	ALLOCATE(Ubot_TSHD(0:j1))
 	ALLOCATE(Vbot_TSHD(0:j1))
-	ALLOCATE(i_inVpunt_rudder(k1*i1))
-	ALLOCATE(j_inVpunt_rudder(k1*i1))
-	ALLOCATE(k_inVpunt_rudder(k1*i1))
-	ALLOCATE(i_inWpunt_suction(i1*j1))
-	ALLOCATE(j_inWpunt_suction(i1*j1))
-	ALLOCATE(k_inWpunt_suction(i1*j1))
+	IF (LOA>0) THEN
+		ALLOCATE(i_inVpunt_rudder(k1*i1))
+		ALLOCATE(j_inVpunt_rudder(k1*i1))
+		ALLOCATE(k_inVpunt_rudder(k1*i1))
+		ALLOCATE(i_inWpunt_suction(i1*j1))
+		ALLOCATE(j_inWpunt_suction(i1*j1))
+		ALLOCATE(k_inWpunt_suction(i1*j1))
 
-
-	ALLOCATE(i_inUpunt_tauTSHD((i1+1)*(j1+1)))
-	ALLOCATE(j_inUpunt_tauTSHD((i1+1)*(j1+1)))
-	ALLOCATE(k_inUpunt_tauTSHD((i1+1)*(j1+1)))
-	ALLOCATE(i_inVpunt_tauTSHD((i1+1)*(j1+1)))
-	ALLOCATE(j_inVpunt_tauTSHD((i1+1)*(j1+1)))
-	ALLOCATE(k_inVpunt_tauTSHD((i1+1)*(j1+1)))
+		ALLOCATE(i_inUpunt_tauTSHD((i1+1)*(j1+1)))
+		ALLOCATE(j_inUpunt_tauTSHD((i1+1)*(j1+1)))
+		ALLOCATE(k_inUpunt_tauTSHD((i1+1)*(j1+1)))
+		ALLOCATE(i_inVpunt_tauTSHD((i1+1)*(j1+1)))
+		ALLOCATE(j_inVpunt_tauTSHD((i1+1)*(j1+1)))
+		ALLOCATE(k_inVpunt_tauTSHD((i1+1)*(j1+1)))
+	ENDIF
 
 
 	Ubot_TSHD=0.
@@ -1169,13 +1157,15 @@
 	ALLOCATE(rhocorr_air_z(1:nfrac,0:k1))
 
 	IF (SEM.eq.1) THEN
-	IF (rank.eq.0.or.rank.eq.px-1) THEN
+	IF (nmax1.gt.0.or.nmax2.gt.0) THEN
+	  IF (rank.eq.0.or.rank.eq.px-1) THEN
 		ALLOCATE(llist1(0:i1,1:kmax,1:2000))
-	ENDIF
-	ALLOCATE(llist2(0:j1,1:kmax,1:1000))
+	  ENDIF
+	  ALLOCATE(llist2(0:j1,1:kmax,1:1000))
+	  ALLOCATE(llmax1(0:i1,1:kmax))
+	  ALLOCATE(llmax2(0:j1,1:kmax))	  	  
+	ENDIF	
 	ALLOCATE(AA(3,3,1:kmax))
-	ALLOCATE(llmax1(0:i1,1:kmax))
-	ALLOCATE(llmax2(0:j1,1:kmax))
 	ALLOCATE(xSEM1(nmax1))
 	ALLOCATE(ySEM1(nmax1))
 	ALLOCATE(zSEM1(nmax1))
@@ -1192,9 +1182,11 @@
 	ALLOCATE(lmxSEM2(nmax2))
 	ALLOCATE(lmySEM2(nmax2))
 	ALLOCATE(lmzSEM2(nmax2))
-	ALLOCATE(llist3(0:i1,0:j1,1:1000))
-	ALLOCATE(AA3(3,3,0:i1,0:j1))
-	ALLOCATE(llmax3(0:i1,0:j1))
+	IF (nmax3.gt.0) THEN
+	  ALLOCATE(llist3(0:i1,0:j1,1:1000))
+	  ALLOCATE(llmax3(0:i1,0:j1))
+	ENDIF
+	ALLOCATE(AA3(3,3,0:i1,0:j1))	
 	ALLOCATE(rSEM3(nmax3))
 	ALLOCATE(thetaSEM3(nmax3))
 	ALLOCATE(zSEM3(nmax3))
@@ -1236,12 +1228,16 @@
 	ALLOCATE(Coldbot(nfrac,0:i1,0:j1))
 	ALLOCATE(Cnewbot(nfrac,0:i1,0:j1))
 	ALLOCATE(dCdtbot(nfrac,0:i1,0:j1))
-	ALLOCATE(bednotfixed(0:i1,0:j1,0:k1))	
-	ALLOCATE(bednotfixed_depo(0:i1,0:j1,0:k1))
-	bednotfixed=1. !default avalanche or erosion is allowed everywhere, only in obstacles connected to bed not allowed, see init.f
-	bednotfixed_depo=1. !default deposition is allowed everywhere, only in obstacles connected to bed not allowed, see init.f
-	ALLOCATE(Clivebed(nfrac,0:i1,0:j1,0:k1))
-	Clivebed=0.
+	IF ((nobst.gt.0.or.LOA.gt.0.).and.interaction_bed.ge.4) THEN
+	  ALLOCATE(bednotfixed(0:i1,0:j1,0:k1))	
+	  ALLOCATE(bednotfixed_depo(0:i1,0:j1,0:k1))
+	  bednotfixed=1. !default avalanche or erosion is allowed everywhere, only in obstacles connected to bed not allowed, see init.f
+	  bednotfixed_depo=1. !default deposition is allowed everywhere, only in obstacles connected to bed not allowed, see init.f
+	ENDIF
+	IF (interaction_bed.ge.4) THEN
+	  ALLOCATE(Clivebed(nfrac,0:i1,0:j1,0:k1))
+	  Clivebed=0.
+	ENDIF
 
 	
 	ALLOCATE(Ppropx(0:i1,0:j1,0:k1))
@@ -1287,7 +1283,9 @@
 ! 	ALLOCATE(sigR2(0:i1,0:j1,0:k1))
 	ALLOCATE(p(1:imax,1:jmax,1:kmax))
 	ALLOCATE(pold(1:imax,1:jmax,1:kmax))
-	ALLOCATE(Csgrid(1:imax,1:jmax,1:kmax))
+	if (sgs_model.eq.'DSmag') then
+	  ALLOCATE(Csgrid(1:imax,1:jmax,1:kmax))
+	endif
 	p=0.
 	pold=0.
 	IF (time_int.eq.'AB2'.or.time_int.eq.'AB3'.or.time_int.eq.'ABv') THEN

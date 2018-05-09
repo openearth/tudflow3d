@@ -3917,14 +3917,14 @@ C..
         DO i = 1, 64
             iparm(i) = 0
         END DO
-        iparm(1) = 0 !1 ! no solver default
+        iparm(1) = 0 ! solver defaults iparm(2)-iparm(64)
         iparm(2) = 2 ! fill-in reordering from METIS
         iparm(4) = 0 ! no iterative-direct algorithm
         iparm(5) = 0 ! no user fill-in reducing permutation
         iparm(6) = 0 ! =0 solution on the first n components of x
         iparm(8) = 2 ! numbers of iterative refinement steps
-        iparm(10) = 13 !8 !13 ! perturb the pivot elements with 1E-13; 8 default for symmetric matrix according to https://software.intel.com/en-us/node/470298
-        iparm(11) = 1 !1 ! use nonsymmetric permutation and scaling MPS; 0 default for symmetric matrix according to https://software.intel.com/en-us/node/470298
+        iparm(10) = 8 !13 ! perturb the pivot elements with 1E-13; 8 default for symmetric matrix according to https://software.intel.com/en-us/node/470298
+        iparm(11) = 0 !1 ! use nonsymmetric permutation and scaling MPS; 0 default for symmetric matrix according to https://software.intel.com/en-us/node/470298
         iparm(13) = 0 ! maximum weighted matching algorithm is switched-off (default for symmetric). Try iparm(13) = 1 in case of inappropriate accuracy
         iparm(14) = 0 ! Output: number of perturbed pivots
         iparm(18) = -1 ! Output: number of nonzeros in the factor LU
@@ -3932,7 +3932,8 @@ C..
         iparm(20) = 0 ! Output: Numbers of CG Iterations
         error = 0 ! initialize error flag
         msglvl = 0 !1 ! print statistical information
-        mtype = 11 !-2 ! symmetric, indefinite; ldw: for tudflow3d incorrect solution is obtained with -2 and upper diagonal CSR matrix A? 
+        mtype = 1 !1=Real and structurally symmetric; 11=Real and nonsymmetric matrix both work; 1 uses 10% less memory and is 10% faster for large problems
+
 		
 !.. Initialize the internal solver memory pointer. This is only
 ! necessary for the FIRST call of the PARDISO solver.
@@ -4049,7 +4050,7 @@ C.. Fill all arrays containing matrix data.
 
         error = 0 ! initialize error flag
         msglvl = 0 !1 ! print statistical information
-        mtype = 11 !-2 ! symmetric, indefinite
+        mtype = 1 !1 !11 !-2 ! symmetric, indefinite
 		
 		
 	!   set up lookup tables
