@@ -3763,6 +3763,9 @@ C.. All other variables
 	  
       pi = 4.*atan(1.)
 	  
+	  !! TEST 9-5-2018 FOUND THAT PERIODIC (X AND Y) SIMS DO RUN WITH PARDISO AND RESULTS LOOK FINE, HOWEVER THE CONTINUITY ERROR IS E-3 INSTEAD OF E-10 WITH FFT-P-SOLVER
+	  !! HAVE TO LOOK INTO THIS FURTHER IN CASE PERIODIC SIMS WITH PARDISO ARE NEEDED
+	  
 	  !   tridiagonal system in r-direction:
       do i=1,imax
         ar(i)= Ru(I-1)/((Rp(I)-Rp(I-1))*Rp(I)*(Ru(I)-Ru(I-1)))
@@ -3775,7 +3778,7 @@ C.. All other variables
 		aar(1:imax)=ar(1:imax)
 		ccr(1:imax)=cr(1:imax)
 		if (periodicx.eq.0.or.periodicx.eq.2) then
-			br(imax)=br(imax)-cr(imax) !! p(imax+1)=-p(imax); p=0 at full bc; don't do this, make p=0 at one location at outflow bc
+			br(imax)=br(imax)-cr(imax) !! p(imax+1)=-p(imax); p=0 at full bc; 
 			br(1)=br(1)+ar(1) !dpdn=0
 			cr(imax)=0. !no interaction
 			ar(1)=0. !no interaction	
@@ -3924,15 +3927,15 @@ C..
         iparm(6) = 0 ! =0 solution on the first n components of x
         iparm(8) = 2 ! numbers of iterative refinement steps
         iparm(10) = 8 !13 ! perturb the pivot elements with 1E-13; 8 default for symmetric matrix according to https://software.intel.com/en-us/node/470298
-        iparm(11) = 0 !1 ! use nonsymmetric permutation and scaling MPS; 0 default for symmetric matrix according to https://software.intel.com/en-us/node/470298
-        iparm(13) = 0 ! maximum weighted matching algorithm is switched-off (default for symmetric). Try iparm(13) = 1 in case of inappropriate accuracy
+        iparm(11) = 0 !0 !1 ! use nonsymmetric permutation and scaling MPS; 0 default for symmetric matrix according to https://software.intel.com/en-us/node/470298
+        iparm(13) = 1 ! maximum weighted matching algorithm is switched-off (default for symmetric). Try iparm(13) = 1 in case of inappropriate accuracy
         iparm(14) = 0 ! Output: number of perturbed pivots
         iparm(18) = -1 ! Output: number of nonzeros in the factor LU
         iparm(19) = -1 ! Output: Mflops for LU factorization
         iparm(20) = 0 ! Output: Numbers of CG Iterations
         error = 0 ! initialize error flag
         msglvl = 0 !1 ! print statistical information
-        mtype = 1 !1=Real and structurally symmetric; 11=Real and nonsymmetric matrix both work; 1 uses 10% less memory and is 10% faster for large problems
+        mtype = 1 !11 !1=Real and structurally symmetric; 11=Real and nonsymmetric matrix both work; 1 uses 10% less memory and is 10% faster for large problems
 
 		
 !.. Initialize the internal solver memory pointer. This is only
@@ -4050,7 +4053,7 @@ C.. Fill all arrays containing matrix data.
 
         error = 0 ! initialize error flag
         msglvl = 0 !1 ! print statistical information
-        mtype = 1 !1 !11 !-2 ! symmetric, indefinite
+        mtype = 1 !11 !1 !11 !-2 ! symmetric, indefinite
 		
 		
 	!   set up lookup tables

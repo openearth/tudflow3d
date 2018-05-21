@@ -415,6 +415,7 @@
 
 	integer n,r,nf
 	
+	IF (istep.lt.200000) THEN
 	his(1)%t(istep)=time_np !Unew is already updated, therefore it is output at time_np
 	DO n=1,nhispoint
 	  r=INT((his(n)%j-1)/jmax)
@@ -427,11 +428,12 @@
 	    his(n)%W(istep)=Wnew(i,j,k)
 	    his(n)%P(istep)=Pold(i,j,k)+P(i,j,k)
 	    his(n)%RHO(istep)=Rnew(i,j,k)
-	    DO nf=1,nfrac
+	    DO nf=1,MIN(20,nfrac)
 	    	his(n)%C(nf,istep)=Cnew(nf,i,j,k)
 	    ENDDO
 	  ENDIF
 	ENDDO
+	ENDIF
 	end SUBROUTINE
 
 ! 	subroutine finalize_his(rank,istep)
@@ -464,7 +466,7 @@
        integer :: ncid, varid1,varid2,varid3, varid4, varid5, varid6, varid7, varid8 
        integer :: varid9,varid10,varid11,varid12,varid13
        integer :: dimids1(NDIMS1), dimids2(NDIMS2),dimids3(NDIMS3),dimids4(NDIMS4)
-       integer :: nhis_dimid,time_dimid,nfrac_dimid
+       integer :: nhis_dimid,time_dimid,nfrac_dimid,istep2
 	character(1024) :: svnversion
 	character(1024) :: svnurl
       include 'version.inc'
@@ -503,16 +505,17 @@
 	  ENDDO
 	ENDIF
 
+	istep2=MIN(istep,200000) ! array size is max 200000
 	IF (rank.eq.0) THEN
 	  DO n=1,nhispoint
-	    Uhis(n,1:istep)=his(n)%U(1:istep)
-	    Vhis(n,1:istep)=his(n)%V(1:istep)
-	    Whis(n,1:istep)=his(n)%W(1:istep)
-	    DO k=1,nfrac
-	      Chis(k,n,1:istep)=his(n)%C(k,1:istep)
+	    Uhis(n,1:istep2)=his(n)%U(1:istep2)
+	    Vhis(n,1:istep2)=his(n)%V(1:istep2)
+	    Whis(n,1:istep2)=his(n)%W(1:istep2)
+	    DO k=1,MIN(nfrac,20)
+	      Chis(k,n,1:istep2)=his(n)%C(k,1:istep2)
 	    ENDDO
-	    Phis(n,1:istep)=his(n)%P(1:istep)
-	    RHOhis(n,1:istep)=his(n)%RHO(1:istep)
+	    Phis(n,1:istep2)=his(n)%P(1:istep2)
+	    RHOhis(n,1:istep2)=his(n)%RHO(1:istep2)
 		
 	    xhis(n)=his(n)%x
 	    yhis(n)=his(n)%y

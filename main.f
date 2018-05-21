@@ -305,7 +305,8 @@
 			call statistics
 		endif
 		if (time_np.ge.te_rms.and.time_n.lt.te_rms) then ! write output statistics at te_rms to have them available also when simulation crashes after te_rms
-			call output_stat_nc(time_n)
+			call output_stat_nc(time_n)		
+			write(*,*),'RMS and AVG output written to file'			
 		endif		
 
 !		if (time_np.ge.t_output) then
@@ -346,6 +347,7 @@
 
 	if (time_n.ge.tstart_rms.and.te_rms.gt.t_end) then ! write output statistics only when not already written
 		call output_stat_nc(time_n)
+		write(*,*),'RMS and AVG output written to file'
 	endif
 		if (hisfile.ne.'') then
 		  call finalize_his!(rank,istep)
