@@ -497,14 +497,20 @@ c******************************************************************
 	   ENDIF
 	    IF (bp(n)%u.ne.-99999.and.bp(n).t0.eq.0.) THEN
 	      Uold(i,j,k)=bp(n)%u*cos_u(j)+bp(n)%v*sin_u(j)
+		  Uold(MAX(i-1,0),j,k)=bp(n)%u*cos_u(j)+bp(n)%v*sin_u(j)
 	      Vold(i,j,k)=-bp(n)%u*sin_v(j)+bp(n)%v*cos_v(j) 
+		  Vold(i,MAX(j-1,0),k)=-bp(n)%u*sin_v(MAX(j-1,0))+bp(n)%v*cos_v(MAX(j-1,0)) 
 	      Wold(i,j,k)=bp(n)%w
+		  Wold(i,j,MAX(k-1,0))=bp(n)%w
 	      Unew(i,j,k)=Uold(i,j,k)
 	      Vnew(i,j,k)=Vold(i,j,k)
 	      Wnew(i,j,k)=bp(n)%w
 	      dUdt(i,j,k)=Uold(i,j,k)*rnew(i,j,k)
+		  dUdt(MAX(i-1,0),j,k)=Uold(MAX(i-1,0),j,k)*rnew(MAX(i-1,0),j,k)
 	      dVdt(i,j,k)=Vold(i,j,k)*rnew(i,j,k)
+		  dVdt(i,MAX(j-1,0),k)=Vold(i,MAX(j-1,0),k)*rnew(i,MAX(j-1,0),k)
 	      dWdt(i,j,k)=bp(n)%w*rnew(i,j,k)
+		  dWdt(i,j,MAX(k-1,0))=bp(n)%w*rnew(i,j,MAX(k-1,0))
 	    ENDIF
 	   endif
 	  enddo

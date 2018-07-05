@@ -794,7 +794,9 @@ c get stuff from other CPU's
 	  ENDIF
 	  if (inout.eq.1) then
 		Ubound(i,j,k)=bp(n)%u*cos_u(j)+bp(n)%v*sin_u(j)
+		Ubound(MAX(i-1,0),j,k)=bp(n)%u*cos_u(j)+bp(n)%v*sin_u(j)
 		Vbound(i,j,k)=-bp(n)%u*sin_v(j)+bp(n)%v*cos_v(j)
+		Vbound(i,MAX(j-1,0),k)=-bp(n)%u*sin_v(MAX(j-1,0))+bp(n)%v*cos_v(MAX(j-1,0))
 		Wbound(i,j,k)=bp(n)%w
 		Wbound(i,j,MAX(k-1,0))=bp(n)%w
 	   endif
@@ -1501,9 +1503,11 @@ c get stuff from other CPU's
 	  ENDIF
 	  if (inout.eq.1) then
 		Ubound(i,j,k)=(bp(n)%u*cos_u(j)+bp(n)%v*sin_u(j))*rho(i,j,k)
+		Ubound(MAX(i-1,0),j,k)=(bp(n)%u*cos_u(j)+bp(n)%v*sin_u(j))*rho(MAX(i-1,0),j,k)
 		Vbound(i,j,k)=(-bp(n)%u*sin_v(j)+bp(n)%v*cos_v(j))*rho(i,j,k)
+		Vbound(i,MAX(j-1,0),k)=(-bp(n)%u*sin_v(MAX(j-1,0))+bp(n)%v*cos_v(MAX(j-1,0)))*rho(i,MAX(j-1,0),k)
 		Wbound(i,j,k)=bp(n)%w*rho(i,j,k)
-		Wbound(i,j,MAX(k-1,0))=bp(n)%w*rho(i,j,k)
+		Wbound(i,j,MAX(k-1,0))=bp(n)%w*rho(i,j,MAX(k-1,0))
 	   endif
 	  enddo
 	 enddo

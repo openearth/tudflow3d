@@ -351,6 +351,7 @@
 	endif
 		if (hisfile.ne.'') then
 		  call finalize_his!(rank,istep)
+		  write(*,*),'HIS output written to file'
 		endif
 
       call mpi_finalize(ierr,istep)
