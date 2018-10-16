@@ -267,6 +267,10 @@
 	CASE(087)
 		write(*,*) '# namelist &LESmodel                             #'			
 		write(*,*) '# damping_b1 or b2 [-] is not defined            #'	
+	CASE(088)
+		write(*,*) '# namelist &LESmodel                             #'			
+		write(*,*) '# extra_mix_visc is not defined                  #'	
+		write(*,*) '# choose ''none'',or ''Krie''                        #'	
 	CASE(090)
 		write(*,*) '# namelist &constants                            #'			
 		write(*,*) '# kappa is not defined                           #'	

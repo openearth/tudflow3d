@@ -51,6 +51,7 @@
 !	determined for 0<c<0.05 and 0.01<Rep<1e3
 	  frac(n)%n=(6.5+0.3*Re_p**0.74)/(1.+0.1*Re_p**0.74)
 	  ENDIF
+	  write(*,*),'fraction #,ws,Re_p,n-factor hindered settling:',n,frac(n)%ws,Re_p,frac(n)%n
 	ENDDO
 
 	rhocorr_air_z=1.
@@ -68,18 +69,18 @@
 	
       END SUBROUTINE init_sediment
 
-      SUBROUTINE slipvelocity(csed,Wcfd,wsed,rr,k1b,k1e,Wfluid,dt,dz)
+      SUBROUTINE slipvelocity(csed,Wcfd,wsed,rr,k1b,k1e,sumWkm,dt,dz)
 
 	implicit none
 
 	INTEGER n,kp ! local variables!
 	REAL    wsed(nfrac,0:i1,0:j1,0:k1)
 	REAL    csed(nfrac,0:i1,0:j1,0:k1),csed2(nfrac,0:i1,0:j1,0:k1)
-	REAL    Wcfd(0:i1,0:j1,0:k1),Wfluid(0:i1,0:j1,0:k1)
+	REAL    Wcfd(0:i1,0:j1,0:k1),sumWkm(0:i1,0:j1,0:k1)
 	REAL	rr(0:i1,0:j1,0:k1),rr2(0:i1,0:j1,0:k1)
 	REAL	ctot,sum_c_ws,ws(nfrac),ccc(nfrac)
 	INTEGER k1b,k1e,kpp,km,iter,kplus
-	REAL dt_dzi,noemer,rrpos,rrneg,limiter,dt,dz,ws_basis(nfrac)
+	REAL dt_dzi,noemer,rrpos,rrneg,limiter,dt,dz,ws_basis(nfrac),W_km_sum
 
 	dt_dzi=dt/dz 
 
@@ -117,16 +118,23 @@
 	      kp = MIN(k+1,k1)
 	      DO n=1,nfrac
 	        ccc(n) = 0.5*(csed2(n,i,j,k) + csed2(n,i,j,kp))	
+			ctot=ccc(n)*frac(n)%dfloc/frac(n)%dpart*0.5*(rhocorr_air_z(n,k)+rhocorr_air_z(n,kp))+ctot
 	        ws(n)=ws_basis(n)
 		! ws is positive downward, wsed is positive upward 
 			sum_c_ws=sum_c_ws+ws(n)*ccc(n)*frac(n)%rho/(0.5*(rr2(i,j,k)+rr2(i,j,kp)))
-		! According to drift velocity literature the drift flux is calculated using the mass-fraction in stead of volume-fraction,
+!!		! According to drift velocity literature the drift flux is calculated using the mass-fraction in stead of volume-fraction,
+!!		! because sum_c_ws is slipvelocity relative to mixture velocity not relative to volumetric flux!
 		! therefore an extra frac(n)%rho/rho_mix is included
 	      ENDDO
 	      DO n=1,nfrac
 			wsed(n,i,j,k)=Wcfd(i,j,k)+sum_c_ws-ws(n) ! wsed is positive upward
 	      ENDDO
-	      Wfluid(i,j,k)=sum_c_ws !Wcfd(i,j,k) left out 
+		  W_km_sum=0.
+		  do n=1,nfrac
+			W_km_sum=W_km_sum+ccc(n)*frac(n)%rho*(wsed(n,i,j,k)-Wcfd(i,j,k)) 
+		  enddo 
+		  W_km_sum=W_km_sum+(1.-ctot)*rho_b*sum_c_ws !sum_c_ws=fluid return velocity --> slipvelocity of fluid relative to mixture-velocity
+		  sumWkm(i,j,k)=W_km_sum !NEW 2-10-2018: contains sum of all fractions and fluid phase drift velocity for correct determination driftflux-force
 	    ENDDO
 	  ENDDO
 	 ENDDO
@@ -141,29 +149,22 @@
 	      km = MAX(k-1,0)
 	      DO n=1,nfrac
 	        ccc(n) = 0.5*(csed2(n,i,j,k) + csed2(n,i,j,kp))
-		ctot=ccc(n)*frac(n)%dfloc/frac(n)%dpart*0.5*(rhocorr_air_z(n,k)+rhocorr_air_z(n,kp))+ctot
+			ctot=ccc(n)*frac(n)%dfloc/frac(n)%dpart*0.5*(rhocorr_air_z(n,k)+rhocorr_air_z(n,kp))+ctot
 		! for mud Cfloc must be used to calculate Ctot (Cfloc=Ctot*dfloc/dpart)
 		! ccc(n) is used in drift flux correction sum_c_ws which is calculated with mass concentration based on Ctot (not on Cfloc)
 	      ENDDO
 	      ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
 	      DO n=1,nfrac
-!		IF (frac(n)%dfloc>frac(n)%dpart) THEN
-!			ws(n)=0.002*MIN(5.,ccc(n)*frac(n)%rho) !Whitehouse simple formula for flocculation
-!			ws(n)=MAX(0.001,ws(n))
-!			ws(n)=frac(n)%ws_dep+MAX(Rp(i)*cos_u(j)-schuif_x,0.)/300.*(frac(n)%ws-frac(n)%ws_dep) ! try time/x-dist dependent settling velocity
-!			ws(n)=ws(n)*(1.-ctot)**(frac(n)%n-1.)
-!		ELSE
 	        ws(n)=ws_basis(n)*(1.-ctot)**(frac(n)%n-1.)
-!		ENDIF
 		! ws is positive downward, wsed is positive upward 
 		! Ri_Za is defined with volume concentration ctot
-!		sum_c_ws=sum_c_ws+ws(n)*0.5*(csed(n,i,j,k)*frac(n)%rho/rr(i,j,k)+csed(n,i,j,kp)*frac(n)%rho/rr(i,j,kp))
   		sum_c_ws=sum_c_ws+ws(n)*ccc(n)*frac(n)%rho/(0.5*(rr2(i,j,k)+rr2(i,j,kp)))
-		! According to drift velocity literature the drift flux is calculated using the mass-fraction in stead of volume-fraction,
+!!		! According to drift velocity literature the drift flux is calculated using the mass-fraction in stead of volume-fraction,
+!!		! because sum_c_ws is slipvelocity relative to mixture velocity not relative to volumetric flux!
 		! therefore an extra frac(n)%rho/rho_mix is included
 	      ENDDO
 	      DO n=1,nfrac
-		wsed(n,i,j,k)=Wcfd(i,j,k)+sum_c_ws-ws(n) ! wsed is positive upward
+		wsed(n,i,j,k)=Wcfd(i,j,k)+sum_c_ws-ws(n) ! wsed is positive upward 
 	      ENDDO
 
 
@@ -193,7 +194,12 @@
 !		wsed(n,i,j,k)=Wcfd(i,j,k)+sum_c_ws-ws(n) ! wsed is positive upward
 !	      ENDDO
 !	      ENDDO
-	      Wfluid(i,j,k)=sum_c_ws !Wcfd(i,j,k) left out 
+			 W_km_sum=0.
+		  	 do n=1,nfrac
+				W_km_sum=W_km_sum+ccc(n)*frac(n)%rho*(wsed(n,i,j,k)-Wcfd(i,j,k)) 
+			 enddo 
+			 W_km_sum=W_km_sum+(1.-ctot)*rho_b*sum_c_ws !sum_c_ws=fluid return velocity --> slipvelocity of fluid relative to mixture-velocity
+		     sumWkm(i,j,k)=W_km_sum !NEW 2-10-2018: contains sum of all fractions and fluid phase drift velocity for correct determination driftflux-force
 	    ENDDO
 	  ENDDO
 	 ENDDO
@@ -204,16 +210,12 @@
 	     DO j=0,j1
 	       DO n=1,nfrac
 	    	wsed(n,i,j,kbed(i,j))=Wcfd(i,j,kbed(i,j))  ! prevent sediment to flow through the bed or bed-obstacles
-		Wfluid(i,j,kbed(i,j))=0.
 		wsed(n,i,j,k1)=Wcfd(i,j,k1) ! prevent sediment to flow out of free surface
 		wsed(n,i,j,k1-1)=-wsed(n,i,j,k1-1)*MIN(0.,frac(n)%ws/(ABS(frac(n)%ws)+1.e-12))  !limit wsed at zero for fractions with downward settling velocity--> no transport of sediment in/out domain at top, but air may escape
-	   	Wfluid(i,j,k1)=0.
-		Wfluid(i,j,k1-1)=0.
 	       ENDDO
 	     ENDDO
 	   ENDDO
 	   Wsed(:,:,:,0)=0.
-	   Wfluid(:,:,0)=0.
 	ENDIF
 
       END SUBROUTINE slipvelocity
@@ -228,7 +230,7 @@
 	REAL     ccfd(nfrac,0:i1,0:j1,0:k1),cbotcfd(nfrac,0:i1,0:j1)  ! input
 	REAL	 ddt,dz ! input
 	REAL     ucfd(0:i1,0:j1,0:k1),vcfd(0:i1,0:j1,0:k1),wcfd(0:i1,0:j1,0:k1),rcfd(0:i1,0:j1,0:k1) ! input
-	REAL     wfluid(0:i1,0:j1,0:k1) !dummy
+	REAL     sumWkm(0:i1,0:j1,0:k1) !dummy
 	REAL     cbottot,kn_sed_avg,Mr_avg,tau_e_avg,ctot_firstcel,cbotnewtot
 	REAL PSD_bot_sand_massfrac(nfr_sand),PSD_bed_sand_massfrac(nfr_sand),PSD_sand(0:nfr_sand),factor,d50
 	REAL cbottot_sand,mbottot_sand,cbedtot,mbedtot_sand,diameter_sand_PSD(0:nfr_sand)
@@ -247,10 +249,10 @@
 			
 	
 	IF (nobst>0.or.bedlevelfile.ne.''.or.interaction_bed.eq.4.or.interaction_bed.eq.6) THEN
-		call slipvelocity(ccfd,wcfd,wsed,rcfd,0,k1-1,wfluid,ddt,dz) 
+		call slipvelocity(ccfd,wcfd,wsed,rcfd,0,k1-1,sumWkm,ddt,dz) 
 		!determine wsed on top of obstacles (actually everywhere in the domain) --> Wsed is not zero on kbed(i,j) in this manner!
 	ELSE
-		call slipvelocity(ccfd,wcfd,wsed,rcfd,0,0,wfluid,ddt,dz)
+		call slipvelocity(ccfd,wcfd,wsed,rcfd,0,0,sumWkm,ddt,dz)
 	ENDIF
 
 	!write(*,*),'kbed(1,1)=',kbed(1,1)
@@ -652,11 +654,12 @@
 !						IF (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).gt.cfixedbed+1e-8) THEN
 !						write(*,*),'C rank,i,j,kbed(i,j),Clb',rank,i,j,kbed(i,j),SUM(Clivebed(1:nfrac,i,j,kbed(i,j))),
 !     ^						Clivebed(1,i,j,kbed(i,j)),Clivebed(2,i,j,kbed(i,j)),Clivebed(3,i,j,kbed(i,j))
-!						ENDIF										
-!				ELSEIF ((cbotnewtot+ctot_firstcel).ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.cbotnewtot.gt.1.e-12.and.
-!     &             (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed.or.kbed(i,j).eq.0)) THEN !if kbed=0 then sedimentation can happen even if Clivebed empty
-				ELSEIF (cbotnewtot.ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.cbotnewtot.gt.1.e-12.and.
-     &             (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed-1.e-12.or.kbed(i,j).eq.0)) THEN !if kbed=0 then sedimentation can happen even if Clivebed empty	 
+!						ENDIF	
+				!! 31-8-2018 switched top 2 lines ELSEIF on instead of bottom 2 lines because ctot_firstcel can become >>cbed in TSHD placement sim; however previous sims diffuser depostion were done with bottom 2 lines!!
+				ELSEIF ((cbotnewtot+ctot_firstcel).ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.cbotnewtot.gt.1.e-12.and.
+     &             (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed-1.e-12.or.kbed(i,j).eq.0)) THEN !if kbed=0 then sedimentation can happen even if Clivebed empty
+!				ELSEIF (cbotnewtot.ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.cbotnewtot.gt.1.e-12.and.
+!     &             (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed-1.e-12.or.kbed(i,j).eq.0)) THEN !if kbed=0 then sedimentation can happen even if Clivebed empty	 
 					kbed(i,j)=kbed(i,j)+1
 					kbedt(i,j)=kbed(i,j)
 					drdt(i,j,kbed(i,j))=rho_b
@@ -1031,9 +1034,9 @@
        implicit none
 
 	integer n,t
-	REAL wsed(nfrac,0:i1,0:j1,0:k1),Wfluid(0:i1,0:j1,0:k1)
+	REAL wsed(nfrac,0:i1,0:j1,0:k1),sumWkm(0:i1,0:j1,0:k1)
 
-	call slipvelocity(cnew,Wnew,wsed,rnew,kmax,kmax,wfluid,0.,1.) !made dt=0,dz=1
+	call slipvelocity(cnew,Wnew,wsed,rnew,kmax,kmax,sumWkm,0.,1.) !made dt=0,dz=1
 	DO i=1,imax
 	  DO j=1,jmax
 		DO n=1,nfrac

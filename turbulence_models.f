@@ -324,6 +324,8 @@
 
 	real ekm2(0:i1,0:j1,0:k1)
 	integer im,ip,jm,jp,km,kp
+	real ctot,cref,pwr
+	integer fracs_included(nfr_sand+nfr_silt)	
 
 !	real shr(1:imax,1:jmax,1:kmax),ekm1(1:imax,1:jmax,1:kmax),ekm2(1:imax,1:jmax,1:kmax)
 !	real shr_T(1:imax,1:jmax*px,1:kmax/px),ekm2_T(1:imax,1:jmax*px,1:kmax/px),ekm2y(1:imax,1:jmax,1:kmax)
@@ -448,6 +450,30 @@ c*************************************************************
 	      enddo
  	endif
 
+		IF (extra_mix_visc.eq.'Krie') THEN
+			pwr=-2.5*cfixedbed
+			cref=1.001*cfixedbed !max ekm_mix is 3e4*ekm_mol
+			tel=0
+			DO n=1,nfr_silt
+				tel=tel+1
+				fracs_included(tel)=nfrac_silt(n)
+			ENDDO
+			DO n=1,nfr_sand
+				tel=tel+1
+				fracs_included(tel)=nfrac_sand(n)
+			ENDDO				
+			DO i=1,imax
+			  DO j=1,jmax
+			    DO k=1,kmax
+					ctot=SUM(cnew(fracs_included,i,j,k))
+					ekm(i,j,k)=ekm(i,j,k)+ekm_mol*(1.-ctot/cref)**pwr
+				ENDDO
+			  ENDDO
+			ENDDO
+		ELSE
+			ekm=ekm+ekm_mol
+		ENDIF
+		
 !!      Boundary conditions Neumann
         call shiftf(ekm,ebf) 
         call shiftb(ekm,ebb) 
@@ -503,7 +529,7 @@ c*************************************************************
                         ekm(i,j,k1) = ekm(i,j,kmax)
                 enddo
         enddo
-        ekm=ekm+ekm_mol
+
 	ekm2=ekm
 
 	if (LOA>0.and.kn_TSHD>0.) then
@@ -617,7 +643,9 @@ c*************************************************************
 	real ekm2(0:i1,0:j1,0:k1)
 	real z,Ri,dudz,dvdz,drdz,Diffcof2(0:i1,0:j1,0:k1),Lm2_Bak(1:kmax),MuAn_factor
 	integer im,ip,jm,jp,km,kp
-
+	real ctot,cref,pwr
+	integer fracs_included(nfr_sand+nfr_silt)
+	
 !	real shr(1:imax,1:jmax,1:kmax),ekm1(1:imax,1:jmax,1:kmax),ekm2(1:imax,1:jmax,1:kmax)
 !	real shr_T(1:imax,1:jmax*px,1:kmax/px),ekm2_T(1:imax,1:jmax*px,1:kmax/px),ekm2y(1:imax,1:jmax,1:kmax)
 
@@ -717,6 +745,30 @@ c*************************************************************
 		enddo
 	enddo
 
+		IF (extra_mix_visc.eq.'Krie') THEN
+			pwr=-2.5*cfixedbed
+			cref=1.001*cfixedbed !max ekm_mix is 3e4*ekm_mol
+			tel=0
+			DO n=1,nfr_silt
+				tel=tel+1
+				fracs_included(tel)=nfrac_silt(n)
+			ENDDO
+			DO n=1,nfr_sand
+				tel=tel+1
+				fracs_included(tel)=nfrac_sand(n)
+			ENDDO				
+			DO i=1,imax
+			  DO j=1,jmax
+			    DO k=1,kmax
+					ctot=SUM(cnew(fracs_included,i,j,k))
+					ekm(i,j,k)=ekm(i,j,k)+ekm_mol*(1.-ctot/cref)**pwr
+				ENDDO
+			  ENDDO
+			ENDDO
+		ELSE
+			ekm=ekm+ekm_mol
+		ENDIF
+		
 !!      Boundary conditions Neumann
         call shiftf(ekm,ebf) 
         call shiftb(ekm,ebb) 
@@ -828,7 +880,6 @@ c*************************************************************
         enddo
  
  
-       ekm=ekm+ekm_mol
 	ekm2=ekm
 	Diffcof2=Diffcof
         IF (LOA>0.or.nobst>0) THEN ! ship:
@@ -938,6 +989,8 @@ c*************************************************************
 	real Sd11,Sd12,Sd13,Sd22,Sd23,Sd33
 	real MuAn_factor,drdz,Ri 
 	integer im,ip,jm,jp,km,kp
+	real ctot,cref,pwr
+	integer fracs_included(nfr_sand+nfr_silt)
 
 
 	MuAn_factor=0.
@@ -1023,6 +1076,30 @@ c*************************************************************
 	  enddo
 	enddo
 
+		IF (extra_mix_visc.eq.'Krie') THEN
+			pwr=-2.5*cfixedbed
+			cref=1.001*cfixedbed !max ekm_mix is 3e4*ekm_mol
+			tel=0
+			DO n=1,nfr_silt
+				tel=tel+1
+				fracs_included(tel)=nfrac_silt(n)
+			ENDDO
+			DO n=1,nfr_sand
+				tel=tel+1
+				fracs_included(tel)=nfrac_sand(n)
+			ENDDO				
+			DO i=1,imax
+			  DO j=1,jmax
+			    DO k=1,kmax
+					ctot=SUM(cnew(fracs_included,i,j,k))
+					ekm(i,j,k)=ekm(i,j,k)+ekm_mol*(1.-ctot/cref)**pwr
+				ENDDO
+			  ENDDO
+			ENDDO
+		ELSE
+			ekm=ekm+ekm_mol
+		ENDIF
+		
 !!      Boundary conditions Neumann
         call shiftf(ekm,ebf) 
         call shiftb(ekm,ebb) 
@@ -1079,8 +1156,6 @@ c*************************************************************
                 enddo
         enddo
 
-
-        ekm=ekm+ekm_mol
 		Diffcof=ekm/Sc/rr        
         do k=kmax-kjet+1,k1 ! maak Diffcof rand buisje nul
           do t=1,tmax_inPpuntrand
@@ -1155,6 +1230,8 @@ c*************************************************************
 	real s1,s2,s3,a1,a2,a3,II1,II2,II3
 	real rrr,qqq,ppp,alpha,ss1,ss2,ss3,sm1,sm2
 	integer im,ip,jm,jp,km,kp
+	real ctot,cref,pwr
+	integer fracs_included(nfr_sand+nfr_silt)	
 
 
 	dzi=1./dz
@@ -1269,6 +1346,31 @@ c*************************************************************
     	    enddo			
 	  enddo
 	enddo
+	
+		IF (extra_mix_visc.eq.'Krie') THEN
+			pwr=-2.5*cfixedbed
+			cref=1.001*cfixedbed !max ekm_mix is 3e4*ekm_mol
+			tel=0
+			DO n=1,nfr_silt
+				tel=tel+1
+				fracs_included(tel)=nfrac_silt(n)
+			ENDDO
+			DO n=1,nfr_sand
+				tel=tel+1
+				fracs_included(tel)=nfrac_sand(n)
+			ENDDO				
+			DO i=1,imax
+			  DO j=1,jmax
+			    DO k=1,kmax
+					ctot=SUM(cnew(fracs_included,i,j,k))
+					ekm(i,j,k)=ekm(i,j,k)+ekm_mol*(1.-ctot/cref)**pwr
+				ENDDO
+			  ENDDO
+			ENDDO
+		ELSE
+			ekm=ekm+ekm_mol
+		ENDIF
+		
 !!      Boundary conditions Neumann
         call shiftf(ekm,ebf) 
         call shiftb(ekm,ebb) 
@@ -1325,7 +1427,6 @@ c*************************************************************
                 enddo
         enddo
 
-        ekm=ekm+ekm_mol
         Diffcof=ekm/Sc/rr
         do k=kmax-kjet+1,k1 ! maak Diffcof rand buisje nul
           do t=1,tmax_inPpuntrand
@@ -1416,6 +1517,8 @@ c*************************************************************
 	integer iii(3),jjj(3),kkk(3)
 	integer ii,jj,kk
 	integer im,ip,jm,jp,km,kp
+	real ctot,cref,pwr
+	integer fracs_included(nfr_sand+nfr_silt)	
 	
 
 	inv27=1./27.
@@ -1830,7 +1933,29 @@ c*************************************************************
    	     enddo			
 	  enddo
 	enddo
-	
+		IF (extra_mix_visc.eq.'Krie') THEN
+			pwr=-2.5*cfixedbed
+			cref=1.001*cfixedbed !max ekm_mix is 3e4*ekm_mol
+			tel=0
+			DO n=1,nfr_silt
+				tel=tel+1
+				fracs_included(tel)=nfrac_silt(n)
+			ENDDO
+			DO n=1,nfr_sand
+				tel=tel+1
+				fracs_included(tel)=nfrac_sand(n)
+			ENDDO				
+			DO i=1,imax
+			  DO j=1,jmax
+			    DO k=1,kmax
+					ctot=SUM(cnew(fracs_included,i,j,k))
+					ekm(i,j,k)=ekm(i,j,k)+ekm_mol*(1.-ctot/cref)**pwr
+				ENDDO
+			  ENDDO
+			ENDDO
+		ELSE
+			ekm=ekm+ekm_mol
+		ENDIF	
 !!      Boundary conditions Neumann
         call shiftf(ekm,ebf) 
         call shiftb(ekm,ebb) 
@@ -1888,7 +2013,6 @@ c*************************************************************
         enddo
 
 
-        ekm=ekm+ekm_mol
         Diffcof=ekm/Sc/rr
         do k=kmax-kjet+1,k1 ! maak Diffcof rand buisje nul
           do t=1,tmax_inPpuntrand
@@ -1968,6 +2092,8 @@ c*************************************************************
 	real*8 ubb(0:i1,0:k1),ubf(0:i1,0:k1)
 	REAL Uvel2(-1:i1+1,-1:j1+1,-1:k1+1),Vvel2(-1:i1+1,-1:j1+1,-1:k1+1),Wvel2(-1:i1+1,-1:j1+1,-1:k1+1)
 	integer im,ip,jm,jp,km,kp
+	real ctot,cref,pwr
+	integer fracs_included(nfr_sand+nfr_silt)	
 
 	Uvel=Uvel4
 	Vvel=Vvel4
@@ -2215,7 +2341,30 @@ c get stuff from other CPU's
      			enddo			
 		enddo
 	enddo
-    
+	
+    	IF (extra_mix_visc.eq.'Krie') THEN
+			pwr=-2.5*cfixedbed
+			cref=1.001*cfixedbed !max ekm_mix is 3e4*ekm_mol
+			tel=0
+			DO n=1,nfr_silt
+				tel=tel+1
+				fracs_included(tel)=nfrac_silt(n)
+			ENDDO
+			DO n=1,nfr_sand
+				tel=tel+1
+				fracs_included(tel)=nfrac_sand(n)
+			ENDDO				
+			DO i=1,imax
+			  DO j=1,jmax
+			    DO k=1,kmax
+					ctot=SUM(cnew(fracs_included,i,j,k))
+					ekm(i,j,k)=ekm(i,j,k)+ekm_mol*(1.-ctot/cref)**pwr
+				ENDDO
+			  ENDDO
+			ENDDO
+		ELSE
+			ekm=ekm+ekm_mol
+		ENDIF
 !!	Boundary conditions Neumann
 	call shiftf(ekm,ebf) 
 	call shiftb(ekm,ebb) 
@@ -2254,7 +2403,6 @@ c get stuff from other CPU's
 		enddo
 	enddo
 
-        ekm=ekm+ekm_mol
 	ekm2=ekm
 
         do k=kmax-kjet+1,k1 ! laat ekm in buisje ongemoeid

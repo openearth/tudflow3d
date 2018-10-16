@@ -341,7 +341,7 @@
      
        ! When we create netCDF files, variables and dimensions, we get back
        ! an ID for each one.
-       integer :: ncid, varid1,varid2,varid3, varid4, varid5, varid6, varid7, varid8, varid9
+       integer :: ncid, varid1,varid2,varid3, varid4, varid5, varid6, varid7, varid8, varid9, varid10
 	   integer :: dimids(NDIMS), dimids2(NDIMS2),dimids3(NDIMS3),dimids5(NDIMS5)
        integer :: x_dimid, y_dimid, z_dimid, nfrac_dimid, par_dimid
 	integer :: dimids4(NDIMS),varid20,varid21,varid22
@@ -443,6 +443,11 @@
          call check( nf90_put_att(ncid, varid9, 'units', '-') )
          call check( nf90_put_att(ncid, varid9, 'long_name', 'Smagorinsky constant from dynamic Germano-Lilly sgs model') )	   
        endif
+	   
+       call check( nf90_def_var(ncid, "wiggle_factor", NF90_REAL, dimids, varid10) )
+       call check( nf90_put_att(ncid, varid10, 'units', '-') )
+       call check( nf90_put_att(ncid, varid10, 'long_name', 'wiggle factor blend: 0=no wiggles, 1=wiggles') )
+	   
        call check( nf90_def_var(ncid, "time", NF90_REAL, dimids3, varid8) )
        call check( nf90_put_att(ncid, varid8, 'units', 's') )
        call check( nf90_put_att(ncid, varid8, 'long_name', 'Time from start simulation') )
@@ -489,6 +494,7 @@
 	     Csgrid=sqrt(Csgrid)
 	     call check( nf90_put_var(ncid, varid9, Csgrid(1:imax,1:jmax,1:kmax)) )
 	   endif
+	   call check( nf90_put_var(ncid, varid10, wf(1:imax,1:jmax,1:kmax)) )
        call check( nf90_put_var(ncid, varid8, tt) )
     
        ! Close the file. This frees up any internal netCDF resources

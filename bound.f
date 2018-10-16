@@ -1935,7 +1935,15 @@ c get stuff from other CPU's
 	! Cbcoarse1 and Cbcoarse2 are zero when no bcfile is used, or when nfrac is zero in bcfile;
 	! in that case simply zero lateral and inflow bc are applied to C
 
-	
+	if (bcfile.eq.'') then
+		if (rank.eq.0) then
+			Cbcoarse1(n,1:imax,1:kmax)=Cbound(1:imax,1,1:kmax)
+		elseif (rank.eq.px-1) then	
+			Cbcoarse1(n,1:imax,1:kmax)=Cbound(1:imax,jmax,1:kmax)
+		endif
+		Cbcoarse2(n,0:j1,1:kmax)=Cbound(1,0:j1,1:kmax)
+	endif
+		
 	if (periodicy.eq.0) then
 		if (rank.eq.0) then ! boundaries in j-direction
 			do k=1,kmax
@@ -2049,7 +2057,7 @@ c get stuff from other CPU's
 	Cbound(0,j,k)=cjet !Cbound(i,j,k1-kjet)=cjet	
       enddo
 
-	Cbound2=Cbound
+	
 
 	DO n2=1,nbedplume
 	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end)
@@ -2094,6 +2102,8 @@ c get stuff from other CPU's
 !	  enddo
 	ENDIF
 	ENDDO ! bedplume loop
+	
+	Cbound2=Cbound
 
 !			IF (interaction_bed.ge.4) THEN ! dynamic bed update, IBM bed re-defined every timestep, make c inside bed zero (diffcof is made zero in turbulence.f to eliminate incorrect diffusion into bed): ! 3-10-2017:why needed, hence switched off; might give trouble for some simulations (hopper filling?) 
 !			DO i=0,i1 
@@ -2125,6 +2135,8 @@ c get stuff from other CPU's
 			!endif
 	  enddo
 	  endif
+	  
+	  
       do t=1,tmax_inPpunt
 	i=i_inPpunt(t)
 	j=j_inPpunt(t)

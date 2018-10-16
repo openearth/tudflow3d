@@ -43,7 +43,7 @@
       CHARACTER*256 hisfile,restart_dir,inpfile,plumetseriesfile,bcfile,plumetseriesfile2,bedlevelfile
       CHARACTER*3 time_int,advec_conc,cutter
       CHARACTER*5 sgs_model
-      CHARACTER*4 damping_drho_dz
+      CHARACTER*4 damping_drho_dz,extra_mix_visc
 	  CHARACTER*11 pickup_formula
       REAL damping_a1,damping_b1,damping_a2,damping_b2,cfixedbed
       REAL plumetseries(1:10000) 
@@ -116,7 +116,7 @@
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: Unew,Vnew,Wnew,Rnew
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: dUdt,dVdt,dWdt,drdt
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: Srr,Spr,Szr,Spp,Spz,Szz
-      REAL, DIMENSION(:,:,:),ALLOCATABLE :: Ppropx_dummy,Ppropy_dummy,Ppropz_dummy
+      REAL, DIMENSION(:,:,:),ALLOCATABLE :: Ppropx_dummy,Ppropy_dummy,Ppropz_dummy,wf
       INTEGER, DIMENSION(:),ALLOCATABLE, TARGET :: jco,iro,beg,di,di2
       REAL Hs,Tp,Lw,nx_w,ny_w,kabs_w,kx_w,ky_w,om_w
       REAL, DIMENSION(:),ALLOCATABLE :: LUB,LHS2 
@@ -203,7 +203,8 @@
 	NAMELIST /plume/W_j,plumetseriesfile,Awjet,Aujet,Avjet,Strouhal,azi_n,kjet,radius_j,Sc,slipvel,outflow_overflow_down,
      & U_j2,plumetseriesfile2,Awjet2,Aujet2,Avjet2,Strouhal2,azi_n2,radius_j2,zjet2,bedplume,radius_inner_j,xj,yj,W_j_powerlaw,
      & plume_z_outflow_belowsurf,hindered_settling,Q_j,plumeQtseriesfile,plumectseriesfile
-	NAMELIST /LESmodel/sgs_model,Cs,Lmix_type,nr_HPfilter,damping_drho_dz,damping_a1,damping_b1,damping_a2,damping_b2
+	NAMELIST /LESmodel/sgs_model,Cs,Lmix_type,nr_HPfilter,damping_drho_dz,damping_a1,damping_b1,damping_a2,damping_b2,
+     & extra_mix_visc
 	NAMELIST /constants/kappa,gx,gy,gz,ekm_mol,calibfac_sand_pickup,pickup_formula,kn_d50_multiplier,avalanche_slope,
      &	calibfac_Shields_cr,reduction_sedimentation_shields
 	NAMELIST /fractions_in_plume/fract
@@ -417,6 +418,7 @@
 	damping_b1 = -999.
 	damping_a2 = -999.
 	damping_b2 = -999.
+	extra_mix_visc='none'
 	!!constants
 	kappa=-999.
 	gx = -999.
@@ -967,6 +969,8 @@
      &  CALL writeerror(86)
 	IF ((damping_drho_dz.eq.'MuAn'.and.damping_b1.lt.-990.).or.(damping_drho_dz.eq.'MuAn'.and.damping_b2.lt.-990.)) 
      &  CALL writeerror(87)
+	IF (extra_mix_visc.ne.'none'.and.extra_mix_visc.ne.'Krie') CALL writeerror(88) 
+	
 
 	READ (UNIT=1,NML=constants,IOSTAT=ios)
 	!! check input constants
@@ -1364,7 +1368,8 @@
 	ALLOCATE(LUBs(0:nm1,kmax/px)) !save LU of LHS
 	ALLOCATE(LHS2(nm1)) !LHS
 	ALLOCATE(lhs(nm1,kmax/px)) !LHS
-
+	ALLOCATE(wf(0:i1,0:j1,0:k1)) !Wiggle factor blend --> 1=apply AV6 dissipation  0=no AV6 dissipation
+	wf = 0.
 
 ! 	ALLOCATE(UT(0:i1,0:j1,0:k1))
 ! 	ALLOCATE(UP(0:i1,0:k1))

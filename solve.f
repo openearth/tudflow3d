@@ -44,7 +44,7 @@ c
       integer  ib,ie,jb,je,kb,ke,n,t
       real     doldc(nfrac,0:i1,0:j1,0:k1),dnewc(nfrac,0:i1,0:j1,0:k1)
       real     dold(0:i1,0:j1,0:k1),dnew(0:i1,0:j1,0:k1)
-      real     wsed(nfrac,0:i1,0:j1,0:k1),wfluid(0:i1,0:j1,0:k1)
+      real     wsed(nfrac,0:i1,0:j1,0:k1),sumWkm(0:i1,0:j1,0:k1)
 	real*8 pplus(imax,kmax)
 	
 
@@ -57,7 +57,7 @@ c     CALCULATE slipvelocity
 c********************************************************************
 	if (nfrac>0) then
 	  if (slipvel.eq.1.or.slipvel.eq.2) then
-	      call slipvelocity(cnew,Wnew,wsed,rnew,1,kmax,wfluid,dt,dz)
+	      call slipvelocity(cnew,Wnew,wsed,rnew,1,kmax,sumWkm,dt,dz)
 	       !! Set boundary conditions jet in:
 	       do t=1,tmax_inPpunt
 	 	i=i_inPpunt(t)
@@ -116,7 +116,7 @@ c********************************************************************
       call advecu_HYB6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecu_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv)
+     &,phiv,wf,ekm,ekm_mol,p+pold)
 	elseif(convection.eq.'uTVD') then
       call advecu_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)	  
@@ -159,7 +159,7 @@ c********************************************************************
       call advecv_HYB6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecv_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv)	  
+     &,phiv,wf)	  
 	elseif(convection.eq.'uTVD') then
       call advecv_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)	  
@@ -201,7 +201,7 @@ c********************************************************************
       call advecw_HYB6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecw_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv)	  
+     &,phiv,wf)	  
 	elseif(convection.eq.'uTVD') then
       call advecw_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)	  
@@ -212,12 +212,11 @@ c********************************************************************
 	elseif(diffusion.eq.'COM4') then
       call diffw_com4(dnew,Szr,Spz,Szz,Ru,Rp,dr,phipt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	endif
-	if (slipvel.eq.1.or.slipvel.eq.2) then
-	do n=1,nfrac
-	  call advecw_driftfluxCDS2(dnew,wsed(n,:,:,:)-Wnew,
-     &  cnew(n,:,:,:)*frac(n)%rho,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke)
-	enddo
+	if ((slipvel.eq.1.or.slipvel.eq.2).and.nfrac>0) then
+	 call advecw_driftfluxCDS2(dnew,sumWkm,
+     &   rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke)
 	endif
+		
 
       do k=1,kmax
          do j=1,jmax
@@ -317,9 +316,9 @@ c
       integer  ib,ie,jb,je,kb,ke,n,t
       real     doldc(nfrac,0:i1,0:j1,0:k1),dnewc(nfrac,0:i1,0:j1,0:k1)
       real     dold(0:i1,0:j1,0:k1),dnew(0:i1,0:j1,0:k1)
-      real     wsed(nfrac,0:i1,0:j1,0:k1),wfluid(0:i1,0:j1,0:k1),W_km_sum(0:i1,0:j1,0:k1)
+      real     wsed(nfrac,0:i1,0:j1,0:k1),sumWkm(0:i1,0:j1,0:k1)
 	real*8 pplus(imax,kmax)
-	real dnewcbot(nfrac,0:i1,0:j1),c_sum(0:i1,0:j1,0:k1)
+	real dnewcbot(nfrac,0:i1,0:j1)
 	
 
 !	real     Diffcof(0:i1,0:j1,0:k1)
@@ -334,7 +333,7 @@ c     CALCULATE advection, diffusion Concentration
 c********************************************************************
 	if (nfrac>0) then
 	  if (slipvel.eq.1.or.slipvel.eq.2) then
-	      call slipvelocity(cnew,Wnew,wsed,rnew,1,kmax,wfluid,dt,dz)
+	      call slipvelocity(cnew,Wnew,wsed,rnew,1,kmax,sumWkm,dt,dz)
 	       !! Set boundary conditions jet in:
 	       do t=1,tmax_inPpunt
 	 	i=i_inPpunt(t)
@@ -376,7 +375,7 @@ c********************************************************************
 	      	  !endif
 	  enddo
       	  if (interaction_bed>0) then
-	    call slipvelocity(cnew,wnew,wsed,rnew,0,0,wfluid,dt,dz) !driftflux_force must be calculated with settling velocity at k=0
+	    call slipvelocity(cnew,wnew,wsed,rnew,0,0,sumWkm,dt,dz) !driftflux_force must be calculated with settling velocity at k=0
 	    CALL erosion_deposition(dcdt,dcdtbot,unew,vnew,wnew,rnew,cnew,cnewbot,dt,dz) !first two vars are adjusted
 	    !! for kn1: erosion_deposition must be after advecc_TVD and after dcdt update, because cnew and dcdt are two separate vars
 		if (interaction_bed.eq.4.or.interaction_bed.eq.6) then
@@ -411,7 +410,7 @@ c********************************************************************
       call advecu_HYB6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecu_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv)	  
+     &,phiv,wf,ekm,ekm_mol,p+pold)	  
 	elseif(convection.eq.'uTVD') then
       call advecu_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)	  
@@ -457,7 +456,7 @@ c********************************************************************
       call advecv_HYB6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecv_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv)	  
+     &,phiv,wf)	  
 	elseif(convection.eq.'uTVD') then
       call advecv_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)	  
@@ -499,7 +498,7 @@ c********************************************************************
       call advecw_HYB6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecw_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv)	  
+     &,phiv,wf)	  
 	elseif(convection.eq.'uTVD') then
       call advecw_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)	  
@@ -511,18 +510,10 @@ c********************************************************************
       call diffw_com4(dnew,Szr,Spz,Szz,Ru,Rp,dr,phipt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	endif
 	if ((slipvel.eq.1.or.slipvel.eq.2).and.nfrac>0) then
-	 W_km_sum=0.
-	 c_sum=0.
-	 do n=1,nfrac
-	  W_km_sum=W_km_sum+wsed(n,:,:,:)-Wnew
-	  c_sum=c_sum+cnew(n,:,:,:)
-	 enddo 
-	 c_sum=MIN(c_sum,1.)
- 	 W_km_sum=W_km_sum+(1.-c_sum)*rho_b*Wfluid !Wfluid is difference with Ucfd 
-	 W_km_sum=W_km_sum/rnew
-	 call advecw_driftfluxCDS2(dnew,W_km_sum,
+	 call advecw_driftfluxCDS2(dnew,sumWkm,
      &   rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke)
 	endif
+	
 
 
       do k=1,kmax
@@ -627,7 +618,7 @@ c
       integer  ib,ie,jb,je,kb,ke,n,t,kpp,kp,km
       real     doldc(nfrac,0:i1,0:j1,0:k1),dnewc(nfrac,0:i1,0:j1,0:k1)
       real     dold(0:i1,0:j1,0:k1),dnew(0:i1,0:j1,0:k1)
-      real     wsed(nfrac,0:i1,0:j1,0:k1),wfluid(0:i1,0:j1,0:k1),W_km_sum(0:i1,0:j1,0:k1),c_sum(0:i1,0:j1,0:k1)
+      real     wsed(nfrac,0:i1,0:j1,0:k1),sumWkm(0:i1,0:j1,0:k1)
 	real*8 pplus(imax,kmax)
 	real fAB3_1,fAB3_2,fAB3_3,fAB3_4,facAB3_1,facAB3_2,facAB3_3,facAB3_4
 	real dist,timeAB_desired(1:4)
@@ -693,14 +684,14 @@ c********************************************************************
 
 
 	dcdt = 0.
-	Wfluid = 0.
+	sumWkm = 0.
 	dnewc=0.
 c********************************************************************
 c     CALCULATE slipvelocity
 c********************************************************************
 	if (nfrac>0) then
 	  if (slipvel.eq.1.or.slipvel.eq.2) then
-	      call slipvelocity(cnew,Wnew,wsed,rnew,1,kmax,wfluid,dt,dz)
+	      call slipvelocity(cnew,Wnew,wsed,rnew,1,kmax,sumWkm,dt,dz)
 	       !! Set boundary conditions jet in:
 	       do t=1,tmax_inPpunt
 	 	i=i_inPpunt(t)
@@ -799,7 +790,7 @@ c********************************************************************
 	   ENDIF
           enddo
       	  if (interaction_bed>0) then
-	    call slipvelocity(cnew,wnew,wsed,rnew,0,0,wfluid,dt,dz) !driftflux_force must be calculated with settling velocity at k=0
+	    call slipvelocity(cnew,wnew,wsed,rnew,0,0,sumWkm,dt,dz) !driftflux_force must be calculated with settling velocity at k=0
 	    CALL erosion_deposition(dcdt,dcdtbot,unew,vnew,wnew,rnew,cnew,cnewbot,dt,dz) !first two vars are adjusted
 	    !! erosion_deposition must be after advecc_TVD and after dcdt update, because cnew and dcdt are two separate vars
 		if (interaction_bed.eq.4.or.interaction_bed.eq.6) then
@@ -833,7 +824,7 @@ c********************************************************************
       call advecu_HYB6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecu_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv)	  
+     &,phiv,wf,ekm,ekm_mol,p)	  
 	elseif(convection.eq.'uTVD') then
       call advecu_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)		  
@@ -878,7 +869,7 @@ c********************************************************************
       call advecv_HYB6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecv_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv)	  
+     &,phiv,wf)	  
 	elseif(convection.eq.'uTVD') then
       call advecv_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)	  
@@ -921,7 +912,7 @@ c********************************************************************
       call advecw_HYB6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecw_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv)	  
+     &,phiv,wf)	  
 	elseif(convection.eq.'uTVD') then
       call advecw_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)	  
@@ -933,16 +924,7 @@ c********************************************************************
       call diffw_com4(dnew,Szr,Spz,Szz,Ru,Rp,dr,phipt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	endif
 	if ((slipvel.eq.1.or.slipvel.eq.2).and.nfrac>0) then
-	 W_km_sum=0.
-	 c_sum=0.
-	 do n=1,nfrac
-	  W_km_sum=W_km_sum+cnew(n,:,:,:)*frac(n)%rho*(wsed(n,:,:,:)-Wnew)
-	  c_sum=c_sum+cnew(n,:,:,:)
-	 enddo 
-	 c_sum=MIN(c_sum,1.)
-	 W_km_sum=W_km_sum+(1.-c_sum)*rho_b*Wfluid !Wfluid is difference with Ucfd 
-	 W_km_sum=W_km_sum/rnew
-	 call advecw_driftfluxCDS2(dnew,W_km_sum,
+	 call advecw_driftfluxCDS2(dnew,sumWkm,
      &   rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke)
 	endif
 	
@@ -1147,13 +1129,13 @@ c
 !       include 'param.txt'
 !       include 'common.txt'
       integer  ib,ie,jb,je,kb,ke,n,t,kpp,km,kp
-      real     wsed(nfrac,0:i1,0:j1,0:k1),wfluid(0:i1,0:j1,0:k1)
+      real     wsed(nfrac,0:i1,0:j1,0:k1),sumWkm(0:i1,0:j1,0:k1)
       real     c2,c3,a21,a31,a32,b1,b2,b3,cn1,cn2,cn3
 	real   b1tvd,b2tvd,b3tvd
 !	real     Diffcof(0:i1,0:j1,0:k1)
 	real	 invrho_b
 	real*8 pplus(imax,kmax),pplus2(imax,kmax)
-	real   W_km_sum(0:i1,0:j1,0:k1),t_output,dWdt_old(0:i1,0:j1,0:k1),c_sum(0:i1,0:j1,0:k1)
+	real   t_output,dWdt_old(0:i1,0:j1,0:k1)
 !	real aaa(1:kmax),bbb(1:kmax),ccc(1:kmax),ekm_min,ekm_plus,rhss(1:kmax)
 	real aaa(0:k1),bbb(0:k1),ccc(0:k1),ekm_min,ekm_plus,rhss(0:k1)
 	real utr(0:i1,0:j1,0:k1),vtr(0:i1,0:j1,0:k1),wtr(0:i1,0:j1,0:k1)
@@ -1182,7 +1164,7 @@ c
 !	Diffcof=ekm/Sc/Rnew 
 
 	dcdt=0.
-	Wfluid=0.
+	sumWkm=0.
 
 !!	Wray RK3 constants:
 	c2=8./15.
@@ -1238,7 +1220,7 @@ c     CALCULATE k1 and predictor 1
 c********************************************************************
 	if (nfrac>0) then
 	  if (slipvel.eq.1.or.slipvel.eq.2) then
-	      call slipvelocity(cnew,Wnew,wsed,rnew,1,kmax,wfluid,cn1*dt,dz)
+	      call slipvelocity(cnew,Wnew,wsed,rnew,1,kmax,sumWkm,cn1*dt,dz)
 	       !! Set boundary conditions jet in:
 	       do t=1,tmax_inPpunt
 	 	i=i_inPpunt(t)
@@ -1325,7 +1307,7 @@ c********************************************************************
 	   ENDIF !endif semi-implicit CN
           enddo
       	  if (interaction_bed>0) then
-	    call slipvelocity(cnew,wnew,wsed,rnew,0,0,wfluid,cn1*dt,dz) !driftflux_force must be calculated with settling velocity at k=0
+	    call slipvelocity(cnew,wnew,wsed,rnew,0,0,sumWkm,cn1*dt,dz) !driftflux_force must be calculated with settling velocity at k=0
 	    CALL erosion_deposition(dcdt,dcdt1bot,unew,vnew,wnew,rnew,cnew,cnewbot,cn1*dt,dz) !first two vars are adjusted
 	    !! for kn1: erosion_deposition must be after advecc_TVD and after dcdt update, because cnew and dcdt are two separate vars
 		if (interaction_bed.eq.4.or.interaction_bed.eq.6) then
@@ -1356,7 +1338,7 @@ c********************************************************************
       call advecu_HYB6(k1u,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecu_C4A6(k1u,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv)	  
+     &,phiv,wf,ekm,ekm_mol,p+pold)	  
 	elseif(convection.eq.'uTVD') then
       call advecu_TVD(k1u,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)	  
@@ -1379,7 +1361,7 @@ c********************************************************************
       call advecv_HYB6(k1v,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecv_C4A6(k1v,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv)	  
+     &,phiv,wf)	  
 	elseif(convection.eq.'uTVD') then
       call advecv_TVD(k1v,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)		  
@@ -1402,7 +1384,7 @@ c********************************************************************
       call advecw_HYB6(k1w,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecw_C4A6(k1w,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv)	  
+     &,phiv,wf)	  
 	elseif(convection.eq.'uTVD') then
       call advecw_TVD(k1w,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)		  
@@ -1413,18 +1395,11 @@ c********************************************************************
       call diffw_com4(k1w,Szr,Spz,Szz,Ru,Rp,dr,phipt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	endif
 	if ((slipvel.eq.1.or.slipvel.eq.2).and.nfrac>0) then
-	 W_km_sum=0.
-	 c_sum=0.
-	 do n=1,nfrac
-	  W_km_sum=W_km_sum+cnew(n,:,:,:)*frac(n)%rho*(wsed(n,:,:,:)-Wnew)
-	  c_sum=c_sum+cnew(n,:,:,:)
-	 enddo 
-	 c_sum=MIN(c_sum,1.)
-	 W_km_sum=W_km_sum+(1.-c_sum)*rho_b*Wfluid !Wfluid is difference with Ucfd 
-	 W_km_sum=W_km_sum/rnew
-	 call advecw_driftfluxCDS2(k1w,W_km_sum,
+	 call advecw_driftfluxCDS2(k1w,sumWkm,
      &   rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke)
 	endif
+	
+	
 
       do k=1,kmax
          do j=1,jmax
@@ -1690,7 +1665,7 @@ c     CALCULATE k2 and predictor 2
 c********************************************************************
 	if (nfrac>0) then
 	  if (slipvel.eq.1.or.slipvel.eq.2) then
-	      call slipvelocity(dcdt,dWdt,wsed,drdt,1,kmax,wfluid,cn2*dt,dz)
+	      call slipvelocity(dcdt,dWdt,wsed,drdt,1,kmax,sumWkm,cn2*dt,dz)
 	       !! Set boundary conditions jet in:
 	       do t=1,tmax_inPpunt
 	 	i=i_inPpunt(t)
@@ -1781,7 +1756,7 @@ c********************************************************************
 	   ENDIF
 	  enddo
 	  if (interaction_bed>0) then
-	    call slipvelocity(dcdt2,dwdt,wsed,drdt,0,0,wfluid,cn2*dt,dz) !get wfluid and wsed at k=0 for driftflux_force 
+	    call slipvelocity(dcdt2,dwdt,wsed,drdt,0,0,sumWkm,cn2*dt,dz) !get sumWkm and wsed at k=0 for driftflux_force 
 	    CALL erosion_deposition(dcdt,dcdt2bot,dudt,dvdt,dwdt,drdt,dcdt2,dcdt1bot,cn2*dt,dz) !first two vars are adjusted 
  	    !! for kn2: variable dcdt2 made
 		if (interaction_bed.eq.4.or.interaction_bed.eq.6) then
@@ -1812,7 +1787,7 @@ c********************************************************************
       call advecu_HYB6(k2u,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecu_C4A6(k2u,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv)	  
+     &,phiv,wf,ekm,ekm_mol,p+pold)	  
 	elseif(convection.eq.'uTVD') then
       call advecu_TVD(k2u,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)	  
@@ -1835,7 +1810,7 @@ c********************************************************************
       call advecv_HYB6(k2v,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecv_C4A6(k2v,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv)	  
+     &,phiv,wf)	  
 	elseif(convection.eq.'uTVD') then
       call advecv_TVD(k2v,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)	  
@@ -1858,7 +1833,7 @@ c********************************************************************
       call advecw_HYB6(k2w,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecw_C4A6(k2w,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv)	  
+     &,phiv,wf)	  
 	elseif(convection.eq.'uTVD') then
       call advecw_TVD(k2w,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)	  
@@ -1870,18 +1845,11 @@ c********************************************************************
 	endif
 	
 	if ((slipvel.eq.1.or.slipvel.eq.2).and.nfrac>0) then
-	 W_km_sum=0.
-	 c_sum=0.
-	 do n=1,nfrac
-	  W_km_sum=W_km_sum+dcdt(n,:,:,:)*frac(n)%rho*(wsed(n,:,:,:)-dWdt)
-	  c_sum=c_sum+dcdt(n,:,:,:)
-	 enddo
-	 c_sum=MIN(c_sum,1.)
-	 W_km_sum=W_km_sum+(1.-c_sum)*rho_b*Wfluid  !Wfluid is difference with Ucfd
-	 W_km_sum=W_km_sum/drdt
-	 call advecw_driftfluxCDS2(k2w,W_km_sum,
+	 call advecw_driftfluxCDS2(k2w,sumWkm,
      &   drdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke)
 	endif
+	
+	
 
         do k=1,kmax
          do j=1,jmax
@@ -2144,7 +2112,7 @@ c     CALCULATE k3 and n+1 values with RK3
 c********************************************************************
 	if (nfrac>0) then
 	  if (slipvel.eq.1.or.slipvel.eq.2) then
-	      call slipvelocity(dcdt,dWdt,wsed,drdt,1,kmax,wfluid,cn3*dt,dz)
+	      call slipvelocity(dcdt,dWdt,wsed,drdt,1,kmax,sumWkm,cn3*dt,dz)
 	       !! Set boundary conditions jet in:
 	       do t=1,tmax_inPpunt
 	 	i=i_inPpunt(t)
@@ -2168,17 +2136,6 @@ c********************************************************************
 	    enddo
 	  endif
 	  	
-!		dwdt_old=dwdt
-!		dWdt(:,:,1:kmax)=0.5*(dcdt(1,:,:,1:kmax)*frac(1)%rho/drdt(:,:,1:kmax)
-!     & +dcdt(1,:,:,2:kmax+1)*frac(1)%rho/drdt(:,:,2:kmax+1))*Wsed(1,:,:,1:kmax)
-!     & +0.5*((1.-dcdt(1,:,:,1:kmax))*rho_b/drdt(:,:,1:kmax)+(1.-dcdt(1,:,:,2:kmax+1))*rho_b/drdt(:,:,2:kmax+1))
-!     & *(Wfluid(:,:,1:kmax)+dWdt_old(:,:,1:kmax))
-
-!	  if (mod(time_np,5.).le.1.e-1) then
-!		write(*,*),'dwdt,wfluid,wsed,sigma(w_k):',rank,dwdt(3,3,1),wfluid(3,3,1),wsed(1,3,3,1),
-!     &		0.5*(dcdt(1,3,3,1)*frac(1)%rho/drdt(3,3,1)+dcdt(1,3,3,2)*frac(1)%rho/drdt(3,3,2))*Wsed(1,3,3,1)
-!     &          +0.5*((1.-dcdt(1,3,3,1))*rho_b/drdt(3,3,1)+(1.-dcdt(1,3,3,2))*rho_b/drdt(3,3,2))*(Wfluid(3,3,1)+dWdt(3,3,1))
-!	  endif
 	  do n=1,nfrac
 	      utr=dUdt
 	      vtr=dVdt
@@ -2249,7 +2206,7 @@ c********************************************************************
 	   ENDIF
 	  enddo
 	  if (interaction_bed>0) then
-	    call slipvelocity(dcdt2,dwdt,wsed,drdt,0,0,wfluid,cn3*dt,dz) !get wfluid and wsed at k=0 for driftflux_force 
+	    call slipvelocity(dcdt2,dwdt,wsed,drdt,0,0,sumWkm,cn3*dt,dz) !get sumWkm and wsed at k=0 for driftflux_force 
 	    CALL erosion_deposition(dcdt,dcdtbot,dudt,dvdt,dwdt,drdt,dcdt2,dcdt2bot,cn3*dt,dz) !first two vars are adjusted
 		    !! for kn3: extra var dcdt2 is used
 	    ! should correct dwdt(n,:,:,0) with (1.-tau/frac(n)%tau_d), but this correction almost always is zero, for now leave
@@ -2281,7 +2238,7 @@ c********************************************************************
       call advecu_HYB6(k3u,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecu_C4A6(k3u,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv)	  
+     &,phiv,wf,ekm,ekm_mol,p+pold)	  
 	elseif(convection.eq.'uTVD') then
       call advecu_TVD(k3u,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)	  
@@ -2305,7 +2262,7 @@ c********************************************************************
       call advecv_HYB6(k3v,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecv_C4A6(k3v,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv)	  
+     &,phiv,wf)	  
 	elseif(convection.eq.'uTVD') then
       call advecv_TVD(k3v,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)	  
@@ -2328,7 +2285,7 @@ c********************************************************************
       call advecw_HYB6(k3w,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecw_C4A6(k3w,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv)	  
+     &,phiv,wf)	  
 	elseif(convection.eq.'uTVD') then
       call advecw_TVD(k3w,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)	  
@@ -2339,16 +2296,7 @@ c********************************************************************
       call diffw_com4(k3w,Szr,Spz,Szz,Ru,Rp,dr,phipt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	endif
 	if ((slipvel.eq.1.or.slipvel.eq.2).and.nfrac>0) then
-	 W_km_sum=0.
-	 c_sum=0.
-	 do n=1,nfrac
-	  W_km_sum=W_km_sum+dcdt(n,:,:,:)*frac(n)%rho*(wsed(n,:,:,:)-dWdt)
-	  c_sum=c_sum+dcdt(n,:,:,:)
-	 enddo
-	 c_sum=MIN(c_sum,1.)
-	 W_km_sum=W_km_sum+(1.-c_sum)*rho_b*Wfluid  !Wfluid is difference with Ucfd
-	 W_km_sum=W_km_sum/drdt
-	 call advecw_driftfluxCDS2(k3w,W_km_sum,
+	 call advecw_driftfluxCDS2(k3w,sumWkm,
      &   drdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke)
 	endif
 	
@@ -2552,7 +2500,7 @@ c
       integer  ib,ie,jb,je,kb,ke,n,t,kpp,kp,km
       real     doldc(nfrac,0:i1,0:j1,0:k1),dnewc(nfrac,0:i1,0:j1,0:k1)
       real     dold(0:i1,0:j1,0:k1),dnew(0:i1,0:j1,0:k1)
-	  real     wsed(nfrac,0:i1,0:j1,0:k1),wfluid(0:i1,0:j1,0:k1),W_km_sum(0:i1,0:j1,0:k1),c_sum(0:i1,0:j1,0:k1)
+	  real     wsed(nfrac,0:i1,0:j1,0:k1),sumWkm(0:i1,0:j1,0:k1)
 	real*8 pplus(imax,kmax)
 	real dnewcbot(nfrac,0:i1,0:j1)	
 	real aaa(0:k1),bbb(0:k1),ccc(0:k1),ekm_min,ekm_plus,rhss(0:k1)
@@ -2560,14 +2508,14 @@ c
 	
 
 	dcdt = 0.
-	Wfluid = 0.
+	sumWkm = 0.
 	dnewc=0.
 c********************************************************************
 c     CALCULATE slipvelocity
 c********************************************************************
 	if (nfrac>0) then
 	  if (slipvel.eq.1.or.slipvel.eq.2) then
-	      call slipvelocity(cnew,Wnew,wsed,rnew,1,kmax,wfluid,dt,dz)
+	      call slipvelocity(cnew,Wnew,wsed,rnew,1,kmax,sumWkm,dt,dz)
 	       !! Set boundary conditions jet in:
 	       do t=1,tmax_inPpunt
 	 	i=i_inPpunt(t)
@@ -2667,7 +2615,7 @@ c********************************************************************
 	   ENDIF
           enddo
       	  if (interaction_bed>0) then
-	    call slipvelocity(cnew,wnew,wsed,rnew,0,0,wfluid,dt,dz) !driftflux_force must be calculated with settling velocity at k=0
+	    call slipvelocity(cnew,wnew,wsed,rnew,0,0,sumWkm,dt,dz) !driftflux_force must be calculated with settling velocity at k=0
 	    CALL erosion_deposition(dcdt,dcdtbot,unew,vnew,wnew,rnew,cnew,cnewbot,dt,dz) !first two vars are adjusted
 	    !! erosion_deposition must be after advecc_TVD and after dcdt update, because cnew and dcdt are two separate vars
 		if (interaction_bed.eq.4.or.interaction_bed.eq.6) then
@@ -2701,7 +2649,7 @@ c********************************************************************
       call advecu_HYB6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecu_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv)
+     &,phiv,wf,ekm,ekm_mol,p+pold)
 	elseif(convection.eq.'uTVD') then
       call advecu_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)		  
@@ -2741,7 +2689,7 @@ c********************************************************************
       call advecv_HYB6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecv_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv)	  
+     &,phiv,wf)	  
 	elseif(convection.eq.'uTVD') then
       call advecv_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)	  
@@ -2778,7 +2726,7 @@ c********************************************************************
       call advecw_HYB6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecw_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv)	  
+     &,phiv,wf)	  
 	elseif(convection.eq.'uTVD') then
       call advecw_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)	  
@@ -2790,18 +2738,10 @@ c********************************************************************
       call diffw_com4(dnew,Szr,Spz,Szz,Ru,Rp,dr,phipt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	endif
 	if ((slipvel.eq.1.or.slipvel.eq.2).and.nfrac>0) then
-	 W_km_sum=0.
-	 c_sum=0.
-	 do n=1,nfrac
-	  W_km_sum=W_km_sum+cnew(n,:,:,:)*frac(n)%rho*(wsed(n,:,:,:)-Wnew)
-	  c_sum=c_sum+cnew(n,:,:,:)
-	 enddo 
-	 c_sum=MIN(c_sum,1.)
-	 W_km_sum=W_km_sum+(1.-c_sum)*rho_b*Wfluid !Wfluid is difference with Ucfd 
-	 W_km_sum=W_km_sum/rnew
-	 call advecw_driftfluxCDS2(dnew,W_km_sum,
+	 call advecw_driftfluxCDS2(dnew,sumWkm,
      &   rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke)
 	endif
+	
 	
 
       do k=1,kmax
@@ -2953,8 +2893,8 @@ c********************************************************************
       implicit none
 
 	real xx,yy,r_orifice2,twodtdt,Qsource,rrri,rrrj,rrrk,rrrim,rrrjm,rrrkm
-	integer t
-	real xTSHD(1:4),yTSHD(1:4),phi
+	integer t,n
+	real xTSHD(1:4),yTSHD(1:4),phi,ddrr,cin,s_in
 	integer inout,n2
 c
 !       include 'param.txt'
@@ -3046,7 +2986,46 @@ c
           enddo
         enddo
       enddo
-	ENDIF
+!	DO n2=1,nbedplume
+!    	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end)) THEN
+!    	! rotation ship for ambient side current
+!    	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
+!    	  phi=atan2(V_b,1.e-12)
+!    	else
+!    	  phi=atan2(V_b,(U_TSHD-U_b))
+!    	endif
+!      do k=1,kmax
+!       do i=1,imax  
+!         do j=jmax,1,-1 
+!	  xx=Rp(i)*cos_u(j)-schuif_x
+!	  yy=Rp(i)*sin_u(j)
+!	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
+!		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
+!		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
+!		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+!	  ELSE 
+!	 	inout=0
+!	  ENDIF
+!	  if (inout.eq.1) then
+!		ddrr=0.
+!		do n=1,nfrac
+!		  ddrr = ddrr + bp(n2)%sedflux(n)*dt/bp(n2)%volncells +
+!     &		  dcdt(n,i,j,k)*MIN(0.,bp(n2)%Q*bp(n2)%changesedsuction)*frac(n)%rho*dt/bp(n2)%volncells  
+!			! change of rho in cell due to sedflux or suction Q --> correct determination drhodt in continuity equation for this
+!			! IMPLICIT: c^n+1-c^n=-Qout_cel/Vol_cel*dt*c^n+1 --> c^n+1 = c^n/(1+Qout_cel/Vol_cel*dt)
+!			!when Q negative, remove sediment from cell as well   IMPLICIT 	 
+!			p(i,j,k)=p(i,j,k)-bp(n2)%sedflux(n)/bp(n2)%volncells/dt  ! total mass flux in 
+!		enddo
+!		!p(i,j,k) = p(i,j,k) - ddrr/dt/dt
+!	 
+!	   endif
+!	  enddo
+!	 enddo
+!	enddo
+!	ENDIF	
+!	ENDDO ! bedplume loop	
+
+	ENDIF ! continuity_solver loop
 
 	DO n2=1,nbedplume
 	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
@@ -3069,7 +3048,26 @@ c
 	 	inout=0
 	  ENDIF
 	  if (inout.eq.1) then
-		  p(i,j,k)=p(i,j,k)-bp(n2)%Q*drdt(i,j,k)/bp(n2)%volncells/dt !bp(n2)%Q positive means influx (and has to be negative in this loop)
+!		cin=0.
+!		s_in=0.
+!		ddrr=0.		
+!		do n=1,nfrac
+!		  cin = cin + bp(n2)%sedflux(n)/(frac(n)%rho*bp(n2)%Q)
+!		  s_in = s_in + bp(n2)%sedflux(n) 
+!		  ddrr = ddrr + bp(n2)%sedflux(n)*dt/bp(n2)%volncells +
+!     &		  dcdt(n,i,j,k)*MIN(0.,bp(n2)%Q*bp(n2)%changesedsuction)*frac(n)%rho*dt/bp(n2)%volncells  
+!			! change of rho in cell due to sedflux or suction Q --> correct determination drhodt in continuity equation for this
+!			! IMPLICIT: c^n+1-c^n=-Qout_cel/Vol_cel*dt*c^n+1 --> c^n+1 = c^n/(1+Qout_cel/Vol_cel*dt)
+!			!when Q negative, remove sediment from cell as well   IMPLICIT 		  
+!		enddo	
+!		  if (continuity_solver.eq.3) THEN
+			p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q/bp(n2)%volncells/dt  				  ! div(u)=0 --> total volume flux in 
+!		  else
+!!			p(i,j,k)=p(i,j,k)-(s_in+(1.-MIN(cin,1.))*drdt(i,j,k)*bp(n2)%Q)/bp(n2)%volncells/dt  ! total mass flux in 
+!			p(i,j,k)=p(i,j,k)-((1.-MIN(cin,1.))*drdt(i,j,k)*bp(n2)%Q)/bp(n2)%volncells/dt  ! total mass flux in 
+!!			p(i,j,k)=p(i,j,k)-rho_b*bp(n2)%Q/bp(n2)%volncells/dt
+!		  endif
+!		  !bp(n2)%Q positive means influx
 	   endif
 	  enddo
 	 enddo
@@ -3300,11 +3298,11 @@ c
       do k=0,k1
         do j=0,j1
           do i=0,i1
-           Uold(i,j,k)=Unew(i,j,k)
-           Vold(i,j,k)=Vnew(i,j,k)
-           Wold(i,j,k)=Wnew(i,j,k) 
+!           Uold(i,j,k)=Unew(i,j,k)  !! ALS test even alle 4 de old=new statements uitgezet omdat volgens mij deze overbodig zijn
+!           Vold(i,j,k)=Vnew(i,j,k)
+!           Wold(i,j,k)=Wnew(i,j,k) 
 	   do n=1,nfrac
-             cold(n,i,j,k)=cnew(n,i,j,k)
+!             cold(n,i,j,k)=cnew(n,i,j,k)
              cnew(n,i,j,k)=dcdt(n,i,j,k)
 	   enddo
           enddo

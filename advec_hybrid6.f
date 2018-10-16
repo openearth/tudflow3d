@@ -184,6 +184,7 @@ c get stuff from other CPU's
             wwR=(Wvel(i,j,k)+Wvel(ip,j,k))*rhokp
             wwL=(Wvel(i,j,km)+Wvel(ip,j,km))*rhokm
 
+
       putout(i,j,k) = - 0.25 * (
      1 (uuR    * ((Uvel2(i,j,k)+Uvel2(ip,j,k)))-
      1 numdif*
@@ -1448,7 +1449,8 @@ c get stuff from other CPU's
 	!limiter2=(r+ABS(r))/MAX(1.+r,1.) 	! Van Leer limiter
 	!limiter2=MAX(0.,MIN(2.*r,1.),MIN(r,2.))	! Superbee limiter
 	!limiter3=MAX(0.,MIN(2.*r/MAX(cfl,1.e-6),1.),MIN(r,2./(1.-MIN(cfl,0.999999))))	! Superbee limiter loosened CFL-dependent restrictions 
-	!limiter3=1. !LW
+	limiter3=1. !LW
+	!limiter3=MIN(MAX(1.,r),2./(1.-cfl)) !LW or anti diffusion
 	!limiter3=1./(1.-MIN(cfl,0.999999)) ! CDS2
 	!limiter3=MAX(0.,r/(ABS(r)+1.e-6)*1./(1.-MIN(cfl,0.999999))) ! CDS2 if r>0 else UPW1 --> much too dissipative!	
 	!limiter3=MAX(r/(1.-MIN(cfl,0.999999)),MIN(2.*r/MAX(cfl,1.e-6),1.),MIN(r,2./(1.-MIN(cfl,0.999999))))	
@@ -1495,7 +1497,7 @@ c get stuff from other CPU's
 !	IF (r<-1.) THEN
 !		limiter3=(r+3.+MAX(3.+r,0.))/(4.*(1.-MIN(cfl,0.999999))) ! QUICK geblend naar CDS2 bij r=-1
 !	ELSE
-		limiter3=1./(1.-MIN(cfl,0.999999)) ! CDS2
+!		limiter3=1./(1.-MIN(cfl,0.999999)) ! CDS2
 !	ENDIF
       return
       end

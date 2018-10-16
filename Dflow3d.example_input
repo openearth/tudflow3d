@@ -21,7 +21,7 @@ restart_dir =''			! Path restart files influding start of filename e.g. '/data/.
 /
 
 &times
-t_end = 360.			! End time simulation from (re)start [s]
+t_end = 60.			! End time simulation from (re)start [s]
 t0_output = 60.			! Start time output [s] (default 0)
 dt_output = 60.			! Time interval output [s]
 te_output = 360.		! End time output [s] (default >t_end)
@@ -45,6 +45,7 @@ comp_filter_n = 0		! Compact filter is applied every comp_filter_n timesteps, de
 CNdiffz = 1			! 1 is implicit CN treatment of diffusion in z-dir 0 is explicit in z-dir (default 0)
 npresIBM = 0			! number of extra pres-correction steps to make IBM objects better impermeable (default 0)
 continuity_solver =3    !nerd option, default is 1 (drdt+drudx=0). Optional: 2 (neglect drdt), 3 (dudx=0)
+!advec_conc='TVD'
 /
 
 &ambient
@@ -165,6 +166,7 @@ nr_HPfilter=1			! Number of times a HPfilter is applied to velocity field in FSm
 damping_drho_dz='none' 	! Damping of eddy viscosity: 'none' (default) or 'MuAn'
 damping_a=10			! 
 damping_b=0.5			! 
+extra_mix_visc='none'   ! Extra mixture viscosity = fac*ekm_mol: 'none' (default) or 'Krie' Krieger & Dougherty 1959 relation 
 /
 
 &constants
