@@ -39,19 +39,19 @@
 !	hindered settling function acc. to Rowe (1987), 
 !	is the smoothed representation of the original Richardson and Zaki (1954) relations:
 !	determined for 0.04<c<0.55 and 0.001<Rep<3e4
-	  frac(n)%n=(4.7+0.41*Re_p**0.75)/(1.+0.175*Re_p**0.75) 
+	  frac(n)%n=(4.7+0.41*Re_p**0.75)/(1.+0.175*Re_p**0.75) -1. 
 	  ELSEIF (hindered_settling.eq.2) THEN
 !	hindered settling function acc. to Garside (1977), 
 !	higher value of n than Rowe (1987)
 !	determined for 0.04<c<0.55 and 0.2<Rep<1e3
-	  frac(n)%n=(5.1+0.27*Re_p**0.9)/(1.+0.1*Re_p**0.9)
+	  frac(n)%n=(5.1+0.27*Re_p**0.9)/(1.+0.1*Re_p**0.9)-1.
 	  ELSEIF (hindered_settling.eq.3) THEN
 !	hindered settling function acc. to Di Felice (1999), 
 !	much higher value of n than Rowe (1987) and Garside (1977)
 !	determined for 0<c<0.05 and 0.01<Rep<1e3
-	  frac(n)%n=(6.5+0.3*Re_p**0.74)/(1.+0.1*Re_p**0.74)
+	  frac(n)%n=(6.5+0.3*Re_p**0.74)/(1.+0.1*Re_p**0.74)-1.
 	  ENDIF
-	  write(*,*),'fraction #,ws,Re_p,n-factor hindered settling:',n,frac(n)%ws,Re_p,frac(n)%n
+	  write(*,*),'fraction #,ws,Re_p,n-factor hindered settling:',n,frac(n)%ws,Re_p,frac(n)%n+1.
 	ENDDO
 
 	rhocorr_air_z=1.
@@ -126,6 +126,7 @@
 !!		! because sum_c_ws is slipvelocity relative to mixture velocity not relative to volumetric flux!
 		! therefore an extra frac(n)%rho/rho_mix is included
 	      ENDDO
+		  ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
 	      DO n=1,nfrac
 			wsed(n,i,j,k)=Wcfd(i,j,k)+sum_c_ws-ws(n) ! wsed is positive upward
 	      ENDDO
@@ -145,8 +146,6 @@
 	      ctot=0.
 	      sum_c_ws=0.
 	      kp = MIN(k+1,k1)
-	      kpp = MIN(k+1,k1-1)
-	      km = MAX(k-1,0)
 	      DO n=1,nfrac
 	        ccc(n) = 0.5*(csed2(n,i,j,k) + csed2(n,i,j,kp))
 			ctot=ccc(n)*frac(n)%dfloc/frac(n)%dpart*0.5*(rhocorr_air_z(n,k)+rhocorr_air_z(n,kp))+ctot
@@ -155,7 +154,7 @@
 	      ENDDO
 	      ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
 	      DO n=1,nfrac
-	        ws(n)=ws_basis(n)*(1.-ctot)**(frac(n)%n-1.)
+	        ws(n)=ws_basis(n)*(1.-ctot)**(frac(n)%n) !frac(n)%n lowered with one already
 		! ws is positive downward, wsed is positive upward 
 		! Ri_Za is defined with volume concentration ctot
   		sum_c_ws=sum_c_ws+ws(n)*ccc(n)*frac(n)%rho/(0.5*(rr2(i,j,k)+rr2(i,j,kp)))
@@ -187,7 +186,7 @@
 !	      ENDDO
 !	      ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
 !	      DO n=1,nfrac
-!	        ws(n)=frac(n)%ws*(1.-ctot)**(frac(n)%n-1.)
+!	        ws(n)=frac(n)%ws*(1.-ctot)**(frac(n)%n) !frac(n)%n lowered with one already
 !		sum_c_ws=sum_c_ws+ws(n)*ccc(n)*frac(n)%rho/(0.5*(rr(i,j,k)+rr(i,j,kp)))
 !	      ENDDO
 !	      DO n=1,nfrac
@@ -219,6 +218,114 @@
 	ENDIF
 
       END SUBROUTINE slipvelocity
+	  
+      SUBROUTINE slipvelocity_bed(csed,Wcfd,wsed,rr,sumWkm,dt,dz)
+
+	implicit none
+
+	INTEGER n,kp ! local variables!
+	REAL    wsed(nfrac,0:i1,0:j1,0:k1)
+	REAL    csed(nfrac,0:i1,0:j1,0:k1),csed2(nfrac,0:i1,0:j1,0:k1)
+	REAL    Wcfd(0:i1,0:j1,0:k1),sumWkm(0:i1,0:j1,0:k1)
+	REAL	rr(0:i1,0:j1,0:k1),rr2(0:i1,0:j1,0:k1)
+	REAL	ctot,sum_c_ws,ws(nfrac),ccc(nfrac)
+	INTEGER kpp,km,iter,kplus
+	REAL dt_dzi,noemer,rrpos,rrneg,limiter,dt,dz,ws_basis(nfrac),W_km_sum
+
+	dt_dzi=dt/dz 
+
+	  DO n=1,nfrac
+	    ws_basis(n)=frac(n)%ws_dep
+	  ENDDO
+
+	csed2=csed
+	rr2=rr 
+	if (nobst>0.or.bedlevelfile.ne.''.or.interaction_bed.eq.4.or.interaction_bed.eq.6) then ! default C(k=0)=C(k=1); therefore only for cases when bed is not necessarily at k=0 this fix is needed:
+	 DO i=0,i1
+	  DO j=0,j1
+		kplus = MIN(kbed(i,j)+1,k1)
+		rr2(i,j,kbed(i,j))=rr2(i,j,kplus) ! apply neumann boundary over obstacles to get correct drift flux settling
+		DO n=1,nfrac
+			csed2(n,i,j,kbed(i,j))=csed2(n,i,j,kplus) ! apply neumann boundary over obstacles to get correct drift flux settling
+	    ENDDO
+	  ENDDO
+	 ENDDO
+	endif
+
+
+	IF (slipvel.eq.2) THEN ! no hindered settling
+	 DO i=0,i1
+	  DO j=0,j1
+	    k=kbed(i,j)
+	    !DO k=k1b,k1e ! at k=0 wsed should be zero at kmax wsed is calculated
+	      ctot=0.
+	      sum_c_ws=0.
+	      kp = MIN(k+1,k1)
+	      DO n=1,nfrac
+	        ccc(n) = 0.5*(csed2(n,i,j,k) + csed2(n,i,j,kp))	
+			ctot=ccc(n)*frac(n)%dfloc/frac(n)%dpart*0.5*(rhocorr_air_z(n,k)+rhocorr_air_z(n,kp))+ctot
+	        ws(n)=ws_basis(n)
+		! ws is positive downward, wsed is positive upward 
+			sum_c_ws=sum_c_ws+ws(n)*ccc(n)*frac(n)%rho/(0.5*(rr2(i,j,k)+rr2(i,j,kp)))
+!!		! According to drift velocity literature the drift flux is calculated using the mass-fraction in stead of volume-fraction,
+!!		! because sum_c_ws is slipvelocity relative to mixture velocity not relative to volumetric flux!
+		! therefore an extra frac(n)%rho/rho_mix is included
+	      ENDDO
+		  ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
+	      DO n=1,nfrac
+			wsed(n,i,j,k)=Wcfd(i,j,k)+sum_c_ws-ws(n) ! wsed is positive upward
+	      ENDDO
+		  W_km_sum=0.
+		  do n=1,nfrac
+			W_km_sum=W_km_sum+ccc(n)*frac(n)%rho*(wsed(n,i,j,k)-Wcfd(i,j,k)) 
+		  enddo 
+		  W_km_sum=W_km_sum+(1.-ctot)*rho_b*sum_c_ws !sum_c_ws=fluid return velocity --> slipvelocity of fluid relative to mixture-velocity
+		  sumWkm(i,j,k)=W_km_sum !NEW 2-10-2018: contains sum of all fractions and fluid phase drift velocity for correct determination driftflux-force
+	    !ENDDO
+	  ENDDO
+	 ENDDO
+	ELSE ! hindered settling
+	 DO i=0,i1
+	  DO j=0,j1
+	    !DO k=k1b,k1e ! at k=0 wsed should be zero at kmax wsed is calculated
+		k=kbed(i,j)
+	      ctot=0.
+	      sum_c_ws=0.
+	      kp = MIN(k+1,k1)
+	      DO n=1,nfrac
+	        ccc(n) = 0.5*(csed2(n,i,j,k) + csed2(n,i,j,kp))
+			ctot=ccc(n)*frac(n)%dfloc/frac(n)%dpart*0.5*(rhocorr_air_z(n,k)+rhocorr_air_z(n,kp))+ctot
+		! for mud Cfloc must be used to calculate Ctot (Cfloc=Ctot*dfloc/dpart)
+		! ccc(n) is used in drift flux correction sum_c_ws which is calculated with mass concentration based on Ctot (not on Cfloc)
+	      ENDDO
+	      ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
+	      DO n=1,nfrac
+	        ws(n)=ws_basis(n)*(1.-ctot)**(frac(n)%n) !frac(n)%n lowered with one already
+		! ws is positive downward, wsed is positive upward 
+		! Ri_Za is defined with volume concentration ctot
+  		sum_c_ws=sum_c_ws+ws(n)*ccc(n)*frac(n)%rho/(0.5*(rr2(i,j,k)+rr2(i,j,kp)))
+!!		! According to drift velocity literature the drift flux is calculated using the mass-fraction in stead of volume-fraction,
+!!		! because sum_c_ws is slipvelocity relative to mixture velocity not relative to volumetric flux!
+		! therefore an extra frac(n)%rho/rho_mix is included
+	      ENDDO
+	      DO n=1,nfrac
+		wsed(n,i,j,k)=Wcfd(i,j,k)+sum_c_ws-ws(n) ! wsed is positive upward 
+	      ENDDO
+			 W_km_sum=0.
+		  	 do n=1,nfrac
+				W_km_sum=W_km_sum+ccc(n)*frac(n)%rho*(wsed(n,i,j,k)-Wcfd(i,j,k)) 
+			 enddo 
+			 W_km_sum=W_km_sum+(1.-ctot)*rho_b*sum_c_ws !sum_c_ws=fluid return velocity --> slipvelocity of fluid relative to mixture-velocity
+		     sumWkm(i,j,k)=W_km_sum !NEW 2-10-2018: contains sum of all fractions and fluid phase drift velocity for correct determination driftflux-force
+	    !ENDDO
+	  ENDDO
+	 ENDDO
+	ENDIF
+
+
+      END SUBROUTINE slipvelocity_bed
+
+	  
 
        subroutine erosion_deposition(ccnew,cbotnew,ucfd,vcfd,wcfd,rcfd,ccfd,cbotcfd,ddt,dz)
 
@@ -245,22 +352,15 @@
 	erosion=0.
 	deposition=0.
 
-
-			
 	
-	IF (nobst>0.or.bedlevelfile.ne.''.or.interaction_bed.eq.4.or.interaction_bed.eq.6) THEN
-		call slipvelocity(ccfd,wcfd,wsed,rcfd,0,k1-1,sumWkm,ddt,dz) 
-		!determine wsed on top of obstacles (actually everywhere in the domain) --> Wsed is not zero on kbed(i,j) in this manner!
-	ELSE
-		call slipvelocity(ccfd,wcfd,wsed,rcfd,0,0,sumWkm,ddt,dz)
-	ENDIF
+!	IF (nobst>0.or.bedlevelfile.ne.''.or.interaction_bed.eq.4.or.interaction_bed.eq.6) THEN
+!		call slipvelocity(ccfd,wcfd,wsed,rcfd,0,k1-1,sumWkm,ddt,dz) 
+!		!determine wsed on top of obstacles (actually everywhere in the domain) --> Wsed is not zero on kbed(i,j) in this manner!
+!	ELSE
+!		call slipvelocity(ccfd,wcfd,wsed,rcfd,0,0,sumWkm,ddt,dz)
+!	ENDIF
+	call slipvelocity_bed(ccfd,wcfd,wsed,rcfd,sumWkm,ddt,dz) 
 
-	!write(*,*),'kbed(1,1)=',kbed(1,1)
-!	DO n=1,nfrac
-!	   Wsed(n,:,:,0)=Wsed(n,:,:,0)+0.5*(Wnew(:,:,1)-Wnew(:,:,0)) !correct for average Wnew at k=1/2 (location of C(:,:,1))
-!	ENDDO
-!	write(*,*),'Wnew(10,10,0),3xCnew,3xwsed',rank,Wnew(10,10,0),cnew(1:3,10,10,0),wsed(1:3,10,10,0)
-	
 	IF (interaction_bed.le.3.and.time_n.ge.tstart_morf) THEN ! erosion sedimentation without bed update and for each sediment fraction independently
 		DO i=1,imax
 		  DO j=1,jmax
@@ -385,7 +485,7 @@
 				tau=rcfd(i,j,kplus)*ust*ust  
 				DO n1=1,nfr_silt
 					n=nfrac_silt(n1)
-					erosion_avg(n) = Mr_avg*MAX(0.,(tau/tau_e_avg-1.))*ddt*bednotfixed(i,j,kbed(i,j)) ! m3/m2	 erosion_avg is filled for silt fractions only with silt erosion
+					erosion_avg(n) = Mr_avg*MAX(0.,(tau/tau_e_avg-1.))*ddt*bednotfixed(i,j,kbed(i,j))*morfac ! m3/m2	 erosion_avg is filled for silt fractions only with silt erosion
 					IF (interaction_bed.ge.6.and.kbed(i,j).eq.0) THEN !unlimited erosion in case kbed.eq.0
 						erosionf(n) = erosion_avg(n) * (c_bed(n)/cfixedbed) !erosion per fraction					
 					ELSEIF (cbottot>0.) THEN
@@ -421,9 +521,9 @@
 					tau=rcfd(i,j,kplus)*ust*ust  !for deposition apply tau belonging to own frac(n)%kn_sed
 	 
 					 depositionf(n) = MAX(0.,(1.-tau/frac(n)%tau_d))*ccfd(n,i,j,kplus)*MIN(0.,Wsed(n,i,j,kbed(i,j)))*ddt
-     & *bednotfixed_depo(i,j,kbed(i,j))					 ! m --> dep is negative due to negative wsed
+     & *bednotfixed_depo(i,j,kbed(i,j))*morfac				 ! m --> dep is negative due to negative wsed
 					 ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus)+(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-]
-					 cbotnew(n,i,j)=cbotnew(n,i,j)-(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-]
+					 cbotnew(n,i,j)=cbotnew(n,i,j)-(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-] 
 					 cbotnewtot=cbotnewtot+cbotnew(n,i,j)
 					 ctot_firstcel=ccnew(n,i,j,kplus)+ctot_firstcel
 				ENDDO
@@ -587,7 +687,7 @@
 				
 				DO n1=1,nfr_sand
 					n=nfrac_sand(n1)			
-					erosion_avg(n) = phip * (delta*ABS(gz)*d50)**0.5*ddt*bednotfixed(i,j,kbed(i,j))  !*rho_sand/rho_sand ! erosion flux in kg/m2/(kg/m3)= m3/m2=m
+					erosion_avg(n) = phip * (delta*ABS(gz)*d50)**0.5*ddt*bednotfixed(i,j,kbed(i,j))*morfac  !*rho_sand/rho_sand ! erosion flux in kg/m2/(kg/m3)= m3/m2=m
 					IF (interaction_bed.ge.6.and.kbed(i,j).eq.0) THEN !unlimited erosion in case kbed.eq.0
 						erosionf(n) = erosion_avg(n) * (c_bed(n)/cfixedbed) !erosion per fraction
 					ELSEIF (cbottot_sand>0.) THEN
@@ -602,9 +702,10 @@
 						erosionf(n) = 0.
 					ENDIF
 					
-					depositionf(n) = ccfd(n,i,j,kplus)*MIN(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))*ddt*bednotfixed_depo(i,j,kbed(i,j)) ! m --> dep is negative due to negative wsed
+					depositionf(n) = ccfd(n,i,j,kplus)*MIN(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))*ddt
+     &     *bednotfixed_depo(i,j,kbed(i,j))*morfac ! m --> dep is negative due to negative wsed
 					ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus)+(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-]
-					cbotnew(n,i,j)=cbotnew(n,i,j)-(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-]
+					cbotnew(n,i,j)=cbotnew(n,i,j)-(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-] 
 					cbotnewtot=cbotnewtot+cbotnew(n,i,j)
 					ctot_firstcel=ccnew(n,i,j,kplus)+ctot_firstcel
 				ENDDO
@@ -666,8 +767,8 @@
 					rnew(i,j,kbed(i,j))=rho_b
 					rold(i,j,kbed(i,j))=rho_b						
 					!kbed(i,j)=MIN(kbed(i,j)+1,kmax) !update bed level at start sedimentation 
-					c_adjustA = MAX(cfixedbed-ctot_firstcel,0.)/MAX(cbotnewtot,1.e-12)
-					c_adjustB = MIN(cfixedbed-ctot_firstcel,0.)/MAX(ctot_firstcel,1.e-12)
+					c_adjustA = MAX(cfixedbed-ctot_firstcel,0.)/MAX(cbotnewtot,1.e-12)    !first fluid cel not yet filled up --> c_adjustA>0 & c_adjustB=0--> fluid cel transformed into bed and sediment from cbotnew moved to bed
+					c_adjustB = MIN(cfixedbed-ctot_firstcel,0.)/MAX(ctot_firstcel,1.e-12) !first fluid cel already more than filled up --> c_adjustB<0&c_adjustA=0 --> fluid cel transformed into bed and excess sediment to cbotnew
 					DO n=1,nfrac 
 						Clivebed(n,i,j,kbed(i,j))=ccnew(n,i,j,kbed(i,j))+
      &						c_adjustA*cbotnew(n,i,j)+c_adjustB*ccnew(n,i,j,kbed(i,j))  ! apply sedimentation ratio between fractions new sediment concentration of cells within bed

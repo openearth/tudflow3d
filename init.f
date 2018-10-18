@@ -383,11 +383,11 @@ c******************************************************************
 
 	else !periodic in x direction:
 		if (LOA>0.) then ! apply U_b as bc also for periodic sims, so to keep random fluctuations alive
-			Unew=-U_b 
+			Unew=-U_init 
 		else
-			Unew=U_b
+			Unew=U_init
 		endif
-		Vnew=V_b
+		Vnew=V_init
 		Wnew=W_b !Wnew*sqrt(dpdx*(depth-bc_obst_h)/rho_b)*4. !scale with 20u_tau
 		Uold=Unew
 		Vold=Vnew
@@ -2812,7 +2812,7 @@ C ...  Locals
 				do i=0,i1 !imax !including i1 strangely gives crash (13/4/15) !1,imax !0,i1
 					do k=1,kbed(i,j) ! assign initial bed concentrations; k=0 remains empty
 						do n=1,nfrac
-							Clivebed(n,i,j,k)=c_bed(n)
+							Clivebed(n,i,j,k)=c_bed(n)*bednotfixed(i,j,k) ! in case obstacle no erosion (bednotfixed=0) then no cbed
 							!Cold(n,i,j,k)=c_bed(n)
 							!Cnew(n,i,j,k)=c_bed(n)
 							!dCdt(n,i,j,k)=c_bed(n)	

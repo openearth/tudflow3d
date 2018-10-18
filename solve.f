@@ -374,8 +374,8 @@ c********************************************************************
 				ccbot(n,:,:)=dnewcbot(n,:,:)
 	      	  !endif
 	  enddo
+	  call slipvelocity_bed(cnew,wnew,wsed,rnew,sumWkm,dt,dz) !driftflux_force must be calculated with settling velocity at bed
       	  if (interaction_bed>0) then
-	    call slipvelocity(cnew,wnew,wsed,rnew,0,0,sumWkm,dt,dz) !driftflux_force must be calculated with settling velocity at k=0
 	    CALL erosion_deposition(dcdt,dcdtbot,unew,vnew,wnew,rnew,cnew,cnewbot,dt,dz) !first two vars are adjusted
 	    !! for kn1: erosion_deposition must be after advecc_TVD and after dcdt update, because cnew and dcdt are two separate vars
 		if (interaction_bed.eq.4.or.interaction_bed.eq.6) then
@@ -718,21 +718,9 @@ c********************************************************************
 c********************************************************************
 c     CALCULATE advection, diffusion Concentration
 c********************************************************************
-!	  do n=1,nfrac
-!	      call advecc_TVD2(dnewc(n,:,:,:),cnew(n,:,:,:),Unew,Vnew,Wsed(n,:,:,:),rnew,Ru,Rp,dr,phiv,phipt,dz,
-!     +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)
-!	      call diffc_CDS2 (dnewc(n,:,:,:),Cnew(n,:,:,:),Diffcof,
-!     +            ib,ie,jb,je,kb,ke)
-
-!!		dcdt(n,:,:,:) =cnew(n,:,:,:) + dt*(1.5*dnewc(n,:,:,:)-0.5*cc(n,:,:,:)) !AB2
-!		dcdt(n,:,:,:) =cnew(n,:,:,:) + dt*dnewc(n,:,:,:)                       !EE1
-!		call bound_c(dcdt(n,:,:,:),frac(n)%c,n) ! bc for intermediate dcdt
-!		cc(n,:,:,:)=dnewc(n,:,:,:)
-!	  enddo
-
+		utr=Unew
+		vtr=Vnew	
 	  do n=1,nfrac
-	      utr=Unew
-	      vtr=Vnew
 	      wtr=Wsed(n,:,:,:)
 	      call make_UtransC_zeroIBM(utr,vtr,wtr)
 		  if (advec_conc.eq.'NVD') then
@@ -746,16 +734,15 @@ c********************************************************************
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)	 
           endif
 		
+		if (Sc<1.e18) then
 	      call diffc_CDS2 (dnewc(n,:,:,:),Cnew(n,:,:,:),Diffcof,
      +            ib,ie,jb,je,kb,ke)
+		endif
 		dcdt(n,:,:,:) =cnew(n,:,:,:) + dt*(dnewc(n,:,:,:)) !update in time with EE1 for TVD
-			  !if(interaction_bed.eq.4.or.interaction_bed.eq.5) then
-			  !  dcdtbot(n,:,:)=cnewbot(n,:,:)	
-			  !else
 		    !! advec concentration in bed with velocity TSHD:
 	      	    call adveccbot_TVD(dnewcbot(n,:,:),cnewbot(n,:,:),Ubot_TSHD,Vbot_TSHD,Ru,Rp,dr,phiv,phipt,dz,
      +            	i1,j1,ib,ie,jb,je,dt,rank,px,periodicx,periodicy)
-		    dcdtbot(n,:,:)= cnewbot(n,:,:) + dt*dnewcbot(n,:,:) ! time update	
+				dcdtbot(n,:,:)= cnewbot(n,:,:) + dt*dnewcbot(n,:,:) ! time update	
            IF (CNdiffz.eq.1) THEN !CN semi implicit treatment diff-z:
 	     call bound_c(dcdt(n,:,:,:),frac(n)%c,n,0.) ! bc start CN-diffz ABv
 	     do k=k1,k1 !-kjet,k1
@@ -788,9 +775,9 @@ c********************************************************************
                enddo
              enddo
 	   ENDIF
-          enddo
+          enddo !end nfrac
+		  call slipvelocity_bed(cnew,wnew,wsed,rnew,sumWkm,dt,dz) !driftflux_force must be calculated with settling velocity at bed
       	  if (interaction_bed>0) then
-	    call slipvelocity(cnew,wnew,wsed,rnew,0,0,sumWkm,dt,dz) !driftflux_force must be calculated with settling velocity at k=0
 	    CALL erosion_deposition(dcdt,dcdtbot,unew,vnew,wnew,rnew,cnew,cnewbot,dt,dz) !first two vars are adjusted
 	    !! erosion_deposition must be after advecc_TVD and after dcdt update, because cnew and dcdt are two separate vars
 		if (interaction_bed.eq.4.or.interaction_bed.eq.6) then
@@ -1306,8 +1293,8 @@ c********************************************************************
              enddo
 	   ENDIF !endif semi-implicit CN
           enddo
+		  call slipvelocity_bed(cnew,wnew,wsed,rnew,sumWkm,cn1*dt,dz) !driftflux_force must be calculated with settling velocity at bed
       	  if (interaction_bed>0) then
-	    call slipvelocity(cnew,wnew,wsed,rnew,0,0,sumWkm,cn1*dt,dz) !driftflux_force must be calculated with settling velocity at k=0
 	    CALL erosion_deposition(dcdt,dcdt1bot,unew,vnew,wnew,rnew,cnew,cnewbot,cn1*dt,dz) !first two vars are adjusted
 	    !! for kn1: erosion_deposition must be after advecc_TVD and after dcdt update, because cnew and dcdt are two separate vars
 		if (interaction_bed.eq.4.or.interaction_bed.eq.6) then
@@ -1755,8 +1742,8 @@ c********************************************************************
 	     !call bound_c(dcdt(n,:,:,:),frac(n)%c,n) ! bc after CN-diffz switched off 6-7-16 
 	   ENDIF
 	  enddo
+	  call slipvelocity_bed(dcdt2,dwdt,wsed,drdt,sumWkm,cn2*dt,dz) !get sumWkm and wsed at bed for driftflux_force 
 	  if (interaction_bed>0) then
-	    call slipvelocity(dcdt2,dwdt,wsed,drdt,0,0,sumWkm,cn2*dt,dz) !get sumWkm and wsed at k=0 for driftflux_force 
 	    CALL erosion_deposition(dcdt,dcdt2bot,dudt,dvdt,dwdt,drdt,dcdt2,dcdt1bot,cn2*dt,dz) !first two vars are adjusted 
  	    !! for kn2: variable dcdt2 made
 		if (interaction_bed.eq.4.or.interaction_bed.eq.6) then
@@ -2205,8 +2192,8 @@ c********************************************************************
 	      
 	   ENDIF
 	  enddo
-	  if (interaction_bed>0) then
-	    call slipvelocity(dcdt2,dwdt,wsed,drdt,0,0,sumWkm,cn3*dt,dz) !get sumWkm and wsed at k=0 for driftflux_force 
+	    call slipvelocity_bed(dcdt2,dwdt,wsed,drdt,sumWkm,cn3*dt,dz) !get sumWkm and wsed at bed for driftflux_force 
+		if (interaction_bed>0) then
 	    CALL erosion_deposition(dcdt,dcdtbot,dudt,dvdt,dwdt,drdt,dcdt2,dcdt2bot,cn3*dt,dz) !first two vars are adjusted
 		    !! for kn3: extra var dcdt2 is used
 	    ! should correct dwdt(n,:,:,0) with (1.-tau/frac(n)%tau_d), but this correction almost always is zero, for now leave
@@ -2614,8 +2601,8 @@ c********************************************************************
              enddo
 	   ENDIF
           enddo
+		  call slipvelocity_bed(cnew,wnew,wsed,rnew,sumWkm,dt,dz) !driftflux_force must be calculated with settling velocity at bed
       	  if (interaction_bed>0) then
-	    call slipvelocity(cnew,wnew,wsed,rnew,0,0,sumWkm,dt,dz) !driftflux_force must be calculated with settling velocity at k=0
 	    CALL erosion_deposition(dcdt,dcdtbot,unew,vnew,wnew,rnew,cnew,cnewbot,dt,dz) !first two vars are adjusted
 	    !! erosion_deposition must be after advecc_TVD and after dcdt update, because cnew and dcdt are two separate vars
 		if (interaction_bed.eq.4.or.interaction_bed.eq.6) then
@@ -3255,8 +3242,6 @@ c
 	      enddo
 	endif
 
-
-
       do k=1,kmax
         do j=1,jmax-1
           do i=1,imax
@@ -3295,6 +3280,18 @@ c
         enddo
       enddo
 
+!	  if (periodicx.eq.1.or.periodicy.eq.1) then
+!      do k=1,kmax
+!         do j=1,jmax
+!            do i=1,imax
+!	    dUdt(i,j,k) = dUdt(i,j,k)+Ppropx(i,j,k) 
+!	    dVdt(i,j,k) = dVdt(i,j,k)+Ppropy(i,j,k) 	 !apply periodic driving forces after pressure correction step otherwise pressure gives exactly reaction force leading to same total flux as at t0
+!            enddo
+!         enddo
+!      enddo
+!	  endif
+
+	  
       do k=0,k1
         do j=0,j1
           do i=0,i1

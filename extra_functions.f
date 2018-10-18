@@ -120,11 +120,13 @@
 		duu = Tadapt*du/dt !30 seconds worked
 		Uav = Uav + duu 
 		dpdx1 = dpdx1 + ABS(U_b)*(U_b-Uav)/depth*dt/Tadapt
+		!dpdx1 = dpdx1 + MIN(ABS(ABS(U_b)*(U_b-Uav)/depth*dt/Tadapt),0.1*ABS(dpdx1))*SIGN(1.,ABS(U_b)*(U_b-Uav)/depth*dt/Tadapt)
 		Ppropx = dpdx1*rnew !with variable density important to use rnew and not rho_b 
 		Uav = Uav - duu
 		if (rank.eq.0) then
 			if (mod(istep,10) .eq.0) then   
 				write(*,'(a,f8.2,a,f6.2,a,f6.2,a)') ' # dpdx: ',dpdx1*rho_b,' Pa/m; Uav: ',Uav,'; U_b:',U_b,' m/s #'
+     		    !write(*,*),du,duu,ABS(U_b)*(U_b-(Uav+duu))/depth*dt/Tadapt
 			endif  
 		endif			
 	  endif
@@ -149,6 +151,7 @@
 		duu = Tadapt*du/dt !30 seconds worked
 		Vav = Vav + duu 
 		dpdy1 = dpdy1 + ABS(V_b)*(V_b-Vav)/depth*dt/Tadapt 
+		!dpdy1 = dpdy1 + MIN(ABS(ABS(V_b)*(V_b-Vav)/depth*dt/Tadapt),0.1*ABS(dpdy1))*SIGN(1.,ABS(V_b)*(V_b-Vav)/depth*dt/Tadapt)
 		Ppropy = dpdy1*rnew !with variable density important to use rnew and not rho_b
 		Vav = Vav - duu
 		if (rank.eq.0) then

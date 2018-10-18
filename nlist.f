@@ -25,10 +25,10 @@
       
       INTEGER i,j,k,imax,jmax,kmax,i1,j1,k1,px,rank,kjet,nmax1,nmax2,nmax3,istep,CNdiffz,npresIBM,counter
       INTEGER Lmix_type,slip_bot,SEM,azi_n,outflow_overflow_down,azi_n2
-      REAL ekm_mol,nu_mol,pi,kappa,gx,gy,gz,Cs,Sc,calibfac_sand_pickup,calibfac_Shields_cr
+      REAL ekm_mol,nu_mol,pi,kappa,gx,gy,gz,Cs,Sc,calibfac_sand_pickup,calibfac_Shields_cr,morfac
       REAL dt,time_nm,time_n,time_np,t_end,t0_output,dt_output,te_output,dt_max,tstart_rms,CFL,dt_ini,tstart_morf
       REAL dt_output_movie,t0_output_movie,te_output_movie,te_rms
-      REAL U_b,V_b,W_b,rho_b,W_j,Awjet,Aujet,Avjet,Strouhal,radius_j,kn,W_ox,U_bSEM,V_bSEM,U_w,V_w
+      REAL U_b,V_b,W_b,rho_b,W_j,Awjet,Aujet,Avjet,Strouhal,radius_j,kn,W_ox,U_bSEM,V_bSEM,U_w,V_w,U_init,V_init
       REAL U_j2,Awjet2,Aujet2,Avjet2,Strouhal2,radius_j2,zjet2
       REAL xj(4),yj(4),radius_inner_j,W_j_powerlaw,plume_z_outflow_belowsurf
       REAL dy,dz,schuif_x,depth,lm_min,lm_min3,Rmin,bc_obst_h
@@ -199,14 +199,14 @@
 	NAMELIST /num_scheme/convection,numdiff,diffusion,comp_filter_a,comp_filter_n,CNdiffz,npresIBM,advec_conc,continuity_solver
 	NAMELIST /ambient/U_b,V_b,W_b,bcfile,rho_b,SEM,nmax2,nmax1,nmax3,lm_min,lm_min3,slip_bot,kn,interaction_bed,
      & periodicx,periodicy,dpdx,dpdy,W_ox,Hs,Tp,nx_w,ny_w,obst,bc_obst_h,U_b3,V_b3,surf_layer,wallup,bedlevelfile,
-     & U_bSEM,V_bSEM,U_w,V_w,c_bed,cfixedbed
+     & U_bSEM,V_bSEM,U_w,V_w,c_bed,cfixedbed,U_init,V_init
 	NAMELIST /plume/W_j,plumetseriesfile,Awjet,Aujet,Avjet,Strouhal,azi_n,kjet,radius_j,Sc,slipvel,outflow_overflow_down,
      & U_j2,plumetseriesfile2,Awjet2,Aujet2,Avjet2,Strouhal2,azi_n2,radius_j2,zjet2,bedplume,radius_inner_j,xj,yj,W_j_powerlaw,
      & plume_z_outflow_belowsurf,hindered_settling,Q_j,plumeQtseriesfile,plumectseriesfile
 	NAMELIST /LESmodel/sgs_model,Cs,Lmix_type,nr_HPfilter,damping_drho_dz,damping_a1,damping_b1,damping_a2,damping_b2,
      & extra_mix_visc
 	NAMELIST /constants/kappa,gx,gy,gz,ekm_mol,calibfac_sand_pickup,pickup_formula,kn_d50_multiplier,avalanche_slope,
-     &	calibfac_Shields_cr,reduction_sedimentation_shields
+     &	calibfac_Shields_cr,reduction_sedimentation_shields,morfac
 	NAMELIST /fractions_in_plume/fract
 	NAMELIST /ship/U_TSHD,LOA,Lfront,Breadth,Draught,Lback,Hback,xfront,yfront,kn_TSHD,nprop,Dprop,xprop,yprop,zprop,
      &   Pprop,rudder,rot_prop,draghead,Dsp,xdh,perc_dh_suction,softnose,Hfront,cutter
@@ -263,6 +263,8 @@
 	U_b = -999.
 	V_b = -999.
 	W_b = -999.
+	U_init = -999.
+	V_init = -999.
 	bcfile = ''
 	rho_b = -999.  
 	SEM = -999
@@ -434,6 +436,7 @@
 	kn_d50_multiplier = 2. !default, kn=2*d50 defined in paper Van Rijn 1984
 	avalanche_slope = 0. !default vertical slopes are allowed
 	reduction_sedimentation_shields = 0. ! default no reduction in sedimentation by shear stresss (shields) ! PhD thesis vRhee p146 eq 7.74
+	morfac = 1.
 	!! ship
 	U_TSHD=-999.
 	LOA=-999.
@@ -571,7 +574,9 @@
 	ELSE 
 	  signV_bSEM=1.	
 	ENDIF
-
+	IF (U_init<-998.) U_init=U_b ! only if defined then different U_init is used else equal to U_b
+	IF (V_init<-998.) V_init=V_b
+	
 	nobst=0
 	DO WHILE (obst(nobst+1)%height.NE.-99999.)
 	  nobst=nobst+1
@@ -985,6 +990,7 @@
 	IF (avalanche_slope<0.) CALL writeerror(97)
 	IF (calibfac_sand_pickup<0.) CALL writeerror(98)
 	IF (calibfac_Shields_cr<0.) CALL writeerror(99)
+	IF (morfac<0.) CALL writeerror(101)
 
 	READ (UNIT=1,NML=ship,IOSTAT=ios)
 	!! check input constants

@@ -55,6 +55,8 @@ W_b = 0.0			! Ambient bc W velocity [m/s] (in x,y coordinates, not r,phi)
 bcfile = ''			! Input netcdf file for bc front & 2 sides (U_b,V_b and U_TSHD are still used for orientation ship hull!)
 U_bSEM = -1.			! Ambient bc U velocity [m/s] used for SEM (if not defined then U_b is used)
 V_bSEM =.5			! Ambient bc V velocity [m/s] used for SEM (if not defined then V_b is used)
+U_init = -1.			! Init U velocity [m/s] (if not defined then U_b is used)
+V_init = -1.			! Init V velocity [m/s] (if not defined then V_b is used)
 rho_b = 1025.			! Ambient density [kg/m3]
 SEM = 0				! 1 = SEM to generate turbulent fluctuations on top of inflow bc, 0 = laminar bc 
 nmax2 = 0			! Number of SEM eddies front inflow 
@@ -181,6 +183,7 @@ pickup_formula = 'nielsen1992' !options are 'vanrijn1984' (default),'nielsen1992
 kn_d50_multiplier = 2. 	! Defines Nikuradse bedroughness for sand pickup function (not for flow shear stress), default 2.; kn=2*d50 defined in paper Van Rijn 1984
 avalanche_slope = 2. ! Max bedslope 1:as; all slopes steeper avalanche towards 1:as (0=vertical slope, wet sand=30deg=1.7--15deg=3.7)
 reduction_sedimentation_shields = 0. ! Reduction of sedimentation at the bed by shear or perhaps grain-grain interactions (sheet flow) default 0. no reduction, value should be 4-5 PhD thesis vRhee p146 eq 7.74
+morfac = 1. 		! Factor applied to erosion and sedimentation fluxes to speed up morfology simulation (default 1.); only dz_bed is accelerated but concentrations in fluid remain unaltered 
 /
 
 &ship

@@ -305,6 +305,9 @@
 	CASE(100)
 		write(*,*) '# Namelist error occured                         #'			
 		write(*,*) '# Namelist involved: HISTORIES                   #'
+	CASE(101)
+		write(*,*) '# namelist &constants                            #'			
+		write(*,*) '# morfac must be >=0.                            #'			
 	CASE(110)
 		write(*,*) '# i history > imax                               #'			
 		write(*,*) '#                                                #'
