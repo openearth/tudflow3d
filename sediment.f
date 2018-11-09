@@ -348,7 +348,7 @@
 	REAL cbedtot_sand,rho_botsand,rho_bedsand,rho_sand,delta,Dstar,Shields_cr,ustc2,TT,phip,erosion_sand
 	REAL ws_botsand,ws_bedsand,ws_sand,Re_p,CD,Shields_eff,dubdt,Fd,Fi,Fl,W
 	REAL erosionf(nfrac),depositionf(nfrac),erosion_avg(nfrac)
-	REAL zb_all(0:i1,0:j1),maxbedslope(0:i1,0:j1),sl1,sl2,sl3,sl4
+	REAL zb_all(0:i1,0:j1),maxbedslope(0:i1,0:j1),sl1,sl2,sl3,sl4,sl5,sl6,sl7,sl8
 	REAL d_cbotnew(nfrac,0:i1,0:j1),dbed,dl,dbed_allowed,dbed_adjust,dz_botlayer,c_adjust,c_adjustA,c_adjustB
 	REAL*8 cbf(nfrac,0:i1),cbb(nfrac,0:i1),zbf(0:i1),zbb(0:i1),reduced_sed
 	INTEGER itrgt,jtrgt
@@ -904,7 +904,11 @@
 					sl2=(Rp(i+1)-Rp(i))/MAX(zb_all(i,j)-zb_all(i+1,j),1.e-18)
 					sl3=(Rp(i)*sin_u(j)-Rp(i)*sin_u(j-1))/MAX(zb_all(i,j)-zb_all(i,j-1),1.e-18)
 					sl4=(Rp(i)*sin_u(j+1)-Rp(i)*sin_u(j))/MAX(zb_all(i,j)-zb_all(i,j+1),1.e-18)					
-					maxbedslope(i,j)=MIN(sl1,sl2,sl3,sl4)
+					sl5=SQRT((Rp(i)*sin_u(j+1)-Rp(i)*sin_u(j))**2+(Rp(i)-Rp(i-1))**2)/MAX(zb_all(i,j)-zb_all(i-1,j+1),1.e-18)
+					sl6=SQRT((Rp(i)*sin_u(j+1)-Rp(i)*sin_u(j))**2+(Rp(i)-Rp(i+1))**2)/MAX(zb_all(i,j)-zb_all(i+1,j+1),1.e-18)
+					sl7=SQRT((Rp(i)*sin_u(j-1)-Rp(i)*sin_u(j))**2+(Rp(i)-Rp(i+1))**2)/MAX(zb_all(i,j)-zb_all(i+1,j-1),1.e-18)
+					sl8=SQRT((Rp(i)*sin_u(j-1)-Rp(i)*sin_u(j))**2+(Rp(i)-Rp(i-1))**2)/MAX(zb_all(i,j)-zb_all(i-1,j-1),1.e-18)
+					maxbedslope(i,j)=MIN(sl1,sl2,sl3,sl4,sl5,sl6,sl7,sl8)
 					IF (maxbedslope(i,j).lt.avalanche_slope*bednotfixed(i,j,kbed(i,j)).and.kbed(i,j).ge.1) THEN
 					! avalanche...
 						IF (sl1.le.maxbedslope(i,j)) THEN
@@ -926,7 +930,27 @@
 							itrgt=i
 							jtrgt=j+1
 							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
-							dl = Rp(i)*sin_u(j+1)-Rp(i)*sin_u(j)							
+							dl = Rp(i)*sin_u(j+1)-Rp(i)*sin_u(j)
+						ELSEIF (sl5.le.maxbedslope(i,j)) THEN
+							itrgt=i-1
+							jtrgt=j+1
+							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
+							dl = SQRT((Rp(i)*sin_u(j)-Rp(i)*sin_u(jtrgt))**2+(Rp(i)-Rp(itrgt))**2)	
+						ELSEIF (sl6.le.maxbedslope(i,j)) THEN
+							itrgt=i+1
+							jtrgt=j+1
+							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
+							dl = SQRT((Rp(i)*sin_u(j)-Rp(i)*sin_u(jtrgt))**2+(Rp(i)-Rp(itrgt))**2)		
+						ELSEIF (sl7.le.maxbedslope(i,j)) THEN
+							itrgt=i+1
+							jtrgt=j-1
+							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
+							dl = SQRT((Rp(i)*sin_u(j)-Rp(i)*sin_u(jtrgt))**2+(Rp(i)-Rp(itrgt))**2)
+						ELSEIF (sl8.le.maxbedslope(i,j)) THEN
+							itrgt=i-1
+							jtrgt=j-1
+							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
+							dl = SQRT((Rp(i)*sin_u(j)-Rp(i)*sin_u(jtrgt))**2+(Rp(i)-Rp(itrgt))**2)								
 						ELSE
 							write(*,*),'Warning avalanche cell not found,i,j:',i,j
 							CYCLE 

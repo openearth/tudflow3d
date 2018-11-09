@@ -147,7 +147,7 @@ bedplume(1)%Q_tseriesfile = './inputfiles/Inflow_Q.asc'		! file containing times
 bedplume(1)%sedflux = 6.625 59.625  ! Sediment flux [kg/s] (divided evenly over all cells within bedplume, length vector must be nfrac large)
 bedplume(1)%S_tseriesfile = './inputfiles/Inflow_S.asc'		! file containing timeseries of sediment flux [kg/s] (optional overrules bedplume(.)%sedflux, default '')
 bedplume(1)%changesedsuction = 1.   ! 0. is no sediment is removed from suction domain in case bedplume%Q negative (default 1.=sediment is sucked out of domain) 
-bedplume(1)%move_zbed_criterium = 3.	! criterium [m] to move this bedplume with move_dx and move_dy once bed within x,y contour grows above this criterium
+bedplume(1)%move_zbed_criterium = 5.5	! criterium [m] to move this bedplume with move_dx and move_dy once bed within x,y contour grows above this criterium
 bedplume(1)%move_dx_series = 			! series [m] to move bedplume in x direction every time bed grows above move_zbed_criterium within x,y contour bedplume
 bedplume(1)%move_dy_series = 			! series [m] to move bedplume in y direction every time bed grows above move_zbed_criterium within x,y contour bedplume
 /
