@@ -59,9 +59,12 @@
       	    df2 = df * df
             dr2 = dr(i) * dr(i)
             kcoeff = ekm(i,j,k) /rnew(i,j,k)
-            tmp1 = ( abs(Unew(i,j,k)) / ( Rp(i+1)-Rp(i) ) ) +
-     &             ( abs(Vnew(i,j,k)) /         df        ) +
-     &             ( abs(Wnew(i,j,k)) /         dz        )
+!            tmp1 = ( abs(Unew(i,j,k)) / ( Rp(i+1)-Rp(i) ) ) +
+!     &             ( abs(Vnew(i,j,k)) /         df        ) +
+!     &             ( abs(Wnew(i,j,k)) /         dz        )
+			tmp1 = ( abs(Unew(i,j,k)) / ( Rp(i+1)-Rp(i) ) )
+			tmp1 = MAX(tmp1,( abs(Vnew(i,j,k)) /         df        ))
+			tmp1 = MAX(tmp1,( abs(Wnew(i,j,k)) /         dz        ))
             tmp2 = ( 1.0/dr2 + 1.0/df2 + 1.0/dz2 )
             tmp3 = 1.0 / ( 1.0 * tmp2 * kcoeff + tmp1 + 1.e-12 )
             tmp3 =Courant *tmp3 
@@ -121,7 +124,7 @@
 		Uav = Uav + duu 
 		dpdx1 = dpdx1 + ABS(U_b)*(U_b-Uav)/depth*dt/Tadapt
 		!dpdx1 = dpdx1 + MIN(ABS(ABS(U_b)*(U_b-Uav)/depth*dt/Tadapt),0.1*ABS(dpdx1))*SIGN(1.,ABS(U_b)*(U_b-Uav)/depth*dt/Tadapt)
-		Ppropx = dpdx1*rnew !with variable density important to use rnew and not rho_b 
+		Ppropx = dpdx1*rhU !rnew !with variable density important to use rnew and not rho_b 
 		Uav = Uav - duu
 		if (rank.eq.0) then
 			if (mod(istep,10) .eq.0) then   
@@ -152,7 +155,7 @@
 		Vav = Vav + duu 
 		dpdy1 = dpdy1 + ABS(V_b)*(V_b-Vav)/depth*dt/Tadapt 
 		!dpdy1 = dpdy1 + MIN(ABS(ABS(V_b)*(V_b-Vav)/depth*dt/Tadapt),0.1*ABS(dpdy1))*SIGN(1.,ABS(V_b)*(V_b-Vav)/depth*dt/Tadapt)
-		Ppropy = dpdy1*rnew !with variable density important to use rnew and not rho_b
+		Ppropy = dpdy1*rhV !rnew !with variable density important to use rnew and not rho_b
 		Vav = Vav - duu
 		if (rank.eq.0) then
 			if (mod(istep,10) .eq.0) then   
@@ -171,16 +174,24 @@
       include 'mpif.h'
       real   div1,divmax1,divbar1,divmax_tot1,divbar_tot1,rhoip,rhoim,rhojp,rhojm,rhokp,rhokm
       real   div2,divmax2,divbar2,divmax_tot2,divbar_tot2
-      integer ierr
+	  real   div3,divmax3,divbar3,divmax_tot3,divbar_tot3,rrri,rrrj,rrrk,rrrim,rrrjm,rrrkm
+      integer ierr,n,inout,n2
+	  real xTSHD(1:4),yTSHD(1:4),phi,xx,yy,kg_sus,kg_sed,kg_sus_tot,kg_sed_tot
+	  real cU2(nfrac,0:i1,0:j1,0:k1),cV2(nfrac,0:i1,0:j1,0:k1),cW2(nfrac,0:i1,0:j1,0:k1)
+	  real rhU2(0:i1,0:j1,0:k1),rhV2(0:i1,0:j1,0:k1),rhW2(0:i1,0:j1,0:k1)
+	  
       divbar1 = 0.0
       divmax1 = 0.0
       divbar2 = 0.0
       divmax2 = 0.0
+      divbar3 = 0.0
+      divmax3 = 0.0	  
+	  
 	  
       do k=2,kmax-1
          do j=2,jmax-1
             do i=2,imax-1		
-	div1 =
+		div1 =
      1  ( Ru(i)*dUdt(i,j,k) - Ru(i-1)*dUdt(i-1,j,k) ) / ( Rp(i)*dr(i) )
      +              +
      2  (       dVdt(i,j,k) -         dVdt(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
@@ -194,31 +205,115 @@
      2  (       Vnew(i,j,k) -         Vnew(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
      +              +
      3  (       Wnew(i,j,k) -         Wnew(i,j,k-1) ) / ( dz )  
+	 
+	DO n2=1,nbedplume !correct div2 for adding or subtracting volume:
+		IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
+		! rotation ship for ambient side current
+		if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
+		  phi=atan2(V_b,1.e-12)
+		else
+		  phi=atan2(V_b,(U_TSHD-U_b))
+		endif
+		  xx=Rp(i)*cos_u(j)-schuif_x
+		  yy=Rp(i)*sin_u(j)
+		  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
+			xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
+			yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
+			CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+		  ELSE 
+			inout=0
+		  ENDIF
+		  if (inout.eq.1) then
+			div2=div2-bp(n2)%Q/bp(n2)%volncells
+		   endif
+		ENDIF
+	ENDDO ! bedplume loop
+	
 
+		IF (split_rho_cont.eq.'TVD') then
+		! U,V,W,C has been updated already, but rho not!
+			do n=1,nfrac
+			  call c_edges_TVD_nocfl(cU2(n,:,:,:),cV2(n,:,:,:),cW2(n,:,:,:),cold(n,:,:,:),Uold,Vold,Wold,rnew,Ru,Rp,dr,phiv,phipt,dz,
+     +            i1,j1,k1,1,imax,1,jmax,1,kmax,dt,rank,px,periodicx,periodicy)
+			enddo
+			call state_edges(cU2,rhU2)
+			call state_edges(cV2,rhV2)
+			call state_edges(cW2,rhW2)		  
+		   rrri= rhU2(i,j,k)
+		   rrrj= rhV2(i,j,k)
+		   rrrk= rhW2(i,j,k)
+		   rrrim=rhU2(i-1,j,k)
+		   rrrjm=rhV2(i,j-1,k)
+		   rrrkm=rhW2(i,j,k-1)
+		ELSE
+		   rrri= 0.5*(rnew(i,j,k)+rnew(i+1,j,k))
+		   rrrj= 0.5*(rnew(i,j,k)+rnew(i,j+1,k))
+		   rrrk= 0.5*(rnew(i,j,k)+rnew(i,j,k+1))
+		   rrrim=0.5*(rnew(i,j,k)+rnew(i-1,j,k))
+		   rrrjm=0.5*(rnew(i,j,k)+rnew(i,j-1,k))
+		   rrrkm=0.5*(rnew(i,j,k)+rnew(i,j,k-1))		
+		ENDIF
+	 
+			div3 =
+     1  ( Ru(i)*Uold(i,j,k)*rrri - Ru(i-1)*Uold(i-1,j,k)*rrrim ) / ( Rp(i)*dr(i) )
+     +              +
+     2  (       Vold(i,j,k)*rrrj -         Vold(i,j-1,k)*rrrjm ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
+     +              +
+     3  (       Wold(i,j,k)*rrrk -         Wold(i,j,k-1)*rrrkm ) / ( dz )
+     +              +  (drdt(i,j,k)-rnew(i,j,k))/(dt)
+	
       divbar1 = divbar1 + div1
       div1    = abs(div1)
       divmax1 = max( divmax1 , div1 )
       divbar2 = divbar2 + div2
       div2    = abs(div2)
       divmax2 = max( divmax2 , div2 )
-
+      divbar3 = divbar3 + div3
+      div3    = abs(div3)
+      divmax3 = max( divmax3 , div3 )
            enddo
          enddo
       enddo
+
+!		kg_sed=0.
+!		kg_sus=0.
+!      do  i=1,imax
+!        do j=1,jmax
+!		  do n=1,nfrac
+!            do k=1,kmax
+!				kg_sus=kg_sus+Cnew(n,i,j,k)*dr(i)*Rp(i)*(phiv(j)-phiv(j-1))*dz*frac(n)%rho
+!				kg_sed=kg_sed+Clivebed(n,i,j,k)*dr(i)*Rp(i)*(phiv(j)-phiv(j-1))*dz*frac(n)%rho
+!            enddo
+!			kg_sed=kg_sed+cnewbot(n,i,j)*dr(i)*Rp(i)*(phiv(j)-phiv(j-1))*dz*frac(n)%rho
+!		  enddo
+!        enddo
+!      enddo		  
+!		call mpi_allreduce(kg_sus,kg_sus_tot,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+!		call mpi_allreduce(kg_sed,kg_sed_tot,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+!      if (rank.eq.0) write(6,104)kg_sus_tot,kg_sed_tot,
+!     & (kg_sus_tot+kg_sed_tot)/(time_np*(bp(1)%sedflux(1)+bp(1)%sedflux(2)+bp(1)%sedflux(3)+bp(1)%sedflux(4)))  
+!104   format('kg_sus = ',e13.6,'kg_sed = ',e13.6,'(kg_sus+kg_sed)/influx=',e13.6)
+	 
 	  
       call mpi_allreduce(divbar1,divbar_tot1,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
       call mpi_allreduce(divmax1,divmax_tot1,1,mpi_real8,mpi_max,mpi_comm_world,ierr)
       call mpi_allreduce(divbar2,divbar_tot2,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
       call mpi_allreduce(divmax2,divmax_tot2,1,mpi_real8,mpi_max,mpi_comm_world,ierr)
+      call mpi_allreduce(divbar3,divbar_tot3,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+      call mpi_allreduce(divmax3,divmax_tot3,1,mpi_real8,mpi_max,mpi_comm_world,ierr)	  
       !call mpi_allreduce(divbar,divbar_tot,1,mpi_real,mpi_max,mpi_comm_world,ierr)
       !call mpi_allreduce(divmax,divmax_tot,1,mpi_real,mpi_sum,mpi_comm_world,ierr)
       
 	if (rank.eq.0) write(6,100)divbar_tot1,divmax_tot1   
-100   format('Mass loss/gain : Tot = ',e13.6,
+100   format('Mass loss/gain A : Tot = ',e13.6,
      +                      '  Max = ',e13.6)
-	if (rank.eq.0) write(6,101)divbar_tot2,divmax_tot2  
-101   format('Div(u) : Tot = ',e13.6,
+	if (rank.eq.0) write(6,102)divbar_tot3,divmax_tot3 
+102   format('Mass loss/gain B : Tot = ',e13.6,
+     +                      '  Max = ',e13.6)	
+	 if (rank.eq.0) write(6,101)divbar_tot2,divmax_tot2  
+101   format('Div(u)           : Tot = ',e13.6,
      +                      '  Max = ',e13.6)
+ 
       end
       
       

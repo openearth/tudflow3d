@@ -60,6 +60,7 @@
 	istep=0
       istep_output=0      
       istep_output_movie=0
+	  istep_output_bpmove = 0
 	t_output_movie=t0_output_movie
 	t_output=t0_output
 
@@ -113,9 +114,9 @@
       ENDIF
 	  
       do n=1,nfrac
-	 call bound_c(cold(n,:,:,:),frac(n)%c,n,0.)
- 	 call bound_c(cnew(n,:,:,:),frac(n)%c,n,0.)
- 	 call bound_c(dcdt(n,:,:,:),frac(n)%c,n,0.)
+	   call bound_c(cold(n,:,:,:),frac(n)%c,n,0.)
+ 	   call bound_c(cnew(n,:,:,:),frac(n)%c,n,0.)
+ 	   call bound_c(dcdt(n,:,:,:),frac(n)%c,n,0.)
       enddo 
       call state(cold,rold)
       call state(cnew,rnew)
@@ -123,7 +124,7 @@
       call bound(Uold,Vold,Wold,rold,0,0.,Ub1old,Vb1old,Wb1old,Ub2old,Vb2old,Wb2old,Ub3old,Vb3old,Wb3old)
       call bound(Unew,Vnew,Wnew,rnew,0,0.,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
       call bound_rhoU(dUdt,dVdt,dWdt,drdt,slip_bot,0.,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
-	  
+	 
 !	call stress_terms(Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
 !	call diffu_com4(wx,Srr,Spr,Szr,Spp,Ru,Rp,dr,dphi,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 
@@ -218,10 +219,11 @@
 		elseif (time_int.eq.'RK3') then
 			call RK3(ib,ie,jb,je,kb,ke)
 		endif
-		call bound_rhoU(dUdt,dVdt,dWdt,drdt,slip_bot,time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
+		call bound_rhoU(dUdt,dVdt,dWdt,drdt,slip_bot,time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new) !bound_rhoU on rhou^*
 		call update_nvol_bedplume(time_np)
 		call update_QSc_bedplume(time_np)
 		call update_Qc_plume(time_np)
+		call update_location_bedplume
 
 		if (comp_filter_n>0) then
 			if (mod(istep,comp_filter_n).eq.0) then
@@ -293,7 +295,10 @@
 
 !		call bound(Uold,Vold,Wold,Rold,0,time_n,Ub1old,Vb1old,Wb1old,Ub2old,Vb2old,Wb2old)
 		call bound(Unew,Vnew,Wnew,Rnew,0,time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
-
+		!call bound_rhoU(dUdt,dVdt,dWdt,drdt,0,time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new) !bound_rhoU on rhoU^n+1 
+		!extra call bound_rhoU only needed for determination rhU,cU with split_rho_cont.eq.'TVD' based on direction of rhoU^n+1 instead of rhoU^* 
+		!nov-2018 not used because 1) consistent with splitting rho of from rhoU^* 2) faster
+		!only drawback is that it is not fully consistent with update C as this is based on c_edge based on direction U^n+1
 		if (mod(istep,100).eq.0) then
 			call chkdiv
 		endif
@@ -313,7 +318,7 @@
 		if (time_np.ge.t_output.and.t_output.le.te_output+1.e-12) then
 		   istep_output=istep_output+1
 		   t_output=t_output+dt_output		   	
-		   call output_nc(istep_output,time_np)
+		   call output_nc('flow3D_',istep_output,time_np)
 		endif
 		if (time_np.ge.t_output_movie.and.t_output_movie.le.te_output_movie+1.e-12) then
 		   istep_output_movie=istep_output_movie+1

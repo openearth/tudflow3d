@@ -307,7 +307,10 @@
 		write(*,*) '# Namelist involved: HISTORIES                   #'
 	CASE(101)
 		write(*,*) '# namelist &constants                            #'			
-		write(*,*) '# morfac must be >=0.                            #'			
+		write(*,*) '# morfac must be >=0.                            #'	
+	CASE(102)
+		write(*,*) '# namelist &constants                            #'			
+		write(*,*) '# morfac must be >=1.                            #'			
 	CASE(110)
 		write(*,*) '# i history > imax                               #'			
 		write(*,*) '#                                                #'
@@ -331,7 +334,11 @@
 		write(*,*) '# type must be 1 (default),2, or 3                   #'	
 	CASE(172)
 		write(*,*) '# namelist &fractions_in_plume                   #'			
-		write(*,*) '# fractions must be ordered with increasing dpart#'			
+		write(*,*) '# fractions must be ordered with increasing dpart#'	
+	CASE(173)
+		write(*,*) '# namelist &plume -->bedplume                    #'			
+		write(*,*) '# move_dx_series not as long as move_dy_series   #'			
+		write(*,*) '# make both series same length                   #'			
 	CASE(200)
 		write(*,*) '#                                                #'			
 		write(*,*) '# input file not found                           #'

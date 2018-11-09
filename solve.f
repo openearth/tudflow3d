@@ -46,6 +46,11 @@ c
       real     dold(0:i1,0:j1,0:k1),dnew(0:i1,0:j1,0:k1)
       real     wsed(nfrac,0:i1,0:j1,0:k1),sumWkm(0:i1,0:j1,0:k1)
 	real*8 pplus(imax,kmax)
+!	real dUdt1(0:i1,0:j1,0:k1),dVdt1(0:i1,0:j1,0:k1),dWdt1(0:i1,0:j1,0:k1)
+!	
+!	dUdt1=dudt
+!	dVdt1=dvdt
+!	dWdt1=dwdt
 	
 
 !	real     Diffcof(0:i1,0:j1,0:k1)
@@ -113,7 +118,8 @@ c********************************************************************
 	elseif(convection.eq.'HYB4') then
       call advecu_HYB4(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
 	elseif(convection.eq.'HYB6') then
-      call advecu_HYB6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecu_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
+     & numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecu_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
      &,phiv,wf,ekm,ekm_mol,p+pold)
@@ -156,7 +162,8 @@ c********************************************************************
 	elseif(convection.eq.'HYB4') then
       call advecv_HYB4(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
 	elseif(convection.eq.'HYB6') then
-      call advecv_HYB6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecv_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
+     & numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecv_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
      &,phiv,wf)	  
@@ -198,7 +205,8 @@ c********************************************************************
 	elseif(convection.eq.'HYB4') then
       call advecw_HYB4(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
 	elseif(convection.eq.'HYB6') then
-      call advecw_HYB6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecw_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
+     & numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecw_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
      &,phiv,wf)	  
@@ -319,12 +327,18 @@ c
       real     wsed(nfrac,0:i1,0:j1,0:k1),sumWkm(0:i1,0:j1,0:k1)
 	real*8 pplus(imax,kmax)
 	real dnewcbot(nfrac,0:i1,0:j1)
+!	real dUdt1(0:i1,0:j1,0:k1),dVdt1(0:i1,0:j1,0:k1),dWdt1(0:i1,0:j1,0:k1)
+!	
+!	dUdt1=dudt
+!	dVdt1=dvdt
+!	dWdt1=dwdt
 	
-
 !	real     Diffcof(0:i1,0:j1,0:k1)
 
 !	Diffcof=ekm/Sc/Rnew 
 
+
+	
 c********************************************************************
 c     CALCULATE slipvelocity
 c********************************************************************
@@ -407,7 +421,8 @@ c********************************************************************
 	elseif(convection.eq.'HYB4') then
       call advecu_HYB4(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
 	elseif(convection.eq.'HYB6') then
-      call advecu_HYB6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecu_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
+     & numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecu_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
      &,phiv,wf,ekm,ekm_mol,p+pold)	  
@@ -453,7 +468,8 @@ c********************************************************************
 	elseif(convection.eq.'HYB4') then
       call advecv_HYB4(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
 	elseif(convection.eq.'HYB6') then
-      call advecv_HYB6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecv_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
+     & numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecv_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
      &,phiv,wf)	  
@@ -495,7 +511,8 @@ c********************************************************************
 	elseif(convection.eq.'HYB4') then
       call advecw_HYB4(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
 	elseif(convection.eq.'HYB6') then
-      call advecw_HYB6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecw_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
+     & numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecw_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
      &,phiv,wf)	  
@@ -625,6 +642,11 @@ c
 	real dnewcbot(nfrac,0:i1,0:j1)	
 	real aaa(0:k1),bbb(0:k1),ccc(0:k1),ekm_min,ekm_plus,rhss(0:k1)
 	real utr(0:i1,0:j1,0:k1),vtr(0:i1,0:j1,0:k1),wtr(0:i1,0:j1,0:k1)	
+!		real dUdt1(0:i1,0:j1,0:k1),dVdt1(0:i1,0:j1,0:k1),dWdt1(0:i1,0:j1,0:k1)
+!	
+!	dUdt1=dudt
+!	dVdt1=dvdt
+!	dWdt1=dwdt
 
 c********************************************************************
 c     CALCULATE coefficients for AB3 interpolation with variable dt
@@ -718,17 +740,34 @@ c********************************************************************
 c********************************************************************
 c     CALCULATE advection, diffusion Concentration
 c********************************************************************
-		utr=Unew
-		vtr=Vnew	
+
 	  do n=1,nfrac
-	      wtr=Wsed(n,:,:,:)
+		if (transporteq_fracs.eq.'massfrac') then
+			utr=rhoU
+			vtr=rhoV		
+			wtr(:,:,0:kmax)=wsed(n,:,:,0:kmax)*0.5*(rnew(:,:,0:kmax)+rnew(:,:,1:k1))
+			cnew(n,:,:,:)=cnew(n,:,:,:)*frac(n)%rho/rnew(:,:,:)  ! go from volume fraction to mass fraction
+			Diffcof=Diffcof*rnew
+		elseif (transporteq_fracs.eq.'massfra2') then
+			cnew(n,:,:,:)=cnew(n,:,:,:)*frac(n)%rho  ! go from volume fraction to (mass-fraction*rho_mix)
+			utr=Unew
+			vtr=Vnew	
+			wtr=Wsed(n,:,:,:)		
+		else
+			utr=Unew
+			vtr=Vnew	
+			wtr=Wsed(n,:,:,:)
+		endif	  
 	      call make_UtransC_zeroIBM(utr,vtr,wtr)
 		  if (advec_conc.eq.'NVD') then
 	      call advecc_NVD(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)	 
           elseif (advec_conc.eq.'VLE') then	 
 	      call advecc_TVD(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
-     +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)
+     +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy,transporteq_fracs)
+          elseif (advec_conc.eq.'VL2') then	 
+	      call advecc_TVD_nocfl(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
+     +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)	 
 		  else
 	      call advecc_TVD2(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)	 
@@ -738,7 +777,18 @@ c********************************************************************
 	      call diffc_CDS2 (dnewc(n,:,:,:),Cnew(n,:,:,:),Diffcof,
      +            ib,ie,jb,je,kb,ke)
 		endif
+
 		dcdt(n,:,:,:) =cnew(n,:,:,:) + dt*(dnewc(n,:,:,:)) !update in time with EE1 for TVD
+		if (transporteq_fracs.eq.'massfrac') then
+			dcdt(n,:,:,:)=dcdt(n,:,:,:)+cnew(n,:,:,:)*rnew-cnew(n,:,:,:) 
+			dcdt(n,:,:,:)=dcdt(n,:,:,:)/frac(n)%rho ! from dcdt (mass-fraction*rho_mix) back to volume-fraction
+			cnew(n,:,:,:)=cnew(n,:,:,:)*rnew/frac(n)%rho ! from mass fraction back to volume fraction
+			Diffcof=Diffcof/rnew
+		elseif (transporteq_fracs.eq.'massfra2') then
+			dcdt(n,:,:,:)=dcdt(n,:,:,:)/frac(n)%rho ! from dcdt (mass-fraction*rho_mix) back to volume-fraction
+			cnew(n,:,:,:)=cnew(n,:,:,:)/frac(n)%rho ! from (mass-fraction*rho_mix) back to volume fraction
+		endif
+		
 		    !! advec concentration in bed with velocity TSHD:
 	      	    call adveccbot_TVD(dnewcbot(n,:,:),cnewbot(n,:,:),Ubot_TSHD,Vbot_TSHD,Ru,Rp,dr,phiv,phipt,dz,
      +            	i1,j1,ib,ie,jb,je,dt,rank,px,periodicx,periodicy)
@@ -808,7 +858,8 @@ c********************************************************************
 	elseif(convection.eq.'HYB4') then
       call advecu_HYB4(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
 	elseif(convection.eq.'HYB6') then
-      call advecu_HYB6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecu_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
+     & numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecu_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
      &,phiv,wf,ekm,ekm_mol,p)	  
@@ -829,7 +880,7 @@ c********************************************************************
             do i=1,imax
 	    dnew(i,j,k)=dnew(i,j,k)-(gx*cos_u(j)+gy*sin_u(j))*(0.5*(rnew(i,j,k)+rnew(i+1,j,k))-rho_b)
      1     +Ppropx(i,j,k) 
-            dUdt(i,j,k)=Unew(i,j,k)*0.5*(rnew(i,j,k)+rnew(i+1,j,k))+
+            dUdt(i,j,k)=Unew(i,j,k)*rhU(i,j,k)+ !0.5*(rnew(i,j,k)+rnew(i+1,j,k))+
      1     dt*(     facAB3_1*dnew(i,j,k)+
      1              facAB3_2*wx(i,j,k)+
      1              facAB3_3*wxold(i,j,k)+
@@ -853,7 +904,8 @@ c********************************************************************
 	elseif(convection.eq.'HYB4') then
       call advecv_HYB4(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
 	elseif(convection.eq.'HYB6') then
-      call advecv_HYB6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecv_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
+     & numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecv_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
      &,phiv,wf)	  
@@ -873,7 +925,7 @@ c********************************************************************
             do i=1,imax
 	    dnew(i,j,k)=dnew(i,j,k)-(-gx*sin_v(j)+gy*cos_v(j))*(0.5*(rnew(i,j,k)+rnew(i,j+1,k))-rho_b)
      1     +Ppropy(i,j,k) 
-            dVdt(i,j,k)=Vnew(i,j,k)*0.5*(rnew(i,j,k)+rnew(i,j+1,k))+
+            dVdt(i,j,k)=Vnew(i,j,k)*rhV(i,j,k)+ !*0.5*(rnew(i,j,k)+rnew(i,j+1,k))+
      1     dt*(      facAB3_1*dnew(i,j,k)+
      1               facAB3_2*wy(i,j,k)+
      1               facAB3_3*wyold(i,j,k)+
@@ -896,7 +948,8 @@ c********************************************************************
 	elseif(convection.eq.'HYB4') then
       call advecw_HYB4(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
 	elseif(convection.eq.'HYB6') then
-      call advecw_HYB6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecw_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
+     & numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecw_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
      &,phiv,wf)	  
@@ -921,7 +974,7 @@ c********************************************************************
             do i=1,imax
 	    dnew(i,j,k)=dnew(i,j,k)-gz*(0.5*(rnew(i,j,k)+rnew(i,j,k+1))-rho_b)
      1     +Ppropz(i,j,k)
-            dWdt(i,j,k)=Wnew(i,j,k)*0.5*(rnew(i,j,k)+rnew(i,j,k+1))+
+            dWdt(i,j,k)= Wnew(i,j,k)*rhW(i,j,k)+ !0.5*(rnew(i,j,k)+rnew(i,j,k+1))+
      1     dt*(      facAB3_1*dnew(i,j,k)+
      1               facAB3_2*wz(i,j,k)+
      1               facAB3_3*wzold(i,j,k)+
@@ -1126,6 +1179,7 @@ c
 !	real aaa(1:kmax),bbb(1:kmax),ccc(1:kmax),ekm_min,ekm_plus,rhss(1:kmax)
 	real aaa(0:k1),bbb(0:k1),ccc(0:k1),ekm_min,ekm_plus,rhss(0:k1)
 	real utr(0:i1,0:j1,0:k1),vtr(0:i1,0:j1,0:k1),wtr(0:i1,0:j1,0:k1)
+!	real dUdt1(0:i1,0:j1,0:k1),dVdt1(0:i1,0:j1,0:k1),dWdt1(0:i1,0:j1,0:k1)
 
 	real   k1c(nfrac,0:i1,0:j1,0:k1)
 	real   k1cbot(nfrac,0:i1,0:j1)
@@ -1146,6 +1200,10 @@ c
 !! predictors:	
 	real   dcdt1bot(nfrac,0:i1,0:j1)
 	real   dcdt2bot(nfrac,0:i1,0:j1)
+	
+!	dUdt1=dudt
+!	dVdt1=dvdt
+!	dWdt1=dwdt
 
 
 !	Diffcof=ekm/Sc/Rnew 
@@ -1240,7 +1298,7 @@ c********************************************************************
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,cn1*dt,rank,px,periodicx,periodicy)	 
           elseif (advec_conc.eq.'VLE') then	 
 	      call advecc_TVD(k1c(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
-     +            i1,j1,k1,ib,ie,jb,je,kb,ke,cn1*dt,rank,px,periodicx,periodicy)
+     +            i1,j1,k1,ib,ie,jb,je,kb,ke,cn1*dt,rank,px,periodicx,periodicy,transporteq_fracs)
 		  else
 	      call advecc_TVD2(k1c(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,cn1*dt,rank,px,periodicx,periodicy)	 
@@ -1322,7 +1380,8 @@ c********************************************************************
 	elseif(convection.eq.'HYB4') then
       call advecu_HYB4(k1u,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
 	elseif(convection.eq.'HYB6') then
-      call advecu_HYB6(k1u,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecu_HYB6(k1u,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
+     & numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecu_C4A6(k1u,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
      &,phiv,wf,ekm,ekm_mol,p+pold)	  
@@ -1345,7 +1404,8 @@ c********************************************************************
 	elseif(convection.eq.'HYB4') then
       call advecv_HYB4(k1v,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
 	elseif(convection.eq.'HYB6') then
-      call advecv_HYB6(k1v,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecv_HYB6(k1v,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
+     & numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecv_C4A6(k1v,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
      &,phiv,wf)	  
@@ -1368,7 +1428,8 @@ c********************************************************************
 	elseif(convection.eq.'HYB4') then
       call advecw_HYB4(k1w,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
 	elseif(convection.eq.'HYB6') then
-      call advecw_HYB6(k1w,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecw_HYB6(k1w,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
+     & numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecw_C4A6(k1w,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
      &,phiv,wf)	  
@@ -1628,18 +1689,25 @@ c********************************************************************
 c********************************************************************
 c     split off the density and apply boundary conditions on predictor 1
 c********************************************************************	
-!      call bound_rhoU(dUdt1,dVdt1,dWdt1,drdt1,slip_bot,time_n+c2*dt,(1.-c2)*Ub1old+c2*Ub1new,(1.-c2)*Vb1old+c2*Vb1new,
-!     & (1.-c2)*Wb1old+c2*Wb1new,(1.-c2)*Ub2old+c2*Ub2new,(1.-c2)*Vb2old+c2*Vb2new,(1.-c2)*Wb2old+c2*Wb2new)
+!	  dUdt1=dudt
+!	  dVdt1=dvdt
+!	  dWdt1=dWdt
+      call bound_rhoU(dUdt,dVdt,dWdt,drdt,0,time_n+c2*dt,(1.-c2)*Ub1old+c2*Ub1new,(1.-c2)*Vb1old+c2*Vb1new,
+     & (1.-c2)*Wb1old+c2*Wb1new,(1.-c2)*Ub2old+c2*Ub2new,(1.-c2)*Vb2old+c2*Vb2new,(1.-c2)*Wb2old+c2*Wb2new,
+     & (1.-c2)*Ub3old+c2*Ub3new,(1.-c2)*Vb3old+c2*Vb3new,(1.-c2)*Wb3old+c2*Wb3new)
 
-      do k=1,kmax
-        do j=1,jmax
-          do i=1,imax
-           dUdt(i,j,k)=dUdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i+1,j,k)))
-           dVdt(i,j,k)=dVdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i,j+1,k)))
-           dWdt(i,j,k)=dWdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i,j,k+1)))
-          enddo
-        enddo
-      enddo   
+	 dUdt=dUdt/rhU 
+	 dVdt=dVdt/rhV
+	 dWdt=dWdt/rhW
+!      do k=1,kmax
+!        do j=1,jmax
+!          do i=1,imax
+!           dUdt(i,j,k)=dUdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i+1,j,k)))
+!           dVdt(i,j,k)=dVdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i,j+1,k)))
+!           dWdt(i,j,k)=dWdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i,j,k+1)))
+!          enddo
+!        enddo
+!      enddo   
 
       call bound_incljet(dUdt,dVdt,dWdt,drdt,0,time_n+c2*dt,(1.-c2)*Ub1old+c2*Ub1new,(1.-c2)*Vb1old+c2*Vb1new,
      & (1.-c2)*Wb1old+c2*Wb1new,(1.-c2)*Ub2old+c2*Ub2new,(1.-c2)*Vb2old+c2*Vb2new,(1.-c2)*Wb2old+c2*Wb2new,
@@ -1686,7 +1754,7 @@ c********************************************************************
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,cn2*dt,rank,px,periodicx,periodicy)
           elseif (advec_conc.eq.'VLE') then	 
 	      call advecc_TVD(k2c(n,:,:,:),dcdt(n,:,:,:),utr,vtr,wtr,drdt,Ru,Rp,dr,phiv,phipt,dz,
-     +            i1,j1,k1,ib,ie,jb,je,kb,ke,cn2*dt,rank,px,periodicx,periodicy)
+     +            i1,j1,k1,ib,ie,jb,je,kb,ke,cn2*dt,rank,px,periodicx,periodicy,transporteq_fracs)
           else
 		  call advecc_TVD2(k2c(n,:,:,:),dcdt(n,:,:,:),utr,vtr,wtr,drdt,Ru,Rp,dr,phiv,phipt,dz,
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,cn2*dt,rank,px,periodicx,periodicy)
@@ -1771,7 +1839,8 @@ c********************************************************************
 	elseif(convection.eq.'HYB4') then
       call advecu_HYB4(k2u,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
 	elseif(convection.eq.'HYB6') then
-      call advecu_HYB6(k2u,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecu_HYB6(k2u,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
+     & numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecu_C4A6(k2u,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
      &,phiv,wf,ekm,ekm_mol,p+pold)	  
@@ -1794,7 +1863,8 @@ c********************************************************************
 	elseif(convection.eq.'HYB4') then
       call advecv_HYB4(k2v,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
 	elseif(convection.eq.'HYB6') then
-      call advecv_HYB6(k2v,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecv_HYB6(k2v,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
+     & numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecv_C4A6(k2v,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
      &,phiv,wf)	  
@@ -1817,7 +1887,8 @@ c********************************************************************
 	elseif(convection.eq.'HYB4') then
       call advecw_HYB4(k2w,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
 	elseif(convection.eq.'HYB6') then
-      call advecw_HYB6(k2w,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecw_HYB6(k2w,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
+     & numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecw_C4A6(k2w,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
      &,phiv,wf)	  
@@ -2072,18 +2143,25 @@ c********************************************************************
 c********************************************************************
 c     split off the density and apply boundary conditions to predictor 2
 c********************************************************************	
-!      call bound_rhoU(dUdt2,dVdt2,dWdt2,drdt2,slip_bot,time_n+c3*dt,(1.-c3)*Ub1old+c3*Ub1new,(1.-c3)*Vb1old+c3*Vb1new,
-!     & (1.-c3)*Wb1old+c3*Wb1new,(1.-c3)*Ub2old+c3*Ub2new,(1.-c3)*Vb2old+c3*Vb2new,(1.-c3)*Wb2old+c3*Wb2new)	
+!		dUdt1=dudt
+!		dVdt1=dvdt
+!		dWdt1=dwdt
+      call bound_rhoU(dUdt,dVdt,dWdt,drdt,0,time_n+c3*dt,(1.-c3)*Ub1old+c3*Ub1new,(1.-c3)*Vb1old+c3*Vb1new,
+     & (1.-c3)*Wb1old+c3*Wb1new,(1.-c3)*Ub2old+c3*Ub2new,(1.-c3)*Vb2old+c3*Vb2new,(1.-c3)*Wb2old+c3*Wb2new,
+     & (1.-c3)*Ub3old+c3*Ub3new,(1.-c3)*Vb3old+c3*Vb3new,(1.-c3)*Wb3old+c2*Wb3new)
 
-      do k=1,kmax
-        do j=1,jmax
-          do i=1,imax
-           dUdt(i,j,k)=dUdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i+1,j,k)))
-           dVdt(i,j,k)=dVdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i,j+1,k)))
-           dWdt(i,j,k)=dWdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i,j,k+1)))
-          enddo
-        enddo
-      enddo       
+	 dUdt=dUdt/rhU 
+	 dVdt=dVdt/rhV
+	 dWdt=dWdt/rhW
+!      do k=1,kmax
+!        do j=1,jmax
+!          do i=1,imax
+!           dUdt(i,j,k)=dUdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i+1,j,k)))
+!           dVdt(i,j,k)=dVdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i,j+1,k)))
+!           dWdt(i,j,k)=dWdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i,j,k+1)))
+!          enddo
+!        enddo
+!      enddo       
 
       call bound_incljet(dUdt,dVdt,dWdt,dRdt,0,time_n+c3*dt,(1.-c3)*Ub1old+c3*Ub1new,(1.-c3)*Vb1old+c3*Vb1new,
      & (1.-c3)*Wb1old+c3*Wb1new,(1.-c3)*Ub2old+c3*Ub2new,(1.-c3)*Vb2old+c3*Vb2new,(1.-c3)*Wb2old+c3*Wb2new,
@@ -2133,7 +2211,7 @@ c********************************************************************
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,cn3*dt,rank,px,periodicx,periodicy)
           elseif (advec_conc.eq.'VLE') then	 	 
 	      call advecc_TVD(k3c(n,:,:,:),dcdt(n,:,:,:),utr,vtr,wtr,drdt,Ru,Rp,dr,phiv,phipt,dz,
-     +            i1,j1,k1,ib,ie,jb,je,kb,ke,cn3*dt,rank,px,periodicx,periodicy)
+     +            i1,j1,k1,ib,ie,jb,je,kb,ke,cn3*dt,rank,px,periodicx,periodicy,transporteq_fracs)
 		  else
 	      call advecc_TVD2(k3c(n,:,:,:),dcdt(n,:,:,:),utr,vtr,wtr,drdt,Ru,Rp,dr,phiv,phipt,dz,
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,cn3*dt,rank,px,periodicx,periodicy)
@@ -2222,7 +2300,8 @@ c********************************************************************
 	elseif(convection.eq.'HYB4') then
       call advecu_HYB4(k3u,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
 	elseif(convection.eq.'HYB6') then
-      call advecu_HYB6(k3u,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecu_HYB6(k3u,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
+     & numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecu_C4A6(k3u,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
      &,phiv,wf,ekm,ekm_mol,p+pold)	  
@@ -2246,7 +2325,8 @@ c********************************************************************
 	elseif(convection.eq.'HYB4') then
       call advecv_HYB4(k3v,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
 	elseif(convection.eq.'HYB6') then
-      call advecv_HYB6(k3v,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecv_HYB6(k3v,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
+     & numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecv_C4A6(k3v,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
      &,phiv,wf)	  
@@ -2269,7 +2349,8 @@ c********************************************************************
 	elseif(convection.eq.'HYB4') then
       call advecw_HYB4(k3w,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
 	elseif(convection.eq.'HYB6') then
-      call advecw_HYB6(k3w,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecw_HYB6(k3w,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
+     & numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecw_C4A6(k3w,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
      &,phiv,wf)	  
@@ -2492,6 +2573,11 @@ c
 	real dnewcbot(nfrac,0:i1,0:j1)	
 	real aaa(0:k1),bbb(0:k1),ccc(0:k1),ekm_min,ekm_plus,rhss(0:k1)
 	real utr(0:i1,0:j1,0:k1),vtr(0:i1,0:j1,0:k1),wtr(0:i1,0:j1,0:k1)	
+!		real dUdt1(0:i1,0:j1,0:k1),dVdt1(0:i1,0:j1,0:k1),dWdt1(0:i1,0:j1,0:k1)
+!	
+!	dUdt1=dudt
+!	dVdt1=dvdt
+!	dWdt1=dwdt
 	
 
 	dcdt = 0.
@@ -2551,7 +2637,7 @@ c********************************************************************
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)	 
           elseif (advec_conc.eq.'VLE') then	 
 	      call advecc_TVD(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
-     +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)
+     +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy,transporteq_fracs)
 		  else
 	      call advecc_TVD2(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)	 
@@ -2633,7 +2719,8 @@ c********************************************************************
 	elseif(convection.eq.'HYB4') then
       call advecu_HYB4(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
 	elseif(convection.eq.'HYB6') then
-      call advecu_HYB6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecu_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
+     & numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecu_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
      &,phiv,wf,ekm,ekm_mol,p+pold)
@@ -2673,7 +2760,8 @@ c********************************************************************
 	elseif(convection.eq.'HYB4') then
       call advecv_HYB4(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
 	elseif(convection.eq.'HYB6') then
-      call advecv_HYB6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecv_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,
+     & rank,px,numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecv_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
      &,phiv,wf)	  
@@ -2710,7 +2798,8 @@ c********************************************************************
 	elseif(convection.eq.'HYB4') then
       call advecw_HYB4(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
 	elseif(convection.eq.'HYB6') then
-      call advecw_HYB6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecw_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
+     & numdiff,periodicx,periodicy)
 	elseif(convection.eq.'C4A6') then
       call advecw_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
      &,phiv,wf)	  
@@ -2880,8 +2969,10 @@ c********************************************************************
       implicit none
 
 	real xx,yy,r_orifice2,twodtdt,Qsource,rrri,rrrj,rrrk,rrrim,rrrjm,rrrkm
+	real rrr2i,rrr2j,rrr2k,rrr2im,rrr2jm,rrr2km
 	integer t,n
 	real xTSHD(1:4),yTSHD(1:4),phi,ddrr,cin,s_in
+	real sum_c_ws,ctot,ws(nfrac)
 	integer inout,n2
 c
 !       include 'param.txt'
@@ -2908,53 +2999,140 @@ c
           enddo
         enddo
       enddo
-	ELSEIF (continuity_solver.eq.3) THEN ! Optional: 3 (dudx=0)
+	ELSEIF (continuity_solver.eq.3) THEN ! Optional: 3 (dudx=0) with input d(ur^*/r^n+1)dx
+!	 if (split_rho_cont.eq.'TVD') then
+!		do n=1,nfrac
+!	      call c_edges_TVD_nocfl(cU(n,:,:,:),cV(n,:,:,:),cW(n,:,:,:),dcdt(n,:,:,:),dUdt,dVdt,dWdt,drdt,Ru,Rp,dr,phiv,phipt,dz,
+!     +            i1,j1,k1,1,imax,1,jmax,1,kmax,dt,rank,px,periodicx,periodicy)
+!		enddo
+!		call state_edges(cU,rhU)
+!		call state_edges(cV,rhV)
+!		call state_edges(cW,rhW)
+!	 else 
+!		rhU(0:imax,0:jmax,0:kmax)=0.5*(drdt(0:imax,0:jmax,0:kmax)+drdt(1:imax+1,0:jmax,0:kmax))
+!		rhV(0:imax,0:jmax,0:kmax)=0.5*(drdt(0:imax,0:jmax,0:kmax)+drdt(0:imax,1:jmax+1,0:kmax))
+!		rhW(0:imax,0:jmax,0:kmax)=0.5*(drdt(0:imax,0:jmax,0:kmax)+drdt(0:imax,0:jmax,1:kmax+1))
+!	 endif
+
+!! rhU,rhV,rhW are filled in bound_rhoU
+	 
       do  k=1,kmax
         do j=1,jmax
           do i=1,imax
-		   rrri=0.5*(drdt(i,j,k)+drdt(i+1,j,k))
-		   rrrj=0.5*(drdt(i,j,k)+drdt(i,j+1,k))
-		   rrrk=0.5*(drdt(i,j,k)+drdt(i,j,k+1))
-		   rrrim=0.5*(drdt(i,j,k)+drdt(i-1,j,k))
-		   rrrjm=0.5*(drdt(i,j,k)+drdt(i,j-1,k))
-		   rrrkm=0.5*(drdt(i,j,k)+drdt(i,j,k-1))		   
-c
       p(i,j,k)  =drdt(i,j,k)*(
-     1  ( Ru(i)*dUdt(i,j,k)/rrri - Ru(i-1)*dUdt(i-1,j,k)/rrrim ) / ( Rp(i)*dr(i) )
+     1  ( Ru(i)*dUdt(i,j,k)/rhU(i,j,k) - Ru(i-1)*dUdt(i-1,j,k)/rhU(i-1,j,k) ) / ( Rp(i)*dr(i) )
      +              +
-     2  (       dVdt(i,j,k)/rrrj -         dVdt(i,j-1,k)/rrrjm ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
+     2  (       dVdt(i,j,k)/rhV(i,j,k) -         dVdt(i,j-1,k)/rhV(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
      +              +
-     3  (       dWdt(i,j,k)/rrrk -         dWdt(i,j,k-1)/rrrkm ) / ( dz )
+     3  (       dWdt(i,j,k)/rhW(i,j,k) -         dWdt(i,j,k-1)/rhW(i,j,k-1) ) / ( dz )
      +              ) /dt 
           enddo
         enddo
       enddo	
-	ELSEIF (continuity_solver.eq.4) THEN ! Optional: 4 (dudx=0 via drudx=rdudx+udrdx)
+	ELSEIF (continuity_solver.eq.33) THEN ! Optional: 33 (dudx=0) improved version of 3 which gives dudx=e-14
+	 if (split_rho_cont.eq.'TVD') then
+!		do n=1,nfrac
+!	      call c_edges_TVD_nocfl(cU(n,:,:,:),cV(n,:,:,:),cW(n,:,:,:),dcdt(n,:,:,:),dUdt,dVdt,dWdt,drdt,Ru,Rp,dr,phiv,phipt,dz,
+!     +            i1,j1,k1,1,imax,1,jmax,1,kmax,dt,rank,px,periodicx,periodicy)
+!		enddo
+!		call state_edges(cU,rhU)
+!		call state_edges(cV,rhV)
+!		call state_edges(cW,rhW)
+		dUdt(1:imax,1:jmax,1:kmax)=dUdt(1:imax,1:jmax,1:kmax)/rhU(1:imax,1:jmax,1:kmax)
+		dVdt(1:imax,1:jmax,1:kmax)=dVdt(1:imax,1:jmax,1:kmax)/rhV(1:imax,1:jmax,1:kmax)
+		dWdt(1:imax,1:jmax,1:kmax)=dWdt(1:imax,1:jmax,1:kmax)/rhW(1:imax,1:jmax,1:kmax)		
+	 else 
+      do k=1,kmax
+        do j=1,jmax
+          do i=1,imax
+           dUdt(i,j,k)=dUdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i+1,j,k)))
+           dVdt(i,j,k)=dVdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i,j+1,k)))
+           dWdt(i,j,k)=dWdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i,j,k+1)))
+          enddo
+        enddo
+      enddo 
+	 endif
+	  call bound(dUdt,dVdt,dWdt,drdt,0,time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
       do  k=1,kmax
         do j=1,jmax
           do i=1,imax
-		   rrri=0.5*(drdt(i,j,k)+drdt(i+1,j,k))
-		   rrrj=0.5*(drdt(i,j,k)+drdt(i,j+1,k))
-		   rrrk=0.5*(drdt(i,j,k)+drdt(i,j,k+1))
-		   rrrim=0.5*(drdt(i,j,k)+drdt(i-1,j,k))
-		   rrrjm=0.5*(drdt(i,j,k)+drdt(i,j-1,k))
-		   rrrkm=0.5*(drdt(i,j,k)+drdt(i,j,k-1))
       p(i,j,k)  =(
-     1  ( Ru(i)*dudt(i,j,k) - Ru(i-1)*dudt(i-1,j,k) ) / ( Rp(i)*dr(i) )
+     1  ( Ru(i)*dUdt(i,j,k) - Ru(i-1)*dUdt(i-1,j,k) ) / ( Rp(i)*dr(i) )
      +              +
-     2  (       dvdt(i,j,k) -         dvdt(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
+     2  (       dVdt(i,j,k) -         dVdt(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
      +              +
-     3  (       dwdt(i,j,k) -         dwdt(i,j,k-1) ) / ( dz )
-     +              )   -  (
-     1  0.5*(dudt(i,j,k)/rrri+dudt(i-1,j,k)/rrrim)*(Ru(i) *rrri  - Ru(i-1)*rrrim ) / ( Rp(i)*dr(i) )
-     +              +
-     2  0.5*(dvdt(i,j,k)/rrrj+dvdt(i,j-1,k)/rrrjm)*(       rrrj -         rrrjm ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
-     +              +
-     3  0.5*(dwdt(i,j,k)/rrrk+dwdt(i,j,k-1)/rrrkm)*(       rrrk -         rrrkm ) / ( dz )	) 
-		  p(i,j,k) = p(i,j,k)/dt 	 
+     3  (       dWdt(i,j,k) -         dWdt(i,j,k-1) ) / ( dz ) ) / dt 
           enddo
         enddo
-      enddo	  	  
+      enddo	
+	ELSEIF (continuity_solver.eq.34) THEN ! Optional: 34 (dudx=0) improved version of 3 which gives dudx=e-14 and with correction to account for difference Um and Uv
+	 if (split_rho_cont.eq.'TVD') then
+!		do n=1,nfrac
+!	      call c_edges_TVD_nocfl(cU(n,:,:,:),cV(n,:,:,:),cW(n,:,:,:),dcdt(n,:,:,:),dUdt,dVdt,dWdt,drdt,Ru,Rp,dr,phiv,phipt,dz,
+!     +            i1,j1,k1,1,imax,1,jmax,1,kmax,dt,rank,px,periodicx,periodicy)
+!		enddo
+!		call state_edges(cU,rhU)
+!		call state_edges(cV,rhV)
+!		call state_edges(cW,rhW)
+		dUdt(1:imax,1:jmax,1:kmax)=dUdt(1:imax,1:jmax,1:kmax)/rhU(1:imax,1:jmax,1:kmax)
+		dVdt(1:imax,1:jmax,1:kmax)=dVdt(1:imax,1:jmax,1:kmax)/rhV(1:imax,1:jmax,1:kmax)
+		dWdt(1:imax,1:jmax,1:kmax)=dWdt(1:imax,1:jmax,1:kmax)/rhW(1:imax,1:jmax,1:kmax)		
+	 else 
+      do k=1,kmax
+        do j=1,jmax
+          do i=1,imax
+           dUdt(i,j,k)=dUdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i+1,j,k)))
+           dVdt(i,j,k)=dVdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i,j+1,k)))
+           dWdt(i,j,k)=dWdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i,j,k+1)))
+          enddo
+        enddo
+      enddo 
+	 endif
+	 IF (slipvel.eq.2) THEN
+      do k=1,kmax
+        do j=1,jmax
+          do i=1,imax   
+		    sum_c_ws=0.
+			do n=1,nfrac
+				ws(n)=-frac(n)%ws !ws defined positive downwards
+				sum_c_ws=sum_c_ws+ws(n)*(cW(n,i,j,k)*frac(n)%rho/rhW(i,j,k)-cW(n,i,j,k))
+			enddo
+			dWdt(i,j,k)=dWdt(i,j,k)-sum_c_ws  !go from mixture velocity (centre of mass velocity) to velocity of volume centre
+          enddo
+        enddo
+      enddo
+	 ELSE
+      do k=1,kmax
+        do j=1,jmax
+          do i=1,imax   
+		    sum_c_ws=0.
+		    ctot=0.
+		    do n=1,nfrac
+				ctot=cW(n,i,j,k)*frac(n)%dfloc/frac(n)%dpart*0.5*(rhocorr_air_z(n,k)+rhocorr_air_z(n,k+1))+ctot
+			enddo
+			ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
+			do n=1,nfrac
+				ws(n)=-frac(n)%ws*(1.-ctot)**(frac(n)%n) !ws defined positive downwards
+				sum_c_ws=sum_c_ws+ws(n)*(cW(n,i,j,k)*frac(n)%rho/rhW(i,j,k)-cW(n,i,j,k))
+			enddo
+			dWdt(i,j,k)=dWdt(i,j,k)-sum_c_ws  !go from mixture velocity (centre of mass velocity) to velocity of volume centre
+          enddo
+        enddo
+      enddo
+	 ENDIF
+	  call bound(dUdt,dVdt,dWdt,drdt,0,time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
+      do  k=1,kmax
+        do j=1,jmax
+          do i=1,imax
+      p(i,j,k)  =(
+     1  ( Ru(i)*dUdt(i,j,k) - Ru(i-1)*dUdt(i-1,j,k) ) / ( Rp(i)*dr(i) )
+     +              +
+     2  (       dVdt(i,j,k) -         dVdt(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
+     +              +
+     3  (       dWdt(i,j,k) -         dWdt(i,j,k-1) ) / ( dz ) ) / dt 
+          enddo
+        enddo
+      enddo		  
 	ELSE !default is 1 (drdt+drudx=0)
 	twodtdt=MAX((3.*time_np-4.*time_n+time_nm)*dt,1.e-12)
 
@@ -2968,8 +3146,8 @@ c
      2  (       dVdt(i,j,k) -         dVdt(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
      +              +
      3  (       dWdt(i,j,k) -         dWdt(i,j,k-1) ) / ( dz )
-!     +              ) /dt  +  (3.*drdt(i,j,k)-4.*rnew(i,j,k)+rold(i,j,k))/(2*dt*dt)
-     +              ) /dt  +  (3.*drdt(i,j,k)-4.*rnew(i,j,k)+rold(i,j,k))/twodtdt
+     +              ) /dt  +  (3.*drdt(i,j,k)-4.*rnew(i,j,k)+rold(i,j,k))/twodtdt ! normally this is used before 25-10-2018
+!     +              ) /dt  +  (drdt(i,j,k)-rnew(i,j,k))/((time_np-time_n)*dt) !test  
           enddo
         enddo
       enddo
@@ -3022,18 +3200,18 @@ c
 	else
 	  phi=atan2(V_b,(U_TSHD-U_b))
 	endif
-      do k=1,kmax
+      do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
        do i=1,imax  
          do j=jmax,1,-1 
 	  xx=Rp(i)*cos_u(j)-schuif_x
 	  yy=Rp(i)*sin_u(j)
-	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
+!	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
 		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
 		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
 		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
-	  ELSE 
-	 	inout=0
-	  ENDIF
+!	  ELSE 
+!	 	inout=0
+!	  ENDIF
 	  if (inout.eq.1) then
 !		cin=0.
 !		s_in=0.
@@ -3047,9 +3225,11 @@ c
 !			! IMPLICIT: c^n+1-c^n=-Qout_cel/Vol_cel*dt*c^n+1 --> c^n+1 = c^n/(1+Qout_cel/Vol_cel*dt)
 !			!when Q negative, remove sediment from cell as well   IMPLICIT 		  
 !		enddo	
-!		  if (continuity_solver.eq.3) THEN
-			p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q/bp(n2)%volncells/dt  				  ! div(u)=0 --> total volume flux in 
-!		  else
+		  if (continuity_solver.eq.33.or.continuity_solver.eq.34) THEN
+			p(i,j,k)=p(i,j,k)-bp(n2)%Q/bp(n2)%volncells/dt  				  			! div(u)=0 --> total volume flux in 
+		  else
+			p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q/bp(n2)%volncells/dt  				! div(u)=0 --> total volume flux in 
+		  endif
 !!			p(i,j,k)=p(i,j,k)-(s_in+(1.-MIN(cin,1.))*drdt(i,j,k)*bp(n2)%Q)/bp(n2)%volncells/dt  ! total mass flux in 
 !			p(i,j,k)=p(i,j,k)-((1.-MIN(cin,1.))*drdt(i,j,k)*bp(n2)%Q)/bp(n2)%volncells/dt  ! total mass flux in 
 !!			p(i,j,k)=p(i,j,k)-rho_b*bp(n2)%Q/bp(n2)%volncells/dt
@@ -3120,32 +3300,7 @@ c
           enddo
         enddo
       enddo
-	ELSEIF (continuity_solver.eq.4) THEN ! Optional: 4 (dudx=0 via drudx=rdudx+udrdx)
-      do  k=1,kmax
-        do j=1,jmax
-          do i=1,imax
-		   rrri=0.5*(rr(i,j,k)+rr(i+1,j,k))
-		   rrrj=0.5*(rr(i,j,k)+rr(i,j+1,k))
-		   rrrk=0.5*(rr(i,j,k)+rr(i,j,k+1))
-		   rrrim=0.5*(rr(i,j,k)+rr(i-1,j,k))
-		   rrrjm=0.5*(rr(i,j,k)+rr(i,j-1,k))
-		   rrrkm=0.5*(rr(i,j,k)+rr(i,j,k-1))
-      p(i,j,k)  =(
-     1  ( Ru(i)*uu(i,j,k) - Ru(i-1)*uu(i-1,j,k) ) / ( Rp(i)*dr(i) )
-     +              +
-     2  (       vv(i,j,k) -         vv(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
-     +              +
-     3  (       ww(i,j,k) -         ww(i,j,k-1) ) / ( dz )
-     +              )  -  (
-     1  0.5*(uu(i,j,k)/rrri+uu(i-1,j,k)/rrrim)*(Ru(i) *rrri  - Ru(i-1)*rrrim ) / ( Rp(i)*dr(i) )
-     +              +
-     2  0.5*(vv(i,j,k)/rrrj+vv(i,j-1,k)/rrrjm)*(       rrrj -         rrrjm ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
-     +              +
-     3  0.5*(ww(i,j,k)/rrrk+ww(i,j,k-1)/rrrkm)*(       rrrk -         rrrkm ) / ( dz )	) 
-	  p(i,j,k) = p(i,j,k)/ddtt 
-          enddo
-        enddo
-      enddo	  
+
 	ELSE !default is 1 (drdt+drudx=0)
 	twodtdt=MAX((3.*tt-4.*time_n+time_nm)*ddtt,1.e-12)
 	
@@ -3166,35 +3321,35 @@ c
       enddo
 	ENDIF
 	
-
-	DO n2=1,nbedplume
-	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
-	! rotation ship for ambient side current
-	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-	  phi=atan2(V_b,1.e-12)
-	else
-	  phi=atan2(V_b,(U_TSHD-U_b))
-	endif
-      do k=1,kmax
-       do i=1,imax  
-         do j=jmax,1,-1      
-	  xx=Rp(i)*cos_u(j)-schuif_x
-	  yy=Rp(i)*sin_u(j)
-	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
-		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
-		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
-		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
-	  ELSE 
-	 	inout=0
-	  ENDIF
-	  if (inout.eq.1) then
-		  p(i,j,k)=p(i,j,k)-bp(n2)%Q*rr(i,j,k)/bp(n2)%volncells/ddtt !bp(n2)%Q positive means influx (and has to be negative in this loop)
-	   endif
-	  enddo
-	 enddo
-	enddo
-	ENDIF
-	ENDDO ! bedplume loop
+!
+!	DO n2=1,nbedplume
+!	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
+!	! rotation ship for ambient side current
+!	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
+!	  phi=atan2(V_b,1.e-12)
+!	else
+!	  phi=atan2(V_b,(U_TSHD-U_b))
+!	endif
+!      do k=1,kmax
+!       do i=1,imax  
+!         do j=jmax,1,-1      
+!	  xx=Rp(i)*cos_u(j)-schuif_x
+!	  yy=Rp(i)*sin_u(j)
+!	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
+!		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
+!		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
+!		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+!	  ELSE 
+!	 	inout=0
+!	  ENDIF
+!	  if (inout.eq.1) then
+!		  p(i,j,k)=p(i,j,k)-bp(n2)%Q*rr(i,j,k)/bp(n2)%volncells/ddtt !bp(n2)%Q positive means influx (and has to be negative in this loop)
+!	   endif
+!	  enddo
+!	 enddo
+!	enddo
+!	ENDIF
+!	ENDDO ! bedplume loop
  
       return
       end
@@ -3208,6 +3363,7 @@ c
 !       include 'param.txt'
 !       include 'common.txt'
       real*8 pplus(imax,kmax)
+	  real sum_c_ws,ctot,ws(nfrac)
       integer t,n
 
 
@@ -3295,11 +3451,11 @@ c
       do k=0,k1
         do j=0,j1
           do i=0,i1
-!           Uold(i,j,k)=Unew(i,j,k)  !! ALS test even alle 4 de old=new statements uitgezet omdat volgens mij deze overbodig zijn
-!           Vold(i,j,k)=Vnew(i,j,k)
-!           Wold(i,j,k)=Wnew(i,j,k) 
+           Uold(i,j,k)=Unew(i,j,k)  !! ALS test even alle 4 de old=new statements uitgezet omdat volgens mij deze overbodig zijn
+           Vold(i,j,k)=Vnew(i,j,k)
+           Wold(i,j,k)=Wnew(i,j,k) 
 	   do n=1,nfrac
-!             cold(n,i,j,k)=cnew(n,i,j,k)
+             cold(n,i,j,k)=cnew(n,i,j,k)
              cnew(n,i,j,k)=dcdt(n,i,j,k)
 	   enddo
           enddo
@@ -3314,15 +3470,141 @@ c
           enddo
         enddo
 
+	IF (continuity_solver.eq.33) THEN 
+!	 if (split_rho_cont.eq.'TVD') then
+!!			do n=1,nfrac
+!!			  call c_edges_TVD_nocfl(cU(n,:,:,:),cV(n,:,:,:),cW(n,:,:,:),dcdt(n,:,:,:),dUdt,dVdt,dWdt,drdt,Ru,Rp,dr,phiv,phipt,dz,
+!!     +            i1,j1,k1,1,imax,1,jmax,1,kmax,dt,rank,px,periodicx,periodicy)
+!!			enddo
+!!			call state_edges(cU,rhU)
+!!			call state_edges(cV,rhV)
+!!			call state_edges(cW,rhW)	 
       do k=1,kmax
         do j=1,jmax
           do i=1,imax
-           Unew(i,j,k)=dUdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i+1,j,k)))
-           Vnew(i,j,k)=dVdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i,j+1,k)))
-           Wnew(i,j,k)=dWdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i,j,k+1)))
+           Unew(i,j,k)=dUdt(i,j,k)
+           Vnew(i,j,k)=dVdt(i,j,k)
+           Wnew(i,j,k)=dWdt(i,j,k)
+		   !dUdt(i,j,k)=dUdt(i,j,k)*rhU(i,j,k)
+		   !dVdt(i,j,k)=dVdt(i,j,k)*rhV(i,j,k)
+		   !dWdt(i,j,k)=dWdt(i,j,k)*rhW(i,j,k)
           enddo
         enddo
-      enddo 
+      enddo 	 
+!	 else
+!      do k=1,kmax
+!        do j=1,jmax
+!          do i=1,imax
+!           Unew(i,j,k)=dUdt(i,j,k)
+!           Vnew(i,j,k)=dVdt(i,j,k)
+!           Wnew(i,j,k)=dWdt(i,j,k)
+!		   dUdt(i,j,k)=dUdt(i,j,k)*(0.5*(drdt(i,j,k)+drdt(i+1,j,k)))
+!		   dVdt(i,j,k)=dVdt(i,j,k)*(0.5*(drdt(i,j,k)+drdt(i,j+1,k)))
+!		   dWdt(i,j,k)=dWdt(i,j,k)*(0.5*(drdt(i,j,k)+drdt(i,j,k+1)))		   
+!          enddo
+!        enddo
+!      enddo 
+!	 endif
+		p=p(1:imax,1:jmax,1:kmax)*drdt(1:imax,1:jmax,1:kmax) !scale P back with rho
+	ELSEIF (continuity_solver.eq.34) THEN 
+	 IF (slipvel.eq.2) THEN
+      do k=1,kmax
+        do j=1,jmax
+          do i=1,imax   
+		    sum_c_ws=0.
+			do n=1,nfrac
+				ws(n)=-frac(n)%ws !ws defined positive downwards
+				sum_c_ws=sum_c_ws+ws(n)*(cW(n,i,j,k)*frac(n)%rho/rhW(i,j,k)-cW(n,i,j,k))
+			enddo
+			dWdt(i,j,k)=dWdt(i,j,k)+sum_c_ws  !go from velocity of volume centre to mixture velocity (centre of mass velocity)
+          enddo
+        enddo
+      enddo
+	 ELSE
+      do k=1,kmax
+        do j=1,jmax
+          do i=1,imax   
+		    sum_c_ws=0.
+		    ctot=0.
+		    do n=1,nfrac
+				ctot=cW(n,i,j,k)*frac(n)%dfloc/frac(n)%dpart*0.5*(rhocorr_air_z(n,k)+rhocorr_air_z(n,k+1))+ctot
+			enddo
+			ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
+			do n=1,nfrac
+				ws(n)=-frac(n)%ws*(1.-ctot)**(frac(n)%n) !ws defined positive downwards
+				sum_c_ws=sum_c_ws+ws(n)*(cW(n,i,j,k)*frac(n)%rho/rhW(i,j,k)-cW(n,i,j,k))
+			enddo
+			dWdt(i,j,k)=dWdt(i,j,k)+sum_c_ws  !go from velocity of volume centre to mixture velocity (centre of mass velocity)
+          enddo
+        enddo
+      enddo
+	 ENDIF	
+!	 if (split_rho_cont.eq.'TVD') then
+!!			do n=1,nfrac
+!!			  call c_edges_TVD_nocfl(cU(n,:,:,:),cV(n,:,:,:),cW(n,:,:,:),dcdt(n,:,:,:),dUdt,dVdt,dWdt,drdt,Ru,Rp,dr,phiv,phipt,dz,
+!!     +            i1,j1,k1,1,imax,1,jmax,1,kmax,dt,rank,px,periodicx,periodicy)
+!!			enddo
+!!			call state_edges(cU,rhU)
+!!			call state_edges(cV,rhV)
+!!			call state_edges(cW,rhW)	 
+      do k=1,kmax
+        do j=1,jmax
+          do i=1,imax
+           Unew(i,j,k)=dUdt(i,j,k)
+           Vnew(i,j,k)=dVdt(i,j,k)
+           Wnew(i,j,k)=dWdt(i,j,k)
+		   !dUdt(i,j,k)=dUdt(i,j,k)*rhU(i,j,k)
+		   !dVdt(i,j,k)=dVdt(i,j,k)*rhV(i,j,k)
+		   !dWdt(i,j,k)=dWdt(i,j,k)*rhW(i,j,k)
+          enddo
+        enddo
+      enddo 	 
+!	 else
+!      do k=1,kmax
+!        do j=1,jmax
+!          do i=1,imax
+!           Unew(i,j,k)=dUdt(i,j,k)
+!           Vnew(i,j,k)=dVdt(i,j,k)
+!           Wnew(i,j,k)=dWdt(i,j,k)
+!		   dUdt(i,j,k)=dUdt(i,j,k)*(0.5*(drdt(i,j,k)+drdt(i+1,j,k)))
+!		   dVdt(i,j,k)=dVdt(i,j,k)*(0.5*(drdt(i,j,k)+drdt(i,j+1,k)))
+!		   dWdt(i,j,k)=dWdt(i,j,k)*(0.5*(drdt(i,j,k)+drdt(i,j,k+1)))		   
+!          enddo
+!        enddo
+!      enddo 
+!	 endif
+		p=p(1:imax,1:jmax,1:kmax)*drdt(1:imax,1:jmax,1:kmax) !scale P back with rho
+	ELSE
+		if (split_rho_cont.eq.'TVD') then
+!			do n=1,nfrac
+!			  call c_edges_TVD_nocfl(cU(n,:,:,:),cV(n,:,:,:),cW(n,:,:,:),dcdt(n,:,:,:),dUdt,dVdt,dWdt,drdt,Ru,Rp,dr,phiv,phipt,dz,
+!     +            i1,j1,k1,1,imax,1,jmax,1,kmax,dt,rank,px,periodicx,periodicy)
+!			enddo
+!			call state_edges(cU,rhU)
+!			call state_edges(cV,rhV)
+!			call state_edges(cW,rhW)
+			Unew(1:imax,1:jmax,1:kmax)=dUdt(1:imax,1:jmax,1:kmax)/rhU(1:imax,1:jmax,1:kmax)
+			Vnew(1:imax,1:jmax,1:kmax)=dVdt(1:imax,1:jmax,1:kmax)/rhV(1:imax,1:jmax,1:kmax)
+			Wnew(1:imax,1:jmax,1:kmax)=dWdt(1:imax,1:jmax,1:kmax)/rhW(1:imax,1:jmax,1:kmax)
+		 else
+		  do k=1,kmax
+			do j=1,jmax
+			  do i=1,imax
+			   Unew(i,j,k)=dUdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i+1,j,k)))
+			   Vnew(i,j,k)=dVdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i,j+1,k)))
+			   Wnew(i,j,k)=dWdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i,j,k+1)))
+			  enddo
+			enddo
+		  enddo 
+		 endif
+	ENDIF
+	  
+	  
+	  if (transporteq_fracs.eq.'massfrac') then
+	    rhoU=dudt
+		rhoV=dvdt
+		rhoW=dwdt
+	  endif
 	  
       end
 
@@ -4756,18 +5038,18 @@ c  J --> direction      (yrt)
 	  phi=atan2(V_b,(U_TSHD-U_b))
 	endif
       !! Search for P,V:
-      do k=0,k1
+      do k=CEILING(bp(n2)%zbottom/dz),FLOOR(bp(n2)%height/dz) !do k=0,k1
        do i=0,i1  
          do j=j1,0,-1       ! bedplume loop is only initial condition: do not bother to have U,V,W initial staggering perfect 
 	  xx=Rp(i)*cos_u(j)-schuif_x
 	  yy=Rp(i)*sin_u(j)
-	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
+!	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
 		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
 		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
 		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
-	  ELSE 
-	 	inout=0
-	  ENDIF
+!	  ELSE 
+!	 	inout=0
+!	  ENDIF
 	  if (inout.eq.1) then
 		rnew(i,j,k)=rho(i,j,k)
 		rold(i,j,k)=rho(i,j,k)
@@ -4783,7 +5065,87 @@ c  J --> direction      (yrt)
 	 
 	  
       end
+	  
+      subroutine state_edges(c,rho)
 
+      USE nlist
+      real c(nfrac,0:i1,0:j1,0:k1)
+      real rho(0:i1,0:j1,0:k1)
+      integer n
+      
+		do k=0,k1
+			do j=0,j1
+				do i=0,i1
+					rho(i,j,k)=rho_b
+					do n=1,nfrac
+						rho(i,j,k)=rho(i,j,k)+c(n,i,j,k)*(frac(n)%rho-rho_b)
+					enddo
+					do n=1,nair !correction for compressible air fraction; compressible air fills different volume not occupied by water
+						rho(i,j,k)=rho(i,j,k)-(rhocorr_air_z(nfrac_air(n),k)*c(nfrac_air(n),i,j,k)-c(nfrac_air(n),i,j,k))*rho_b
+					enddo
+				enddo
+			enddo
+		enddo
+    
+	end
+	  
+
+	        subroutine state_massfrac(c,rho)
+
+      USE nlist
+! 	include 'param.txt'
+      real c(nfrac,0:i1,0:j1,0:k1)
+      real rho(0:i1,0:j1,0:k1)
+      integer n,n2,inout,ierr
+	real xTSHD(4),yTSHD(4),phi,xx,yy,summ
+      
+      do k=0,k1
+	do j=0,j1
+	 do i=0,i1
+	   rho(i,j,k)=rho_b
+	   summ=0.
+	   do n=1,nfrac
+		summ=summ+c(n,i,j,k)*(1.-rho_b/(frac(n)%rho/rhocorr_air_z(n,k)))
+	   enddo
+		rho(i,j,k)=rho_b/summ
+	 enddo
+        enddo
+      enddo
+	  
+	DO n2=1,nbedplume
+	IF (bp(n2)%forever.eq.0.and.time_n.lt.bp(n2)%t0.and.time_np.gt.bp(n2)%t0) THEN
+	! rotation ship for ambient side current
+	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
+	  phi=atan2(V_b,1.e-12)
+	else
+	  phi=atan2(V_b,(U_TSHD-U_b))
+	endif
+      !! Search for P,V:
+      do k=CEILING(bp(n2)%zbottom/dz),FLOOR(bp(n2)%height/dz) !do k=0,k1
+       do i=0,i1  
+         do j=j1,0,-1       ! bedplume loop is only initial condition: do not bother to have U,V,W initial staggering perfect 
+	  xx=Rp(i)*cos_u(j)-schuif_x
+	  yy=Rp(i)*sin_u(j)
+!	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
+		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
+		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
+		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+!	  ELSE 
+!	 	inout=0
+!	  ENDIF
+	  if (inout.eq.1) then
+		rnew(i,j,k)=rho(i,j,k)
+		rold(i,j,k)=rho(i,j,k)
+		! prevent large source in pres-corr by sudden increase in density with bp%c 
+	   endif
+	  enddo
+	 enddo
+	enddo
+	ENDIF
+	ENDDO ! bedplume loop
+
+      end
+	  
 
 c  All the MPI - shit
 c

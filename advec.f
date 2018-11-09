@@ -677,7 +677,7 @@ c
       end
 
 	  	subroutine advecc_TVD(putout,putin,Uvel,Vvel,Wvel,rho,Ru,Rp,dr,phiv,phipt,dz,
-     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)
+     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy,transporteq_fracs)
       implicit none
 ! TVD scheme called with nerd option advec_conc.eq.'VLE', efficiently face-based with limiter Van Leer
 c
@@ -721,12 +721,14 @@ c********************************************************************
      +         dr(0:i1),phiv(0:j1),phipt(0:je*px+1),dz,Ru(0:i1),Rp(0:i1),
      +         noemer,rRpos,rRneg,rLpos,rLneg,cRpos,cRneg,cLpos,cLneg,limiter,
      +         rho_p,rho_m,putin2(-1:i1+1,-1:j1+1,0:k1),Rp2(-1:i1+1)
+     +         ,Uvel2(0:i1,0:j1,0:k1),Vvel2(0:i1,0:j1,0:k1),Wvel2(0:i1,0:j1,0:k1)
       
       real 	dz_i,Rpdr_i,Rpdphi_i,varx_grid_Rpos,varx_grid_Rneg,varx_grid_Lpos,varx_grid_Lneg
 	  real  vary_grid_Rpos,vary_grid_Rneg,vary_grid_Lpos,vary_grid_Lneg,phipt2(-1:je*px+2)
 	real  dt!,Vvel2(0:i1,0:j1,0:k1)
 	real*8 pbb(0:i1,0:k1),pbf(0:i1,0:k1)
 	real cfl,flux,Rpdr_ip,Rpdphi_ip,limiter99,r
+	character*8 transporteq_fracs
 
       dz_i=1./dz
 
@@ -739,6 +741,15 @@ c********************************************************************
 	phipt2(-1)=phipt(0)-(phipt(1)-phipt(0)) !needed for periodicy sim
  	phipt2(je*px+1+1)=phipt(je*px+1)+(phipt(je*px+1)-phipt(je*px+1-1)) !needed for periodicy sim
 	
+	if (transporteq_fracs.eq.'massfrac') then
+	  uvel2(0:ie,:,:)=uvel(0:ie,:,:)/(0.5*(rho(0:ie,:,:)+rho(1:i1,:,:)))
+	  vvel2(:,0:je,:)=vvel(:,0:je,:)/(0.5*(rho(:,0:je,:)+rho(:,1:j1,:))) !vnew2 j1 not needed
+	  wvel2(:,:,0:ke)=wvel(:,:,0:ke)/(0.5*(rho(:,:,0:ke)+rho(:,:,1:k1)))
+	else
+	  uvel2=uvel
+	  vvel2=vvel
+	  wvel2=wvel
+	endif
 
 	putin2(0:i1,0:j1,0:k1)=putin
 	if (periodicx.eq.0.or.periodicx.eq.2) then
@@ -835,7 +846,7 @@ c
 	IF (Uvel(i,j,k).ge.0.) THEN
 	  noemer = putin2(ip,j,k)-putin2(i,j,k)
   	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
-	  cfl =dt*ABS(Uvel(i ,j,k))/(Rp2(ip)-Rp2(i ))
+	  cfl =dt*ABS(Uvel2(i ,j,k))/(Rp2(ip)-Rp2(i ))
 	  rRpos = (putin2(i    ,j,k)-putin2(im,j,k))/noemer *varx_grid_Rpos
 	  !cRpos = putin2(i ,j,k) + 0.5*limiter(rRpos)*(putin2(ip,j,k) - putin2(i ,j,k))*(1.-cfl)
 	  r=rRpos
@@ -855,7 +866,7 @@ c
 	ELSE
 	  noemer = putin2(ip,j,k)-putin2(i,j,k)
 	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
-	  cfl =dt*ABS(Uvel(i ,j,k))/(Rp2(ip)-Rp2(i ))
+	  cfl =dt*ABS(Uvel2(i ,j,k))/(Rp2(ip)-Rp2(i ))
   	  rRneg = (putin2(ipp+1,j,k)-putin2(ip,j,k))/noemer *varx_grid_Rneg
 	  !cRneg = putin2(ip,j,k) + 0.5*limiter(rRneg)*(putin2( i,j,k) - putin2(ip,j,k))*(1.-cfl)
 	  r=rRneg
@@ -877,7 +888,7 @@ c
 	IF (Uvel(im,j,k).ge.0.) THEN
 	  noemer = putin2(i,j,k)-putin2(im,j,k)
 	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
-	  cfl=dt*ABS(Uvel(im,j,k))/(Rp2(i )-Rp2(im))
+	  cfl=dt*ABS(Uvel2(im,j,k))/(Rp2(i )-Rp2(im))
 	  rLpos = (putin2(im,j,k)-putin2(imm-1,j,k))/noemer *varx_grid_Lpos
 	  !cLpos = putin2(im,j,k) + 0.5*limiter(rLpos)*(putin2( i,j,k) - putin2(im,j,k)) *(1.-cfl)
 	  r=rLpos
@@ -890,7 +901,7 @@ c
 	ELSE
 	  noemer = putin2(i,j,k)-putin2(im,j,k)
 	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
-	  cfl=dt*ABS(Uvel(im,j,k))/(Rp2(i )-Rp2(im))
+	  cfl=dt*ABS(Uvel2(im,j,k))/(Rp2(i )-Rp2(im))
 	  rLneg = (putin2(ip,j,k)-putin2(i    ,j,k))/noemer *varx_grid_Lneg
 	  !cLneg = putin2(i ,j,k) + 0.5*limiter(rLneg)*(putin2(im,j,k) - putin2(i ,j,k)) *(1.-cfl)
 	  r=rLneg
@@ -907,7 +918,7 @@ c
 	IF (Vvel(i,j ,k).ge.0.) THEN
 	  noemer = putin2(i,jp,k)-putin2(i,j,k)
 	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
-	  cfl=dt*ABS(Vvel(i,j ,k))/(Rp(i)*(phipt2(rank*je+jp)-phipt2(rank*je+j)))
+	  cfl=dt*ABS(Vvel2(i,j ,k))/(Rp(i)*(phipt2(rank*je+jp)-phipt2(rank*je+j)))
 	  rRpos = (putin2(i,j    ,k)-putin2(i,jm,k))/noemer*vary_grid_Rpos
 	  !cRpos = putin2(i ,j,k) + 0.5*limiter(rRpos)*(putin2(i,jp,k) - putin2(i ,j,k)) *(1.-cfl)
 	  r=rRpos
@@ -920,7 +931,7 @@ c
 	ELSE
 	  noemer = putin2(i,jp,k)-putin2(i,j,k)
 	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
-	  cfl=dt*ABS(Vvel(i,j ,k))/(Rp(i)*(phipt2(rank*je+jp)-phipt2(rank*je+j)))
+	  cfl=dt*ABS(Vvel2(i,j ,k))/(Rp(i)*(phipt2(rank*je+jp)-phipt2(rank*je+j)))
 	  rRneg = (putin2(i,jpp+1,k)-putin2(i,jp,k))/noemer*vary_grid_Rneg 
 	  !cRneg = putin2(i,jp,k) + 0.5*limiter(rRneg)*(putin2( i,j,k) - putin2(i,jp,k)) *(1.-cfl)
 	  r=rRneg
@@ -935,7 +946,7 @@ c
 	IF (Vvel(i,jm,k).ge.0.) THEN
 	  noemer = putin2(i,j,k)-putin2(i,jm,k)
   	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
-	  cfl=dt*ABS(Vvel(i,jm,k))/(Rp(i)*(phipt2(rank*je+j)-phipt2(rank*je+jm)))
+	  cfl=dt*ABS(Vvel2(i,jm,k))/(Rp(i)*(phipt2(rank*je+j)-phipt2(rank*je+jm)))
 	  rLpos = (putin2(i,jm,k)-putin2(i,jmm-1,k))/noemer*vary_grid_Lpos
 	  !cLpos = putin2(i,jm,k) + 0.5*limiter(rLpos)*(putin2( i,j,k) - putin2(i,jm,k)) *(1.-cfl)
 	  r=rLpos
@@ -945,7 +956,7 @@ c
 	ELSE
 	  noemer = putin2(i,j,k)-putin2(i,jm,k)
   	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
-	  cfl=dt*ABS(Vvel(i,jm,k))/(Rp(i)*(phipt2(rank*je+j)-phipt2(rank*je+jm)))
+	  cfl=dt*ABS(Vvel2(i,jm,k))/(Rp(i)*(phipt2(rank*je+j)-phipt2(rank*je+jm)))
 	  rLneg = (putin2(i,jp,k)-putin2(i,j    ,k))/noemer*vary_grid_Lneg 
 	  !cLneg = putin2(i,j ,k) + 0.5*limiter(rLneg)*(putin2(i,jm,k) - putin2(i,j ,k)) *(1.-cfl)
 	  r=rLneg
@@ -962,7 +973,7 @@ c
 	IF (Wvel(i,j,k ).ge.0.) THEN
 	  noemer = putin2(i,j,kp)-putin2(i,j,k)
 	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
-	  cfl=dt*ABS(Wvel(i,j,k ))*dz_i
+	  cfl=dt*ABS(Wvel2(i,j,k ))*dz_i
 	  rRpos = (putin2(i,j,k    )-putin2(i,j,km))/noemer
 	  !cRpos = putin2(i ,j,k) + 0.5*limiter(rRpos)*(putin2(i,j,kp) - putin2(i ,j,k))*(1.-cfl)
 	  r=rRpos
@@ -975,7 +986,7 @@ c
 	ELSE
 	  noemer = putin2(i,j,kp)-putin2(i,j,k)
 	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
-	  cfl=dt*ABS(Wvel(i,j,k ))*dz_i
+	  cfl=dt*ABS(Wvel2(i,j,k ))*dz_i
 	  rRneg = (putin2(i,j,kpp+1)-putin2(i,j,kp))/noemer 
  	  !cRneg = putin2(i,j,kp) + 0.5*limiter(rRneg)*(putin2(i,j, k) - putin2(i,j,kp))*(1.-cfl)
 	  r=rRneg
@@ -990,7 +1001,7 @@ c
 	IF (Wvel(i,j,km).ge.0.) THEN
 	  noemer = putin2(i,j,k)-putin2(i,j,km)
 	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
-	  cfl=dt*ABS(Wvel(i,j,km))*dz_i
+	  cfl=dt*ABS(Wvel2(i,j,km))*dz_i
 	  rLpos = (putin2(i,j,km)-putin2(i,j,kmm-1))/noemer
 	  !cLpos = putin2(i,j,km) + 0.5*limiter(rLpos)*(putin2(i,j, k) - putin2(i,j,km))*(1.-cfl)
 	  r=rLpos
@@ -1000,7 +1011,7 @@ c
 	ELSE
 	  noemer = putin2(i,j,k)-putin2(i,j,km)
 	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
-	  cfl=dt*ABS(Wvel(i,j,km))*dz_i
+	  cfl=dt*ABS(Wvel2(i,j,km))*dz_i
 	  rLneg = (putin2(i,j,kp)-putin2(i,j,k))/noemer
 	  !cLneg = putin2(i,j,k ) + 0.5*limiter(rLneg)*(putin2(i,j,km) - putin2(i,j, k))*(1.-cfl)
 	  r=rLneg
@@ -1024,6 +1035,648 @@ c     -------------------------------------------end k-loop
       return
       end
 
+	  
+
+	  	subroutine advecc_TVD_nocfl(putout,putin,Uvel,Vvel,Wvel,rho,Ru,Rp,dr,phiv,phipt,dz,
+     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)
+      implicit none
+! TVD scheme called with nerd option advec_conc.eq.'VL2', efficiently face-based with limiter Van Leer without (1-cfl) term --> mix upw1 and cds2
+c
+c********************************************************************
+c
+c     advecc calculates the advection for a scalar variable, which is
+c     situated in the center point of the grid cell.
+c
+c     In formula:
+c
+c         1 d(ruC)     1 d(vC)     d(wC)
+c    - (  - ------  +  - -----  +  -----  )
+c         r   dr       r  dphi      dz
+c
+c      on input :
+c
+c          putout            : "empty" (initialised to zero)
+c          putin             : variable for which the advection has
+c                              to be calculated
+c          Uvel,Vvel,Wvel    : contain velocities at former timestep
+c          putinn            : contains subgrid energy at oldest timestep
+c          dr,phiv,dz        : grid spacing in r, phi and z-direction
+c          i1,j1,k1          : parameters for array-dimensions
+c          ib,ie,jb,je,kb,ke : range of gridpoints for which the
+c                              advection has to be calculated
+c          Ru,Rp             : radial positions of the U-velocity
+c                              component and the pressure location
+c                              respectively
+c
+c      on output :
+c
+c          putout            : advection part
+c          other parameters  : all unchanged
+c
+c********************************************************************
+      integer  i,j,k,im,ip,jm,jp,km,kp,i1,j1,k1,ib,ie,jb,je,kb,ke
+	  integer kmm,kpp,imm,ipp,jmm,jpp,rank,px,periodicx,periodicy
+      real     putout(0:i1,0:j1,0:k1),putin(0:i1,0:j1,0:k1),
+     +         Uvel(0:i1,0:j1,0:k1),rho(0:i1,0:j1,0:k1),
+     +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
+     +         dr(0:i1),phiv(0:j1),phipt(0:je*px+1),dz,Ru(0:i1),Rp(0:i1),
+     +         noemer,rRpos,rRneg,rLpos,rLneg,cRpos,cRneg,cLpos,cLneg,limiter,
+     +         rho_p,rho_m,putin2(-1:i1+1,-1:j1+1,0:k1),Rp2(-1:i1+1)
+     +         ,Uvel2(0:i1,0:j1,0:k1),Vvel2(0:i1,0:j1,0:k1),Wvel2(0:i1,0:j1,0:k1)
+      
+      real 	dz_i,Rpdr_i,Rpdphi_i,varx_grid_Rpos,varx_grid_Rneg,varx_grid_Lpos,varx_grid_Lneg
+	  real  vary_grid_Rpos,vary_grid_Rneg,vary_grid_Lpos,vary_grid_Lneg,phipt2(-1:je*px+2)
+	real  dt!,Vvel2(0:i1,0:j1,0:k1)
+	real*8 pbb(0:i1,0:k1),pbf(0:i1,0:k1)
+	real cfl,flux,Rpdr_ip,Rpdphi_ip,limiter99,r
+	character*8 transporteq_fracs
+
+      dz_i=1./dz
+
+	  putout(ib:ie,jb:je,kb:ke)=0.
+	Rp2(0:i1)=Rp
+	Rp2(-1)=Rp(0)-(Rp(2)-Rp(1)) !needed for periodicx sim
+ 	Rp2(i1+1)=Rp(i1)+(Rp(i1)-Rp(i1-1)) !needed for periodicx sim
+	
+	phipt2(0:je*px+1)=phipt
+	phipt2(-1)=phipt(0)-(phipt(1)-phipt(0)) !needed for periodicy sim
+ 	phipt2(je*px+1+1)=phipt(je*px+1)+(phipt(je*px+1)-phipt(je*px+1-1)) !needed for periodicy sim
+
+
+	putin2(0:i1,0:j1,0:k1)=putin
+	if (periodicx.eq.0.or.periodicx.eq.2) then
+		putin2(-1,0:j1,0:k1)=putin(0,0:j1,0:k1)
+		putin2(i1+1,0:j1,0:k1)=putin(ie,0:j1,0:k1)
+	else 
+		putin2(-1,0:j1,0:k1)=putin(ie-1,0:j1,0:k1)
+		putin2(i1+1,0:j1,0:k1)=putin(2,0:j1,0:k1)
+	endif
+c get stuff from other CPU's
+	  call shiftf2(putin,pbf)
+	  call shiftb2(putin,pbb) 
+
+	if (periodicy.eq.0.or.periodicy.eq.2) then
+	  if (rank.eq.0) then
+		do k=1,ke
+		   do i=1,ie
+		   putin2(i,-1,k) = putin(i,0,k)
+		   putin2(i,j1+1,k) =pbb(i,k)
+		   enddo
+		enddo
+	  elseif (rank.eq.px-1) then
+		do k=1,ke
+		   do i=1,ie
+		   putin2(i,-1,k) = pbf(i,k)
+		   putin2(i,j1+1,k) =putin(i,j1,k)
+		   enddo
+		enddo
+	  else 
+		do k=1,ke
+		   do i=1,ie
+		   putin2(i,-1,k) = pbf(i,k)
+		   putin2(i,j1+1,k) =pbb(i,k)
+		   enddo
+		enddo
+	  endif
+	else 
+		do k=1,ke
+		   do i=1,ie
+		   putin2(i,-1,k) = pbf(i,k)
+		   putin2(i,j1+1,k) =pbb(i,k)
+		   enddo
+		enddo
+	endif
+c
+c     -------------------------------------------start i-loop
+      do 100 i=ib,ie
+c
+      ip=i+1
+      im=i-1
+      imm=im
+      ipp=ip
+      if (periodicx.eq.0.or.periodicx.eq.2) then
+        if (i.eq.1) imm=i
+        if (i.eq.ie) ipp=i
+      endif
+      varx_grid_Rpos=(Rp2(ip)-Rp2(i))/(Rp2(i)-Rp2(im))
+      varx_grid_Rneg=(Rp2(ipp)-Rp2(i))/(Rp2(ipp+1)-Rp2(ipp))
+      varx_grid_Lpos=(Rp2(i)-Rp2(imm))/(Rp2(imm)-Rp2(imm-1))
+      varx_grid_Lneg=(Rp2(i)-Rp2(im))/(Rp2(ip)-Rp2(i))
+      Rpdr_i=1./(Rp2(i)*dr(i))
+	  Rpdr_ip=1./(Rp2(ip)*dr(ip))
+
+    
+c     -------------------------------------------start j-loop
+        do 200 j=jb,je
+c
+        jp=j+1
+        jm=j-1
+	jmm=jm
+	jpp=jp
+        if ((periodicy.eq.0.or.periodicy.eq.2).and.rank.eq.0) then
+	  if (j.eq.1) jmm=j
+	endif
+        if ((periodicy.eq.0.or.periodicy.eq.2).and.rank.eq.px-1) then
+	  if (j.eq.je) jpp=j
+	endif
+      vary_grid_Rpos=(phipt2(rank*je+jp) -phipt2(rank*je+j))  /(phipt2(rank*je+j)    -phipt2(rank*je+jm))
+      vary_grid_Rneg=(phipt2(rank*je+jpp)-phipt2(rank*je+j))  /(phipt2(rank*je+jpp+1)-phipt2(rank*je+jpp))
+      vary_grid_Lpos=(phipt2(rank*je+j)  -phipt2(rank*je+jmm))/(phipt2(rank*je+jmm)  -phipt2(rank*je+jmm-1))
+      vary_grid_Lneg=(phipt2(rank*je+j)  -phipt2(rank*je+jm)) /(phipt2(rank*je+jp)   -phipt2(rank*je+j))	
+      Rpdphi_i=1./(Rp2(i)*(phiv(j)-phiv(jm)))
+	  Rpdphi_ip=1./(Rp2(i)*(phiv(jp)-phiv(j)))
+c
+c     -------------------------------------------start k-loop
+	  do 300 k=kb,ke
+c
+	  kp=k+1
+	  km=k-1
+	  kmm=km
+	  kpp=kp
+	  if (k.eq.1) kmm=k
+	  if (k.eq.ke) kpp=k
+	IF (Uvel(i,j,k).ge.0.) THEN
+	  noemer = putin2(ip,j,k)-putin2(i,j,k)
+  	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
+	  rRpos = (putin2(i    ,j,k)-putin2(im,j,k))/noemer *varx_grid_Rpos
+	  !cRpos = putin2(i ,j,k) + 0.5*limiter(rRpos)*(putin2(ip,j,k) - putin2(i ,j,k))*(1.-cfl)
+	  r=rRpos
+	  limiter99=(r+ABS(r))/MAX(1.+r,1.) 	  
+	  cRpos = putin2(i ,j,k) + 0.5*limiter99*(putin2(ip,j,k) - putin2(i ,j,k))
+	    !  if (i.eq.ib) then
+		!  putout(i,j,k)  = - flux
+		!  else
+          putout(i,j,k)  = putout(i,j,k) - Ru(i)*Uvel(i ,j,k)*cRpos*Rpdr_i
+		!  endif
+		!  if (ip.le.ie) then
+		  putout(ip,j,k) = putout(ip,j,k) + Ru(i)*Uvel(i ,j,k)*cRpos*Rpdr_ip
+		!  endif
+		!if (rank.eq.4.and.j.eq.1.and.k.eq.26.and.i.eq.ie-1-12) then
+		!write(*,*),'i,fluxR u>0',i,flux
+		!endif		
+	ELSE
+	  noemer = putin2(ip,j,k)-putin2(i,j,k)
+	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
+  	  rRneg = (putin2(ipp+1,j,k)-putin2(ip,j,k))/noemer *varx_grid_Rneg
+	  !cRneg = putin2(ip,j,k) + 0.5*limiter(rRneg)*(putin2( i,j,k) - putin2(ip,j,k))*(1.-cfl)
+	  r=rRneg
+	  limiter99=(r+ABS(r))/MAX(1.+r,1.) 
+	  cRneg = putin2(ip,j,k) + 0.5*limiter99*(putin2( i,j,k) - putin2(ip,j,k))
+	     ! if (i.eq.ib) then
+         ! putout(i,j,k)  = - flux
+		 ! else
+		  putout(i,j,k)  = putout(i ,j,k) - Ru(i)*Uvel(i ,j,k)*cRneg*Rpdr_i
+		 ! endif
+		 ! if (ip.le.ie) then
+		  putout(ip,j,k) = putout(ip,j,k) + Ru(i)*Uvel(i ,j,k)*cRneg*Rpdr_ip
+		 ! endif
+!		if (rank.eq.4.and.j.eq.1.and.k.eq.26.and.i.eq.ie-1-12) then
+!		write(*,*),'i,fluxR u<0',i,flux
+!		endif		 
+	ENDIF
+	IF (i.eq.1) THEN
+	IF (Uvel(im,j,k).ge.0.) THEN
+	  noemer = putin2(i,j,k)-putin2(im,j,k)
+	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
+	  rLpos = (putin2(im,j,k)-putin2(imm-1,j,k))/noemer *varx_grid_Lpos
+	  !cLpos = putin2(im,j,k) + 0.5*limiter(rLpos)*(putin2( i,j,k) - putin2(im,j,k)) *(1.-cfl)
+	  r=rLpos
+	  limiter99=(r+ABS(r))/MAX(1.+r,1.) 
+	  cLpos = putin2(im,j,k) + 0.5*limiter99*(putin2( i,j,k) - putin2(im,j,k))
+          putout(i,j,k) = putout(i,j,k) + Ru(im)*Uvel(im,j,k)*cLpos*Rpdr_i
+!		if (rank.eq.4.and.j.eq.1.and.k.eq.26.and.i.eq.ie-12) then
+!		write(*,*),'i,fluxL u>0',i,Ru(im)*Uvel(im,j,k)*cLpos*Rpdr_i
+!		endif		  
+	ELSE
+	  noemer = putin2(i,j,k)-putin2(im,j,k)
+	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
+	  rLneg = (putin2(ip,j,k)-putin2(i    ,j,k))/noemer *varx_grid_Lneg
+	  !cLneg = putin2(i ,j,k) + 0.5*limiter(rLneg)*(putin2(im,j,k) - putin2(i ,j,k)) *(1.-cfl)
+	  r=rLneg
+	  limiter99=(r+ABS(r))/MAX(1.+r,1.) 	  
+	  cLneg = putin2(i ,j,k) + 0.5*limiter99*(putin2(im,j,k) - putin2(i ,j,k))
+          putout(i,j,k) = putout(i,j,k) + Ru(im)*Uvel(im,j,k)*cLneg*Rpdr_i
+	ENDIF
+	ENDIF
+!      putout(i,j,k) = - (
+!     &   Ru(i)  * ( 0.5*(Uvel(i ,j,k)+ABS(Uvel(i ,j,k)))*cRpos + 0.5*(Uvel(i ,j,k)-ABS(Uvel(i ,j,k)))*cRneg ) -
+!     &   Ru(im) * ( 0.5*(Uvel(im,j,k)+ABS(Uvel(im,j,k)))*cLpos + 0.5*(Uvel(im,j,k)-ABS(Uvel(im,j,k)))*cLneg ) )
+!     &  *Rpdr_i !/ ( Rp(i) * dr(i) ) 
+
+	IF (Vvel(i,j ,k).ge.0.) THEN
+	  noemer = putin2(i,jp,k)-putin2(i,j,k)
+	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
+	  rRpos = (putin2(i,j    ,k)-putin2(i,jm,k))/noemer*vary_grid_Rpos
+	  !cRpos = putin2(i ,j,k) + 0.5*limiter(rRpos)*(putin2(i,jp,k) - putin2(i ,j,k)) *(1.-cfl)
+	  r=rRpos
+	  limiter99=(r+ABS(r))/MAX(1.+r,1.) 	  
+	  cRpos = putin2(i ,j,k) + 0.5*limiter99*(putin2(i,jp,k) - putin2(i ,j,k))
+	  putout(i,j,k) = putout(i,j,k) - Vvel(i,j ,k)*cRpos*Rpdphi_i 
+	  !if (jp.le.je) then
+	  putout(i,jp,k) = putout(i,jp,k) + Vvel(i,j ,k)*cRpos*Rpdphi_ip 
+	  !endif
+	ELSE
+	  noemer = putin2(i,jp,k)-putin2(i,j,k)
+	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
+	  rRneg = (putin2(i,jpp+1,k)-putin2(i,jp,k))/noemer*vary_grid_Rneg 
+	  !cRneg = putin2(i,jp,k) + 0.5*limiter(rRneg)*(putin2( i,j,k) - putin2(i,jp,k)) *(1.-cfl)
+	  r=rRneg
+	  limiter99=(r+ABS(r))/MAX(1.+r,1.) 
+	  cRneg = putin2(i,jp,k) + 0.5*limiter99*(putin2( i,j,k) - putin2(i,jp,k))
+	  putout(i,j,k) = putout(i,j,k) - Vvel(i,j ,k)*cRneg*Rpdphi_i 
+	  !if (jp.le.je) then
+	  putout(i,jp,k) = putout(i,jp,k) + Vvel(i,j ,k)*cRneg*Rpdphi_ip 
+	  !endif
+	ENDIF
+	IF (j.eq.1) THEN
+	IF (Vvel(i,jm,k).ge.0.) THEN
+	  noemer = putin2(i,j,k)-putin2(i,jm,k)
+  	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
+	  rLpos = (putin2(i,jm,k)-putin2(i,jmm-1,k))/noemer*vary_grid_Lpos
+	  !cLpos = putin2(i,jm,k) + 0.5*limiter(rLpos)*(putin2( i,j,k) - putin2(i,jm,k)) *(1.-cfl)
+	  r=rLpos
+	  limiter99=(r+ABS(r))/MAX(1.+r,1.) 	  
+	  cLpos = putin2(i,jm,k) + 0.5*limiter99*(putin2( i,j,k) - putin2(i,jm,k))
+	  putout(i,j,k)  = putout(i,j ,k) + Vvel(i,jm,k)*cLpos*Rpdphi_i 
+	ELSE
+	  noemer = putin2(i,j,k)-putin2(i,jm,k)
+  	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
+	  rLneg = (putin2(i,jp,k)-putin2(i,j    ,k))/noemer*vary_grid_Lneg 
+	  !cLneg = putin2(i,j ,k) + 0.5*limiter(rLneg)*(putin2(i,jm,k) - putin2(i,j ,k)) *(1.-cfl)
+	  r=rLneg
+	  limiter99=(r+ABS(r))/MAX(1.+r,1.) 	  
+	  cLneg = putin2(i,j ,k) + 0.5*limiter99*(putin2(i,jm,k) - putin2(i,j ,k)) 
+	  putout(i,j,k) = putout(i,j,k) + Vvel(i,jm,k)*cLneg*Rpdphi_i 
+	ENDIF	
+	ENDIF
+!	putout(i,j,k) = putout(i,j,k) - (
+!     &   (  0.5*(Vvel(i,j ,k)+ABS(Vvel(i,j ,k)))*cRpos + 0.5*(Vvel(i,j ,k)-ABS(Vvel(i,j ,k)))*cRneg )  -
+!     &   (  0.5*(Vvel(i,jm,k)+ABS(Vvel(i,jm,k)))*cLpos + 0.5*(Vvel(i,jm,k)-ABS(Vvel(i,jm,k)))*cLneg ) )
+!     &  *Rpdphi_i !/ ( Rp(i) * dphi ) 
+
+	IF (Wvel(i,j,k ).ge.0.) THEN
+	  noemer = putin2(i,j,kp)-putin2(i,j,k)
+	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
+	  rRpos = (putin2(i,j,k    )-putin2(i,j,km))/noemer
+	  !cRpos = putin2(i ,j,k) + 0.5*limiter(rRpos)*(putin2(i,j,kp) - putin2(i ,j,k))*(1.-cfl)
+	  r=rRpos
+	  limiter99=(r+ABS(r))/MAX(1.+r,1.)	  
+	  cRpos = putin2(i ,j,k) + 0.5*limiter99*(putin2(i,j,kp) - putin2(i ,j,k))
+	  putout(i,j,k)  = putout(i,j,k ) - Wvel(i,j,k )*cRpos*dz_i 
+	  !if (kp.le.ke) then
+	  putout(i,j,kp) = putout(i,j,kp) + Wvel(i,j,k )*cRpos*dz_i 
+	  !endif
+	ELSE
+	  noemer = putin2(i,j,kp)-putin2(i,j,k)
+	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
+	  rRneg = (putin2(i,j,kpp+1)-putin2(i,j,kp))/noemer 
+ 	  !cRneg = putin2(i,j,kp) + 0.5*limiter(rRneg)*(putin2(i,j, k) - putin2(i,j,kp))*(1.-cfl)
+	  r=rRneg
+	  limiter99=(r+ABS(r))/MAX(1.+r,1.)
+	  cRneg = putin2(i,j,kp) + 0.5*limiter99*(putin2(i,j, k) - putin2(i,j,kp))
+	  putout(i,j,k) = putout(i,j,k) - Wvel(i,j,k )*cRneg*dz_i
+	  !if (kp.le.ke) then
+	  putout(i,j,kp)= putout(i,j,kp)+ Wvel(i,j,k )*cRneg*dz_i
+	  !endif	  
+	ENDIF
+	IF (k.eq.1) THEN
+	IF (Wvel(i,j,km).ge.0.) THEN
+	  noemer = putin2(i,j,k)-putin2(i,j,km)
+	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
+	  rLpos = (putin2(i,j,km)-putin2(i,j,kmm-1))/noemer
+	  !cLpos = putin2(i,j,km) + 0.5*limiter(rLpos)*(putin2(i,j, k) - putin2(i,j,km))*(1.-cfl)
+	  r=rLpos
+	  limiter99=(r+ABS(r))/MAX(1.+r,1.)	  
+	  cLpos = putin2(i,j,km) + 0.5*limiter99*(putin2(i,j, k) - putin2(i,j,km))
+	  putout(i,j,k) = putout(i,j,k) + Wvel(i,j,km)*cLpos*dz_i 
+	ELSE
+	  noemer = putin2(i,j,k)-putin2(i,j,km)
+	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
+	  rLneg = (putin2(i,j,kp)-putin2(i,j,k))/noemer
+	  !cLneg = putin2(i,j,k ) + 0.5*limiter(rLneg)*(putin2(i,j,km) - putin2(i,j, k))*(1.-cfl)
+	  r=rLneg
+	  limiter99=(r+ABS(r))/MAX(1.+r,1.)		  
+	  cLneg = putin2(i,j,k ) + 0.5*limiter99*(putin2(i,j,km) - putin2(i,j, k))
+	  putout(i,j,k) = putout(i,j,k) + Wvel(i,j,km)*cLneg*dz_i 
+	ENDIF
+	ENDIF
+!	putout(i,j,k) = putout(i,j,k) - (
+!     &  ( 0.5*(Wvel(i,j,k )+ABS(Wvel(i,j,k )))*cRpos + 0.5*(Wvel(i,j,k )-ABS(Wvel(i,j,k )))*cRneg )  -
+!     &  ( 0.5*(Wvel(i,j,km)+ABS(Wvel(i,j,km)))*cLpos + 0.5*(Wvel(i,j,km)-ABS(Wvel(i,j,km)))*cLneg ) )
+!     &  *dz_i !/ ( dz ) 
+c
+300       continue
+c     -------------------------------------------end i-loop
+200     continue
+c     -------------------------------------------end j-loop
+100   continue
+c     -------------------------------------------end k-loop
+
+      return
+      end
+
+	  	subroutine c_edges_TVD_nocfl(putoutU,putoutV,putoutW,putin,Uvel,Vvel,Wvel,rho,Ru,Rp,dr,phiv,phipt,dz,
+     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)
+      implicit none
+! determines c at cell edges with TVD van Leer scheme without (1-cfl) term
+c
+c********************************************************************
+c
+c     advecc calculates the advection for a scalar variable, which is
+c     situated in the center point of the grid cell.
+c
+c     In formula:
+c
+c         1 d(ruC)     1 d(vC)     d(wC)
+c    - (  - ------  +  - -----  +  -----  )
+c         r   dr       r  dphi      dz
+c
+c      on input :
+c
+c          putoutU,putoutV,putoutW  : "empty" (initialised to zero)
+c          putin             : variable for which the advection has
+c                              to be calculated
+c          Uvel,Vvel,Wvel    : contain velocities at former timestep
+c          putinn            : contains subgrid energy at oldest timestep
+c          dr,phiv,dz        : grid spacing in r, phi and z-direction
+c          i1,j1,k1          : parameters for array-dimensions
+c          ib,ie,jb,je,kb,ke : range of gridpoints for which the
+c                              advection has to be calculated
+c          Ru,Rp             : radial positions of the U-velocity
+c                              component and the pressure location
+c                              respectively
+c
+c      on output :
+c
+c          putoutU            : variable interpolated TVD fashion at cell edge U-loc
+c          putoutV            : variable interpolated TVD fashion at cell edge V-loc
+c          putoutW            : variable interpolated TVD fashion at cell edge W-loc
+c          other parameters  : all unchanged
+c
+c********************************************************************
+      integer  i,j,k,im,ip,jm,jp,km,kp,i1,j1,k1,ib,ie,jb,je,kb,ke
+	  integer kmm,kpp,imm,ipp,jmm,jpp,rank,px,periodicx,periodicy
+      real     putoutU(0:i1,0:j1,0:k1),putoutV(0:i1,0:j1,0:k1),putoutW(0:i1,0:j1,0:k1),putin(0:i1,0:j1,0:k1),
+     +         Uvel(0:i1,0:j1,0:k1),rho(0:i1,0:j1,0:k1),
+     +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
+     +         dr(0:i1),phiv(0:j1),phipt(0:je*px+1),dz,Ru(0:i1),Rp(0:i1),
+     +         noemer,rRpos,rRneg,rLpos,rLneg,cRpos,cRneg,cLpos,cLneg,limiter,
+     +         rho_p,rho_m,putin2(-1:i1+1,-1:j1+1,0:k1),Rp2(-1:i1+1)
+     +         ,Uvel2(0:i1,0:j1,0:k1),Vvel2(0:i1,0:j1,0:k1),Wvel2(0:i1,0:j1,0:k1)
+      
+      real 	dz_i,Rpdr_i,Rpdphi_i,varx_grid_Rpos,varx_grid_Rneg,varx_grid_Lpos,varx_grid_Lneg
+	  real  vary_grid_Rpos,vary_grid_Rneg,vary_grid_Lpos,vary_grid_Lneg,phipt2(-1:je*px+2)
+	real  dt!,Vvel2(0:i1,0:j1,0:k1)
+	real*8 pbb(0:i1,0:k1),pbf(0:i1,0:k1)
+	real cfl,flux,Rpdr_ip,Rpdphi_ip,limiter99,r
+	character*8 transporteq_fracs
+
+      dz_i=1./dz
+
+	  putoutU=0.
+	  putoutV=0.
+	  putoutW=0.
+	Rp2(0:i1)=Rp
+	Rp2(-1)=Rp(0)-(Rp(2)-Rp(1)) !needed for periodicx sim
+ 	Rp2(i1+1)=Rp(i1)+(Rp(i1)-Rp(i1-1)) !needed for periodicx sim
+	
+	phipt2(0:je*px+1)=phipt
+	phipt2(-1)=phipt(0)-(phipt(1)-phipt(0)) !needed for periodicy sim
+ 	phipt2(je*px+1+1)=phipt(je*px+1)+(phipt(je*px+1)-phipt(je*px+1-1)) !needed for periodicy sim
+
+
+	putin2(0:i1,0:j1,0:k1)=putin
+	if (periodicx.eq.0.or.periodicx.eq.2) then
+		putin2(-1,0:j1,0:k1)=putin(0,0:j1,0:k1)
+		putin2(i1+1,0:j1,0:k1)=putin(ie,0:j1,0:k1)
+	else 
+		putin2(-1,0:j1,0:k1)=putin(ie-1,0:j1,0:k1)
+		putin2(i1+1,0:j1,0:k1)=putin(2,0:j1,0:k1)
+	endif
+c get stuff from other CPU's
+	  call shiftf2(putin,pbf)
+	  call shiftb2(putin,pbb) 
+
+	if (periodicy.eq.0.or.periodicy.eq.2) then
+	  if (rank.eq.0) then
+		do k=1,ke
+		   do i=1,ie
+		   putin2(i,-1,k) = putin(i,0,k)
+		   putin2(i,j1+1,k) =pbb(i,k)
+		   enddo
+		enddo
+	  elseif (rank.eq.px-1) then
+		do k=1,ke
+		   do i=1,ie
+		   putin2(i,-1,k) = pbf(i,k)
+		   putin2(i,j1+1,k) =putin(i,j1,k)
+		   enddo
+		enddo
+	  else 
+		do k=1,ke
+		   do i=1,ie
+		   putin2(i,-1,k) = pbf(i,k)
+		   putin2(i,j1+1,k) =pbb(i,k)
+		   enddo
+		enddo
+	  endif
+	else 
+		do k=1,ke
+		   do i=1,ie
+		   putin2(i,-1,k) = pbf(i,k)
+		   putin2(i,j1+1,k) =pbb(i,k)
+		   enddo
+		enddo
+	endif
+c
+c     -------------------------------------------start i-loop
+      do 100 i=ib,ie
+c
+      ip=i+1
+      im=i-1
+      imm=im
+      ipp=ip
+      if (periodicx.eq.0.or.periodicx.eq.2) then
+        if (i.eq.1) imm=i
+        if (i.eq.ie) ipp=i
+      endif
+      varx_grid_Rpos=(Rp2(ip)-Rp2(i))/(Rp2(i)-Rp2(im))
+      varx_grid_Rneg=(Rp2(ipp)-Rp2(i))/(Rp2(ipp+1)-Rp2(ipp))
+      varx_grid_Lpos=(Rp2(i)-Rp2(imm))/(Rp2(imm)-Rp2(imm-1))
+      varx_grid_Lneg=(Rp2(i)-Rp2(im))/(Rp2(ip)-Rp2(i))
+      Rpdr_i=1./(Rp2(i)*dr(i))
+	  Rpdr_ip=1./(Rp2(ip)*dr(ip))
+
+    
+c     -------------------------------------------start j-loop
+        do 200 j=jb,je
+c
+        jp=j+1
+        jm=j-1
+	jmm=jm
+	jpp=jp
+        if ((periodicy.eq.0.or.periodicy.eq.2).and.rank.eq.0) then
+	  if (j.eq.1) jmm=j
+	endif
+        if ((periodicy.eq.0.or.periodicy.eq.2).and.rank.eq.px-1) then
+	  if (j.eq.je) jpp=j
+	endif
+      vary_grid_Rpos=(phipt2(rank*je+jp) -phipt2(rank*je+j))  /(phipt2(rank*je+j)    -phipt2(rank*je+jm))
+      vary_grid_Rneg=(phipt2(rank*je+jpp)-phipt2(rank*je+j))  /(phipt2(rank*je+jpp+1)-phipt2(rank*je+jpp))
+      vary_grid_Lpos=(phipt2(rank*je+j)  -phipt2(rank*je+jmm))/(phipt2(rank*je+jmm)  -phipt2(rank*je+jmm-1))
+      vary_grid_Lneg=(phipt2(rank*je+j)  -phipt2(rank*je+jm)) /(phipt2(rank*je+jp)   -phipt2(rank*je+j))	
+      Rpdphi_i=1./(Rp2(i)*(phiv(j)-phiv(jm)))
+	  Rpdphi_ip=1./(Rp2(i)*(phiv(jp)-phiv(j)))
+c
+c     -------------------------------------------start k-loop
+	  do 300 k=kb,ke
+c
+	  kp=k+1
+	  km=k-1
+	  kmm=km
+	  kpp=kp
+	  if (k.eq.1) kmm=k
+	  if (k.eq.ke) kpp=k
+	IF (Uvel(i,j,k).ge.0.) THEN
+	  noemer = putin2(ip,j,k)-putin2(i,j,k)
+  	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
+	  rRpos = (putin2(i    ,j,k)-putin2(im,j,k))/noemer *varx_grid_Rpos
+	  !cRpos = putin2(i ,j,k) + 0.5*limiter(rRpos)*(putin2(ip,j,k) - putin2(i ,j,k))*(1.-cfl)
+	  r=rRpos
+	  limiter99=(r+ABS(r))/MAX(1.+r,1.) 	  
+	  putoutU(i,j,k) = putin2(i ,j,k) + 0.5*limiter99*(putin2(ip,j,k) - putin2(i ,j,k))
+          !putout(i,j,k)  = putout(i,j,k) - Ru(i)*Uvel(i ,j,k)*cRpos*Rpdr_i
+		  !putout(ip,j,k) = putout(ip,j,k) + Ru(i)*Uvel(i ,j,k)*cRpos*Rpdr_ip
+	ELSE
+	  noemer = putin2(ip,j,k)-putin2(i,j,k)
+	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
+  	  rRneg = (putin2(ipp+1,j,k)-putin2(ip,j,k))/noemer *varx_grid_Rneg
+	  !cRneg = putin2(ip,j,k) + 0.5*limiter(rRneg)*(putin2( i,j,k) - putin2(ip,j,k))*(1.-cfl)
+	  r=rRneg
+	  limiter99=(r+ABS(r))/MAX(1.+r,1.) 
+	  putoutU(i,j,k) = putin2(ip,j,k) + 0.5*limiter99*(putin2( i,j,k) - putin2(ip,j,k))
+		  !putout(i,j,k)  = putout(i ,j,k) - Ru(i)*Uvel(i ,j,k)*cRneg*Rpdr_i
+		  !putout(ip,j,k) = putout(ip,j,k) + Ru(i)*Uvel(i ,j,k)*cRneg*Rpdr_ip
+	ENDIF
+!	IF (i.eq.1) THEN  ! skip all boundary rhoU,rhoV,rhoW determination --> simply use (rho_left+rho_right)/2 after this subroutine for all 0,i1,0,j1,0,k1 cells
+!	IF (Uvel(im,j,k).ge.0.) THEN
+!	  noemer = putin2(i,j,k)-putin2(im,j,k)
+!	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
+!	  rLpos = (putin2(im,j,k)-putin2(imm-1,j,k))/noemer *varx_grid_Lpos
+!	  !cLpos = putin2(im,j,k) + 0.5*limiter(rLpos)*(putin2( i,j,k) - putin2(im,j,k)) *(1.-cfl)
+!	  r=rLpos
+!	  limiter99=(r+ABS(r))/MAX(1.+r,1.) 
+!	  putoutU(im,j,k) = putin2(im,j,k) + 0.5*limiter99*(putin2( i,j,k) - putin2(im,j,k))
+!          !putout(i,j,k) = putout(i,j,k) + Ru(im)*Uvel(im,j,k)*cLpos*Rpdr_i
+!	ELSE
+!	  noemer = putin2(i,j,k)-putin2(im,j,k)
+!	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
+!	  rLneg = (putin2(ip,j,k)-putin2(i    ,j,k))/noemer *varx_grid_Lneg
+!	  !cLneg = putin2(i ,j,k) + 0.5*limiter(rLneg)*(putin2(im,j,k) - putin2(i ,j,k)) *(1.-cfl)
+!	  r=rLneg
+!	  limiter99=(r+ABS(r))/MAX(1.+r,1.) 	  
+!	  putoutU(im,j,k) = putin2(i ,j,k) + 0.5*limiter99*(putin2(im,j,k) - putin2(i ,j,k))
+!          !putout(i,j,k) = putout(i,j,k) + Ru(im)*Uvel(im,j,k)*cLneg*Rpdr_i
+!	ENDIF
+!	ENDIF
+
+	IF (Vvel(i,j ,k).ge.0.) THEN
+	  noemer = putin2(i,jp,k)-putin2(i,j,k)
+	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
+	  rRpos = (putin2(i,j    ,k)-putin2(i,jm,k))/noemer*vary_grid_Rpos
+	  !cRpos = putin2(i ,j,k) + 0.5*limiter(rRpos)*(putin2(i,jp,k) - putin2(i ,j,k)) *(1.-cfl)
+	  r=rRpos
+	  limiter99=(r+ABS(r))/MAX(1.+r,1.) 	  
+	  putoutV(i,j,k) = putin2(i ,j,k) + 0.5*limiter99*(putin2(i,jp,k) - putin2(i ,j,k))
+	  !putout(i,j,k) = putout(i,j,k) - Vvel(i,j ,k)*cRpos*Rpdphi_i 
+	  !putout(i,jp,k) = putout(i,jp,k) + Vvel(i,j ,k)*cRpos*Rpdphi_ip 
+	ELSE
+	  noemer = putin2(i,jp,k)-putin2(i,j,k)
+	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
+	  rRneg = (putin2(i,jpp+1,k)-putin2(i,jp,k))/noemer*vary_grid_Rneg 
+	  !cRneg = putin2(i,jp,k) + 0.5*limiter(rRneg)*(putin2( i,j,k) - putin2(i,jp,k)) *(1.-cfl)
+	  r=rRneg
+	  limiter99=(r+ABS(r))/MAX(1.+r,1.) 
+	  putoutV(i,j,k) = putin2(i,jp,k) + 0.5*limiter99*(putin2( i,j,k) - putin2(i,jp,k))
+	  !putout(i,j,k) = putout(i,j,k) - Vvel(i,j ,k)*cRneg*Rpdphi_i 
+	  !putout(i,jp,k) = putout(i,jp,k) + Vvel(i,j ,k)*cRneg*Rpdphi_ip 
+	ENDIF
+!	IF (j.eq.1) THEN ! skip all boundary rhoU,rhoV,rhoW determination --> simply use (rho_left+rho_right)/2 after this subroutine for all 0,i1,0,j1,0,k1 cells
+!	IF (Vvel(i,jm,k).ge.0.) THEN
+!	  noemer = putin2(i,j,k)-putin2(i,jm,k)
+!  	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
+!	  rLpos = (putin2(i,jm,k)-putin2(i,jmm-1,k))/noemer*vary_grid_Lpos
+!	  !cLpos = putin2(i,jm,k) + 0.5*limiter(rLpos)*(putin2( i,j,k) - putin2(i,jm,k)) *(1.-cfl)
+!	  r=rLpos
+!	  limiter99=(r+ABS(r))/MAX(1.+r,1.) 	  
+!	  putoutV(i,jm,k) = putin2(i,jm,k) + 0.5*limiter99*(putin2( i,j,k) - putin2(i,jm,k))
+!	  !putout(i,j,k)  = putout(i,j ,k) + Vvel(i,jm,k)*cLpos*Rpdphi_i 
+!	ELSE
+!	  noemer = putin2(i,j,k)-putin2(i,jm,k)
+!  	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
+!	  rLneg = (putin2(i,jp,k)-putin2(i,j    ,k))/noemer*vary_grid_Lneg 
+!	  !cLneg = putin2(i,j ,k) + 0.5*limiter(rLneg)*(putin2(i,jm,k) - putin2(i,j ,k)) *(1.-cfl)
+!	  r=rLneg
+!	  limiter99=(r+ABS(r))/MAX(1.+r,1.) 	  
+!	  putoutV(i,jm,k) = putin2(i,j ,k) + 0.5*limiter99*(putin2(i,jm,k) - putin2(i,j ,k)) 
+!	  !putout(i,j,k) = putout(i,j,k) + Vvel(i,jm,k)*cLneg*Rpdphi_i 
+!	ENDIF	
+!	ENDIF
+	IF (Wvel(i,j,k ).ge.0.) THEN
+	  noemer = putin2(i,j,kp)-putin2(i,j,k)
+	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
+	  rRpos = (putin2(i,j,k    )-putin2(i,j,km))/noemer
+	  !cRpos = putin2(i ,j,k) + 0.5*limiter(rRpos)*(putin2(i,j,kp) - putin2(i ,j,k))*(1.-cfl)
+	  r=rRpos
+	  limiter99=(r+ABS(r))/MAX(1.+r,1.)	  
+	  putoutW(i,j,k) = putin2(i ,j,k) + 0.5*limiter99*(putin2(i,j,kp) - putin2(i ,j,k))
+	  !putout(i,j,k)  = putout(i,j,k ) - Wvel(i,j,k )*cRpos*dz_i 
+	  !putout(i,j,kp) = putout(i,j,kp) + Wvel(i,j,k )*cRpos*dz_i 
+	ELSE
+	  noemer = putin2(i,j,kp)-putin2(i,j,k)
+	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
+	  rRneg = (putin2(i,j,kpp+1)-putin2(i,j,kp))/noemer 
+ 	  !cRneg = putin2(i,j,kp) + 0.5*limiter(rRneg)*(putin2(i,j, k) - putin2(i,j,kp))*(1.-cfl)
+	  r=rRneg
+	  limiter99=(r+ABS(r))/MAX(1.+r,1.)
+	  putoutW(i,j,k) = putin2(i,j,kp) + 0.5*limiter99*(putin2(i,j, k) - putin2(i,j,kp))
+	  !putout(i,j,k) = putout(i,j,k) - Wvel(i,j,k )*cRneg*dz_i
+	  !putout(i,j,kp)= putout(i,j,kp)+ Wvel(i,j,k )*cRneg*dz_i
+	ENDIF
+!	IF (k.eq.1) THEN  ! skip all boundary rhoU,rhoV,rhoW determination --> simply use (rho_left+rho_right)/2 after this subroutine for all 0,i1,0,j1,0,k1 cells
+!	IF (Wvel(i,j,km).ge.0.) THEN
+!	  noemer = putin2(i,j,k)-putin2(i,j,km)
+!	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
+!	  rLpos = (putin2(i,j,km)-putin2(i,j,kmm-1))/noemer
+!	  !cLpos = putin2(i,j,km) + 0.5*limiter(rLpos)*(putin2(i,j, k) - putin2(i,j,km))*(1.-cfl)
+!	  r=rLpos
+!	  limiter99=(r+ABS(r))/MAX(1.+r,1.)	  
+!	  putoutW(i,j,km) = putin2(i,j,km) + 0.5*limiter99*(putin2(i,j, k) - putin2(i,j,km))
+!	  !putout(i,j,k) = putout(i,j,k) + Wvel(i,j,km)*cLpos*dz_i 
+!	ELSE
+!	  noemer = putin2(i,j,k)-putin2(i,j,km)
+!	  noemer=MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
+!	  rLneg = (putin2(i,j,kp)-putin2(i,j,k))/noemer
+!	  !cLneg = putin2(i,j,k ) + 0.5*limiter(rLneg)*(putin2(i,j,km) - putin2(i,j, k))*(1.-cfl)
+!	  r=rLneg
+!	  limiter99=(r+ABS(r))/MAX(1.+r,1.)		  
+!	  putoutW(i,j,km) = putin2(i,j,k ) + 0.5*limiter99*(putin2(i,j,km) - putin2(i,j, k))
+!	  !putout(i,j,k) = putout(i,j,k) + Wvel(i,j,km)*cLneg*dz_i 
+!	ENDIF
+!	ENDIF
+c
+300       continue
+c     -------------------------------------------end i-loop
+200     continue
+c     -------------------------------------------end j-loop
+100   continue
+c     -------------------------------------------end k-loop
+
+      return
+      end
+	  
+	  
+	  
 	  	  
 	subroutine advecc_TVD2(putout,putin,Uvel,Vvel,Wvel,rho,Ru,Rp,dr,phiv,phipt,dz,
      +                  i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)

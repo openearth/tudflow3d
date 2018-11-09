@@ -32,7 +32,7 @@
 	real uu(1:imax,1:jmax,1:kmax)
 	real vv(1:imax,1:jmax,1:kmax)
 	real mass_bed(1:nfrac,1:imax,1:jmax)
-	real tt
+	real tt,ddxx(1:imax,1:jmax),ddyy(1:imax,1:jmax)
 	integer tel,n,ios
 	character*60 FILE_NAME
 	character*60 strng
@@ -45,13 +45,15 @@
        integer, parameter :: NDIMS = 3
        integer, parameter :: NDIMS2 = 4
        integer, parameter :: NDIMS3 = 1
+	   integer, parameter :: NDIMS5 = 2
 !       integer, parameter :: NX = imax, NY = jmax, NZ = kmax
      
        ! When we create netCDF files, variables and dimensions, we get back
        ! an ID for each one.
-       integer :: ncid, varid1,varid2,varid3, varid4, varid5, varid6, varid7, varid8, dimids(NDIMS), dimids2(NDIMS2),dimids3(NDIMS3)
-       integer :: x_dimid, y_dimid, z_dimid, nfrac_dimid, par_dimid
+       integer :: ncid, varid1,varid2,varid3, varid4, varid5, varid6, varid7, varid8, dimids(NDIMS), dimids2(NDIMS2)
+       integer :: x_dimid, y_dimid, z_dimid, nfrac_dimid, par_dimid,dimids3(NDIMS3),dimids5(NDIMS5)
        integer :: dimids4(NDIMS),varid20,varid21,obstacle(1:imax,1:jmax,1:kmax),t
+	   integer :: varid22,varid23	   
 	character(1024) :: svnversion
 	character(1024) :: svnurl
       include 'version.inc'
@@ -69,6 +71,12 @@
 				y(i,j,k)=Rp(i)*sin_u(j)
 				z(i,j,k)=(k-0.5)*dz-bc_obst_h
 			enddo
+		enddo
+	enddo
+	do j=1,jmax
+		do i=1,imax
+			ddxx(i,j)=dr(i)
+			ddyy(i,j)=Rp(i)*(phiv(j)-phiv(j-1))
 		enddo
 	enddo
 	
@@ -111,22 +119,30 @@
        ! the variables. Note that in fortran arrays are stored in
        ! column-major format.
        dimids =  (/ x_dimid, y_dimid, z_dimid /)
+	   dimids5 =  (/ x_dimid, y_dimid /)
      
        ! Define the variable. The type of the variable in this case is
        ! NF90_DOUBLE (4-byte double).
        call check( nf90_def_var(ncid, "x", NF90_REAL, dimids, varid1) )
        call check( nf90_put_att(ncid, varid1, 'units', 'm') )
-       call check( nf90_put_att(ncid, varid1, 'long_name', 'local x coordinate') )
+       call check( nf90_put_att(ncid, varid1, 'long_name', 'local x coordinate C-point') )
 !       call check( nf90_put_att(ncid, varid1, 'axis', 'x') )
        call check( nf90_def_var(ncid, "y", NF90_REAL, dimids, varid2) )
        call check( nf90_put_att(ncid, varid2, 'units', 'm') )
-       call check( nf90_put_att(ncid, varid2, 'long_name', 'local y coordinate') )
+       call check( nf90_put_att(ncid, varid2, 'long_name', 'local y coordinate C-point') )
 !       call check( nf90_put_att(ncid, varid2, 'axis', 'y') )
        call check( nf90_def_var(ncid, "z", NF90_REAL, dimids, varid3) )
        call check( nf90_put_att(ncid, varid3, 'units', 'm') )
-       call check( nf90_put_att(ncid, varid3, 'long_name', 'local z coordinate') )
+       call check( nf90_put_att(ncid, varid3, 'long_name', 'local z coordinate C-point') )
 !       call check( nf90_put_att(ncid, varid3, 'axis', 'z') )
 
+       call check( nf90_def_var(ncid, "dx", NF90_REAL, dimids5, varid22) )
+       call check( nf90_put_att(ncid, varid22, 'units', 'm') )
+       call check( nf90_put_att(ncid, varid22, 'long_name', 'grid size dx C-grid') )
+	   call check( nf90_def_var(ncid, "dy", NF90_REAL, dimids5, varid23) )
+       call check( nf90_put_att(ncid, varid23, 'units', 'm') )
+       call check( nf90_put_att(ncid, varid23, 'long_name', 'grid size dy C-grid') )
+	   
 	IF (tmax_inPpuntTSHD>0) THEN
        call check( nf90_def_var(ncid, "obstacle", NF90_SHORT, dimids, varid21) )
        call check( nf90_put_att(ncid, varid21, 'units', '-') )
@@ -147,12 +163,16 @@
        call check( nf90_put_var(ncid, varid1, x) )
        call check( nf90_put_var(ncid, varid2, y) )
        call check( nf90_put_var(ncid, varid3, z) )
+       call check( nf90_put_var(ncid, varid22, ddxx) )
+       call check( nf90_put_var(ncid, varid23, ddyy) )
 	   
 	IF (tmax_inPpuntTSHD>0) THEN
 		call check( nf90_put_var(ncid, varid21, obstacle) )
 	ENDIF
 	
-     
+
+	 
+	 
        ! Close the file. This frees up any internal netCDF resources
        ! associated with the file, and flushes any buffers.
        call check( nf90_close(ncid) )
@@ -308,7 +328,7 @@
 
 	END 
 
-      subroutine output_nc(istap,tt)
+      subroutine output_nc(fname_basis,istap,tt)
       USE nlist
       USE netcdf
 
@@ -329,6 +349,7 @@
 	character*60 FILE_NAME
 	character*60 strng
 	character*3 varname
+	character*7 fname_basis
 	logical(4) res
 !	integer(4) ps
 
@@ -368,8 +389,10 @@
 	   enddo
 	enddo
 
-	WRITE(FILE_NAME,'(a,i9.9,a,i4.4,a)')'flow3D_',INT(istap),'_',INT(rank),'.nc'
-	WRITE(*,'(a,i9.9,a,i4.4,a)')'flow3D_',INT(istap),'_',INT(rank),'.nc'
+	!WRITE(FILE_NAME,'(a,i9.9,a,i4.4,a)')'flow3D_',INT(istap),'_',INT(rank),'.nc'
+	!WRITE(*,'(a,i9.9,a,i4.4,a)')'flow3D_',INT(istap),'_',INT(rank),'.nc'
+	WRITE(FILE_NAME,'(a,i9.9,a,i4.4,a)'),fname_basis,INT(istap),'_',INT(rank),'.nc'
+	WRITE(*,'(a,i9.9,a,i4.4,a)'),fname_basis,INT(istap),'_',INT(rank),'.nc'
 	
        ! Create the netCDF file. The nf90_clobber parameter tells netCDF to
        ! overwrite this file, if it already exists.

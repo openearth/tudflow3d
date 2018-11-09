@@ -768,44 +768,7 @@ c get stuff from other CPU's
         enddo
        enddo
 
-	DO n=1,nbedplume
-	IF (bp(n)%u.ne.-99999.) THEN ! apply bedplume velocity boundary condition:
-	IF ((bp(n)%forever.eq.1.and.time_np.gt.bp(n)%t0.and.time_np.lt.bp(n)%t_end)
-     &     .or.(bp(n)%forever.eq.0.and.time_n.lt.bp(n)%t0.and.time_np.gt.bp(n)%t0)) THEN
-	! rotation ship for ambient side current
-	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-	  phi=atan2(V_b,1.e-12)
-	else
-	  phi=atan2(V_b,(U_TSHD-U_b))
-	endif
-	
-      !! Search for P,V:
-      do k=k1,0,-1 !from top to bottom
-       do i=0,i1  
-         do j=j1,0,-1       ! bedplume loop is only initial condition: do not bother to have U,V,W initial staggering perfect 
-	  xx=Rp(i)*cos_u(j)-schuif_x
-	  yy=Rp(i)*sin_u(j)
-	  IF (k.le.FLOOR(bp(n)%height/dz).and.k.ge.CEILING(bp(n)%zbottom/dz)) THEN ! obstacle:
-		xTSHD(1:4)=bp(n)%x*cos(phi)-bp(n)%y*sin(phi)
-		yTSHD(1:4)=bp(n)%x*sin(phi)+bp(n)%y*cos(phi)
-		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
-	  ELSE 
-	 	inout=0
-	  ENDIF
-	  if (inout.eq.1) then
-		Ubound(i,j,k)=bp(n)%u*cos_u(j)+bp(n)%v*sin_u(j)
-		Ubound(MAX(i-1,0),j,k)=bp(n)%u*cos_u(j)+bp(n)%v*sin_u(j)
-		Vbound(i,j,k)=-bp(n)%u*sin_v(j)+bp(n)%v*cos_v(j)
-		Vbound(i,MAX(j-1,0),k)=-bp(n)%u*sin_v(MAX(j-1,0))+bp(n)%v*cos_v(MAX(j-1,0))
-		Wbound(i,j,k)=bp(n)%w
-		Wbound(i,j,MAX(k-1,0))=bp(n)%w
-	   endif
-	  enddo
-	 enddo
-	enddo
-	ENDIF
-	ENDIF
-	ENDDO ! bedplume loop
+!! there used to be bedplume loop here to assign bp()u,v,w directly, but now with determination of force in bedplume in bound_rhoU this is no longer needed
 	
 	 
 	IF (LOA>0.) THEN ! ship:
@@ -1014,7 +977,7 @@ c get stuff from other CPU's
 	  Wbound(i,j,k)=Wjetbc
        enddo
 
-	IF (interaction_bed.ge.4.or.bedlevelfile.ne.'') THEN ! dynamic bed update, IBM bed re-defined every timestep:
+	IF (interaction_bed.ge.4.or.bedlevelfile.ne.''.or.nobst>0) THEN ! dynamic bed update, IBM bed re-defined every timestep:
 		DO i=0,i1 !1,imax
 			DO j=0,j1 !1,jmax
 				DO k=1,kbed(i,j)
@@ -1093,6 +1056,7 @@ c
 	real rr,interpseries
 	real uu1,uu2,vv1,vv2,test
       real zzz,Ujet2,z2,val2,jetcorr
+	  real duu,du,Uav,Tadapt,fbx2,fby2,fbz2,fbx,fby
 
 !      real  Ubound2(0:i1,0:j1,0:k1),Vbound2(0:i1,0:j1,0:k1),Wbound2(0:i1,0:j1,0:k1)
       real  Ubound2(-1:i1+1,-1:j1+1,0:k1),Vbound2(-1:i1+1,-1:j1+1,0:k1),Wbound2(0:i1,0:j1,0:k1),rho2(-1:i1+1,-1:j1+1,0:k1),rr1,rr2
@@ -1117,6 +1081,108 @@ c	x,y,z coordinate system, not in r,theta,z like this code
 	  phi=atan2(V_b,(U_TSHD-U_b))
 	endif
 
+	 if (split_rho_cont.eq.'TVD') then
+		do n=1,nfrac
+	     call c_edges_TVD_nocfl(cU(n,:,:,:),cV(n,:,:,:),cW(n,:,:,:),dcdt(n,:,:,:),Ubound,Vbound,Wbound,rho,Ru,Rp,dr,phiv,phipt,dz,
+     +            i1,j1,k1,1,imax,1,jmax,1,kmax,dt,rank,px,periodicx,periodicy) 
+	 ! bound_rhoU always called for n+1 timestep which always corresponds to dcdt (but this is not passed explicitly to this subroutine)
+	 ! this is the first moment in a timestep that c_edges_TVD is called in the code
+		enddo
+		call state_edges(cU,rhU)
+		call state_edges(cV,rhV)
+		call state_edges(cW,rhW)
+	 else 
+		cU(1:nfrac,0:imax,0:j1,0:k1)=0.5*(cnew(1:nfrac,0:imax,0:j1,0:k1)+cnew(1:nfrac,1:imax+1,0:j1,0:k1))
+		cV(1:nfrac,0:i1,0:jmax,0:k1)=0.5*(cnew(1:nfrac,0:i1,0:jmax,0:k1)+cnew(1:nfrac,0:i1,1:jmax+1,0:k1))
+		cW(1:nfrac,0:i1,0:j1,0:kmax)=0.5*(cnew(1:nfrac,0:i1,0:j1,0:kmax)+cnew(1:nfrac,0:i1,0:j1,1:kmax+1))	 
+		rhU(0:imax,0:j1,0:k1)=0.5*(rho(0:imax,0:j1,0:k1)+rho(1:imax+1,0:j1,0:k1))
+		rhV(0:i1,0:jmax,0:k1)=0.5*(rho(0:i1,0:jmax,0:k1)+rho(0:i1,1:jmax+1,0:k1))
+		rhW(0:i1,0:j1,0:kmax)=0.5*(rho(0:i1,0:j1,0:kmax)+rho(0:i1,0:j1,1:kmax+1))
+	 endif
+	 
+	 
+	if (periodicx.eq.1) then
+		rhU(i1,0:j1,0:k1)=  rhU(1,0:j1,0:k1)
+		rhV(i1,0:j1,0:k1)=  rhV(1,0:j1,0:k1)
+		rhW(i1,0:j1,0:k1)=  rhW(1,0:j1,0:k1)
+		rhU(0,0:j1,0:k1)=  rhU(imax,0:j1,0:k1)
+		rhV(0,0:j1,0:k1)=  rhV(imax,0:j1,0:k1)
+		rhW(0,0:j1,0:k1)=  rhW(imax,0:j1,0:k1)		
+	else
+		rhU(i1,0:j1,0:k1)=  rho(i1,0:j1,0:k1) 
+		rhU(imax,0:j1,0:k1)=  	 0.5*(rho(imax,0:j1,0:k1)+rho(imax+1,0:j1,0:k1))
+		rhV(i1,0:jmax,0:k1)=  0.5*(rho(i1,0:jmax,0:k1)+rho(i1,1:j1,0:k1))
+		rhW(i1,0:j1,0:kmax)=  0.5*(rho(i1,0:j1,0:kmax)+rho(i1,0:j1,1:k1))
+		rhU(0,0:j1,0:k1)=  	 0.5*(rho(0,0:j1,0:k1)+rho(1,0:j1,0:k1))
+		rhV(0,0:jmax,0:k1)=  0.5*(rho(0,0:jmax,0:k1)+rho(0,1:j1,0:k1))
+		rhW(0,0:j1,0:kmax)=  0.5*(rho(0,0:j1,0:kmax)+rho(0,0:j1,1:k1))		
+	endif
+	rhU(0:imax,0:j1,k1)=  0.5*(rho(0:imax,0:j1,k1)+rho(1:i1,0:j1,k1))
+	rhV(0:i1,0:jmax,k1)=  0.5*(rho(0:i1,0:jmax,k1)+rho(0:i1,1:j1,k1))
+	rhW(0:i1,0:j1,k1)=    rho(0:i1,0:j1,k1)
+	rhW(0:i1,0:j1,kmax)=    0.5*(rho(0:i1,0:j1,kmax)+rho(0:i1,0:j1,kmax+1))
+	rhU(0:imax,0:j1,0)=  0.5*(rho(0:imax,0:j1,0)+rho(1:i1,0:j1,0))
+	rhV(0:i1,0:jmax,0)=  0.5*(rho(0:i1,0:jmax,0)+rho(0:i1,1:j1,0))
+	rhW(0:i1,0:j1,0)=    0.5*(rho(0:i1,0:j1,0)+rho(0:i1,0:j1,1))
+	
+		!! boundary conditions in y-dir as last to prevail (especially for internal partitions this is essential)
+c get stuff from other CPU's
+	call shiftf(rhU,ubf) 
+	call shiftf(rhV,vbf)
+	call shiftf(rhW,wbf)
+	call shiftb(rhU,ubb)
+	call shiftb(rhV,vbb)
+	call shiftb(rhW,wbb)
+	if (periodicy.eq.0.or.periodicy.eq.2) then !for rho it does not matter periodicy is 0 or 2
+	  if (rank.eq.0) then ! boundaries in j-direction
+		do k=0,k1
+		   do i=0,i1
+		   rhU(i,0,k) =0.5*(rho(i,0,k)+rho(MIN(i+1,i1),0,k))		   
+		   rhV(i,0,k) =0.5*(rho(i,0,k)+rho(i,1,k))
+		   rhW(i,0,k) =0.5*(rho(i,0,k)+rho(i,0,MIN(k+1,k1)))
+		   rhU(i,j1,k) =Ubb(i,k)
+		   rhV(i,j1,k) =Vbb(i,k)
+		   rhW(i,j1,k) =Wbb(i,k)
+		   enddo
+		enddo
+	  elseif (rank.eq.px-1) then
+		do k=0,k1
+		   do i=0,i1
+		   rhU(i,j1,k) =0.5*(rho(i,j1,k)+rho(MIN(i+1,i1),j1,k))		   
+		   rhV(i,j1,k) =rho(i,j1,k)
+		   rhV(i,jmax,k) =0.5*(rho(i,jmax,k)+rho(i,jmax+1,k))
+		   rhW(i,j1,k) =0.5*(rho(i,j1,k)+rho(i,j1,MIN(k+1,k1)))
+		   rhU(i,0,k) =Ubf(i,k)
+		   rhV(i,0,k) =Vbf(i,k)
+		   rhW(i,0,k) =Wbf(i,k)
+		   enddo
+		enddo	
+	  else
+		do k=0,k1
+		   do i=0,i1
+		   rhU(i,0,k) = Ubf(i,k)
+		   rhV(i,0,k) = Vbf(i,k)
+		   rhW(i,0,k) = Wbf(i,k)
+		   rhU(i,j1,k) =Ubb(i,k)
+		   rhV(i,j1,k) =Vbb(i,k)
+		   rhW(i,j1,k) =Wbb(i,k)
+		   enddo
+		enddo
+	  endif
+	elseif (periodicy.eq.1) then !periodic in y:
+		do k=0,k1
+		   do i=0,i1
+		   rhU(i,0,k) = Ubf(i,k)
+		   rhV(i,0,k) = Vbf(i,k)
+		   rhW(i,0,k) = Wbf(i,k)
+		   rhU(i,j1,k) =Ubb(i,k)
+		   rhV(i,j1,k) =Vbb(i,k)
+		   rhW(i,j1,k) =Wbb(i,k)
+	   enddo
+	  enddo
+	endif
+
+	
 c 	influence of waves on lateral boundaries:
 	IF(Hs>0.) THEN
 	 DO k=0,k1
@@ -1196,9 +1262,9 @@ c get stuff from other CPU's
 			Vbc1(i,k)=Vbcoarse1(i,k)
 			Wbc1=Wbcoarse1(i,k)
 		    endif
-		    Ubc=0.5*(rho(i,0,k)+rho(i,1,k))*(0.5*(Ub1(i,k)+Ub1(i+1,k))+Ubc1(i,k))
-		    Vbc=0.5*(rho(i,0,k)+rho(i,1,k))*(Vb1(i,k)+Vbc1(i,k))
-		    Wbc=0.5*(rho(i,0,k)+rho(i,1,k))*(0.5*(Wb1(i,k)+Wb1(i,k+1))+Wbc1)
+		    Ubc=rhV(i,0,k)*(0.5*(Ub1(i,k)+Ub1(i+1,k))+Ubc1(i,k))    !0.5*(rho(i,0,k)+rho(i,1,k))*
+		    Vbc=rhV(i,0,k)*(Vb1(i,k)+Vbc1(i,k))                     !0.5*(rho(i,0,k)+rho(i,1,k))*
+		    Wbc=rhV(i,0,k)*(0.5*(Wb1(i,k)+Wb1(i,k+1))+Wbc1)         !0.5*(rho(i,0,k)+rho(i,1,k))*
 
  		   Ubound(i,0,k) = Ubc*cos_u(0)+Vbc*sin_u(0) !Ubf(i,k)
 !		   Ubound(i,0,k) = 2.*(Ubc*cos_u(0)+Vbc*sin_u(0))-Ubound(i,1,k) !Ubf(i,k)
@@ -1220,9 +1286,9 @@ c get stuff from other CPU's
 			Vbc1(i,k)=Vbcoarse1(i,k)
 			Wbc1=Wbcoarse1(i,k)
 		    endif
-		    Ubc=0.5*(rho(i,jmax,k)+rho(i,j1,k))*(0.5*(Ub1(i,k)+Ub1(i+1,k))+Ubc1(i,k))
-		    Vbc=0.5*(rho(i,jmax,k)+rho(i,j1,k))*(Vb1(i,k)+Vbc1(i,k))
-		    Wbc=0.5*(rho(i,jmax,k)+rho(i,j1,k))*(0.5*(Wb1(i,k)+Wb1(i,k+1))+Wbc1)
+		    Ubc=rhV(i,jmax,k)*(0.5*(Ub1(i,k)+Ub1(i+1,k))+Ubc1(i,k))                 !0.5*(rho(i,jmax,k)+rho(i,j1,k))
+		    Vbc=rhV(i,jmax,k)*(Vb1(i,k)+Vbc1(i,k))                                  !0.5*(rho(i,jmax,k)+rho(i,j1,k))
+		    Wbc=rhV(i,jmax,k)*(0.5*(Wb1(i,k)+Wb1(i,k+1))+Wbc1)                      !0.5*(rho(i,jmax,k)+rho(i,j1,k))
 
 !		    Ubc=rho_b*(0.5*(Ub1(i,k)+Ub1(i+1,k))+Ubc1)
 !		    Vbc=rho_b*(Vb1(i,k)+Vbc1)
@@ -1314,9 +1380,9 @@ c get stuff from other CPU's
 			Vbc2(j,k)=Vbcoarse2(j,k)
 			Wbc2=Wbcoarse2(j,k)
 		    endif
-		    Ubc=0.5*(rho(0,j,k)+rho(1,j,k))*(Ub2(j,k)+Ubc2(j,k))
-		    Vbc=0.5*(rho(0,j,k)+rho(1,j,k))*(0.5*(Vb2(j,k)+Vb2(j+1,k))+Vbc2(j,k))
-		    Wbc=0.5*(rho(0,j,k)+rho(1,j,k))*(0.5*(Wb2(j,k)+Wb2(j,k+1))+Wbc2)	
+		    Ubc=rhU(0,j,k)*(Ub2(j,k)+Ubc2(j,k))                                     !0.5*(rho(0,j,k)+rho(1,j,k))*
+		    Vbc=rhU(0,j,k)*(0.5*(Vb2(j,k)+Vb2(j+1,k))+Vbc2(j,k))                    !0.5*(rho(0,j,k)+rho(1,j,k))*
+		    Wbc=rhU(0,j,k)*(0.5*(Wb2(j,k)+Wb2(j,k+1))+Wbc2)	                     !0.5*(rho(0,j,k)+rho(1,j,k))*
 		   Ubound(0,j,k)    =    (Ubc*cos_u(j)+Vbc*sin_u(j))
 		   Ubound(imax,j,k) =    MAX(Ubound(imax-1,j,k),0.)
 		   Ubound(i1,j,k)   =    MAX(Ubound(imax,j,k),0.)
@@ -1488,30 +1554,63 @@ c get stuff from other CPU's
 	else
 	  phi=atan2(V_b,(U_TSHD-U_b))
 	endif
+
       !! Search for P,V:
-      do k=k1,0,-1 !from top to bottom
+      do k=CEILING(bp(n)%zbottom/dz),FLOOR(bp(n)%height/dz)! do k=k1,0,-1 !from top to bottom
        do i=0,i1  
          do j=j1,0,-1       ! bedplume loop is only initial condition: do not bother to have U,V,W initial staggering perfect 
-	  xx=Rp(i)*cos_u(j)-schuif_x
-	  yy=Rp(i)*sin_u(j)
-	  IF (k.le.FLOOR(bp(n)%height/dz).and.k.ge.CEILING(bp(n)%zbottom/dz)) THEN ! obstacle:
-		xTSHD(1:4)=bp(n)%x*cos(phi)-bp(n)%y*sin(phi)
-		yTSHD(1:4)=bp(n)%x*sin(phi)+bp(n)%y*cos(phi)
-		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
-	  ELSE 
-	 	inout=0
-	  ENDIF
-	  if (inout.eq.1) then
-		Ubound(i,j,k)=(bp(n)%u*cos_u(j)+bp(n)%v*sin_u(j))*rho(i,j,k)
-		Ubound(MAX(i-1,0),j,k)=(bp(n)%u*cos_u(j)+bp(n)%v*sin_u(j))*rho(MAX(i-1,0),j,k)
-		Vbound(i,j,k)=(-bp(n)%u*sin_v(j)+bp(n)%v*cos_v(j))*rho(i,j,k)
-		Vbound(i,MAX(j-1,0),k)=(-bp(n)%u*sin_v(MAX(j-1,0))+bp(n)%v*cos_v(MAX(j-1,0)))*rho(i,MAX(j-1,0),k)
-		Wbound(i,j,k)=bp(n)%w*rho(i,j,k)
-		Wbound(i,j,MAX(k-1,0))=bp(n)%w*rho(i,j,MAX(k-1,0))
-	   endif
+			xx=Rp(i)*cos_u(j)-schuif_x
+			yy=Rp(i)*sin_u(j)
+			xTSHD(1:4)=bp(n)%x*cos(phi)-bp(n)%y*sin(phi)
+			yTSHD(1:4)=bp(n)%x*sin(phi)+bp(n)%y*cos(phi)
+			CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+			if (inout.eq.1) then
+				Ppropx(i,j,k) = 0. 
+				Ppropx(MAX(i-1,0),j,k) = 0.
+				Ppropy(i,j,k) = 0.
+				Ppropy(i,MAX(j-1,0),k) = 0.
+				Ppropz(i,j,k) = 0.
+				Ppropz(i,j,MAX(k-1,0)) = 0. 
+			endif
+		 enddo
+	   enddo
 	  enddo
-	 enddo
-	enddo
+	
+      do k=CEILING(bp(n)%zbottom/dz),FLOOR(bp(n)%height/dz)! do k=k1,0,-1 !from top to bottom
+       do i=0,i1  
+         do j=j1,0,-1       ! bedplume loop is only initial condition: do not bother to have U,V,W initial staggering perfect 
+			xx=Rp(i)*cos_u(j)-schuif_x
+			yy=Rp(i)*sin_u(j)
+!	  		IF (k.le.FLOOR(bp(n)%height/dz).and.k.ge.CEILING(bp(n)%zbottom/dz)) THEN ! obstacle:
+			xTSHD(1:4)=bp(n)%x*cos(phi)-bp(n)%y*sin(phi)
+			yTSHD(1:4)=bp(n)%x*sin(phi)+bp(n)%y*cos(phi)
+			CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+!	  		ELSE 
+!	 			inout=0
+!	  		ENDIF
+			if (inout.eq.1) then
+				!Ubound(i,j,k)=(bp(n)%u*cos_u(j)+bp(n)%v*sin_u(j))*rhU(i,j,k) !rho(i,j,k)
+				!Ubound(MAX(i-1,0),j,k)=(bp(n)%u*cos_u(j)+bp(n)%v*sin_u(j))*rhU(MAX(i-1,0),j,k) !rho(MAX(i-1,0),j,k)
+				!Vbound(i,j,k)=(-bp(n)%u*sin_v(j)+bp(n)%v*cos_v(j))*rhV(i,j,k) !rho(i,j,k)
+				!Vbound(i,MAX(j-1,0),k)=(-bp(n)%u*sin_v(MAX(j-1,0))+bp(n)%v*cos_v(MAX(j-1,0)))*rhV(i,MAX(j-1,0),k) !rho(i,MAX(j-1,0),k)
+				!Wbound(i,j,k)=bp(n)%w*rhW(i,j,k) !rho(i,j,k)
+				!Wbound(i,j,MAX(k-1,0))=bp(n)%w*rhW(i,j,MAX(k-1,0)) !rho(i,j,MAX(k-1,0))
+				
+				fbx2=rhU(i,j,k)*ABS(bp(n)%u)*bp(n)%u/(bp(n)%x(2)-bp(n)%x(1))
+				fby2=rhV(i,j,k)*ABS(bp(n)%v)*bp(n)%v/(bp(n)%y(3)-bp(n)%y(2))
+				fbz2=rhW(i,j,k)*ABS(bp(n)%w)*bp(n)%w/(bp(n)%height-bp(n)%zbottom)
+				fbx   =  fbx2 * cos(phi) - fby2 * sin(phi)
+				fby   =  fbx2 * sin(phi) + fby2 * cos(phi)		
+				Ppropx(i,j,k) = Ppropx(i,j,k)+0.5*(cos_u(j)*fbx+sin_u(j)*fby)
+				Ppropx(MAX(i-1,0),j,k) = Ppropx(MAX(i-1,0),j,k) + 0.5*(cos_u(j)*fbx+sin_u(j)*fby)
+				Ppropy(i,j,k) = Ppropy(i,j,k)+0.5*(-sin_v(j)*fbx+cos_v(j)*fby)
+				Ppropy(i,MAX(j-1,0),k) = Ppropy(i,MAX(j-1,0),k) + 0.5*(-sin_v(MAX(j-1,0))*fbx+cos_v(MAX(j-1,0))*fby)
+				Ppropz(i,j,k) = Ppropz(i,j,k)+0.5*fbz2
+				Ppropz(i,j,MAX(k-1,0)) = Ppropz(i,j,MAX(k-1,0)) + 0.5*fbz2
+			endif
+		 enddo
+	   enddo
+	  enddo
 	ENDIF
 	ENDIF
 	ENDDO ! bedplume loop
@@ -1552,8 +1651,8 @@ c get stuff from other CPU's
 	  do i=0,i1 ! prescribe UTSHD in obstacle:
 	    do j=0,j1
 	      do k=1,kbed(i,j)
-	        Ubound(i,j,k)=Ubot_TSHD(j)*rho(i,j,k)
-	        Vbound(i,j,k)=Vbot_TSHD(j)*rho(i,j,k)
+	        Ubound(i,j,k)=Ubot_TSHD(j)*rhU(i,j,k) !*rho(i,j,k)
+	        Vbound(i,j,k)=Vbot_TSHD(j)*rhV(i,j,k) !*rho(i,j,k)
 	      enddo
 	    enddo
 	  enddo
@@ -1589,9 +1688,9 @@ c get stuff from other CPU's
 	    jp=MIN(j+1,j1) ! if j is j1, then jp=j1 --> uu2 is incorrect, but this is no problem as Ubound(i,j1,k) is not used	
 	    uu1 = -sin_v(j)*Vbound(i,j,k)+(Ubound(i,j,k))*cos_v(j) ! u wanted along rudder (v wanted = zero)
 	    uu2 = -sin_v(j)*Vbound(i,j,k)+(Ubound(i,jp,k))*cos_v(j) ! u wanted along rudder (v wanted = zero)
-	    Vbound(i,j,k)= -sin_v(j)*0.5*(uu1+uu2)
-	    Ubound(i,j,k)= cos_u(j)*uu1
-	    Ubound(i,jp,k)= cos_u(jp)*uu2
+	    Vbound(i,j,k)= -sin_v(j)*0.5*(uu1+uu2)*rhV(i,j,k)
+	    Ubound(i,j,k)= cos_u(j)*uu1*rhU(i,j,k)
+	    Ubound(i,jp,k)= cos_u(jp)*uu2*rhU(i,jp,k)
 	  enddo
 	ELSE 
           !! Set boundary conditions plate:
@@ -1627,13 +1726,13 @@ c get stuff from other CPU's
  		  Wbound(i,j,k)=Wbound2(i,j,k) !Wjet*0.5*(rho(i,j,k)+rho(i,j,k+1))+Awjet/6.*Wjet*0.5*(rho(i,j,k)+rho(i,j,k+1))*fluc
  		enddo
  		do k=kmax-kjet+1,kmax
- 		  Wbound(i,j,k)=((jetcorr*rr**(1./W_j_powerlaw)+fluc*Awjet/REAL(azi_n))*Wjet+Wb3in(i,j))*0.5*(rho(i,j,k)+rho(i,j,k+1))
+ 		  Wbound(i,j,k)=((jetcorr*rr**(1./W_j_powerlaw)+fluc*Awjet/REAL(azi_n))*Wjet+Wb3in(i,j))*rhW(i,j,k) !*0.5*(rho(i,j,k)+rho(i,j,k+1))
  		enddo
 	else
  		do k=kmax-kjet,kmax
  		  Wbound(i,j,k)=Wbound2(i,j,k) !Wjet*0.5*(rho(i,j,k)+rho(i,j,k+1))+Awjet/6.*Wjet*0.5*(rho(i,j,k)+rho(i,j,k+1))*fluc
  		enddo
-	 	Wbound(i,j,kmax)=((jetcorr*rr**(1./W_j_powerlaw)+fluc*Awjet/REAL(azi_n))*Wjet+Wb3in(i,j))*0.5*(rho(i,j,kmax)+rho(i,j,k1))
+	 	Wbound(i,j,kmax)=((jetcorr*rr**(1./W_j_powerlaw)+fluc*Awjet/REAL(azi_n))*Wjet+Wb3in(i,j))*rhW(i,j,kmax) !*0.5*(rho(i,j,kmax)+rho(i,j,k1))
 	endif
        enddo
 
@@ -1659,7 +1758,7 @@ c get stuff from other CPU's
 		do k=kmax-kjet,k1
 		  Ubound(i,j,k)=Ubound2(i,j,k)
 		enddo	
-	  	Ubound(i,j,k1)=(rho(i,j,k1)+rho(i+1,j,k1))*(Ujetbc2*cos_u(j)+Vjetbc2*sin_u(j))-Ubound(i,j,kmax)
+	  	Ubound(i,j,k1)=2.*rhU(i,j,k1)*(Ujetbc2*cos_u(j)+Vjetbc2*sin_u(j))-Ubound(i,j,kmax)   !(rho(i,j,k1)+rho(i+1,j,k1))*
 	endif
        enddo
        do t=1,tmax_inVpunt
@@ -1685,7 +1784,7 @@ c get stuff from other CPU's
 		do k=kmax-kjet,k1
 		  Vbound(i,j,k)=Vbound2(i,j,k)
 		enddo
-	  	Vbound(i,j,k1)=(rho(i,j,k1)+rho(i,jp,k1))*(Ujetbc2*sin_v(j)+Vjetbc2*cos_v(j))-Vbound(i,j,kmax) !(Aujet/6.*Wjet*fluc)
+	  	Vbound(i,j,k1)=(2.*rhV(i,j,k1)*Ujetbc2*sin_v(j)+Vjetbc2*cos_v(j))-Vbound(i,j,kmax) !(Aujet/6.*Wjet*fluc)   (rho(i,j,k1)+rho(i,jp,k1))*(
 	endif
        enddo
 
@@ -1710,7 +1809,7 @@ c get stuff from other CPU's
 	    rr=MAX(rr,0.)
 	    Ujetbc=jetcorr*Ujet2*rr**(1./W_j_powerlaw)+Aujet2/azi_n2*Ujet2*fluc 
 	    Vjetbc=Avjet/azi_n*Ujet2*fluc
-	    Ubound(0,j,k)=(Ujetbc*cos_u(j)+Vjetbc*sin_u(j))*0.5*(rho(0,j,k)+rho(1,j,k))
+	    Ubound(0,j,k)=(Ujetbc*cos_u(j)+Vjetbc*sin_u(j))*rhU(0,j,k) !*0.5*(rho(0,j,k)+rho(1,j,k))
        enddo
        do t=1,tmax_inWpunt2
  	  k=k_inWpunt2(t)
@@ -1723,7 +1822,7 @@ c get stuff from other CPU's
  	  enddo
 	  Wjetbc=Awjet/azi_n*Ujet2*fluc
 	  Vjetbc=Avjet/azi_n*Ujet2*fluc
-	  Wbound(0,j,k)=(rho(0,j,k)+rho(0,j,k+1))*(cos(atan2(zzz,yy))*Wjetbc+sin(atan2(zzz,yy))*Vjetbc)-Wbound(1,j,k)
+	  Wbound(0,j,k)=2.*rhW(0,j,k)*(cos(atan2(zzz,yy))*Wjetbc+sin(atan2(zzz,yy))*Vjetbc)-Wbound(1,j,k)   !(rho(0,j,k)+rho(0,j,k+1))*
        enddo
        do t=1,tmax_inVpunt2
  	  k=k_inVpunt2(t)
@@ -1740,8 +1839,8 @@ c get stuff from other CPU's
 	  Vjetbc=Avjet/azi_n*Ujet2*fluc
 	  Wjetbc=Awjet/azi_n*Ujet2*fluc
 	  jp=min(j+1,j1) !this error is no issue as Vbound(j1) is not used
-	  Vbound(0,j,k)=(rho(0,j,k)+rho(0,jp,k))*
-     &                  ((-Ujetbc*sin_v(j)+Vjetbc*cos_v(j))*cos(atan2(zzz,yy))-sin(atan2(zzz,yy))*Wjetbc)-Vbound(1,j,k)
+	  Vbound(0,j,k)=2.*rhV(0,j,k)*
+     &                  ((-Ujetbc*sin_v(j)+Vjetbc*cos_v(j))*cos(atan2(zzz,yy))-sin(atan2(zzz,yy))*Wjetbc)-Vbound(1,j,k)        !(rho(0,j,k)+rho(0,jp,k))*
        enddo
 
        do t=1,tmax_inWpunt_suction ! add suction in front of draghead
@@ -1749,19 +1848,19 @@ c get stuff from other CPU's
  	  j=j_inWpunt_suction(t)
  	  i=i_inWpunt_suction(t)
 	  Wjetbc=pi*MAX(radius_j**2,1.e-12)*W_j*perc_dh_suction/(dr(i)*3.*Dsp) !(m3/s)/m2=m/s per suction cell (perc_dh_suction is corrected for number of dragheads)
-	  Wbound(i,j,k)=Wjetbc*0.5*(rho(i,j,k)+rho(i,j,k+1))
+	  Wbound(i,j,k)=Wjetbc*rhW(i,j,k) !0.5*(rho(i,j,k)+rho(i,j,k+1))
        enddo
 
-	IF (interaction_bed.ge.4.or.bedlevelfile.ne.'') THEN ! dynamic bed update, IBM bed re-defined every timestep:
+	IF (interaction_bed.ge.4.or.bedlevelfile.ne.''.or.nobst>0) THEN ! dynamic bed update, IBM bed re-defined every timestep:
 		DO i=0,i1
 			DO j=0,j1
 				DO k=1,kbed(i,j)
-					Ubound(i,j,k)=Ubot_TSHD(j)*rho(i,j,k) !0.
-					Vbound(i,j,k)=Vbot_TSHD(j)*rho(i,j,k) !0.
+					Ubound(i,j,k)=Ubot_TSHD(j)*rhU(i,j,k) !*rho(i,j,k) !0.
+					Vbound(i,j,k)=Vbot_TSHD(j)*rhV(i,j,k) !*rho(i,j,k) !0.
 					im=MAX(i-1,0)
 					jm=MAX(j-1,0)
-					Ubound(im,j,k)=Ubot_TSHD(j)*rho(im,j,k) !0.
-					Vbound(i,jm,k)=Vbot_TSHD(jm)*rho(i,jm,k) !0.					
+					Ubound(im,j,k)=Ubot_TSHD(j)*rhU(im,j,k) !*rho(im,j,k) !0.
+					Vbound(i,jm,k)=Vbot_TSHD(jm)*rhV(i,jm,k) !*rho(i,jm,k) !0.					
 					Wbound(i,j,k)=0.
 				ENDDO
 			ENDDO
@@ -1871,7 +1970,7 @@ c get stuff from other CPU's
  	 enddo
 	enddo
 
-	IF (interaction_bed.ge.4.or.bedlevelfile.ne.'') THEN ! dynamic bed update, IBM bed re-defined every timestep:
+	IF (interaction_bed.ge.4.or.bedlevelfile.ne.''.or.nobst>0) THEN ! dynamic bed update, IBM bed re-defined every timestep:
 		DO i=0,i1
 			DO j=0,j1
 				DO k=1,kbed(i,j)
@@ -2068,18 +2167,18 @@ c get stuff from other CPU's
 	else
 	  phi=atan2(V_b,(U_TSHD-U_b))
 	endif
-      do k=0,k1
+      do k=CEILING(bp(n2)%zbottom/dz),FLOOR(bp(n2)%height/dz)! do k=0,k1
        do i=0,i1  
          do j=j1,0,-1       
 	  xx=Rp(i)*cos_u(j)-schuif_x
 	  yy=Rp(i)*sin_u(j)
-	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
+!	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
 		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
 		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
 		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
-	  ELSE 
-	 	inout=0
-	  ENDIF
+!	  ELSE 
+!	 	inout=0
+!	  ENDIF
 	  if (inout.eq.1) then
 	    if (bp(n2)%c(n)>0.) then
 		  Cbound(i,j,k)=bp(n2)%c(n)
@@ -2423,18 +2522,18 @@ c*************************************************************
 			bp(n2)%zbottom=interpseries(bp(n2)%zb_tseries,bp(n2)%zb_series,bp(n2)%zb_seriesloc,tt)
 		  ENDIF	
 		  bp(n2)%volncells=0.
-		  do k=1,kmax
+		  do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
 		   do i=1,imax 
 			 do j=1,jmax*px        
 		  xx=Rp(i)*cos_ut(j)-schuif_x !global xx over different processors
 		  yy=Rp(i)*sin_ut(j)          !global yy over different processors
-		  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle: 
+!		  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle: 
 			xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
 			yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
 			CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
-		  ELSE 
-			inout=0
-		  ENDIF
+!		  ELSE 
+!			inout=0
+!		  ENDIF
 		  if (inout.eq.1) then
 		   bp(n2)%volncells=bp(n2)%volncells+vol_V(i,j)
 		   endif
@@ -2493,6 +2592,72 @@ c*************************************************************
 		  ENDIF			  
 	
 	end	
+	
+	
+	subroutine update_location_bedplume 
+	
+	USE nlist
+	
+	implicit none
+	include 'mpif.h'
+	
+	integer inout,n,ierr
+	real xx,yy,phi,xTSHD(1:4),yTSHD(1:4),zbed_max,zbed_max_tot,zb
+	
+	DO n=1,nbedplume
+	  IF ((bp(n)%forever.eq.1.and.time_np.gt.bp(n)%t0.and.time_np.lt.bp(n)%t_end).and.bp(n)%move_zbed_criterium<depth) THEN
+		! rotation ship for ambient side current
+		if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
+		  phi=atan2(V_b,1.e-12)
+		else
+		  phi=atan2(V_b,(U_TSHD-U_b))
+		endif
+		zbed_max=0.
+		do i=0,i1  
+		 do j=j1,0,-1       ! bedplume loop is only initial condition: do not bother to have U,V,W initial staggering perfect 
+			xx=Rp(i)*cos_u(j)-schuif_x
+			yy=Rp(i)*sin_u(j)
+			xTSHD(1:4)=bp(n)%x*cos(phi)-bp(n)%y*sin(phi)
+			yTSHD(1:4)=bp(n)%x*sin(phi)+bp(n)%y*cos(phi)
+			CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+			
+			if (inout.eq.1) then
+				!zb=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(dcdtbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
+				zb=REAL(MAX(kbed(i,j),0))*dz !use zb = kbed*dz as this corresponds with bed cells that are blocked in flow, buffer layer is not real bed but bookkeeping
+				zbed_max=MAX(zbed_max,zb)
+			endif
+		 enddo
+		enddo
+		call mpi_allreduce(zbed_max,zbed_max_tot,1,mpi_real8,mpi_max,mpi_comm_world,ierr)
+		IF(zbed_max_tot>bp(n)%move_zbed_criterium) THEN
+			bp(n)%nmove_present=bp(n)%nmove_present+1
+			istep_output_bpmove = istep_output_bpmove +1
+			IF ((bp(n)%nmove_present-bp(n)%nmove).eq.1) THEN
+				IF (rank.eq.0) THEN
+					write(*,'(a,i6,a)'),'* WARNING, bedplume : ',n,' should have been moved, because'
+					write(*,*),' move_zbed_criterium has been met, but move_dx_series is not long enough'
+					write(*,*),' simulation is continued with bedplume at last location, '
+					write(*,*),' a mvbp output file is created at this moment now move_zbed_criterium has been reached'
+				ENDIF
+				call output_nc('mvbp3D_',istep_output_bpmove,time_np)
+			ELSEIF (bp(n)%nmove_present>bp(n)%nmove) THEN
+				! move_dx_series not long enough: do nothing and leave bp at present location
+			ELSE
+				bp(n)%x = bp(n)%x+bp(n)%move_dx_series(bp(n)%nmove_present)
+				bp(n)%y = bp(n)%y+bp(n)%move_dy_series(bp(n)%nmove_present)
+				IF (rank.eq.0) THEN
+				write(*,'(a,i6,a,f8.4,a,i4,a)'),'* Bedplume : ',n,' with max bedlevel: ',zbed_max_tot,
+     &			' has been moved for the ',bp(n)%nmove_present,' time.'
+				write(*,'(a,f7.2,f7.2)'),'Move dx,dy:',bp(n)%move_dx_series(bp(n)%nmove_present),bp(n)%move_dy_series(bp(n)%nmove_present)
+				ENDIF
+				call output_nc('mvbp3D_',istep_output_bpmove,time_np)
+			ENDIF
+		ENDIF
+	  ENDIF
+	ENDDO
+	end	
+
+
 	
 	REAL function interpseries(tseries,series,sloc,tt)
 

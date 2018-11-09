@@ -44,8 +44,10 @@ comp_filter_a = 0.495		! Alpha in compact filter (0-0.5), default 0.5 (no filter
 comp_filter_n = 0		! Compact filter is applied every comp_filter_n timesteps, default 0 (no filtering) [-]
 CNdiffz = 1			! 1 is implicit CN treatment of diffusion in z-dir 0 is explicit in z-dir (default 0)
 npresIBM = 0			! number of extra pres-correction steps to make IBM objects better impermeable (default 0)
-continuity_solver =3    !nerd option, default is 1 (drdt+drudx=0). Optional: 2 (neglect drdt), 3 (dudx=0)
-!advec_conc='TVD'
+continuity_solver =3    !nerd option, default is 1 (drdt+drudx=0). Optional: 2 (neglect drdt), 3 (dudx almost 0 U-mix), 33 (dudx=0 U-mix), 34 (dudx=0 U-vol with proper U-mix)
+!advec_conc='VLE'		! optional advection scheme concentration, options: 'VLE' (default) 'VL2' 'ARO' 'SBE' SB2' 'NVD' :'VLE' VanLeer(via LW)(default) 'ARO' Arora(via LW) 'SBE' Superbee(via LW) 'VL2' VanLeer(via CDS2) or 'SB2' Superbee(via CDS2) TVD schemes or 'NVD' for NVD scheme 
+!transporteq_fracs = 'volufrac' !nerd option default volume fractions, but as option also 'massfrac' can be used internally (input/output still is volume frac!)
+!split_rho_cont = 'SB2'  ! optional 'VL2' or 'SB2' TVD scheme (via CDS2 without 1-cfl term) to split off rho from rho*U, default 'CDS' scheme
 /
 
 &ambient
@@ -84,6 +86,7 @@ V_b3 = -0.29			! Ambient bc V velocity [m/s] in surf_layer with respect to TSHD 
 surf_layer = 0.			! Layer depth [m] from free surface with U_b3,V_b3 ambient current (default 0)
 wallup=0			! 0 wall = below; wall = up (default 0)
 bedlevelfile = ''		! Input netcdf file for bedlevel which are simulated by IBM obstacles (filled with zbed(1:imax,0:jmax*px+1) [m])
+initconditionsfile = '' ! Input netcdf file initial conditions (variables not provided are simply not used): U,V,W,C,Cbed,zbed,mass_bed 3D matrix (1:imax,1:jmax*px,1:kmax): U,V,W, 4D (1:nfrac,1:imax,1:jmax*px,1:kmax): C,Cbed, 2D matrix (1:imax,1:jmax*px): zbed, 3D(1:nfrac,1:imax,1:jmax*px): mass_bed
 c_bed= 0.1 				! Initial volume fractions inside bed [-] (length vector must be nfrac large and sum must be equal to cfixedbed)
 cfixedbed = 0.6			! Volume concentration threshold for fixed bed (default 0.6)
 
@@ -144,6 +147,9 @@ bedplume(1)%Q_tseriesfile = './inputfiles/Inflow_Q.asc'		! file containing times
 bedplume(1)%sedflux = 6.625 59.625  ! Sediment flux [kg/s] (divided evenly over all cells within bedplume, length vector must be nfrac large)
 bedplume(1)%S_tseriesfile = './inputfiles/Inflow_S.asc'		! file containing timeseries of sediment flux [kg/s] (optional overrules bedplume(.)%sedflux, default '')
 bedplume(1)%changesedsuction = 1.   ! 0. is no sediment is removed from suction domain in case bedplume%Q negative (default 1.=sediment is sucked out of domain) 
+bedplume(1)%move_zbed_criterium = 3.	! criterium [m] to move this bedplume with move_dx and move_dy once bed within x,y contour grows above this criterium
+bedplume(1)%move_dx_series = 			! series [m] to move bedplume in x direction every time bed grows above move_zbed_criterium within x,y contour bedplume
+bedplume(1)%move_dy_series = 			! series [m] to move bedplume in y direction every time bed grows above move_zbed_criterium within x,y contour bedplume
 /
 
 &fractions_in_plume
@@ -183,7 +189,9 @@ pickup_formula = 'nielsen1992' !options are 'vanrijn1984' (default),'nielsen1992
 kn_d50_multiplier = 2. 	! Defines Nikuradse bedroughness for sand pickup function (not for flow shear stress), default 2.; kn=2*d50 defined in paper Van Rijn 1984
 avalanche_slope = 2. ! Max bedslope 1:as; all slopes steeper avalanche towards 1:as (0=vertical slope, wet sand=30deg=1.7--15deg=3.7)
 reduction_sedimentation_shields = 0. ! Reduction of sedimentation at the bed by shear or perhaps grain-grain interactions (sheet flow) default 0. no reduction, value should be 4-5 PhD thesis vRhee p146 eq 7.74
-morfac = 1. 		! Factor applied to erosion and sedimentation fluxes to speed up morfology simulation (default 1.); only dz_bed is accelerated but concentrations in fluid remain unaltered 
+morfac = 1. 		! Factor applied to erosion and sedimentation fluxes to speed up morfology simulation (default 1.)
+morfac2 = 1. 		! Factor applied to erosion and sedimentation fluxes in bed (not in fluid) to speed up morfology simulation (default 1.); only dz_bed is accelerated but concentrations in fluid remain unaltered 
+!morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
 /
 
 &ship

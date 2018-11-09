@@ -25,7 +25,7 @@
       
       INTEGER i,j,k,imax,jmax,kmax,i1,j1,k1,px,rank,kjet,nmax1,nmax2,nmax3,istep,CNdiffz,npresIBM,counter
       INTEGER Lmix_type,slip_bot,SEM,azi_n,outflow_overflow_down,azi_n2
-      REAL ekm_mol,nu_mol,pi,kappa,gx,gy,gz,Cs,Sc,calibfac_sand_pickup,calibfac_Shields_cr,morfac
+      REAL ekm_mol,nu_mol,pi,kappa,gx,gy,gz,Cs,Sc,calibfac_sand_pickup,calibfac_Shields_cr,morfac,morfac2
       REAL dt,time_nm,time_n,time_np,t_end,t0_output,dt_output,te_output,dt_max,tstart_rms,CFL,dt_ini,tstart_morf
       REAL dt_output_movie,t0_output_movie,te_output_movie,te_rms
       REAL U_b,V_b,W_b,rho_b,W_j,Awjet,Aujet,Avjet,Strouhal,radius_j,kn,W_ox,U_bSEM,V_bSEM,U_w,V_w,U_init,V_init
@@ -40,11 +40,12 @@
       INTEGER tmax_inWpunt2,tmax_inVpunt2,tmax_inPpunt2,tmax_inWpunt_suction
       INTEGER nfrac,slipvel,interaction_bed,nobst,kbed_bc,nbedplume,continuity_solver,hindered_settling
       INTEGER nfr_silt,nfr_sand,nfr_air
-      CHARACTER*256 hisfile,restart_dir,inpfile,plumetseriesfile,bcfile,plumetseriesfile2,bedlevelfile
-      CHARACTER*3 time_int,advec_conc,cutter
+      CHARACTER*256 hisfile,restart_dir,inpfile,plumetseriesfile,bcfile,plumetseriesfile2,bedlevelfile,initconditionsfile
+      CHARACTER*3 time_int,advec_conc,cutter,split_rho_cont
       CHARACTER*5 sgs_model
       CHARACTER*4 damping_drho_dz,extra_mix_visc
 	  CHARACTER*11 pickup_formula
+	  CHARACTER*8 transporteq_fracs
       REAL damping_a1,damping_b1,damping_a2,damping_b2,cfixedbed
       REAL plumetseries(1:10000) 
       REAL plumeUseries(1:10000)
@@ -56,7 +57,7 @@
       INTEGER periodicx,periodicy,wallup
       REAL U_b3,V_b3,surf_layer,reduction_sedimentation_shields
       INTEGER ksurf_bc,kmaxTSHD_ind,nair
-      INTEGER poissolver,nm1
+      INTEGER poissolver,nm1,istep_output_bpmove
       INTEGER iparm(64)
       CHARACTER*256 plumeQtseriesfile,plumectseriesfile      
       REAL Q_j,plumeQseries(1:10000),plumeQtseries(1:10000),plumectseries(1:10000),plumecseries(30,1:10000) !c(30) matches with size frac_init
@@ -115,6 +116,7 @@
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: Uold,Vold,Wold,Rold
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: Unew,Vnew,Wnew,Rnew
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: dUdt,dVdt,dWdt,drdt
+	  REAL, DIMENSION(:,:,:),ALLOCATABLE :: rhoU,rhoV,rhoW
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: Srr,Spr,Szr,Spp,Spz,Szz
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: Ppropx_dummy,Ppropy_dummy,Ppropz_dummy,wf
       INTEGER, DIMENSION(:),ALLOCATABLE, TARGET :: jco,iro,beg,di,di2
@@ -124,6 +126,8 @@
       INTEGER, DIMENSION(:),ALLOCATABLE, TARGET :: jco3,iro3,beg3,di3 
       REAL, DIMENSION(:),ALLOCATABLE, TARGET :: lhs3
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: rhs3
+	  REAL, DIMENSION(:,:,:),ALLOCATABLE :: rhU,rhV,rhW
+	  REAL, DIMENSION(:,:,:,:),ALLOCATABLE :: cU,cV,cW
 
  !     REAL, DIMENSION(:,:,:),ALLOCATABLE :: Uf,Vf,Wf
 
@@ -159,14 +163,24 @@
 	end type bed_obstacles
 	type bed_plumes
 	    REAL ::	x(4),y(4),height,u,v,w,c(30),t0,t_end,zbottom,Q,sedflux(30),volncells,changesedsuction !c(30) matches with size frac_init
-		REAL :: h_tseries(10000),h_series(10000),zb_tseries(10000),zb_series(10000)
-		REAL :: Q_tseries(10000),c_tseries(10000),S_tseries(10000),Q_series(10000),c_series(30,10000),S_series(30,10000)
+		REAL :: move_zbed_criterium,move_dx_series(1000),move_dy_series(1000)
 	    INTEGER :: forever,h_seriesloc,zb_seriesloc,Q_seriesloc,S_seriesloc,c_seriesloc
 		CHARACTER*256 :: h_tseriesfile,zb_tseriesfile,Q_tseriesfile,S_tseriesfile,c_tseriesfile
 	end type bed_plumes
+	type bed_plumes2
+	    REAL ::	x(4),y(4),height,u,v,w,c(30),t0,t_end,zbottom,Q,sedflux(30),volncells,changesedsuction !c(30) matches with size frac_init
+		REAL :: h_tseries(10000),h_series(10000),zb_tseries(10000),zb_series(10000)
+		REAL :: Q_tseries(10000),c_tseries(10000),S_tseries(10000),Q_series(10000),c_series(30,10000),S_series(30,10000)
+		REAL :: move_zbed_criterium,move_dx_series(1000),move_dy_series(1000)
+	    INTEGER :: forever,h_seriesloc,zb_seriesloc,Q_seriesloc,S_seriesloc,c_seriesloc,nmove,nmove_present
+		CHARACTER*256 :: h_tseriesfile,zb_tseriesfile,Q_tseriesfile,S_tseriesfile,c_tseriesfile
+!		INTEGER :: tmax_iP,tmax_iU,iP_inbp(10000),jP_inbp(10000),kP_inbp(10000),iU_inbp(10000),jU_inbp(10000),kU_inbp(10000)		
+	end type bed_plumes2
+	
 	TYPE(fractions), DIMENSION(:), ALLOCATABLE :: frac
 	TYPE(bed_obstacles), DIMENSION(:), ALLOCATABLE :: ob,obst
-	TYPE(bed_plumes), DIMENSION(:), ALLOCATABLE :: bp,bedplume
+	TYPE(bed_plumes), DIMENSION(:), ALLOCATABLE :: bedplume
+	TYPE(bed_plumes2), DIMENSION(:), ALLOCATABLE :: bp
 
       
 !       REAL*8, DIMENSION(:,:,:),ALLOCATABLE :: UT
@@ -197,16 +211,17 @@
 	NAMELIST /times/t_end,t0_output,dt_output,te_output,tstart_rms,dt_max,dt_ini,time_int,CFL,
      & t0_output_movie,dt_output_movie,te_output_movie,tstart_morf,te_rms
 	NAMELIST /num_scheme/convection,numdiff,diffusion,comp_filter_a,comp_filter_n,CNdiffz,npresIBM,advec_conc,continuity_solver
+     & ,transporteq_fracs,split_rho_cont
 	NAMELIST /ambient/U_b,V_b,W_b,bcfile,rho_b,SEM,nmax2,nmax1,nmax3,lm_min,lm_min3,slip_bot,kn,interaction_bed,
      & periodicx,periodicy,dpdx,dpdy,W_ox,Hs,Tp,nx_w,ny_w,obst,bc_obst_h,U_b3,V_b3,surf_layer,wallup,bedlevelfile,
-     & U_bSEM,V_bSEM,U_w,V_w,c_bed,cfixedbed,U_init,V_init
+     & U_bSEM,V_bSEM,U_w,V_w,c_bed,cfixedbed,U_init,V_init,initconditionsfile
 	NAMELIST /plume/W_j,plumetseriesfile,Awjet,Aujet,Avjet,Strouhal,azi_n,kjet,radius_j,Sc,slipvel,outflow_overflow_down,
      & U_j2,plumetseriesfile2,Awjet2,Aujet2,Avjet2,Strouhal2,azi_n2,radius_j2,zjet2,bedplume,radius_inner_j,xj,yj,W_j_powerlaw,
      & plume_z_outflow_belowsurf,hindered_settling,Q_j,plumeQtseriesfile,plumectseriesfile
 	NAMELIST /LESmodel/sgs_model,Cs,Lmix_type,nr_HPfilter,damping_drho_dz,damping_a1,damping_b1,damping_a2,damping_b2,
      & extra_mix_visc
 	NAMELIST /constants/kappa,gx,gy,gz,ekm_mol,calibfac_sand_pickup,pickup_formula,kn_d50_multiplier,avalanche_slope,
-     &	calibfac_Shields_cr,reduction_sedimentation_shields,morfac
+     &	calibfac_Shields_cr,reduction_sedimentation_shields,morfac,morfac2
 	NAMELIST /fractions_in_plume/fract
 	NAMELIST /ship/U_TSHD,LOA,Lfront,Breadth,Draught,Lback,Hback,xfront,yfront,kn_TSHD,nprop,Dprop,xprop,yprop,zprop,
      &   Pprop,rudder,rot_prop,draghead,Dsp,xdh,perc_dh_suction,softnose,Hfront,cutter
@@ -257,8 +272,10 @@
 	comp_filter_n = 0
 	CNdiffz = 0
 	npresIBM = 0
-	advec_conc='VLE' !nerdoption, default is 'VLE' (TVD Van Leer) most robust scheme, can also be 'TVD' alpha-cfl dependent scheme or 'NVD' (alpha-cfl dependent scheme via NVD manner) which should also be robust/stable and sligthly more accurate. In a test VLE gave no negative concentrations and TVD did...
-	continuity_solver = 1 !nerd option, default is 1 (drdt+drudx=0). Optional: 2 (neglect drdt), 3 (dudx=0)
+	advec_conc='VLE' !optional advection scheme concentration, options: 'VLE' (default) 'VL2' 'ARO' 'SBE' SB2' 'NVD' :'VLE' VanLeer(via LW)(default) 'ARO' Arora(via LW) 'SBE' Superbee(via LW) 'VL2' VanLeer(via CDS2) or 'SB2' Superbee(via CDS2) TVD schemes or 'NVD' for NVD scheme 
+	continuity_solver = 1 !nerd option, default is 1 (drdt+drudx=0). Optional: 2 (neglect drdt), 3 (dudx almost 0 U-mix), 33 (dudx=0 U-mix), 34 (dudx=0 U-vol with proper U-mix)
+	transporteq_fracs = 'volufrac' !nerd option default volume fractions, but as option also 'massfrac' can be used internally (input/output still is volume frac!)
+	split_rho_cont='CDS'  ! optional 'VL2' or 'SB2' TVD scheme (via CDS2 without 1-cfl term) to split off rho from rho*U, default 'CDS' scheme
 	!! ambient:
 	U_b = -999.
 	V_b = -999.
@@ -294,6 +311,7 @@
 	U_w=-9999.
 	V_w=-9999.	
 	bedlevelfile = ''
+	initconditionsfile = ''
 	cfixedbed=0.6
 	c_bed(:)=-1.
 	DO i=1,4
@@ -374,23 +392,14 @@
 	bedplume(:)%S_seriesloc=1
 	bedplume(:)%c_tseriesfile=''
 	bedplume(:)%c_seriesloc=1	
-	DO i=1,10000
-		bedplume(:)%h_tseries(i)=-99999.
-		bedplume(:)%h_series(i)=-99999.
-		bedplume(:)%zb_tseries(i)=-99999.
-		bedplume(:)%zb_series(i)=-99999.
-		bedplume(:)%Q_tseries(i)=-99999.
-		bedplume(:)%Q_series(i)=-99999.
-		bedplume(:)%S_tseries(i)=-99999.
-		bedplume(:)%c_tseries(i)=-99999.
-		DO j=1,30
-			bedplume(:)%S_series(j,i)=-99999.
-			bedplume(:)%c_series(j,i)=-99999.		
-		ENDDO
-	ENDDO
 	DO i=1,30
 		bedplume(:)%c(i) = 0.
 		bedplume(:)%sedflux(i) = 0. 
+	ENDDO
+	bedplume(:)%move_zbed_criterium=999999999.
+	DO i=1,1000
+		bedplume(:)%move_dx_series(i)=-99999999.
+		bedplume(:)%move_dy_series(i)=-99999999.
 	ENDDO
 	plume_z_outflow_belowsurf=-999.
 	!! Fractions_in_plume
@@ -437,6 +446,7 @@
 	avalanche_slope = 0. !default vertical slopes are allowed
 	reduction_sedimentation_shields = 0. ! default no reduction in sedimentation by shear stresss (shields) ! PhD thesis vRhee p146 eq 7.74
 	morfac = 1.
+	morfac2 = 1.
 	!! ship
 	U_TSHD=-999.
 	LOA=-999.
@@ -778,10 +788,38 @@
 	  bp(n)%zb_tseriesfile=bedplume(n)%zb_tseriesfile
 	  bp(n)%h_seriesloc=bedplume(n)%h_seriesloc
 	  bp(n)%zb_seriesloc=bedplume(n)%zb_seriesloc
-	  bp(n)%h_tseries=bedplume(n)%h_tseries
-	  bp(n)%zb_tseries=bedplume(n)%zb_tseries
-	  bp(n)%h_series=bedplume(n)%h_series
-	  bp(n)%zb_series=bedplume(n)%zb_series
+
+	  bp(n)%move_zbed_criterium=bedplume(n)%move_zbed_criterium
+	  bp(n)%move_dx_series=bedplume(n)%move_dx_series
+	  bp(n)%move_dy_series=bedplume(n)%move_dy_series
+	  bp(n)%nmove_present=0
+	  bp(n)%nmove=0
+	  DO WHILE (bp(n)%move_dx_series(bp(n)%nmove+1).NE.-99999999.)
+		bp(n)%nmove=bp(n)%nmove+1
+	  END DO
+	  n3=0
+	  DO WHILE (bp(n)%move_dy_series(n3+1).NE.-99999999.)
+		n3=n3+1
+	  END DO	  
+	  IF (n3.ne.bp(n)%nmove) THEN
+		write(*,*),' Bedplume : ',n
+		CALL writeerror(173)
+	  ENDIF
+	  DO i=1,10000
+	  	bp(n)%h_tseries(i)=-99999.
+	  	bp(n)%h_series(i)=-99999.
+	  	bp(n)%zb_tseries(i)=-99999.
+	  	bp(n)%zb_series(i)=-99999.
+	  	bp(n)%Q_tseries(i)=-99999.
+	  	bp(n)%Q_series(i)=-99999.
+	  	bp(n)%S_tseries(i)=-99999.
+	  	bp(n)%c_tseries(i)=-99999.
+	  	DO j=1,30
+	  		bp(n)%S_series(j,i)=-99999.
+	  		bp(n)%c_series(j,i)=-99999.		
+	  	ENDDO
+	  ENDDO
+	
 	  
 	  bp(n)%Q_tseriesfile=bedplume(n)%Q_tseriesfile
 	  bp(n)%S_tseriesfile=bedplume(n)%S_tseriesfile
@@ -789,12 +827,20 @@
 	  bp(n)%Q_seriesloc=bedplume(n)%Q_seriesloc
 	  bp(n)%S_seriesloc=bedplume(n)%S_seriesloc
 	  bp(n)%c_seriesloc=bedplume(n)%c_seriesloc
-	  bp(n)%Q_tseries=bedplume(n)%Q_tseries
-	  bp(n)%S_tseries=bedplume(n)%S_tseries
-	  bp(n)%c_tseries=bedplume(n)%c_tseries
-	  bp(n)%Q_series=bedplume(n)%Q_series
-	  bp(n)%S_series=bedplume(n)%S_series
-	  bp(n)%c_series=bedplume(n)%c_series
+
+
+!	  bp(n)%h_tseries=bedplume(n)%h_tseries
+!	  bp(n)%zb_tseries=bedplume(n)%zb_tseries
+!	  bp(n)%h_series=bedplume(n)%h_series
+!	  bp(n)%zb_series=bedplume(n)%zb_series
+!	  
+!	  bp(n)%Q_tseries=bedplume(n)%Q_tseries
+!	  bp(n)%S_tseries=bedplume(n)%S_tseries
+!	  bp(n)%c_tseries=bedplume(n)%c_tseries
+!	  bp(n)%Q_series=bedplume(n)%Q_series
+!	  bp(n)%S_series=bedplume(n)%S_series
+!	  bp(n)%c_series=bedplume(n)%c_series
+	  
 
 
 	IF (bp(n)%Q_tseriesfile.eq.'') THEN
@@ -806,7 +852,7 @@
 		n3=n3+1
 	   END DO	  
 	   IF (bp(n)%Q_tseries(n3).lt.t_end) THEN
-				write(*,*),' Bedplume:',n
+				write(*,*),' Bedplume : ',n
 				write(*,*),' time series shorter than t_end'
 				write(*,*),' series file:',bp(n)%Q_tseriesfile
 				CALL writeerror(279)
@@ -821,7 +867,7 @@
 		n3=n3+1
 	   END DO	  
 	   IF (bp(n)%S_tseries(n3).lt.t_end) THEN
-				write(*,*),' Bedplume:',n
+				write(*,*),' Bedplume : ',n
 				write(*,*),' time series shorter than t_end'
 				write(*,*),' series file:',bp(n)%S_tseriesfile
 				CALL writeerror(279)
@@ -830,7 +876,7 @@
 	   DO i=1,nfrac
 		 DO j=1,n3
 			IF (bp(n)%S_series(i,j)<0) THEN
-				write(*,*),' Bedplume:',n
+				write(*,*),' Bedplume : ',n
 				write(*,*),' Sediment fraction,# in serie:',i,j
 				write(*,*),' value:',bp(n)%S_series(i,j)
 				write(*,*),' series file:',bp(n)%S_tseriesfile
@@ -848,7 +894,7 @@
 		n3=n3+1
 	   END DO	  
 	   IF (bp(n)%c_tseries(n3).lt.t_end) THEN
-				write(*,*),' Bedplume:',n
+				write(*,*),' Bedplume : ',n
 				write(*,*),' time series shorter than t_end'
 				write(*,*),' series file:',bp(n)%c_tseriesfile
 				CALL writeerror(279)
@@ -857,7 +903,7 @@
 	   DO i=1,nfrac
 		 DO j=1,n3
 			IF (bp(n)%c_series(i,j)<0) THEN
-				write(*,*),' Bedplume:',n
+				write(*,*),' Bedplume : ',n
 				write(*,*),' Sediment fraction, # n series:',i,j
 				write(*,*),' value:',bp(n)%c_series(i,j)
 				write(*,*),' series file:',bp(n)%c_tseriesfile
@@ -867,21 +913,21 @@
 		ENDDO
 	ENDIF	
 	IF (bp(n)%c_tseriesfile.ne.''.and.bp(n)%S_tseriesfile.ne.'') THEN
-		write(*,*),' Bedplume:',n
+		write(*,*),' Bedplume : ',n
 		write(*,*),' series file:',bp(n)%c_tseriesfile
 		write(*,*),' series file:',bp(n)%S_tseriesfile
 		write(*,*),' should not be both defined'
 		CALL writeerror(277)
 	ENDIF
 	IF (bp(n)%c_tseriesfile.ne.''.and.MAXVAL(bp(n)%sedflux(1:nfrac))>0.) THEN
-		write(*,*),' Bedplume:',n
+		write(*,*),' Bedplume : ',n
 		write(*,*),' series file:',bp(n)%c_tseriesfile
 		write(*,*),' sedflux:',bp(n)%sedflux
 		write(*,*),' should not be both defined'
 		CALL writeerror(277)
 	ENDIF
 	IF (MAXVAL(bp(n)%c(1:nfrac))>0.and.bp(n)%S_tseriesfile.ne.'') THEN
-		write(*,*),' Bedplume:',n
+		write(*,*),' Bedplume : ',n
 		write(*,*),' series file:',bp(n)%S_tseriesfile
 		write(*,*),' c:',bp(n)%c
 		write(*,*),' should not be both defined'
@@ -897,7 +943,7 @@
 		n3=n3+1
 	   END DO	  
 	   IF (bp(n)%h_tseries(n3).lt.t_end) THEN
-				write(*,*),' Bedplume:',n
+				write(*,*),' Bedplume : ',n
 				write(*,*),' time series shorter than t_end'
 				write(*,*),' series file:',bp(n)%h_tseriesfile
 				CALL writeerror(279)
@@ -912,7 +958,7 @@
 		n3=n3+1
 	   END DO	  
 	   IF (bp(n)%zb_tseries(n3).lt.t_end) THEN
-				write(*,*),' Bedplume:',n
+				write(*,*),' Bedplume : ',n
 				write(*,*),' time series shorter than t_end'
 				write(*,*),' series file:',bp(n)%zb_tseriesfile
 				CALL writeerror(279)
@@ -920,12 +966,12 @@
 	ENDIF
 	  DO i=1,4
 	    IF (bp(n)%x(i).eq.-99999.or.bp(n)%y(i).eq.-99999) THEN
-		write(*,*),' Bedplume:',n
+		write(*,*),' Bedplume : ',n
 		CALL writeerror(269)
 	    ENDIF
 	  ENDDO
 	  IF (bp(n)%height<0.) THEN
-	    write(*,*),' Bedplume:',n
+	    write(*,*),' Bedplume : ',n
 	    CALL writeerror(270)
 	  ENDIF
 	  DO i=1,nfrac
@@ -991,6 +1037,7 @@
 	IF (calibfac_sand_pickup<0.) CALL writeerror(98)
 	IF (calibfac_Shields_cr<0.) CALL writeerror(99)
 	IF (morfac<0.) CALL writeerror(101)
+	IF (morfac2<1.) CALL writeerror(102)
 
 	READ (UNIT=1,NML=ship,IOSTAT=ios)
 	!! check input constants
@@ -1225,6 +1272,20 @@
 	ALLOCATE(dVdt(0:i1,0:j1,0:k1))
 	ALLOCATE(dWdt(0:i1,0:j1,0:k1))
 	ALLOCATE(dRdt(0:i1,0:j1,0:k1))
+	
+	
+	ALLOCATE(rhU(0:i1,0:j1,0:k1))
+	ALLOCATE(rhV(0:i1,0:j1,0:k1))
+	ALLOCATE(rhW(0:i1,0:j1,0:k1))
+	ALLOCATE(cU(nfrac,0:i1,0:j1,0:k1))
+	ALLOCATE(cV(nfrac,0:i1,0:j1,0:k1))
+	ALLOCATE(cW(nfrac,0:i1,0:j1,0:k1))
+	
+	if (transporteq_fracs.eq.'massfrac') then
+		ALLOCATE(rhoU(0:i1,0:j1,0:k1))  
+		ALLOCATE(rhoV(0:i1,0:j1,0:k1))  
+		ALLOCATE(rhoW(0:i1,0:j1,0:k1))  
+	endif
 
 !        ALLOCATE(Uf(0:i1,0:j1,0:k1))
 !        ALLOCATE(Vf(0:i1,0:j1,0:k1))
