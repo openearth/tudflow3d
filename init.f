@@ -319,15 +319,17 @@ c******************************************************************
       subroutine fkdat
       USE nlist
 	  USE netcdf
+	  USE sediment
       implicit none
 
 	integer n,n2,ii,inout
 	real ampli,phi,uu,vv,xTSHD(4),yTSHD(4),z,xx,yy
 	real U2,V2,z0_U,ust_U_b,z0_V,ust_V_b,interpseries
-	integer clock
-      INTEGER, DIMENSION(:), ALLOCATABLE :: seed
 	  	integer :: ncid, rhVarId, status2, ndims, xtype,natts,status
 		integer, dimension(nf90_max_var_dims) :: dimids
+		REAL dummy_var(1:imax,1:px*jmax,1:kmax),dummy_var2(1:imax,1:px*jmax,1:kmax) 
+		CHARACTER(len=256) :: command,dummy,restart_file(1000)
+		INTEGER ressystem, io, nfound,jpx,size1,size2,size3,size4
 
 !       include 'param.txt'
 !       include 'common.txt'
@@ -552,33 +554,246 @@ c******************************************************************
 
 	ENDIF
 
-	if (initconditionsfile.ne.'') then
-
-       	status2 = nf90_open(initconditionsfile, nf90_NoWrite, ncid) 
-		IF (status2/= nf90_noerr) THEN
-			write(*,*),'initconditionsfile =',initconditionsfile
-			CALL writeerror(606)
+	if (restart_dir.ne.'') then
+		WRITE(*,*) 'Listing restart files with system call'
+		WRITE(command,'(a,a,a,i4.4,a)')'ls ',TRIM(restart_dir),' > restart_temp',INT(rank),'.txt'
+		CALL SYSTEM(command) 
+		
+		WRITE(command,'(a,i4.4,a)')'restart_temp',INT(rank),'.txt'
+		OPEN(unit=25,file=command) 
+		
+		nfound = 0
+		DO
+			READ(25,'(a)',iostat=io) dummy
+			IF (io/=0) EXIT
+			nfound = nfound + 1
+			restart_file(nfound)=TRIM(dummy)
+		ENDDO
+		IF (rank.eq.0) THEN
+			WRITE(*,'(A,I0)') ' Number of restart files found: ',nfound	
+			DO n=1,nfound 
+			  write(*,*),restart_file(n)
+			ENDDO
 		ENDIF
-		status = nf90_inq_varid(ncid, "U",rhVarid)
-		if (status.eq.nf90_NoErr) then
-			call check( nf90_get_var(ncid,rhVarid,Unew(1:imax,1:jmax,1:kmax),start=(/1,rank*jmax+1,1/),count=(/imax,jmax,kmax/)) )
-		else
-			write(*,*),'initconditionsfile =',initconditionsfile,' variable "U" not found and not used as initial condition'
-		endif
-			
+		CLOSE(25, STATUS = 'DELETE')
+		!CLOSE(25, STATUS = 'KEEP')
+		
+		jpx = (jmax*px/nfound)
+
+		IF (nfound.gt.0) THEN
+			n2=1 
+			status2 = nf90_open(restart_file(n2), nf90_NoWrite, ncid) 
+			IF (status2/= nf90_noerr) THEN
+				write(*,*),'initconditionsfile =',restart_file(n2)
+				CALL writeerror(701)
+			ENDIF
+			status = nf90_inq_varid(ncid, "time",rhVarid)
+			if (status.eq.nf90_NoErr) then
+				call check( nf90_get_var(ncid,rhVarid,time_n))
+				IF (rank.eq.0) write(*,*),'restart time =',time_n
+				trestart=time_n
+			endif
 			call check( nf90_close(ncid) )
+		ENDIF
+		
+		
+		DO n2=1,nfound
+			status2 = nf90_open(restart_file(n2), nf90_NoWrite, ncid) 
+			IF (status2/= nf90_noerr) THEN
+				write(*,*),'initconditionsfile =',restart_file(n2)
+				CALL writeerror(701)
+			ENDIF
+			IF (rank.eq.0) write(*,*),'reading initconditionsfile =',restart_file(n2)
+			status = nf90_inq_varid(ncid, "U",rhVarid)
+			if (status.eq.nf90_NoErr) then
+				call check( nf90_inquire_variable(ncid, rhVarid, dimids = dimIDs))
+				call check( nf90_inquire_dimension(ncid, dimIDs(1), len = size1))
+				call check( nf90_inquire_dimension(ncid, dimIDs(2), len = size2))
+				call check( nf90_inquire_dimension(ncid, dimIDs(3), len = size3))
+				IF(size1.ne.imax.or.size2*nfound.ne.jmax*px.or.size3.ne.kmax) CALL writeerror(702)
+				call check( nf90_get_var(ncid,rhVarid,dummy_var(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1:kmax),
+     &                       start=(/1,1,1/),count=(/imax,jpx,kmax/)) )
+			else
+				write(*,*),'initconditionsfile =',restart_file(n2),' variable "U" not found and not used as initial condition'
+				dummy_var(1:imax,(n2-1)*jpx+1:jpx,1:kmax)=0.
+			endif
+			call check( nf90_close(ncid) )
+		ENDDO
+		DO n2=1,nfound
+			status2 = nf90_open(restart_file(n2), nf90_NoWrite, ncid) 
+			IF (status2/= nf90_noerr) THEN
+				write(*,*),'initconditionsfile =',restart_file(n2)
+				CALL writeerror(701)
+			ENDIF
+			status = nf90_inq_varid(ncid, "V",rhVarid)
+			if (status.eq.nf90_NoErr) then
+				call check( nf90_inquire_variable(ncid, rhVarid, dimids = dimIDs))
+				call check( nf90_inquire_dimension(ncid, dimIDs(1), len = size1))
+				call check( nf90_inquire_dimension(ncid, dimIDs(2), len = size2))
+				call check( nf90_inquire_dimension(ncid, dimIDs(3), len = size3))
+				IF(size1.ne.imax.or.size2*nfound.ne.jmax*px.or.size3.ne.kmax) CALL writeerror(702)
+				call check( nf90_get_var(ncid,rhVarid,dummy_var2(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1:kmax),
+     &                       start=(/1,1,1/),count=(/imax,jpx,kmax/)) )
+			else
+				write(*,*),'initconditionsfile =',restart_file(n2),' variable "V" not found and not used as initial condition'
+				dummy_var2(1:imax,(n2-1)*jpx+1:jpx,1:kmax)=0.
+			endif
+			call check( nf90_close(ncid) )
+		ENDDO
+		do i=1,imax
+		  do j=1,jmax
+		    do k=1,kmax 
+			  Unew(i,j,k)=dummy_var(i,j+rank*jmax,k)*cos_u(j)+dummy_var2(i,j+rank*jmax,k)*sin_u(j)
+			  Vnew(i,j,k)=dummy_var2(i,j+rank*jmax,k)*cos_v(j)-dummy_var(i,j+rank*jmax,k)*sin_v(j)
+			enddo 
+		  enddo
+		enddo
+		DO n2=1,nfound
+			status2 = nf90_open(restart_file(n2), nf90_NoWrite, ncid) 
+			IF (status2/= nf90_noerr) THEN
+				write(*,*),'initconditionsfile =',restart_file(n2)
+				CALL writeerror(701)
+			ENDIF
+			status = nf90_inq_varid(ncid, "W",rhVarid)
+			if (status.eq.nf90_NoErr) then
+				call check( nf90_inquire_variable(ncid, rhVarid, dimids = dimIDs))
+				call check( nf90_inquire_dimension(ncid, dimIDs(1), len = size1))
+				call check( nf90_inquire_dimension(ncid, dimIDs(2), len = size2))
+				call check( nf90_inquire_dimension(ncid, dimIDs(3), len = size3))
+				IF(size1.ne.imax.or.size2*nfound.ne.jmax*px.or.size3.ne.kmax) CALL writeerror(702)
+				call check( nf90_get_var(ncid,rhVarid,dummy_var(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1:kmax),
+     &                       start=(/1,1,1/),count=(/imax,jpx,kmax/)) )
+			else
+				write(*,*),'initconditionsfile =',restart_file(n2),' variable "W" not found and not used as initial condition'
+				dummy_var(1:imax,(n2-1)*jpx+1:jpx,1:kmax)=0.
+			endif
+			call check( nf90_close(ncid) )
+		ENDDO
+		do i=1,imax
+		  do j=1,jmax
+		    do k=1,kmax 
+			  Wnew(i,j,k)=dummy_var(i,j+rank*jmax,k)
+			enddo 
+		  enddo
+		enddo
+		DO n=1,nfrac
+			DO n2=1,nfound
+				status2 = nf90_open(restart_file(n2), nf90_NoWrite, ncid) 
+				IF (status2/= nf90_noerr) THEN
+					write(*,*),'initconditionsfile =',restart_file(n2)
+					CALL writeerror(701)
+				ENDIF
+				status = nf90_inq_varid(ncid, "C",rhVarid)
+				if (status.eq.nf90_NoErr) then
+					call check( nf90_inquire_variable(ncid, rhVarid, dimids = dimIDs))
+					call check( nf90_inquire_dimension(ncid, dimIDs(1), len = size1))
+					call check( nf90_inquire_dimension(ncid, dimIDs(2), len = size2))
+					call check( nf90_inquire_dimension(ncid, dimIDs(3), len = size3))
+					call check( nf90_inquire_dimension(ncid, dimIDs(4), len = size4))
+					IF(size1.ne.nfrac.or.size2.ne.imax.or.size3*nfound.ne.jmax*px.or.size4.ne.kmax) CALL writeerror(702)
+					call check( nf90_get_var(ncid,rhVarid,dummy_var(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1:kmax),
+     &                       start=(/n,1,1,1/),count=(/1,imax,jpx,kmax/)) )
+				else
+					write(*,*),'initconditionsfile =',restart_file(n2),' variable "C" not found and not used as initial condition'
+					dummy_var(1:imax,(n2-1)*jpx+1:jpx,1:kmax)=0.
+				endif
+				call check( nf90_close(ncid) )
+			ENDDO
+			do i=1,imax
+			  do j=1,jmax
+				do k=1,kmax 
+				  Cnew(n,i,j,k)=dummy_var(i,j+rank*jmax,k)
+				enddo 
+			  enddo
+			enddo
+		ENDDO
+		DO n=1,nfrac
+			DO n2=1,nfound
+				status2 = nf90_open(restart_file(n2), nf90_NoWrite, ncid) 
+				IF (status2/= nf90_noerr) THEN
+					write(*,*),'initconditionsfile =',restart_file(n2)
+					CALL writeerror(701)
+				ENDIF
+				status = nf90_inq_varid(ncid, "Cbed",rhVarid)
+				if (status.eq.nf90_NoErr) then
+					call check( nf90_inquire_variable(ncid, rhVarid, dimids = dimIDs))
+					call check( nf90_inquire_dimension(ncid, dimIDs(1), len = size1))
+					call check( nf90_inquire_dimension(ncid, dimIDs(2), len = size2))
+					call check( nf90_inquire_dimension(ncid, dimIDs(3), len = size3))
+					call check( nf90_inquire_dimension(ncid, dimIDs(4), len = size4))
+					IF(size1.ne.nfrac.or.size2.ne.imax.or.size3*nfound.ne.jmax*px.or.size4.ne.kmax) CALL writeerror(702)
+					call check( nf90_get_var(ncid,rhVarid,dummy_var(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1:kmax),
+     &                       start=(/n,1,1,1/),count=(/1,imax,jpx,kmax/)) )
+				else
+					write(*,*),'initconditionsfile =',restart_file(n2),' variable "Cbed" not found and not used as initial condition'
+					dummy_var(1:imax,(n2-1)*jpx+1:jpx,1:kmax)=0.
+				endif
+				call check( nf90_close(ncid) )
+			ENDDO
+			do i=1,imax
+			  do j=1,jmax
+				do k=1,kmax 
+				  Clivebed(n,i,j,k)=dummy_var(i,j+rank*jmax,k)
+				enddo 
+			  enddo
+			enddo
+		ENDDO
+		DO n=1,nfrac
+			DO n2=1,nfound
+				status2 = nf90_open(restart_file(n2), nf90_NoWrite, ncid) 
+				IF (status2/= nf90_noerr) THEN
+					write(*,*),'initconditionsfile =',restart_file(n2)
+					CALL writeerror(701)
+				ENDIF
+				status = nf90_inq_varid(ncid, "mass_bed",rhVarid)
+				if (status.eq.nf90_NoErr) then
+					call check( nf90_inquire_variable(ncid, rhVarid, dimids = dimIDs))
+					call check( nf90_inquire_dimension(ncid, dimIDs(1), len = size1))
+					call check( nf90_inquire_dimension(ncid, dimIDs(2), len = size2))
+					call check( nf90_inquire_dimension(ncid, dimIDs(3), len = size3))
+					IF(size1.ne.nfrac.or.size2.ne.imax.or.size3*nfound.ne.jmax*px) CALL writeerror(702)
+					call check( nf90_get_var(ncid,rhVarid,dummy_var(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1),
+     &                       start=(/n,1,1/),count=(/1,imax,jpx/)) )
+				else
+					write(*,*),'initconditionsfile =',restart_file(n2),' variable "mass_bed" not found and not used as initial condition'
+					dummy_var(1:imax,(n2-1)*jpx+1:jpx,1)=0.
+				endif
+				call check( nf90_close(ncid) )
+			ENDDO
+			do i=1,imax
+			  do j=1,jmax
+				  Cnewbot(n,i,j)=dummy_var(i,j+rank*jmax,1)/dz/frac(n)%rho 
+			  enddo
+			enddo
+		ENDDO		
+		
+		Uold=Unew
+		Vold=Vnew 
+		Wold=Wnew 
+		Cold=Cnew
+		
+
+		kbed=0
+		do i=1,imax
+		  do j=1,jmax
+			k=1
+		    do WHILE (SUM(Clivebed(1:nfrac,i,j,k)).gt.0.)
+			  k=k+1
+			  kbed(i,j)=k
+			  kbedt(i,j)=k
+			enddo
+		  enddo
+		enddo
+!		call state(cnew,rnew)
+!		CALL erosion_deposition(Cnew,cnewbot,Unew,Vnew,Wnew,Rnew,Cnew,Cnewbot,dt,dz)
+
+      do n=1,nfrac
+	     call bound_c(Clivebed(n,:,:,:),0.,n,0.)
+	     call bound_cbot(Cnewbot(n,:,:))
+      enddo	
+	  call bound_cbot_integer(kbed) 
+	  call bound_cbot_integer(kbedt)
 	
-!		! bedlevel file obstacles have no i=0 or i=i1 in zbed3, but do have j=0 and j=j1
-!		kbed3=0
-!		!! search for zbed and kbed on each proc (j=0,j1): (used for deposition and bc in solver [adjusted for ob(n)%zbottom])
-!		do j=0,j1 
-!		   do i=0,i1 !imax  !including i1 strangely gives crash (13/4/15) !1,imax !0,i1
-!				kbed3(i,j)=FLOOR(zbed3(i,j)/dz)
-!				kbed3(i,j)=MAX(0,kbed3(i,j))
-!				kbed3(i,j)=MIN(kmax,kbed3(i,j))
-!				zbed(i,j)=MAX(zbed(i,j),zbed3(i,j)) !zero without obstacle, otherwise max of all obstacles at i,j  
-!			enddo
-!		enddo	
 	ENDIF
 	
 	END 

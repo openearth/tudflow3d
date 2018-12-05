@@ -641,7 +641,7 @@ c*************************************************************
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),rr(0:i1,0:j1,0:k1)
 
 	real ekm2(0:i1,0:j1,0:k1)
-	real z,Ri,dudz,dvdz,drdz,Diffcof2(0:i1,0:j1,0:k1),Lm2_Bak(1:kmax),MuAn_factor
+	real z,Ri,dudz,dvdz,drdz,Diffcof2(0:i1,0:j1,0:k1),Lm2_Bak,MuAn_factor
 	integer im,ip,jm,jp,km,kp
 	real ctot,cref,pwr
 	integer fracs_included(nfr_sand+nfr_silt)
@@ -654,12 +654,6 @@ c*************************************************************
 	if (damping_drho_dz.eq.'MuAn') then
 	  MuAn_factor=1.
 	endif
-
-	do k=1,kmax
-	  z=k*dz-0.5*dz 
-	  Lm2_Bak(k)=(kappa*z)**2*(1.-z/depth)
-	enddo 
-		
 
 	dzi=1./dz
 	do i=1,imax
@@ -737,7 +731,9 @@ c*************************************************************
 		drdz=0.5*(rr(i,j,k+1  )-rr(i,j,k-1))*dzi
 		Ri = -gz/rr(i,j,k)*drdz/(dudz**2+dvdz**2+1.e-18)
 		Ri = MuAn_factor*MAX(0.,Ri)	
-		ekm(i,j,k) = rr(i,j,k) * Lm2_Bak(k) * sqrt(shear) ! Mixing length model with Ri-damping
+		z=MAX(0.,(k-kbed(i,j))*dz-0.5*dz)
+		Lm2_Bak=(kappa*z)**2*(1.-z/(MAX(depth-kbed(i,j)*dz,1.e-8)))		
+		ekm(i,j,k) = rr(i,j,k) * Lm2_Bak * sqrt(shear) ! Mixing length model with Ri-damping
 
 		ekm(i,j,k) = ekm(i,j,k) * (1.+damping_a1*Ri)**damping_b1
 		Diffcof(i,j,k) = (ekm(i,j,k)+ekm_mol)/rr(i,j,k)/Sc * (1.+damping_a2*Ri)**damping_b2 ! damping diffusivity is by both damping functions

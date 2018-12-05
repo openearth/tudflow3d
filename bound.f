@@ -2643,14 +2643,39 @@ c*************************************************************
 			ELSEIF (bp(n)%nmove_present>bp(n)%nmove) THEN
 				! move_dx_series not long enough: do nothing and leave bp at present location
 			ELSE
+				IF (bp(n)%u.ne.-99999.) THEN ! make propx,y,z forces zero of old bedplume location:
+				  !! Search for P,V:
+				  do k=CEILING(bp(n)%zbottom/dz),FLOOR(bp(n)%height/dz)! do k=k1,0,-1 !from top to bottom
+				   do i=0,i1  
+					 do j=j1,0,-1       ! bedplume loop is only initial condition: do not bother to have U,V,W initial staggering perfect 
+						xx=Rp(i)*cos_u(j)-schuif_x
+						yy=Rp(i)*sin_u(j)
+						xTSHD(1:4)=bp(n)%x*cos(phi)-bp(n)%y*sin(phi)
+						yTSHD(1:4)=bp(n)%x*sin(phi)+bp(n)%y*cos(phi)
+						CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+						if (inout.eq.1) then
+							Ppropx(i,j,k) = 0. 
+							Ppropx(MAX(i-1,0),j,k) = 0.
+							Ppropy(i,j,k) = 0.
+							Ppropy(i,MAX(j-1,0),k) = 0.
+							Ppropz(i,j,k) = 0.
+							Ppropz(i,j,MAX(k-1,0)) = 0. 
+						endif
+					 enddo
+				   enddo
+				  enddo				
+				ENDIF			
 				bp(n)%x = bp(n)%x+bp(n)%move_dx_series(bp(n)%nmove_present)
 				bp(n)%y = bp(n)%y+bp(n)%move_dy_series(bp(n)%nmove_present)
 				IF (rank.eq.0) THEN
-				write(*,'(a,i6,a,f8.4,a,i4,a)'),'* Bedplume : ',n,' with max bedlevel: ',zbed_max_tot,
-     &			' has been moved for the ',bp(n)%nmove_present,' time.'
-				write(*,'(a,f7.2,f7.2)'),'Move dx,dy:',bp(n)%move_dx_series(bp(n)%nmove_present),bp(n)%move_dy_series(bp(n)%nmove_present)
+				  write(*,'(a,i6,a,f8.4,a,i4,a)'),'* Bedplume : ',n,' with max bedlevel: ',zbed_max_tot,
+     &			  ' has been moved for the ',bp(n)%nmove_present,' time.'
+				  write(*,'(a,f7.2,f7.2)'),'Move dx,dy:',
+     &				bp(n)%move_dx_series(bp(n)%nmove_present),bp(n)%move_dy_series(bp(n)%nmove_present)
 				ENDIF
 				call output_nc('mvbp3D_',istep_output_bpmove,time_np)
+							
+
 			ENDIF
 		ENDIF
 	  ENDIF
@@ -2664,16 +2689,20 @@ c*************************************************************
 	REAL tseries(1:10000),series(1:10000),tt
 	INTEGER sloc
 
-	IF (tt>tseries(sloc+1)) THEN
+	!IF (tt>tseries(sloc+1)) THEN
+	!	sloc=sloc+1
+	!ENDIF	
+	DO WHILE (tt>tseries(sloc+1)) 
 		sloc=sloc+1
-	ENDIF
-
+	ENDDO
+	
 !	write(*,*)'sloc,tseries(sloc),tseries(sloc+1)',sloc,tseries(sloc),tseries(sloc+1)
 !	write(*,*)'series(sloc),series(sloc+1),interpval',series(sloc),series(sloc+1),
 !     & (tt-tseries(sloc))/(tseries(sloc+1)-tseries(sloc))*(series(sloc+1)-series(sloc))+series(sloc)
 	interpseries=(tt-tseries(sloc))/(tseries(sloc+1)-tseries(sloc))*(series(sloc+1)-series(sloc))+series(sloc)	
 
-	end function interpseries	
+	end function interpseries
+
 
 	subroutine interpseries3(tseries,series,sloc,tt,nfrac,output)
 	implicit none

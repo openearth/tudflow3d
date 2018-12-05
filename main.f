@@ -67,12 +67,12 @@
       call init_transpose	
       call mkgrid
       call determine_indices_jet_in
-      call fkdat
+      !call fkdat
       call init_sediment
       call init_propeller
       call determine_indices_ship_in
       call bedroughness_init
-
+	  call fkdat
 
       dt    = MIN(dt_ini,dt_max) 
       ekm   =0. 
@@ -81,10 +81,6 @@
 ! 	call SEM_turb_bc(Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub1old,Vb1old,Wb1old,Ub2old,Vb2old,Wb2old)
 	call SEM_turb_bc
       endif
-	if (restart_dir.ne.'') then
-		write(*,*) 'Restart option obsolete, Dflow3d is stopped...'
-		STOP
-	endif
 	if (hisfile.ne.'') then
 	  call init_his
 	endif
@@ -161,9 +157,13 @@
 	  ekm(:,:,:)=ekm_mol
 	endif
       call chkdt
-      time_nm=-dt
-      time_n=0.
-      time_np=dt
+	  if (restart_dir.eq.'') then
+	    time_n=0.
+	  endif
+      time_nm=time_n-dt
+	  time_np=time_n+dt
+      
+      
 	  call update_nvol_bedplume(time_n)
 	  call update_QSc_bedplume(time_n)
 	  call update_Qc_plume(time_n)
@@ -178,7 +178,7 @@
 		!CALL system_clock(count_rate=cr)
 		!crate = REAL(cr)	
 	  endif
-	
+	  CALL write_inputtxtfile	
 
       do while (time_n.le.t_end)
 	  if (rank.eq.0) then		
@@ -334,7 +334,7 @@
 		if (rank.eq.0) then
 			if (mod(istep,10) .eq.0) then  
 				call cpu_time(cput10b)			
-				CALL writeprogress(time_np,t_end,istep,dt,cput1,cput10a,cput10b,cput11a,cput11b)
+				CALL writeprogress(time_np,t_end,istep,dt,cput1,cput10a,cput10b,cput11a,cput11b,trestart)
 			endif
 		endif
 		time_nm = time_n
@@ -365,7 +365,6 @@
 	call cpu_time(cput2)
 	!call SYSTEM_CLOCK(cput2) !SYSTEM_CLOCK works correctly in case a processor is overloaded with more partitions than physical cores, but strangely sometimes results in incorrect negative runtime...
 	
-	CALL write_inputtxtfile
 !		cput2b=REAL(cput2)/crate
 !		cput1b=REAL(cput1)/crate
 		

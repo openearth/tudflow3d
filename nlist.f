@@ -26,7 +26,7 @@
       INTEGER i,j,k,imax,jmax,kmax,i1,j1,k1,px,rank,kjet,nmax1,nmax2,nmax3,istep,CNdiffz,npresIBM,counter
       INTEGER Lmix_type,slip_bot,SEM,azi_n,outflow_overflow_down,azi_n2
       REAL ekm_mol,nu_mol,pi,kappa,gx,gy,gz,Cs,Sc,calibfac_sand_pickup,calibfac_Shields_cr,morfac,morfac2
-      REAL dt,time_nm,time_n,time_np,t_end,t0_output,dt_output,te_output,dt_max,tstart_rms,CFL,dt_ini,tstart_morf
+      REAL dt,time_nm,time_n,time_np,t_end,t0_output,dt_output,te_output,dt_max,tstart_rms,CFL,dt_ini,tstart_morf,trestart
       REAL dt_output_movie,t0_output_movie,te_output_movie,te_rms
       REAL U_b,V_b,W_b,rho_b,W_j,Awjet,Aujet,Avjet,Strouhal,radius_j,kn,W_ox,U_bSEM,V_bSEM,U_w,V_w,U_init,V_init
       REAL U_j2,Awjet2,Aujet2,Avjet2,Strouhal2,radius_j2,zjet2
@@ -53,7 +53,7 @@
       REAL plumeUseries2(1:10000),c_bed(100)
       INTEGER plumeseriesloc,plumeseriesloc2,plumeQseriesloc,plumecseriesloc
       INTEGER nr_HPfilter
-      REAL timeAB_real(1:4),dpdx,dpdy,kn_d50_multiplier,avalanche_slope,dpdx1,dpdy1,Uavold,Vavold
+      REAL timeAB_real(1:4),dpdx,dpdy,kn_d50_multiplier,avalanche_slope(100),av_slope_z(100),dpdx1,dpdy1,Uavold,Vavold
       INTEGER periodicx,periodicy,wallup
       REAL U_b3,V_b3,surf_layer,reduction_sedimentation_shields
       INTEGER ksurf_bc,kmaxTSHD_ind,nair
@@ -92,7 +92,7 @@
       INTEGER*2, DIMENSION(:),ALLOCATABLE :: i_inVpunt_tauTSHD,j_inVpunt_tauTSHD,k_inVpunt_tauTSHD
       INTEGER*2, DIMENSION(:),ALLOCATABLE :: i_inVpunt_rudder,j_inVpunt_rudder,k_inVpunt_rudder
       INTEGER*2, DIMENSION(:),ALLOCATABLE :: i_inWpunt_suction,j_inWpunt_suction,k_inWpunt_suction
-      REAL, DIMENSION(:),ALLOCATABLE :: Ubot_TSHD,Vbot_TSHD !,facIBMu,facIBMv,facIBMw
+      REAL, DIMENSION(:),ALLOCATABLE :: Ubot_TSHD,Vbot_TSHD,av_slope !,facIBMu,facIBMv,facIBMw
       INTEGER*8, DIMENSION(:),ALLOCATABLE :: pt,pt3
 
       INTEGER*2, DIMENSION(:,:,:),ALLOCATABLE :: llist1,llist2,llist3
@@ -221,7 +221,7 @@
 	NAMELIST /LESmodel/sgs_model,Cs,Lmix_type,nr_HPfilter,damping_drho_dz,damping_a1,damping_b1,damping_a2,damping_b2,
      & extra_mix_visc
 	NAMELIST /constants/kappa,gx,gy,gz,ekm_mol,calibfac_sand_pickup,pickup_formula,kn_d50_multiplier,avalanche_slope,
-     &	calibfac_Shields_cr,reduction_sedimentation_shields,morfac,morfac2
+     &	av_slope_z,calibfac_Shields_cr,reduction_sedimentation_shields,morfac,morfac2
 	NAMELIST /fractions_in_plume/fract
 	NAMELIST /ship/U_TSHD,LOA,Lfront,Breadth,Draught,Lback,Hback,xfront,yfront,kn_TSHD,nprop,Dprop,xprop,yprop,zprop,
      &   Pprop,rudder,rot_prop,draghead,Dsp,xdh,perc_dh_suction,softnose,Hfront,cutter
@@ -264,6 +264,7 @@
 	dt_output_movie = 9.e18
 	te_output_movie = 9.e18
 	tstart_morf=0.
+	trestart=0.
 	!! num_scheme
 	convection = 'ARGH'
 	numdiff = 0.
@@ -443,7 +444,9 @@
 	calibfac_Shields_cr = 1.
 	pickup_formula = 'vanrijn1984' !default
 	kn_d50_multiplier = 2. !default, kn=2*d50 defined in paper Van Rijn 1984
-	avalanche_slope = 0. !default vertical slopes are allowed
+	avalanche_slope = -99. 
+	avalanche_slope(1)=0. !default vertical slopes are allowed
+	av_slope_z= -1.
 	reduction_sedimentation_shields = 0. ! default no reduction in sedimentation by shear stresss (shields) ! PhD thesis vRhee p146 eq 7.74
 	morfac = 1.
 	morfac2 = 1.
@@ -1033,7 +1036,7 @@
 	IF (pickup_formula.ne.'vanrijn1984'.and.pickup_formula.ne.'nielsen1992'.and.pickup_formula.ne.'okayasu2010') 
      &    CALL writeerror(95)
 	IF (kn_d50_multiplier<0.) CALL writeerror(96)
-	IF (avalanche_slope<0.) CALL writeerror(97)
+	IF (MINVAL(avalanche_slope)<0.and.MINVAL(avalanche_slope).ne.-99.) CALL writeerror(97)
 	IF (calibfac_sand_pickup<0.) CALL writeerror(98)
 	IF (calibfac_Shields_cr<0.) CALL writeerror(99)
 	IF (morfac<0.) CALL writeerror(101)
@@ -1212,7 +1215,9 @@
 	ALLOCATE(kbedt(0:i1,0:j1))
 	ALLOCATE(zbed(0:i1,0:j1))
 	ALLOCATE(rhocorr_air_z(1:nfrac,0:k1))
-
+	ALLOCATE(av_slope(0:k1))
+	
+	
 	IF (SEM.eq.1) THEN
 	IF (nmax1.gt.0.or.nmax2.gt.0) THEN
 	  IF (rank.eq.0.or.rank.eq.px-1) THEN

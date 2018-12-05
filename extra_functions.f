@@ -735,11 +735,11 @@
 
 	END SUBROUTINE
     
-	SUBROUTINE writeprogress(time_np,t_end,istep,dt,cput1,cput10a,cput10b,cput11a,cput11b)
+	SUBROUTINE writeprogress(time_np,t_end,istep,dt,cput1,cput10a,cput10b,cput11a,cput11b,trestart)
 	
 	implicit none
 	
-	real time_np,t_end,dt,cput1,cput10a,cput10b,cput11a,cput11b,secrunt,hrrunt 
+	real time_np,t_end,dt,cput1,cput10a,cput10b,cput11a,cput11b,secrunt,hrrunt,trestart
 	integer istep 
 	integer,dimension(8) :: ttvalues
 	CHARACTER(len=3) :: mons(12)
@@ -752,7 +752,8 @@
 		mons = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 		monlen = [31, 28,   31,   30,   31,    30,   31,  31,   30,   31,  30,    31]
 		
-		secrunt= ((1.-(time_np/t_end))/(time_np/t_end))*(cput10b-cput1) ! remaining run time in seconds
+		!secrunt= ((1.-(time_np/t_end))/(time_np/t_end))*(cput10b-cput1) ! remaining run time in seconds
+		secrunt= ((1.-((time_np-trestart)/(t_end-trestart)))/((time_np-trestart)/(t_end-trestart)))*(cput10b-cput1) ! remaining run time in seconds
 		hrrunt=secrunt/3600.
 		
 		tmpyear = floor(secrunt/(365*24*3600))

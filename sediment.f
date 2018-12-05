@@ -28,8 +28,8 @@
 
        implicit none
 
- 	INTEGER n
-	REAL Re_p,atm_pres,rhoair_z,zz,ddzz
+ 	INTEGER n,n2
+	REAL Re_p,atm_pres,rhoair_z,zz,ddzz,z_rks(1:kmax),interpseries
 
 	DO n=1,nfrac
 	  Re_p=ABS(frac(n)%ws)*frac(n)%dfloc/(ekm_mol/rho_b)
@@ -51,7 +51,9 @@
 !	determined for 0<c<0.05 and 0.01<Rep<1e3
 	  frac(n)%n=(6.5+0.3*Re_p**0.74)/(1.+0.1*Re_p**0.74)-1.
 	  ENDIF
+	  IF (rank.eq.0) THEN
 	  write(*,*),'fraction #,ws,Re_p,n-factor hindered settling:',n,frac(n)%ws,Re_p,frac(n)%n+1.
+	  ENDIF
 	ENDDO
 
 	rhocorr_air_z=1.
@@ -65,6 +67,32 @@
 			rhocorr_air_z(nfrac_air(n),k) = frac(nfrac_air(n))%rho / rhoair_z
 		ENDDO
 	ENDDO
+	
+	DO k=1,kmax
+		z_rks(k)=k*dz-0.5*dz
+	ENDDO
+	IF (av_slope_z(1)<0.) THEN
+	  av_slope(0:k1)=avalanche_slope(1)
+	ELSE
+		IF (av_slope_z(1)>0.) CALL writeerror(141)
+		n=1
+		DO WHILE (av_slope_z(n+1)>0.)
+		  n=n+1
+		  IF (av_slope_z(n)-av_slope_z(n-1)<0.) CALL writeerror(141)
+		END DO
+		IF (av_slope_z(n)<depth) CALL writeerror(141)
+		IF (avalanche_slope(n)<0.) CALL writeerror(142)
+		n2=0
+		DO k=1,kmax
+			av_slope(k)=interpseries(av_slope_z(1:n),avalanche_slope(1:n),n2,z_rks(k))
+			IF (av_slope(k)>41.) THEN
+			 write(*,*),rank,k,n2,av_slope(k),z_rks(k),av_slope_z(n2:n2+1),avalanche_slope(n2:n2+1)
+			ENDIF
+		ENDDO
+		av_slope(0)=av_slope(1)
+		av_slope(k1)=av_slope(kmax)
+	ENDIF
+	!IF (rank.eq.0) write(*,*),av_slope,z_rks,av_slope_z(1:n),avalanche_slope(1:n)
 	
 	
       END SUBROUTINE init_sediment
@@ -850,7 +878,8 @@
 			ENDDO
 		ENDDO
 		
-		IF (avalanche_slope.gt.0.) THEN
+		IF (MAXVAL(av_slope).gt.0.) THEN
+		 DO tel=1,MAX(NINT(morfac2),NINT(morfac)) ! normally avalanche 1 time every timestep; with morfac more times avalanche every timestep
 			d_cbotnew = 0.
 			DO i=1,imax
 				DO j=1,jmax
@@ -909,7 +938,7 @@
 					sl7=SQRT((Rp(i)*sin_u(j-1)-Rp(i)*sin_u(j))**2+(Rp(i)-Rp(i+1))**2)/MAX(zb_all(i,j)-zb_all(i+1,j-1),1.e-18)
 					sl8=SQRT((Rp(i)*sin_u(j-1)-Rp(i)*sin_u(j))**2+(Rp(i)-Rp(i-1))**2)/MAX(zb_all(i,j)-zb_all(i-1,j-1),1.e-18)
 					maxbedslope(i,j)=MIN(sl1,sl2,sl3,sl4,sl5,sl6,sl7,sl8)
-					IF (maxbedslope(i,j).lt.avalanche_slope*bednotfixed(i,j,kbed(i,j)).and.kbed(i,j).ge.1) THEN
+					IF (maxbedslope(i,j).lt.av_slope(kbed(i,j))*bednotfixed(i,j,kbed(i,j)).and.kbed(i,j).ge.1) THEN
 					! avalanche...
 						IF (sl1.le.maxbedslope(i,j)) THEN
 							itrgt=i-1
@@ -955,7 +984,7 @@
 							write(*,*),'Warning avalanche cell not found,i,j:',i,j
 							CYCLE 
 						ENDIF
-						dbed_allowed = dl/MAX(avalanche_slope*bednotfixed(i,j,kbed(i,j)),1.e-18)
+						dbed_allowed = dl/MAX(av_slope(kbed(i,j))*bednotfixed(i,j,kbed(i,j)),1.e-18)
 						dbed_adjust = vol_Vp(itrgt,jtrgt)/(vol_Vp(i,j)+vol_Vp(itrgt,jtrgt))*(dbed - dbed_allowed)
 						dz_botlayer =SUM(cbotnew(1:nfrac,i,j))/cfixedbed*dz
 						IF (dbed_adjust.le.dz_botlayer) THEN ! only cbotnew adjusted
@@ -1043,7 +1072,8 @@
 						cbotnew(n,i,j)=cbotnew(n,i,j)+d_cbotnew(n,i,j)
 					ENDDO
 				ENDDO
-			ENDDO				
+			ENDDO
+		 ENDDO
 		ENDIF
 	ENDIF
 	

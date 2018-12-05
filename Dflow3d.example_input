@@ -17,7 +17,7 @@ schuif_x = 0.57016                 ! Shift in x-coordinate to make (x,y) plume =
 dy = 0.00288			! width gridcell at (x,y)=(0,0) [m]
 depth = 0.558			! Depth [m] (dz=depth/kmax)
 hisfile = './inputfiles/his_jicf_Gal_ufvar04.inp'			! Input file for history points
-restart_dir =''			! Path restart files influding start of filename e.g. '/data/.../flow3d_000000010_'
+restart_dir =''			! Path restart netcdf-files influding start of filename e.g. '/data/.../flow3d_000000010_*.nc' containing (variables not provided are simply not used): U,V,W,C,Cbed,zbed,mass_bed 3D matrix (1:imax,1:jmax*px,1:kmax): U,V,W, 4D (1:nfrac,1:imax,1:jmax*px,1:kmax): C,Cbed, 2D matrix (1:imax,1:jmax*px): zbed, 3D(1:nfrac,1:imax,1:jmax*px): mass_bed
 /
 
 &times
@@ -48,6 +48,7 @@ continuity_solver =3    !nerd option, default is 1 (drdt+drudx=0). Optional: 2 (
 !advec_conc='VLE'		! optional advection scheme concentration, options: 'VLE' (default) 'VL2' 'ARO' 'SBE' SB2' 'NVD' :'VLE' VanLeer(via LW)(default) 'ARO' Arora(via LW) 'SBE' Superbee(via LW) 'VL2' VanLeer(via CDS2) or 'SB2' Superbee(via CDS2) TVD schemes or 'NVD' for NVD scheme 
 !transporteq_fracs = 'volufrac' !nerd option default volume fractions, but as option also 'massfrac' can be used internally (input/output still is volume frac!)
 !split_rho_cont = 'SB2'  ! optional 'VL2' or 'SB2' TVD scheme (via CDS2 without 1-cfl term) to split off rho from rho*U, default 'CDS' scheme
+CNdiffz = 1			! 1 is implicit CN treatment of diffusion in z-dir 0 is explicit in z-dir (default 0)
 /
 
 &ambient
@@ -86,7 +87,6 @@ V_b3 = -0.29			! Ambient bc V velocity [m/s] in surf_layer with respect to TSHD 
 surf_layer = 0.			! Layer depth [m] from free surface with U_b3,V_b3 ambient current (default 0)
 wallup=0			! 0 wall = below; wall = up (default 0)
 bedlevelfile = ''		! Input netcdf file for bedlevel which are simulated by IBM obstacles (filled with zbed(1:imax,0:jmax*px+1) [m])
-initconditionsfile = '' ! Input netcdf file initial conditions (variables not provided are simply not used): U,V,W,C,Cbed,zbed,mass_bed 3D matrix (1:imax,1:jmax*px,1:kmax): U,V,W, 4D (1:nfrac,1:imax,1:jmax*px,1:kmax): C,Cbed, 2D matrix (1:imax,1:jmax*px): zbed, 3D(1:nfrac,1:imax,1:jmax*px): mass_bed
 c_bed= 0.1 				! Initial volume fractions inside bed [-] (length vector must be nfrac large and sum must be equal to cfixedbed)
 cfixedbed = 0.6			! Volume concentration threshold for fixed bed (default 0.6)
 
@@ -167,15 +167,18 @@ fract(1)%type = 1			! 1 = silt/mud (default), 2=sand, 3=air
 /
 
 &LESmodel
-sgs_model='SWALE'		! Smagorinsky, WALE or SIGMA sgs model: 'SSmag','SWALE','SIGMA'
+sgs_model='SWALE'		! Smagorinsky, WALE or SIGMA sgs model: 'SSmag','SWALE','SIGMA','DSmag','MixLe'
 Cs=0.325			! Constant in sgs model [-]
 Lmix_type=1			! 1=(dx*dy*dz)^1/3 | 2=sqrt((dx^2+dy^2+dz^2)/3)
 nr_HPfilter=1			! Number of times a HPfilter is applied to velocity field in FSmag (>=1, recommended 3)
-damping_drho_dz='none' 	! Damping of eddy viscosity: 'none' (default) or 'MuAn'
-damping_a=10			! 
-damping_b=0.5			! 
+!damping_drho_dz = 'MuAn'	! Turbulence damping at density interface in Munk-Anderson type of way:
+!damping_a1 = 100.		! Damping applied to eddy visc. fluid: Fdamp(Ri)=(1+damping_a1*Ri)^damping_b1
+!damping_b1 = -0.333333		! Damping applied to eddy visc. fluid: Fdamp(Ri)=(1+damping_a1*Ri)^damping_b1
+!damping_a2 = 21.		! Damping applied to diffusion sediment fractions: Fdamp(Ri)=(1+damping_a2*Ri)^damping_b2
+!damping_b2 = -0.8		! Damping applied to diffusion sediment fractions: Fdamp(Ri)=(1+damping_a2*Ri)^damping_b2
 extra_mix_visc='none'   ! Extra mixture viscosity = fac*ekm_mol: 'none' (default) or 'Krie' Krieger & Dougherty 1959 relation 
 /
+
 
 &constants
 kappa = 0.41			! Von Karman constant [-]
@@ -188,6 +191,7 @@ calibfac_Shields_cr = 1. ! Calibration factor to adjust Shields_cr curve for sta
 pickup_formula = 'nielsen1992' !options are 'vanrijn1984' (default),'nielsen1992','okayasu2010'
 kn_d50_multiplier = 2. 	! Defines Nikuradse bedroughness for sand pickup function (not for flow shear stress), default 2.; kn=2*d50 defined in paper Van Rijn 1984
 avalanche_slope = 2. ! Max bedslope 1:as; all slopes steeper avalanche towards 1:as (0=vertical slope, wet sand=30deg=1.7--15deg=3.7)
+av_slope_z =         ! To define variable avalanche_slope over depth --> make av_slope_z and avalanche_slope series over vertical; when av_slope_z not defined a uniform avalanche_slope is used
 reduction_sedimentation_shields = 0. ! Reduction of sedimentation at the bed by shear or perhaps grain-grain interactions (sheet flow) default 0. no reduction, value should be 4-5 PhD thesis vRhee p146 eq 7.74
 morfac = 1. 		! Factor applied to erosion and sedimentation fluxes to speed up morfology simulation (default 1.)
 morfac2 = 1. 		! Factor applied to erosion and sedimentation fluxes in bed (not in fluid) to speed up morfology simulation (default 1.); only dz_bed is accelerated but concentrations in fluid remain unaltered 

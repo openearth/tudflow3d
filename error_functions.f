@@ -329,6 +329,14 @@
 	CASE(131)
 		write(*,*) '# k history < 1                                  #'			
 		write(*,*) '#                                                #'
+	CASE(141)
+		write(*,*) '# namelist &constants                            #'			
+		write(*,*) '# av_slope_z must be increasing and start with 0 #'		
+		write(*,*) '# and end with depth                             #'		
+	CASE(142)
+		write(*,*) '# namelist &constants                            #'			
+		write(*,*) '# avalanche_slope series must be >0 and as long  #'		
+		write(*,*) '# av_slope_z                                     #'				
 	CASE(171)
 		write(*,*) '# namelist &fractions_in_plume                   #'			
 		write(*,*) '# type must be 1 (default),2, or 3                   #'	
@@ -523,9 +531,9 @@
 	CASE(604)
 		write(*,*) '# namelist &ambient                              #'			
 		write(*,*) '# surf_layer should be >0 and < depth            #'
-        CASE(605)
-                write(*,*) '# namelist &ambient                              #'
-                write(*,*) '# wallup should be 0 or 1 (default 0)            #'
+	CASE(605)
+			write(*,*) '# namelist &ambient                              #'
+			write(*,*) '# wallup should be 0 or 1 (default 0)            #'
 	CASE(606)
 		write(*,*) '# namelist &ambient                              #'			
 		write(*,*) '# input bedlevel file does not exist             #'	
@@ -551,7 +559,13 @@
 		write(*,*) '# nmax3 is not defined                           #'			
 	CASE(621)
 		write(*,*) '# namelist &ambient                              #'			
-		write(*,*) '# lm_min3 is not defined                         #'					
+		write(*,*) '# lm_min3 is not defined                         #'		
+	CASE(701)
+		write(*,*) '# namelist &simulation                           #'			
+		write(*,*) '# restart_dir does not give correct files        #'	
+	CASE(702)
+		write(*,*) '# namelist &simulation                           #'			
+		write(*,*) '# restart_dir does not contain correct size data #'			
 	CASE(1001)
 		write(*,*) '# namelist &timeseries                           #'			
 		write(*,*) '# file cannot be found                           #'	
