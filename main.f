@@ -296,7 +296,7 @@
 !		call bound(Uold,Vold,Wold,Rold,0,time_n,Ub1old,Vb1old,Wb1old,Ub2old,Vb2old,Wb2old)
 		call bound(Unew,Vnew,Wnew,Rnew,0,time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
 		!call bound_rhoU(dUdt,dVdt,dWdt,drdt,0,time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new) !bound_rhoU on rhoU^n+1 
-		!extra call bound_rhoU only needed for determination rhU,cU with split_rho_cont.eq.'TVD' based on direction of rhoU^n+1 instead of rhoU^* 
+		!extra call bound_rhoU only needed for determination rhU,cU with split_rho_cont.eq.'VL2' based on direction of rhoU^n+1 instead of rhoU^* 
 		!nov-2018 not used because 1) consistent with splitting rho of from rhoU^* 2) faster
 		!only drawback is that it is not fully consistent with update C as this is based on c_edge based on direction U^n+1
 		if (mod(istep,100).eq.0) then

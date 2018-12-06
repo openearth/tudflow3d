@@ -90,7 +90,7 @@ c********************************************************************
 c     CALCULATE advection, diffusion Concentration
 c********************************************************************
 	  do n=1,nfrac
-	      call advecc_TVD2(dnewc(n,:,:,:),cnew(n,:,:,:),Unew,Vnew,Wsed(n,:,:,:),rnew,Ru,Rp,dr,phiv,phipt,dz,
+	      call advecc_VLE(dnewc(n,:,:,:),cnew(n,:,:,:),Unew,Vnew,Wsed(n,:,:,:),rnew,Ru,Rp,dr,phiv,phipt,dz,
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)
 	      call diffc_CDS2 (dnewc(n,:,:,:),Cnew(n,:,:,:),Diffcof,
      +            ib,ie,jb,je,kb,ke)
@@ -371,7 +371,7 @@ c********************************************************************
 	    enddo
 	  endif
 	  do n=1,nfrac
-	      call advecc_TVD2(dnewc(n,:,:,:),cnew(n,:,:,:),Unew,Vnew,Wsed(n,:,:,:),rnew,Ru,Rp,dr,phiv,phipt,dz,
+	      call advecc_VLE(dnewc(n,:,:,:),cnew(n,:,:,:),Unew,Vnew,Wsed(n,:,:,:),rnew,Ru,Rp,dr,phiv,phipt,dz,
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)
 		
 	      call diffc_CDS2 (dnewc(n,:,:,:),Cnew(n,:,:,:),Diffcof,
@@ -763,13 +763,19 @@ c********************************************************************
 	      call advecc_NVD(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)	 
           elseif (advec_conc.eq.'VLE') then	 
-	      call advecc_TVD(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
+	      call advecc_VLE(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy,transporteq_fracs)
+          elseif (advec_conc.eq.'SBE') then	 
+	      call advecc_SBE(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
+     +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy,transporteq_fracs)	 
           elseif (advec_conc.eq.'VL2') then	 
-	      call advecc_TVD_nocfl(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
+	      call advecc_VL2_nocfl(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
+     +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)
+          elseif (advec_conc.eq.'SB2') then	 
+	      call advecc_SB2_nocfl(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)	 
-		  else
-	      call advecc_TVD2(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
+		  elseif (advec_conc.eq.'ARO') then	 
+	      call advecc_ARO(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)	 
           endif
 		
@@ -1297,17 +1303,27 @@ c********************************************************************
 	      call advecc_NVD(k1c(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,cn1*dt,rank,px,periodicx,periodicy)	 
           elseif (advec_conc.eq.'VLE') then	 
-	      call advecc_TVD(k1c(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
+	      call advecc_VLE(k1c(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,cn1*dt,rank,px,periodicx,periodicy,transporteq_fracs)
-		  else
-	      call advecc_TVD2(k1c(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
+          elseif (advec_conc.eq.'SBE') then	 
+	      call advecc_SBE(k1c(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
+     +            i1,j1,k1,ib,ie,jb,je,kb,ke,cn1*dt,rank,px,periodicx,periodicy,transporteq_fracs)	
+          elseif (advec_conc.eq.'VL2') then	 
+	      call advecc_VL2_nocfl(k1c(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
+     +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)
+          elseif (advec_conc.eq.'SB2') then	 
+	      call advecc_SB2_nocfl(k1c(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
+     +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)	 
+		  elseif (advec_conc.eq.'ARO') then	
+	      call advecc_ARO(k1c(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,cn1*dt,rank,px,periodicx,periodicy)	 
           endif
 !	      call advecc_TVD(k1c(n,:,:,:),cnew(n,:,:,:),Unew,Vnew,Wsed(n,:,:,:),rnew,Ru,Rp,dr,phiv,phipt,dz,
 !     +            i1,j1,k1,ib,ie,jb,je,kb,ke,cn1*dt,rank,px,periodicx,periodicy)
-		
+		if (Sc<1.e18) then
 	      call diffc_CDS2 (k1c(n,:,:,:),Cnew(n,:,:,:),Diffcof,
      +            ib,ie,jb,je,kb,ke)
+	    endif
 !		dcdt(n,:,:,:) =cnew(n,:,:,:) + a21*dt*(k1c(n,:,:,:)) !pred1
 		dcdt(n,:,:,:) =cnew(n,:,:,:) + cn1*dt*(k1c(n,:,:,:)) !pred1
 			  !if(interaction_bed.eq.4.or.interaction_bed.eq.5) then
@@ -1753,14 +1769,22 @@ c********************************************************************
 	      call advecc_NVD(k2c(n,:,:,:),dcdt(n,:,:,:),utr,vtr,wtr,drdt,Ru,Rp,dr,phiv,phipt,dz,
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,cn2*dt,rank,px,periodicx,periodicy)
           elseif (advec_conc.eq.'VLE') then	 
-	      call advecc_TVD(k2c(n,:,:,:),dcdt(n,:,:,:),utr,vtr,wtr,drdt,Ru,Rp,dr,phiv,phipt,dz,
+	      call advecc_VLE(k2c(n,:,:,:),dcdt(n,:,:,:),utr,vtr,wtr,drdt,Ru,Rp,dr,phiv,phipt,dz,
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,cn2*dt,rank,px,periodicx,periodicy,transporteq_fracs)
-          else
-		  call advecc_TVD2(k2c(n,:,:,:),dcdt(n,:,:,:),utr,vtr,wtr,drdt,Ru,Rp,dr,phiv,phipt,dz,
+          elseif (advec_conc.eq.'VL2') then	 
+	      call advecc_VL2_nocfl(k2c(n,:,:,:),dcdt(n,:,:,:),utr,vtr,wtr,drdt,Ru,Rp,dr,phiv,phipt,dz,
+     +            i1,j1,k1,ib,ie,jb,je,kb,ke,cn2*dt,rank,px,periodicx,periodicy)	 
+          elseif (advec_conc.eq.'SB2') then	 
+	      call advecc_SB2_nocfl(k2c(n,:,:,:),dcdt(n,:,:,:),utr,vtr,wtr,drdt,Ru,Rp,dr,phiv,phipt,dz,
+     +            i1,j1,k1,ib,ie,jb,je,kb,ke,cn2*dt,rank,px,periodicx,periodicy)		 
+          elseif (advec_conc.eq.'ARO') then	 
+		  call advecc_ARO(k2c(n,:,:,:),dcdt(n,:,:,:),utr,vtr,wtr,drdt,Ru,Rp,dr,phiv,phipt,dz,
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,cn2*dt,rank,px,periodicx,periodicy)
 		  endif
+		 if (Sc<1.e18) then
 	      call diffc_CDS2 (k2c(n,:,:,:),dCdt(n,:,:,:),Diffcof,
      +            ib,ie,jb,je,kb,ke)
+	     endif
 
 			  !if(interaction_bed.eq.4.or.interaction_bed.eq.5) then
 			  !  dcdt2bot(n,:,:)=dcdt1bot(n,:,:)	
@@ -2210,15 +2234,22 @@ c********************************************************************
 	      call advecc_NVD(k3c(n,:,:,:),dcdt(n,:,:,:),utr,vtr,wtr,drdt,Ru,Rp,dr,phiv,phipt,dz,
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,cn3*dt,rank,px,periodicx,periodicy)
           elseif (advec_conc.eq.'VLE') then	 	 
-	      call advecc_TVD(k3c(n,:,:,:),dcdt(n,:,:,:),utr,vtr,wtr,drdt,Ru,Rp,dr,phiv,phipt,dz,
+	      call advecc_VLE(k3c(n,:,:,:),dcdt(n,:,:,:),utr,vtr,wtr,drdt,Ru,Rp,dr,phiv,phipt,dz,
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,cn3*dt,rank,px,periodicx,periodicy,transporteq_fracs)
-		  else
-	      call advecc_TVD2(k3c(n,:,:,:),dcdt(n,:,:,:),utr,vtr,wtr,drdt,Ru,Rp,dr,phiv,phipt,dz,
+          elseif (advec_conc.eq.'VL2') then	 	 
+	      call advecc_VL2_nocfl(k3c(n,:,:,:),dcdt(n,:,:,:),utr,vtr,wtr,drdt,Ru,Rp,dr,phiv,phipt,dz,
+     +            i1,j1,k1,ib,ie,jb,je,kb,ke,cn3*dt,rank,px,periodicx,periodicy)
+	      elseif (advec_conc.eq.'SB2') then	 	 
+	      call advecc_SB2_nocfl(k3c(n,:,:,:),dcdt(n,:,:,:),utr,vtr,wtr,drdt,Ru,Rp,dr,phiv,phipt,dz,
+     +            i1,j1,k1,ib,ie,jb,je,kb,ke,cn3*dt,rank,px,periodicx,periodicy)
+		  elseif (advec_conc.eq.'ARO') then	
+	      call advecc_ARO(k3c(n,:,:,:),dcdt(n,:,:,:),utr,vtr,wtr,drdt,Ru,Rp,dr,phiv,phipt,dz,
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,cn3*dt,rank,px,periodicx,periodicy)
 		  endif
+		  if (Sc<1.e18) then
 	      call diffc_CDS2 (k3c(n,:,:,:),dCdt(n,:,:,:),Diffcof,
      +            ib,ie,jb,je,kb,ke)
-
+		  endif
 			  !if(interaction_bed.eq.4.or.interaction_bed.eq.5) then
 			  !  dcdtbot(n,:,:)=dcdt2bot(n,:,:)	
 			  !else
@@ -2636,15 +2667,27 @@ c********************************************************************
 	      call advecc_NVD(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)	 
           elseif (advec_conc.eq.'VLE') then	 
-	      call advecc_TVD(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
+	      call advecc_VLE(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy,transporteq_fracs)
-		  else
-	      call advecc_TVD2(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
+          elseif (advec_conc.eq.'SBE') then	 
+	      call advecc_SBE(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
+     +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy,transporteq_fracs)	 
+          elseif (advec_conc.eq.'VL2') then	 
+	      call advecc_VL2_nocfl(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
+     +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)
+          elseif (advec_conc.eq.'SB2') then	 
+	      call advecc_SB2_nocfl(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
+     +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)	 
+		  elseif (advec_conc.eq.'ARO') then	 
+	      call advecc_ARO(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)	 
           endif
 		
+		if (Sc<1.e18) then
 	      call diffc_CDS2 (dnewc(n,:,:,:),Cnew(n,:,:,:),Diffcof,
      +            ib,ie,jb,je,kb,ke)
+		endif
+
 		dcdt(n,:,:,:) =cnew(n,:,:,:) + dt*(dnewc(n,:,:,:)) !update in time with EE1 for TVD
 			  !if(interaction_bed.eq.4.or.interaction_bed.eq.5) then
 			  !  dcdtbot(n,:,:)=cnewbot(n,:,:)	
@@ -3000,7 +3043,7 @@ c
         enddo
       enddo
 	ELSEIF (continuity_solver.eq.3) THEN ! Optional: 3 (dudx=0) with input d(ur^*/r^n+1)dx
-!	 if (split_rho_cont.eq.'TVD') then
+!	 if (split_rho_cont.eq.'VL2') then
 !		do n=1,nfrac
 !	      call c_edges_TVD_nocfl(cU(n,:,:,:),cV(n,:,:,:),cW(n,:,:,:),dcdt(n,:,:,:),dUdt,dVdt,dWdt,drdt,Ru,Rp,dr,phiv,phipt,dz,
 !     +            i1,j1,k1,1,imax,1,jmax,1,kmax,dt,rank,px,periodicx,periodicy)
@@ -3030,7 +3073,7 @@ c
         enddo
       enddo	
 	ELSEIF (continuity_solver.eq.33) THEN ! Optional: 33 (dudx=0) improved version of 3 which gives dudx=e-14
-	 if (split_rho_cont.eq.'TVD') then
+	 if (split_rho_cont.eq.'VL2') then
 !		do n=1,nfrac
 !	      call c_edges_TVD_nocfl(cU(n,:,:,:),cV(n,:,:,:),cW(n,:,:,:),dcdt(n,:,:,:),dUdt,dVdt,dWdt,drdt,Ru,Rp,dr,phiv,phipt,dz,
 !     +            i1,j1,k1,1,imax,1,jmax,1,kmax,dt,rank,px,periodicx,periodicy)
@@ -3066,7 +3109,7 @@ c
         enddo
       enddo	
 	ELSEIF (continuity_solver.eq.34) THEN ! Optional: 34 (dudx=0) improved version of 3 which gives dudx=e-14 and with correction to account for difference Um and Uv
-	 if (split_rho_cont.eq.'TVD') then
+	 if (split_rho_cont.eq.'VL2') then
 !		do n=1,nfrac
 !	      call c_edges_TVD_nocfl(cU(n,:,:,:),cV(n,:,:,:),cW(n,:,:,:),dcdt(n,:,:,:),dUdt,dVdt,dWdt,drdt,Ru,Rp,dr,phiv,phipt,dz,
 !     +            i1,j1,k1,1,imax,1,jmax,1,kmax,dt,rank,px,periodicx,periodicy)
@@ -3471,7 +3514,7 @@ c
         enddo
 
 	IF (continuity_solver.eq.33) THEN 
-!	 if (split_rho_cont.eq.'TVD') then
+!	 if (split_rho_cont.eq.'VL2') then
 !!			do n=1,nfrac
 !!			  call c_edges_TVD_nocfl(cU(n,:,:,:),cV(n,:,:,:),cW(n,:,:,:),dcdt(n,:,:,:),dUdt,dVdt,dWdt,drdt,Ru,Rp,dr,phiv,phipt,dz,
 !!     +            i1,j1,k1,1,imax,1,jmax,1,kmax,dt,rank,px,periodicx,periodicy)
@@ -3539,7 +3582,7 @@ c
         enddo
       enddo
 	 ENDIF	
-!	 if (split_rho_cont.eq.'TVD') then
+!	 if (split_rho_cont.eq.'VL2') then
 !!			do n=1,nfrac
 !!			  call c_edges_TVD_nocfl(cU(n,:,:,:),cV(n,:,:,:),cW(n,:,:,:),dcdt(n,:,:,:),dUdt,dVdt,dWdt,drdt,Ru,Rp,dr,phiv,phipt,dz,
 !!     +            i1,j1,k1,1,imax,1,jmax,1,kmax,dt,rank,px,periodicx,periodicy)
@@ -3575,7 +3618,7 @@ c
 !	 endif
 		p=p(1:imax,1:jmax,1:kmax)*drdt(1:imax,1:jmax,1:kmax) !scale P back with rho
 	ELSE
-		if (split_rho_cont.eq.'TVD') then
+		if (split_rho_cont.eq.'VL2') then
 !			do n=1,nfrac
 !			  call c_edges_TVD_nocfl(cU(n,:,:,:),cV(n,:,:,:),cW(n,:,:,:),dcdt(n,:,:,:),dUdt,dVdt,dWdt,drdt,Ru,Rp,dr,phiv,phipt,dz,
 !     +            i1,j1,k1,1,imax,1,jmax,1,kmax,dt,rank,px,periodicx,periodicy)

@@ -1081,13 +1081,21 @@ c	x,y,z coordinate system, not in r,theta,z like this code
 	  phi=atan2(V_b,(U_TSHD-U_b))
 	endif
 
-	 if (split_rho_cont.eq.'TVD') then
-		do n=1,nfrac
-	     call c_edges_TVD_nocfl(cU(n,:,:,:),cV(n,:,:,:),cW(n,:,:,:),dcdt(n,:,:,:),Ubound,Vbound,Wbound,rho,Ru,Rp,dr,phiv,phipt,dz,
+	 if (split_rho_cont.eq.'VL2'.or.split_rho_cont.eq.'SB2') then
+	    if (split_rho_cont.eq.'VL2') THEN
+		 do n=1,nfrac
+	      call c_edges_VL2_nocfl(cU(n,:,:,:),cV(n,:,:,:),cW(n,:,:,:),dcdt(n,:,:,:),Ubound,Vbound,Wbound,rho,Ru,Rp,dr,phiv,phipt,dz,
      +            i1,j1,k1,1,imax,1,jmax,1,kmax,dt,rank,px,periodicx,periodicy) 
+		 enddo
+		endif
+	    if (split_rho_cont.eq.'SB2') THEN
+		 do n=1,nfrac
+	      call c_edges_SB2_nocfl(cU(n,:,:,:),cV(n,:,:,:),cW(n,:,:,:),dcdt(n,:,:,:),Ubound,Vbound,Wbound,rho,Ru,Rp,dr,phiv,phipt,dz,
+     +            i1,j1,k1,1,imax,1,jmax,1,kmax,dt,rank,px,periodicx,periodicy) 
+		 enddo
+		endif		
 	 ! bound_rhoU always called for n+1 timestep which always corresponds to dcdt (but this is not passed explicitly to this subroutine)
-	 ! this is the first moment in a timestep that c_edges_TVD is called in the code
-		enddo
+	 ! this is the first moment in a timestep that c_edges_TVD is called in the code		
 		call state_edges(cU,rhU)
 		call state_edges(cV,rhV)
 		call state_edges(cW,rhW)

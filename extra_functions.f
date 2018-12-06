@@ -59,12 +59,12 @@
       	    df2 = df * df
             dr2 = dr(i) * dr(i)
             kcoeff = ekm(i,j,k) /rnew(i,j,k)
-!            tmp1 = ( abs(Unew(i,j,k)) / ( Rp(i+1)-Rp(i) ) ) +
-!     &             ( abs(Vnew(i,j,k)) /         df        ) +
-!     &             ( abs(Wnew(i,j,k)) /         dz        )
-			tmp1 = ( abs(Unew(i,j,k)) / ( Rp(i+1)-Rp(i) ) )
-			tmp1 = MAX(tmp1,( abs(Vnew(i,j,k)) /         df        ))
-			tmp1 = MAX(tmp1,( abs(Wnew(i,j,k)) /         dz        ))
+            tmp1 = ( abs(Unew(i,j,k)) / ( Rp(i+1)-Rp(i) ) ) +
+     &             ( abs(Vnew(i,j,k)) /         df        ) +
+     &             ( abs(Wnew(i,j,k)) /         dz        )             
+!			tmp1 = ( abs(Unew(i,j,k)) / ( Rp(i+1)-Rp(i) ) )              !2D TVD tests show that taking MAX of 3 dirs is not sufficient for stable results without overshoot/undershoot
+!			tmp1 = MAX(tmp1,( abs(Vnew(i,j,k)) /         df        ))
+!			tmp1 = MAX(tmp1,( abs(Wnew(i,j,k)) /         dz        ))
             tmp2 = ( 1.0/dr2 + 1.0/df2 + 1.0/dz2 )
             tmp3 = 1.0 / ( 1.0 * tmp2 * kcoeff + tmp1 + 1.e-12 )
             tmp3 =Courant *tmp3 
@@ -230,12 +230,20 @@
 	ENDDO ! bedplume loop
 	
 
-		IF (split_rho_cont.eq.'TVD') then
+		IF (split_rho_cont.eq.'VL2'.or.split_rho_cont.eq.'SB2') then
 		! U,V,W,C has been updated already, but rho not!
+		  IF (split_rho_cont.eq.'VL2') then
 			do n=1,nfrac
-			  call c_edges_TVD_nocfl(cU2(n,:,:,:),cV2(n,:,:,:),cW2(n,:,:,:),cold(n,:,:,:),Uold,Vold,Wold,rnew,Ru,Rp,dr,phiv,phipt,dz,
+			  call c_edges_VL2_nocfl(cU2(n,:,:,:),cV2(n,:,:,:),cW2(n,:,:,:),cold(n,:,:,:),Uold,Vold,Wold,rnew,Ru,Rp,dr,phiv,phipt,dz,
      +            i1,j1,k1,1,imax,1,jmax,1,kmax,dt,rank,px,periodicx,periodicy)
 			enddo
+		  ENDIF
+		  IF (split_rho_cont.eq.'SB2') then
+			do n=1,nfrac
+			  call c_edges_SB2_nocfl(cU2(n,:,:,:),cV2(n,:,:,:),cW2(n,:,:,:),cold(n,:,:,:),Uold,Vold,Wold,rnew,Ru,Rp,dr,phiv,phipt,dz,
+     +            i1,j1,k1,1,imax,1,jmax,1,kmax,dt,rank,px,periodicx,periodicy)
+			enddo
+		  ENDIF		  
 			call state_edges(cU2,rhU2)
 			call state_edges(cV2,rhV2)
 			call state_edges(cW2,rhW2)		  
