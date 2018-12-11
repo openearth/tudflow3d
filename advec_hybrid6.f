@@ -18,7 +18,7 @@
 
 
       subroutine advecu_HYB6(putout,Uvel,Vvel,Wvel,RHO,rhu,rhv,rhw,Ru,Rp,dr,phiv,dz,
-     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy)
+     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy,kbed)
       implicit none
 c
 c********************************************************************
@@ -51,7 +51,7 @@ c          putout            : advection part
 c          other parameters  : all unchanged
 c
 c********************************************************************
-      integer  i,j,k,im,ip,jm,jp,km,kp,i1,j1,k1,ib,ie,jb,je,kb,ke
+      integer  i,j,k,im,ip,jm,jp,km,kp,i1,j1,k1,ib,ie,jb,je,kb,ke,kbed(0:i1,0:j1)
       real     putout(0:i1,0:j1,0:k1),Uvel(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
      +         dr(0:i1),phiv(0:j1),dz,Ru(0:i1),Rp(0:i1)
@@ -151,27 +151,27 @@ c get stuff from other CPU's
 	Uvel2(-2:i1+2,-2:j1+2,k1+2)=Uvel2(-2:i1+2,-2:j1+2,k1)
 
 
-      do k=kb,ke
-        kp=k+1
-        km=k-1
-        kpp=k+2
-        kppp=k+3
-        kmm=k-2
-        kmmm=k-3
+	  do  i=ib,ie
+		ip=i+1
+		im=i-1
+		ipp=i+2
+		ippp=i+3
+		imm=i-2
+		immm=i-3
         do j=jb,je
           jp=j+1
           jm=j-1
-	  jpp=j+2
-	  jppp=j+3
-	  jmm=j-2
-	  jmmm=j-3
-          do  i=ib,ie
-            ip=i+1
-            im=i-1
-	    ipp=i+2
-	    ippp=i+3
-	    imm=i-2
-	    immm=i-3
+		  jpp=j+2
+		  jppp=j+3
+		  jmm=j-2
+		  jmmm=j-3
+		  do k=kb,ke 
+			kp=k+1
+			km=k-1
+			kpp=k+2
+			kppp=k+3
+			kmm=k-2
+			kmmm=k-3		
 
 !            rhojp =0.25*(rho(i,j,k)+rho(i,jp,k)+rho(ip,j,k)+rho(ip,jp,k))
 !            rhojm =0.25*(rho(i,j,k)+rho(i,jm,k)+rho(ip,j,k)+rho(ip,jm,k))
@@ -235,7 +235,7 @@ c get stuff from other CPU's
 
 
       subroutine advecv_HYB6(putout,Uvel,Vvel,Wvel,RHO,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,
-     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy)
+     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy,kbed)
       implicit none
 c
 c********************************************************************
@@ -268,7 +268,7 @@ c          putout            : advection part
 c          other parameters  : all unchanged
 c
 c********************************************************************
-      integer  i,j,k,im,ip,jm,jp,km,kp,i1,j1,k1,ib,ie,jb,je,kb,ke
+      integer  i,j,k,im,ip,jm,jp,km,kp,i1,j1,k1,ib,ie,jb,je,kb,ke,kbed(0:i1,0:j1)
       real     putout(0:i1,0:j1,0:k1),Uvel(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
      +         dr(0:i1),phiv(0:j1),dz,Ru(0:i1),Rp(0:i1)
@@ -371,27 +371,27 @@ c get stuff from other CPU's
 	Vvel2(-2:i1+2,-2:j1+2,k1+1)=Vvel2(-2:i1+2,-2:j1+2,k1)
 	Vvel2(-2:i1+2,-2:j1+2,k1+2)=Vvel2(-2:i1+2,-2:j1+2,k1)
 
-      do k=kb,ke
-      	kp=k+1
-      	km=k-1
-  	kpp=k+2
-	kppp=k+3
-	kmm=k-2
-	kmmm=k-3
-        do j=jb,je
+	  do  i=ib,ie
+		ip=i+1
+		im=i-1
+		ipp=i+2
+		ippp=i+3
+		imm=i-2
+		immm=i-3
+		do j=jb,je
           jp=j+1
           jm=j-1
-	  jpp=j+2
-	  jppp=j+3
-	  jmm=j-2
-	  jmmm=j-3
-          do  i=ib,ie
-            ip=i+1
-            im=i-1
-	    ipp=i+2
-	    ippp=i+3
-	    imm=i-2
-  	    immm=i-3
+		  jpp=j+2
+		  jppp=j+3
+		  jmm=j-2
+		  jmmm=j-3
+		  do k=kb,ke 
+			kp=k+1
+			km=k-1
+			kpp=k+2
+			kppp=k+3
+			kmm=k-2
+			kmmm=k-3		
 !            rhoip =0.25*(rho(i,j,k)+rho(ip,j,k)+rho(i,jp,k)+rho(ip,jp,k))
 !            rhoim =0.25*(rho(i,j,k)+rho(im,j,k)+rho(i,jp,k)+rho(im,jp,k))
 !            rhojp =rho(i,jp,k)
@@ -468,7 +468,7 @@ c get stuff from other CPU's
       end
 
       subroutine advecw_HYB6(putout,Uvel,Vvel,Wvel,RHO,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,
-     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy)
+     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy,kbed)
       implicit none
 c
 c********************************************************************
@@ -501,7 +501,7 @@ c          putout            : advection part
 c          other parameters  : all unchanged
 c
 c********************************************************************
-      integer  i,j,k,im,ip,jm,jp,km,kp,i1,j1,k1,ib,ie,jb,je,kb,ke
+      integer  i,j,k,im,ip,jm,jp,km,kp,i1,j1,k1,ib,ie,jb,je,kb,ke,kbed(0:i1,0:j1)
       real     putout(0:i1,0:j1,0:k1),Uvel(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
      +         dr(0:i1),phiv(0:j1),dz,Ru(0:i1),Rp(0:i1)
@@ -599,27 +599,27 @@ c get stuff from other CPU's
 	Wvel2(-2:i1+2,-2:j1+2,k1+1)=Wvel2(-2:i1+2,-2:j1+2,k1)
 	Wvel2(-2:i1+2,-2:j1+2,k1+2)=Wvel2(-2:i1+2,-2:j1+2,k1)
 
-      do k=kb,ke
-        kp=k+1
-        km=k-1
-	kpp=k+2
-	kppp=k+3
-	kmm=k-2
-	kmmm=k-3
+	do  i=ib,ie
+		ip=i+1
+		im=i-1
+		ipp=i+2
+		ippp=i+3
+		imm=i-2
+		immm=i-3
         do j=jb,je
           jp=j+1
           jm=j-1
-	  jpp=j+2
-	  jppp=j+3
-	  jmm=j-2
-	  jmmm=j-3
-          do  i=ib,ie
-            ip=i+1
-            im=i-1
-  	    ipp=i+2
-	    ippp=i+3
-	    imm=i-2
-	    immm=i-3
+		  jpp=j+2
+		  jppp=j+3
+		  jmm=j-2
+		  jmmm=j-3
+		  do k=kb,ke 
+			kp=k+1
+			km=k-1
+			kpp=k+2
+			kppp=k+3
+			kmm=k-2
+			kmmm=k-3		  
 
 !            rhoip =0.25*(rho(i,j,k)+rho(i,j,kp)+rho(ip,j,k)+rho(ip,j,kp))
 !            rhoim =0.25*(rho(i,j,k)+rho(i,j,kp)+rho(im,j,k)+rho(im,j,kp))

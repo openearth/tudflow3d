@@ -677,7 +677,7 @@ c
       end
 
 	  	subroutine advecc_VLE(putout,putin,Uvel,Vvel,Wvel,rho,Ru,Rp,dr,phiv,phipt,dz,
-     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy,transporteq_fracs)
+     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy,transporteq_fracs,kbed)
       implicit none
 ! TVD scheme called with nerd option advec_conc.eq.'VLE', efficiently face-based with limiter Van Leer incl (1-cfl) term
 c
@@ -714,7 +714,7 @@ c          other parameters  : all unchanged
 c
 c********************************************************************
       integer  i,j,k,im,ip,jm,jp,km,kp,i1,j1,k1,ib,ie,jb,je,kb,ke
-	  integer kmm,kpp,imm,ipp,jmm,jpp,rank,px,periodicx,periodicy
+	  integer kmm,kpp,imm,ipp,jmm,jpp,rank,px,periodicx,periodicy,kbed(0:i1,0:j1)
       real     putout(0:i1,0:j1,0:k1),putin(0:i1,0:j1,0:k1),
      +         Uvel(0:i1,0:j1,0:k1),rho(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
@@ -835,7 +835,7 @@ c
 	  Rpdphi_ip=1./(Rp2(i)*(phiv(jp)-phiv(j)))
 c
 c     -------------------------------------------start k-loop
-	  do 300 k=kb,ke
+	  do 300 k=MAX(kb,MIN(kbed(i,j),kbed(i+1,j),kbed(i,j+1),kbed(i+1,j+1))),ke !kb,ke
 c
 	  kp=k+1
 	  km=k-1
@@ -1036,7 +1036,7 @@ c     -------------------------------------------end k-loop
       end
 
 	  	subroutine advecc_SBE(putout,putin,Uvel,Vvel,Wvel,rho,Ru,Rp,dr,phiv,phipt,dz,
-     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy,transporteq_fracs)
+     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy,transporteq_fracs,kbed)
       implicit none
 ! TVD scheme called with nerd option advec_conc.eq.'SBE', efficiently face-based with limiter Superbee incl (1-cfl) term
 c
@@ -1073,7 +1073,7 @@ c          other parameters  : all unchanged
 c
 c********************************************************************
       integer  i,j,k,im,ip,jm,jp,km,kp,i1,j1,k1,ib,ie,jb,je,kb,ke
-	  integer kmm,kpp,imm,ipp,jmm,jpp,rank,px,periodicx,periodicy
+	  integer kmm,kpp,imm,ipp,jmm,jpp,rank,px,periodicx,periodicy,kbed(0:i1,0:j1)
       real     putout(0:i1,0:j1,0:k1),putin(0:i1,0:j1,0:k1),
      +         Uvel(0:i1,0:j1,0:k1),rho(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
@@ -1194,7 +1194,7 @@ c
 	  Rpdphi_ip=1./(Rp2(i)*(phiv(jp)-phiv(j)))
 c
 c     -------------------------------------------start k-loop
-	  do 300 k=kb,ke
+	  do 300 k=MAX(kb,MIN(kbed(i,j),kbed(i+1,j),kbed(i,j+1),kbed(i+1,j+1))),ke !k=kb,ke
 c
 	  kp=k+1
 	  km=k-1

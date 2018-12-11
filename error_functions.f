@@ -345,8 +345,17 @@
 		write(*,*) '# fractions must be ordered with increasing dpart#'	
 	CASE(173)
 		write(*,*) '# namelist &plume -->bedplume                    #'			
-		write(*,*) '# move_dx_series not as long as move_dy_series   #'			
-		write(*,*) '# make both series same length                   #'			
+		write(*,*) '# move_dx_series,move_dy_series,move_dz_series   #'			
+		write(*,*) '# or move_zbed_criterium not same length         #'
+		write(*,*) '# make all series same length                    #'			
+		write(*,*) '# move_zbed_criterium may be length 1 or length series #'	
+	CASE(174)
+		write(*,*) '# namelist &plume -->bedplume                    #'			
+		write(*,*) '# move_filename_series  must have length         #'			
+		write(*,*) '# of move_dx_series, or length zero              #'
+		write(*,*) '# when length zero then always a outputfile is   #'
+		write(*,*) '# generated when bedplume is moved               #'
+
 	CASE(200)
 		write(*,*) '#                                                #'			
 		write(*,*) '# input file not found                           #'

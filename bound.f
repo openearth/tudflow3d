@@ -2613,7 +2613,8 @@ c*************************************************************
 	real xx,yy,phi,xTSHD(1:4),yTSHD(1:4),zbed_max,zbed_max_tot,zb
 	
 	DO n=1,nbedplume
-	  IF ((bp(n)%forever.eq.1.and.time_np.gt.bp(n)%t0.and.time_np.lt.bp(n)%t_end).and.bp(n)%move_zbed_criterium<depth) THEN
+	  IF ((bp(n)%forever.eq.1.and.time_np.gt.bp(n)%t0.and.time_np.lt.bp(n)%t_end).and.
+     & bp(n)%move_zbed_criterium(MAX(bp(n)%nmove_present,1))<depth) THEN
 		! rotation ship for ambient side current
 		if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
 		  phi=atan2(V_b,1.e-12)
@@ -2637,7 +2638,7 @@ c*************************************************************
 		 enddo
 		enddo
 		call mpi_allreduce(zbed_max,zbed_max_tot,1,mpi_real8,mpi_max,mpi_comm_world,ierr)
-		IF(zbed_max_tot>bp(n)%move_zbed_criterium) THEN
+		IF(zbed_max_tot>bp(n)%move_zbed_criterium(MAX(bp(n)%nmove_present,1))) THEN
 			bp(n)%nmove_present=bp(n)%nmove_present+1
 			istep_output_bpmove = istep_output_bpmove +1
 			IF ((bp(n)%nmove_present-bp(n)%nmove).eq.1) THEN
@@ -2675,15 +2676,19 @@ c*************************************************************
 				ENDIF			
 				bp(n)%x = bp(n)%x+bp(n)%move_dx_series(bp(n)%nmove_present)
 				bp(n)%y = bp(n)%y+bp(n)%move_dy_series(bp(n)%nmove_present)
+				bp(n)%height = bp(n)%height+bp(n)%move_dz_series(bp(n)%nmove_present)
+				bp(n)%zbottom = bp(n)%zbottom+bp(n)%move_dz_series(bp(n)%nmove_present)
+				
 				IF (rank.eq.0) THEN
 				  write(*,'(a,i6,a,f8.4,a,i4,a)'),'* Bedplume : ',n,' with max bedlevel: ',zbed_max_tot,
      &			  ' has been moved for the ',bp(n)%nmove_present,' time.'
-				  write(*,'(a,f7.2,f7.2)'),'Move dx,dy:',
-     &				bp(n)%move_dx_series(bp(n)%nmove_present),bp(n)%move_dy_series(bp(n)%nmove_present)
+				  write(*,'(a,f7.2,f7.2,f7.2)'),'Move dx,dy,dz:',
+     &				bp(n)%move_dx_series(bp(n)%nmove_present),bp(n)%move_dy_series(bp(n)%nmove_present),
+     &	 bp(n)%move_dz_series(bp(n)%nmove_present)
 				ENDIF
-				call output_nc('mvbp3D_',istep_output_bpmove,time_np)
-							
-
+				IF (bp(n)%move_outputfile_series(bp(n)%nmove_present).eq.1) THEN
+					call output_nc('mvbp3D_',istep_output_bpmove,time_np)
+				ENDIF
 			ENDIF
 		ENDIF
 	  ENDIF
@@ -2719,9 +2724,12 @@ c*************************************************************
 	REAL output(1:nfrac)
 	INTEGER sloc,nfrac,n
 
-	IF (tt>tseries(sloc+1)) THEN
+	!IF (tt>tseries(sloc+1)) THEN
+	!	sloc=sloc+1
+	!ENDIF
+	DO WHILE (tt>tseries(sloc+1)) 
 		sloc=sloc+1
-	ENDIF
+	ENDDO	
 	fac=(tt-tseries(sloc))/(tseries(sloc+1)-tseries(sloc))
 	DO n=1,nfrac
 		output(n)=fac*(series(n,sloc+1)-series(n,sloc))+series(n,sloc)	

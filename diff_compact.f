@@ -726,13 +726,13 @@ c*****************************************************************
       ip=i+1
       im=i-1
       drp = Rp(ip)-Rp(i)
-	do k=kb,ke
-	kp=k+1
-	km=k-1
 	  do j=jb,je
 	  jp=j+1
 	  jm=j-1
-c
+		do k=kb,ke !k=MAX(kb,kbed(i,k)),ke !kb,ke
+		kp=k+1
+		km=k-1
+	  
       eppo = 0.25 * (
      +   ekm(i,j,k) + ekm(ip,j,k) + ekm(ip,jp,k) + ekm(i,jp,k)  )
       epmo = 0.25 * (
@@ -862,12 +862,12 @@ c*****************************************************************
 	do i=ib,ie
 	  ip=i+1
 	  im=i-1
-	      do k=kb,ke
-	      kp=k+1
-	      km=k-1
 		do j=jb,je
 		jp=j+1
 		jm=j-1
+	      do k=kb,ke !MAX(kb,kbed(i,k)),ke !do k=kb,ke
+	      kp=k+1
+	      km=k-1		
 
       eppo = 0.25 * (
      +   ekm(i,j,k) + ekm(ip,j,k) + ekm(ip,jp,k) + ekm(i,jp,k)  )
@@ -991,13 +991,12 @@ c*****************************************************************
         do i=ib,ie
         ip=i+1
         im=i-1
-	      do k=kb,ke
-	      kp=k+1
-	      km=k-1
 		do j=jb,je
 		jp=j+1
 		jm=j-1
-
+	      do k=kb,ke !MAX(kb,kbed(i,k)),ke ! do k=kb,ke
+	      kp=k+1
+	      km=k-1
       epop = 0.25 * (
      +   ekm(i,j,k) + ekm(i,j,kp) + ekm(ip,j,k) + ekm(ip,j,kp) )
       emop = 0.25 * (

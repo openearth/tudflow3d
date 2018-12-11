@@ -57,7 +57,7 @@
       INTEGER periodicx,periodicy,wallup
       REAL U_b3,V_b3,surf_layer,reduction_sedimentation_shields
       INTEGER ksurf_bc,kmaxTSHD_ind,nair
-      INTEGER poissolver,nm1,istep_output_bpmove
+      INTEGER poissolver,nm1,istep_output_bpmove,avalanche_until_done
       INTEGER iparm(64)
       CHARACTER*256 plumeQtseriesfile,plumectseriesfile      
       REAL Q_j,plumeQseries(1:10000),plumeQtseries(1:10000),plumectseries(1:10000),plumecseries(30,1:10000) !c(30) matches with size frac_init
@@ -163,7 +163,8 @@
 	end type bed_obstacles
 	type bed_plumes
 	    REAL ::	x(4),y(4),height,u,v,w,c(30),t0,t_end,zbottom,Q,sedflux(30),volncells,changesedsuction !c(30) matches with size frac_init
-		REAL :: move_zbed_criterium,move_dx_series(1000),move_dy_series(1000)
+		REAL :: move_zbed_criterium(1000),move_dx_series(1000),move_dy_series(1000),move_dz_series(1000)
+		REAL :: move_outputfile_series(1000)
 	    INTEGER :: forever,h_seriesloc,zb_seriesloc,Q_seriesloc,S_seriesloc,c_seriesloc
 		CHARACTER*256 :: h_tseriesfile,zb_tseriesfile,Q_tseriesfile,S_tseriesfile,c_tseriesfile
 	end type bed_plumes
@@ -171,7 +172,8 @@
 	    REAL ::	x(4),y(4),height,u,v,w,c(30),t0,t_end,zbottom,Q,sedflux(30),volncells,changesedsuction !c(30) matches with size frac_init
 		REAL :: h_tseries(10000),h_series(10000),zb_tseries(10000),zb_series(10000)
 		REAL :: Q_tseries(10000),c_tseries(10000),S_tseries(10000),Q_series(10000),c_series(30,10000),S_series(30,10000)
-		REAL :: move_zbed_criterium,move_dx_series(1000),move_dy_series(1000)
+		REAL :: move_zbed_criterium(1000),move_dx_series(1000),move_dy_series(1000),move_dz_series(1000)
+		REAL :: move_outputfile_series(1000)
 	    INTEGER :: forever,h_seriesloc,zb_seriesloc,Q_seriesloc,S_seriesloc,c_seriesloc,nmove,nmove_present
 		CHARACTER*256 :: h_tseriesfile,zb_tseriesfile,Q_tseriesfile,S_tseriesfile,c_tseriesfile
 !		INTEGER :: tmax_iP,tmax_iU,iP_inbp(10000),jP_inbp(10000),kP_inbp(10000),iU_inbp(10000),jU_inbp(10000),kU_inbp(10000)		
@@ -221,7 +223,7 @@
 	NAMELIST /LESmodel/sgs_model,Cs,Lmix_type,nr_HPfilter,damping_drho_dz,damping_a1,damping_b1,damping_a2,damping_b2,
      & extra_mix_visc
 	NAMELIST /constants/kappa,gx,gy,gz,ekm_mol,calibfac_sand_pickup,pickup_formula,kn_d50_multiplier,avalanche_slope,
-     &	av_slope_z,calibfac_Shields_cr,reduction_sedimentation_shields,morfac,morfac2
+     &	av_slope_z,calibfac_Shields_cr,reduction_sedimentation_shields,morfac,morfac2,avalanche_until_done
 	NAMELIST /fractions_in_plume/fract
 	NAMELIST /ship/U_TSHD,LOA,Lfront,Breadth,Draught,Lback,Hback,xfront,yfront,kn_TSHD,nprop,Dprop,xprop,yprop,zprop,
      &   Pprop,rudder,rot_prop,draghead,Dsp,xdh,perc_dh_suction,softnose,Hfront,cutter
@@ -397,10 +399,12 @@
 		bedplume(:)%c(i) = 0.
 		bedplume(:)%sedflux(i) = 0. 
 	ENDDO
-	bedplume(:)%move_zbed_criterium=999999999.
 	DO i=1,1000
 		bedplume(:)%move_dx_series(i)=-99999999.
 		bedplume(:)%move_dy_series(i)=-99999999.
+		bedplume(:)%move_dz_series(i)=-99999999.
+		bedplume(:)%move_zbed_criterium(i)=999999999.
+		bedplume(:)%move_outputfile_series(i)=-1
 	ENDDO
 	plume_z_outflow_belowsurf=-999.
 	!! Fractions_in_plume
@@ -450,6 +454,7 @@
 	reduction_sedimentation_shields = 0. ! default no reduction in sedimentation by shear stresss (shields) ! PhD thesis vRhee p146 eq 7.74
 	morfac = 1.
 	morfac2 = 1.
+	avalanche_until_done=0
 	!! ship
 	U_TSHD=-999.
 	LOA=-999.
@@ -795,6 +800,8 @@
 	  bp(n)%move_zbed_criterium=bedplume(n)%move_zbed_criterium
 	  bp(n)%move_dx_series=bedplume(n)%move_dx_series
 	  bp(n)%move_dy_series=bedplume(n)%move_dy_series
+	  bp(n)%move_dz_series=bedplume(n)%move_dz_series
+	  bp(n)%move_outputfile_series=bedplume(n)%move_outputfile_series
 	  bp(n)%nmove_present=0
 	  bp(n)%nmove=0
 	  DO WHILE (bp(n)%move_dx_series(bp(n)%nmove+1).NE.-99999999.)
@@ -803,11 +810,36 @@
 	  n3=0
 	  DO WHILE (bp(n)%move_dy_series(n3+1).NE.-99999999.)
 		n3=n3+1
-	  END DO	  
-	  IF (n3.ne.bp(n)%nmove) THEN
+	  END DO
+	  n2=0
+	  DO WHILE (bp(n)%move_dz_series(n2+1).NE.-99999999.)
+		n2=n2+1
+	  END DO
+	  n1=0
+	  DO WHILE (bp(n)%move_zbed_criterium(n1+1).NE.999999999.)
+		n1=n1+1
+	  END DO
+	  IF (n1.eq.1) THEN 
+	    bp(n)%move_zbed_criterium(1:1000)=bp(n)%move_zbed_criterium(1)
+		n1=n3
+	  ENDIF 
+	  IF (n3.ne.bp(n)%nmove.or.n2.ne.bp(n)%nmove.or.n1.ne.bp(n)%nmove) THEN
 		write(*,*),' Bedplume : ',n
 		CALL writeerror(173)
 	  ENDIF
+	  n1=0
+	  DO WHILE (bp(n)%move_outputfile_series(n1+1).NE.-1)
+		n1=n1+1
+	  END DO
+	  IF (n1.eq.0) THEN 
+	    bp(n)%move_outputfile_series(1:1000)=1
+		n1=n3
+	  ENDIF 
+	  IF (n1.ne.bp(n)%nmove) THEN
+		write(*,*),' Bedplume : ',n
+		CALL writeerror(174)
+	  ENDIF
+	  
 	  DO i=1,10000
 	  	bp(n)%h_tseries(i)=-99999.
 	  	bp(n)%h_series(i)=-99999.

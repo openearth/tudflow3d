@@ -147,9 +147,11 @@ bedplume(1)%Q_tseriesfile = './inputfiles/Inflow_Q.asc'		! file containing times
 bedplume(1)%sedflux = 6.625 59.625  ! Sediment flux [kg/s] (divided evenly over all cells within bedplume, length vector must be nfrac large)
 bedplume(1)%S_tseriesfile = './inputfiles/Inflow_S.asc'		! file containing timeseries of sediment flux [kg/s] (optional overrules bedplume(.)%sedflux, default '')
 bedplume(1)%changesedsuction = 1.   ! 0. is no sediment is removed from suction domain in case bedplume%Q negative (default 1.=sediment is sucked out of domain) 
-bedplume(1)%move_zbed_criterium = 5.5	! criterium [m] to move this bedplume with move_dx and move_dy once bed within x,y contour grows above this criterium
+bedplume(1)%move_zbed_criterium = 5.5	! criterium [m] to move this bedplume with move_dx,dy,dz once bed within x,y contour grows above this criterium: default one criterium full sim; optional series with length move_dx_series
 bedplume(1)%move_dx_series = 			! series [m] to move bedplume in x direction every time bed grows above move_zbed_criterium within x,y contour bedplume
 bedplume(1)%move_dy_series = 			! series [m] to move bedplume in y direction every time bed grows above move_zbed_criterium within x,y contour bedplume
+bedplume(1)%move_dz_series = 			! series [m] to move bedplume in z direction (heigth and zbottom) every time bed grows above move_zbed_criterium within x,y contour bedplume
+bedplume(1)%move_outputfile_series = 	! series 1/0 to create a output 'mvbp3D' file yes or no every time bedplume is moved: default every time 'mvbp3D' file is created
 /
 
 &fractions_in_plume
@@ -192,6 +194,7 @@ pickup_formula = 'nielsen1992' !options are 'vanrijn1984' (default),'nielsen1992
 kn_d50_multiplier = 2. 	! Defines Nikuradse bedroughness for sand pickup function (not for flow shear stress), default 2.; kn=2*d50 defined in paper Van Rijn 1984
 avalanche_slope = 2. ! Max bedslope 1:as; all slopes steeper avalanche towards 1:as (0=vertical slope, wet sand=30deg=1.7--15deg=3.7)
 av_slope_z =         ! To define variable avalanche_slope over depth --> make av_slope_z and avalanche_slope series over vertical; when av_slope_z not defined a uniform avalanche_slope is used
+avalanche_until_done =0	!1 = repeat avalanche until all bedslopes in domain agree with avalanche_slope (default 0 only do morfac times avalanche each timestep)
 reduction_sedimentation_shields = 0. ! Reduction of sedimentation at the bed by shear or perhaps grain-grain interactions (sheet flow) default 0. no reduction, value should be 4-5 PhD thesis vRhee p146 eq 7.74
 morfac = 1. 		! Factor applied to erosion and sedimentation fluxes to speed up morfology simulation (default 1.)
 morfac2 = 1. 		! Factor applied to erosion and sedimentation fluxes in bed (not in fluid) to speed up morfology simulation (default 1.); only dz_bed is accelerated but concentrations in fluid remain unaltered 
