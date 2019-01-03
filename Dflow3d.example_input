@@ -86,7 +86,7 @@ U_b3 = -0.47			! Ambient bc U velocity [m/s] in surf_layer with respect to TSHD 
 V_b3 = -0.29			! Ambient bc V velocity [m/s] in surf_layer with respect to TSHD motion: positive means current from starboard  
 surf_layer = 0.			! Layer depth [m] from free surface with U_b3,V_b3 ambient current (default 0)
 wallup=0			! 0 wall = below; wall = up (default 0)
-bedlevelfile = ''		! Input netcdf file for bedlevel which are simulated by IBM obstacles (filled with zbed(1:imax,0:jmax*px+1) [m])
+bedlevelfile = ''		! Input netcdf file for bedlevel which are simulated by IBM obstacles (filled with zbed(1:imax,0:jmax*px+1) [m])Input netcdf file for bedlevel which are simulated by IBM obstacles (filled with zbed(1:imax,0:jmax*px+1) [m])
 c_bed= 0.1 				! Initial volume fractions inside bed [-] (length vector must be nfrac large and sum must be equal to cfixedbed)
 cfixedbed = 0.6			! Volume concentration threshold for fixed bed (default 0.6)
 
@@ -137,8 +137,11 @@ bedplume(1)%zb_tseriesfile = ''		! file containing timeseries of bedplume bottom
 bedplume(1)%u = 0.5            		! Initial U velocity inside bedplume [m/s] (if not defined then vertical profile based on U_b is used)
 bedplume(1)%v = 0.5            		! Initial V velocity inside bedplume [m/s] (if not defined then vertical profile based on V_b is used)
 bedplume(1)%w = 0.5            		! Initial W velocity inside bedplume [m/s] (if not defined then W_b is used)
+bedplume(1)%u_tseriesfile = ''		! file containing timeseries of u [m/s] (optional overrules bedplume(.)%u, default '')
+bedplume(1)%v_tseriesfile = ''		! file containing timeseries of v [m/s] (optional overrules bedplume(.)%v, default '')
+bedplume(1)%w_tseriesfile = ''		! file containing timeseries of w [m/s] (optional overrules bedplume(.)%w, default '')
 bedplume(1)%c = 0.1 0.1 0.1    		! Initial volume fractions inside bedplume [-] (length vector must be nfrac large)
-bedplume(1)%c_tseriesfile = './inputfiles/Inflow_C.asc'		! file containing timeseries of volume fractions [-] (optional overrules bedplume(.)%c, default '')
+bedplume(1)%c_tseriesfile = ''		! file containing timeseries of volume fractions [-] (optional overrules bedplume(.)%c, default '')
 bedplume(1)%forever = 0        		! 1 is bedplume put in place every timestep, 0 is only initial bedplume (default 0)
 bedplume(1)%t0 = 0.        			! bedplume is started after t0 seconds (default 0. s) 
 bedplume(1)%t_end = 0.        		! bedplume ends after t_end seconds (default t_end of simulation) 
@@ -152,6 +155,9 @@ bedplume(1)%move_dx_series = 			! series [m] to move bedplume in x direction eve
 bedplume(1)%move_dy_series = 			! series [m] to move bedplume in y direction every time bed grows above move_zbed_criterium within x,y contour bedplume
 bedplume(1)%move_dz_series = 			! series [m] to move bedplume in z direction (heigth and zbottom) every time bed grows above move_zbed_criterium within x,y contour bedplume
 bedplume(1)%move_outputfile_series = 	! series 1/0 to create a output 'mvbp3D' file yes or no every time bedplume is moved: default every time 'mvbp3D' file is created
+bedplume(1)%velocity_force = 1 			! default 1 velocity is implemented with body force, when 0 then velocity is implemented as immersed velocity straightforward
+bedplume(1)%move_nx_series = 			! series [-] to have momentum sqrt(u^2,v^2) in desired direction when bedplume has moved (length 1 or length move_dx_series; when nx,ny both 0 no momentum)
+bedplume(1)%move_ny_series = 			! series [-] to have momentum sqrt(u^2,v^2) in desired direction when bedplume has moved (length 1 or length move_dx_series; when nx,ny both 0 no momentum)
 /
 
 &fractions_in_plume
@@ -194,6 +200,7 @@ pickup_formula = 'nielsen1992' !options are 'vanrijn1984' (default),'nielsen1992
 kn_d50_multiplier = 2. 	! Defines Nikuradse bedroughness for sand pickup function (not for flow shear stress), default 2.; kn=2*d50 defined in paper Van Rijn 1984
 avalanche_slope = 2. ! Max bedslope 1:as; all slopes steeper avalanche towards 1:as (0=vertical slope, wet sand=30deg=1.7--15deg=3.7)
 av_slope_z =         ! To define variable avalanche_slope over depth --> make av_slope_z and avalanche_slope series over vertical; when av_slope_z not defined a uniform avalanche_slope is used
+avfile = './inputfiles/av_SQDA2_v01.nc'         ! Input netcdf file for spatially variable av_slope (filled with av_slope(1:imax,1:jmax*px,0:k1) [-]) 
 avalanche_until_done =0	!1 = repeat avalanche until all bedslopes in domain agree with avalanche_slope (default 0 only do morfac times avalanche each timestep)
 reduction_sedimentation_shields = 0. ! Reduction of sedimentation at the bed by shear or perhaps grain-grain interactions (sheet flow) default 0. no reduction, value should be 4-5 PhD thesis vRhee p146 eq 7.74
 morfac = 1. 		! Factor applied to erosion and sedimentation fluxes to speed up morfology simulation (default 1.)

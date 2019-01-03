@@ -59,7 +59,7 @@
       INTEGER ksurf_bc,kmaxTSHD_ind,nair
       INTEGER poissolver,nm1,istep_output_bpmove,avalanche_until_done
       INTEGER iparm(64)
-      CHARACTER*256 plumeQtseriesfile,plumectseriesfile      
+      CHARACTER*256 plumeQtseriesfile,plumectseriesfile,avfile      
       REAL Q_j,plumeQseries(1:10000),plumeQtseries(1:10000),plumectseries(1:10000),plumecseries(30,1:10000) !c(30) matches with size frac_init
       REAL Aplume
 	  
@@ -92,7 +92,7 @@
       INTEGER*2, DIMENSION(:),ALLOCATABLE :: i_inVpunt_tauTSHD,j_inVpunt_tauTSHD,k_inVpunt_tauTSHD
       INTEGER*2, DIMENSION(:),ALLOCATABLE :: i_inVpunt_rudder,j_inVpunt_rudder,k_inVpunt_rudder
       INTEGER*2, DIMENSION(:),ALLOCATABLE :: i_inWpunt_suction,j_inWpunt_suction,k_inWpunt_suction
-      REAL, DIMENSION(:),ALLOCATABLE :: Ubot_TSHD,Vbot_TSHD,av_slope !,facIBMu,facIBMv,facIBMw
+      REAL, DIMENSION(:),ALLOCATABLE :: Ubot_TSHD,Vbot_TSHD!,facIBMu,facIBMv,facIBMw
       INTEGER*8, DIMENSION(:),ALLOCATABLE :: pt,pt3
 
       INTEGER*2, DIMENSION(:,:,:),ALLOCATABLE :: llist1,llist2,llist3
@@ -118,7 +118,7 @@
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: dUdt,dVdt,dWdt,drdt
 	  REAL, DIMENSION(:,:,:),ALLOCATABLE :: rhoU,rhoV,rhoW
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: Srr,Spr,Szr,Spp,Spz,Szz
-      REAL, DIMENSION(:,:,:),ALLOCATABLE :: Ppropx_dummy,Ppropy_dummy,Ppropz_dummy,wf
+      REAL, DIMENSION(:,:,:),ALLOCATABLE :: Ppropx_dummy,Ppropy_dummy,Ppropz_dummy,wf,av_slope 
       INTEGER, DIMENSION(:),ALLOCATABLE, TARGET :: jco,iro,beg,di,di2
       REAL Hs,Tp,Lw,nx_w,ny_w,kabs_w,kx_w,ky_w,om_w
       REAL, DIMENSION(:),ALLOCATABLE :: LUB,LHS2 
@@ -163,19 +163,27 @@
 	end type bed_obstacles
 	type bed_plumes
 	    REAL ::	x(4),y(4),height,u,v,w,c(30),t0,t_end,zbottom,Q,sedflux(30),volncells,changesedsuction !c(30) matches with size frac_init
-		REAL :: move_zbed_criterium(1000),move_dx_series(1000),move_dy_series(1000),move_dz_series(1000)
-		REAL :: move_outputfile_series(1000)
-	    INTEGER :: forever,h_seriesloc,zb_seriesloc,Q_seriesloc,S_seriesloc,c_seriesloc
+		REAL :: move_zbed_criterium(10000),move_dx_series(10000),move_dy_series(10000),move_dz_series(10000)
+		REAL :: move_nx_series(10000),move_ny_series(10000)
+		REAL :: move_outputfile_series(10000)
+	    INTEGER :: forever,h_seriesloc,zb_seriesloc,Q_seriesloc,S_seriesloc,c_seriesloc,velocity_force
+		INTEGER :: u_seriesloc,v_seriesloc,w_seriesloc
 		CHARACTER*256 :: h_tseriesfile,zb_tseriesfile,Q_tseriesfile,S_tseriesfile,c_tseriesfile
+		CHARACTER*256 :: u_tseriesfile,v_tseriesfile,w_tseriesfile
 	end type bed_plumes
 	type bed_plumes2
 	    REAL ::	x(4),y(4),height,u,v,w,c(30),t0,t_end,zbottom,Q,sedflux(30),volncells,changesedsuction !c(30) matches with size frac_init
 		REAL :: h_tseries(10000),h_series(10000),zb_tseries(10000),zb_series(10000)
 		REAL :: Q_tseries(10000),c_tseries(10000),S_tseries(10000),Q_series(10000),c_series(30,10000),S_series(30,10000)
-		REAL :: move_zbed_criterium(1000),move_dx_series(1000),move_dy_series(1000),move_dz_series(1000)
-		REAL :: move_outputfile_series(1000)
-	    INTEGER :: forever,h_seriesloc,zb_seriesloc,Q_seriesloc,S_seriesloc,c_seriesloc,nmove,nmove_present
+		REAL :: move_zbed_criterium(10000),move_dx_series(10000),move_dy_series(10000),move_dz_series(10000)
+		REAL :: move_nx_series(10000),move_ny_series(10000)
+		REAL :: move_outputfile_series(10000)
+		REAL :: u_tseries(10000),v_tseries(10000),w_tseries(10000)
+		REAL :: u_series(10000),v_series(10000),w_series(10000)
+	    INTEGER :: forever,h_seriesloc,zb_seriesloc,Q_seriesloc,S_seriesloc,c_seriesloc,nmove,nmove_present,velocity_force
+		INTEGER :: u_seriesloc,v_seriesloc,w_seriesloc
 		CHARACTER*256 :: h_tseriesfile,zb_tseriesfile,Q_tseriesfile,S_tseriesfile,c_tseriesfile
+		CHARACTER*256 :: u_tseriesfile,v_tseriesfile,w_tseriesfile
 !		INTEGER :: tmax_iP,tmax_iU,iP_inbp(10000),jP_inbp(10000),kP_inbp(10000),iU_inbp(10000),jU_inbp(10000),kU_inbp(10000)		
 	end type bed_plumes2
 	
@@ -223,7 +231,7 @@
 	NAMELIST /LESmodel/sgs_model,Cs,Lmix_type,nr_HPfilter,damping_drho_dz,damping_a1,damping_b1,damping_a2,damping_b2,
      & extra_mix_visc
 	NAMELIST /constants/kappa,gx,gy,gz,ekm_mol,calibfac_sand_pickup,pickup_formula,kn_d50_multiplier,avalanche_slope,
-     &	av_slope_z,calibfac_Shields_cr,reduction_sedimentation_shields,morfac,morfac2,avalanche_until_done
+     &	av_slope_z,calibfac_Shields_cr,reduction_sedimentation_shields,morfac,morfac2,avalanche_until_done,avfile
 	NAMELIST /fractions_in_plume/fract
 	NAMELIST /ship/U_TSHD,LOA,Lfront,Breadth,Draught,Lback,Hback,xfront,yfront,kn_TSHD,nprop,Dprop,xprop,yprop,zprop,
      &   Pprop,rudder,rot_prop,draghead,Dsp,xdh,perc_dh_suction,softnose,Hfront,cutter
@@ -394,17 +402,27 @@
 	bedplume(:)%S_tseriesfile=''
 	bedplume(:)%S_seriesloc=1
 	bedplume(:)%c_tseriesfile=''
-	bedplume(:)%c_seriesloc=1	
+	bedplume(:)%c_seriesloc=1
+	bedplume(:)%velocity_force=1 
+	bedplume(:)%u_tseriesfile=''
+	bedplume(:)%v_tseriesfile=''
+	bedplume(:)%w_tseriesfile=''
+	bedplume(:)%u_seriesloc=1
+	bedplume(:)%v_seriesloc=1
+	bedplume(:)%w_seriesloc=1
+	
 	DO i=1,30
 		bedplume(:)%c(i) = 0.
 		bedplume(:)%sedflux(i) = 0. 
 	ENDDO
-	DO i=1,1000
+	DO i=1,10000
 		bedplume(:)%move_dx_series(i)=-99999999.
 		bedplume(:)%move_dy_series(i)=-99999999.
 		bedplume(:)%move_dz_series(i)=-99999999.
 		bedplume(:)%move_zbed_criterium(i)=999999999.
 		bedplume(:)%move_outputfile_series(i)=-1
+		bedplume(:)%move_nx_series(i)=-99999999.
+		bedplume(:)%move_ny_series(i)=-99999999.
 	ENDDO
 	plume_z_outflow_belowsurf=-999.
 	!! Fractions_in_plume
@@ -451,6 +469,7 @@
 	avalanche_slope = -99. 
 	avalanche_slope(1)=0. !default vertical slopes are allowed
 	av_slope_z= -1.
+	avfile = ''
 	reduction_sedimentation_shields = 0. ! default no reduction in sedimentation by shear stresss (shields) ! PhD thesis vRhee p146 eq 7.74
 	morfac = 1.
 	morfac2 = 1.
@@ -785,6 +804,7 @@
 	  bp(n)%w=bedplume(n)%w
 	  bp(n)%c=bedplume(n)%c
 	  bp(n)%forever=bedplume(n)%forever
+	  bp(n)%velocity_force=bedplume(n)%velocity_force
 	  bp(n)%t0=bedplume(n)%t0
 	  bp(n)%t_end=bedplume(n)%t_end
 	  bp(n)%zbottom=bedplume(n)%zbottom
@@ -796,11 +816,19 @@
 	  bp(n)%zb_tseriesfile=bedplume(n)%zb_tseriesfile
 	  bp(n)%h_seriesloc=bedplume(n)%h_seriesloc
 	  bp(n)%zb_seriesloc=bedplume(n)%zb_seriesloc
-
+	  bp(n)%u_tseriesfile=bedplume(n)%u_tseriesfile
+	  bp(n)%v_tseriesfile=bedplume(n)%v_tseriesfile
+	  bp(n)%w_tseriesfile=bedplume(n)%w_tseriesfile
+	  bp(n)%u_seriesloc=bedplume(n)%u_seriesloc
+	  bp(n)%v_seriesloc=bedplume(n)%v_seriesloc
+	  bp(n)%w_seriesloc=bedplume(n)%w_seriesloc
+	  
 	  bp(n)%move_zbed_criterium=bedplume(n)%move_zbed_criterium
 	  bp(n)%move_dx_series=bedplume(n)%move_dx_series
 	  bp(n)%move_dy_series=bedplume(n)%move_dy_series
 	  bp(n)%move_dz_series=bedplume(n)%move_dz_series
+	  bp(n)%move_nx_series=bedplume(n)%move_nx_series
+	  bp(n)%move_ny_series=bedplume(n)%move_ny_series
 	  bp(n)%move_outputfile_series=bedplume(n)%move_outputfile_series
 	  bp(n)%nmove_present=0
 	  bp(n)%nmove=0
@@ -827,6 +855,27 @@
 		write(*,*),' Bedplume : ',n
 		CALL writeerror(173)
 	  ENDIF
+	  n2=0
+	  DO WHILE (bp(n)%move_nx_series(n2+1).NE.-99999999.)
+		n2=n2+1
+	  END DO
+	  IF (n2.eq.1) THEN 
+	    bp(n)%move_nx_series(1:1000)=bp(n)%move_nx_series(1)
+		n2=bp(n)%nmove
+	  ENDIF 	  
+	  n1=0
+	  DO WHILE (bp(n)%move_ny_series(n1+1).NE.-99999999.)
+		n1=n1+1
+	  END DO
+	  IF (n1.eq.1) THEN 
+	    bp(n)%move_ny_series(1:1000)=bp(n)%move_ny_series(1)
+		n1=bp(n)%nmove
+	  ENDIF 
+	  IF (n1.ne.bp(n)%nmove.or.n2.ne.bp(n)%nmove) THEN
+		write(*,*),' Bedplume : ',n
+		CALL writeerror(173)
+	  ENDIF	  
+	  
 	  n1=0
 	  DO WHILE (bp(n)%move_outputfile_series(n1+1).NE.-1)
 		n1=n1+1
@@ -849,6 +898,12 @@
 	  	bp(n)%Q_series(i)=-99999.
 	  	bp(n)%S_tseries(i)=-99999.
 	  	bp(n)%c_tseries(i)=-99999.
+	  	bp(n)%u_tseries(i)=-99999.
+	  	bp(n)%u_series(i)=-99999.
+	  	bp(n)%v_tseries(i)=-99999.
+	  	bp(n)%v_series(i)=-99999.		
+	  	bp(n)%w_tseries(i)=-99999.
+	  	bp(n)%w_series(i)=-99999.		
 	  	DO j=1,30
 	  		bp(n)%S_series(j,i)=-99999.
 	  		bp(n)%c_series(j,i)=-99999.		
@@ -859,6 +914,9 @@
 	  bp(n)%Q_tseriesfile=bedplume(n)%Q_tseriesfile
 	  bp(n)%S_tseriesfile=bedplume(n)%S_tseriesfile
 	  bp(n)%c_tseriesfile=bedplume(n)%c_tseriesfile
+	  bp(n)%u_tseriesfile=bedplume(n)%u_tseriesfile
+	  bp(n)%v_tseriesfile=bedplume(n)%v_tseriesfile
+	  bp(n)%w_tseriesfile=bedplume(n)%w_tseriesfile
 	  bp(n)%Q_seriesloc=bedplume(n)%Q_seriesloc
 	  bp(n)%S_seriesloc=bedplume(n)%S_seriesloc
 	  bp(n)%c_seriesloc=bedplume(n)%c_seriesloc
@@ -893,6 +951,52 @@
 				CALL writeerror(279)
 		ENDIF	   
 	ENDIF	  
+	IF (bp(n)%u_tseriesfile.eq.'') THEN
+	ELSE
+	   call readtseries2(bp(n)%u_tseriesfile,bp(n)%u_tseries,bp(n)%u_series)
+	   bp(n)%u_seriesloc=1
+	   n3=0
+	   DO WHILE (bp(n)%u_tseries(n3+1).NE.-99999.)
+		n3=n3+1
+	   END DO	  
+	   IF (bp(n)%u_tseries(n3).lt.t_end) THEN
+				write(*,*),' Bedplume : ',n
+				write(*,*),' time series shorter than t_end'
+				write(*,*),' series file:',bp(n)%u_tseriesfile
+				CALL writeerror(279)
+		ENDIF	   
+	ENDIF
+	IF (bp(n)%v_tseriesfile.eq.'') THEN
+	ELSE
+	   call readtseries2(bp(n)%v_tseriesfile,bp(n)%v_tseries,bp(n)%v_series)
+	   bp(n)%v_seriesloc=1
+	   n3=0
+	   DO WHILE (bp(n)%v_tseries(n3+1).NE.-99999.)
+		n3=n3+1
+	   END DO	  
+	   IF (bp(n)%v_tseries(n3).lt.t_end) THEN
+				write(*,*),' Bedplume : ',n
+				write(*,*),' time series shorter than t_end'
+				write(*,*),' series file:',bp(n)%v_tseriesfile
+				CALL writeerror(279)
+		ENDIF	   
+	ENDIF
+	IF (bp(n)%w_tseriesfile.eq.'') THEN
+	ELSE
+	   call readtseries2(bp(n)%w_tseriesfile,bp(n)%w_tseries,bp(n)%w_series)
+	   bp(n)%u_seriesloc=1
+	   n3=0
+	   DO WHILE (bp(n)%w_tseries(n3+1).NE.-99999.)
+		n3=n3+1
+	   END DO	  
+	   IF (bp(n)%w_tseries(n3).lt.t_end) THEN
+				write(*,*),' Bedplume : ',n
+				write(*,*),' time series shorter than t_end'
+				write(*,*),' series file:',bp(n)%w_tseriesfile
+				CALL writeerror(279)
+		ENDIF	   
+	ENDIF
+	
 	IF (bp(n)%S_tseriesfile.eq.'') THEN
 	ELSE
 	   call readtseries3(bp(n)%S_tseriesfile,bp(n)%S_tseries,bp(n)%S_series(1:nfrac,:),nfrac)
@@ -1247,7 +1351,7 @@
 	ALLOCATE(kbedt(0:i1,0:j1))
 	ALLOCATE(zbed(0:i1,0:j1))
 	ALLOCATE(rhocorr_air_z(1:nfrac,0:k1))
-	ALLOCATE(av_slope(0:k1))
+	ALLOCATE(av_slope(1:imax,1:jmax,0:k1))
 	
 	
 	IF (SEM.eq.1) THEN

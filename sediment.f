@@ -25,11 +25,15 @@
        CONTAINS
 
        subroutine init_sediment
-
+		USE netcdf
        implicit none
 
  	INTEGER n,n2
 	REAL Re_p,atm_pres,rhoair_z,zz,ddzz,z_rks(1:kmax),interpseries
+	integer :: ncid, rhVarId, status2, ndims, xtype,natts,status
+	integer, dimension(nf90_max_var_dims) :: dimids
+	integer size1,size2,size3,size4
+	
 
 	DO n=1,nfrac
 	  Re_p=ABS(frac(n)%ws)*frac(n)%dfloc/(ekm_mol/rho_b)
@@ -72,7 +76,7 @@
 		z_rks(k)=k*dz-0.5*dz
 	ENDDO
 	IF (av_slope_z(1)<0.) THEN
-	  av_slope(0:k1)=avalanche_slope(1)
+	  av_slope(1:imax,1:jmax,0:k1)=avalanche_slope(1)
 	ELSE
 		IF (av_slope_z(1)>0.) CALL writeerror(141)
 		n=1
@@ -84,14 +88,36 @@
 		IF (avalanche_slope(n)<0.) CALL writeerror(142)
 		n2=0
 		DO k=1,kmax
-			av_slope(k)=interpseries(av_slope_z(1:n),avalanche_slope(1:n),n2,z_rks(k))
-			IF (av_slope(k)>41.) THEN
-			 write(*,*),rank,k,n2,av_slope(k),z_rks(k),av_slope_z(n2:n2+1),avalanche_slope(n2:n2+1)
-			ENDIF
+			av_slope(1:imax,1:jmax,k)=interpseries(av_slope_z(1:n),avalanche_slope(1:n),n2,z_rks(k))
 		ENDDO
-		av_slope(0)=av_slope(1)
-		av_slope(k1)=av_slope(kmax)
+		av_slope(1:imax,1:jmax,0)=av_slope(1:imax,1:jmax,1)
+		av_slope(1:imax,1:jmax,k1)=av_slope(1:imax,1:jmax,kmax)
 	ENDIF
+	
+	if (avfile.ne.'') then
+		status2 = nf90_open(avfile, nf90_NoWrite, ncid) 
+		IF (status2/= nf90_noerr) THEN
+			write(*,*),'file =',avfile
+			CALL writeerror(703)
+		ENDIF
+		status = nf90_inq_varid(ncid, "av_slope",rhVarid)
+		if (status.eq.nf90_NoErr) then
+			call check( nf90_inquire_variable(ncid, rhVarid, dimids = dimIDs))
+			call check( nf90_inquire_dimension(ncid, dimIDs(1), len = size1))
+			call check( nf90_inquire_dimension(ncid, dimIDs(2), len = size2))
+			call check( nf90_inquire_dimension(ncid, dimIDs(3), len = size3))
+			IF(size1.ne.imax.or.size2.ne.jmax*px.or.size3.ne.k1+1) CALL writeerror(704)
+			call check( nf90_get_var(ncid,rhVarid,av_slope(1:imax,1:jmax,0:k1),
+     &                       start=(/1,rank*jmax+1,1/),count=(/imax,jmax,k1+1/)) )
+		else
+			write(*,*),'file =',avfile,' variable "av_slope" not found '
+			CALL writeerror(704)
+		endif
+		call check( nf90_close(ncid) )
+	endif
+	
+
+			
 	!IF (rank.eq.0) write(*,*),av_slope,z_rks,av_slope_z(1:n),avalanche_slope(1:n)
 	
 	
@@ -818,20 +844,47 @@
 					!kbed(i,j)=MIN(kbed(i,j)+1,kmax) !update bed level at start sedimentation 
 					c_adjustA = MAX(cfixedbed-ctot_firstcel,0.)/MAX(cbotnewtot,1.e-12)    !first fluid cel not yet filled up --> c_adjustA>0 & c_adjustB=0--> fluid cel transformed into bed and sediment from cbotnew moved to bed
 					c_adjustB = MIN(cfixedbed-ctot_firstcel,0.)/MAX(ctot_firstcel,1.e-12) !first fluid cel already more than filled up --> c_adjustB<0&c_adjustA=0 --> fluid cel transformed into bed and excess sediment to cbotnew
+!					DO n=1,nfrac 
+!						Clivebed(n,i,j,kbed(i,j))=ccnew(n,i,j,kbed(i,j))+
+!     &						c_adjustA*cbotnew(n,i,j)+c_adjustB*ccnew(n,i,j,kbed(i,j))  ! apply sedimentation ratio between fractions new sediment concentration of cells within bed
+!						cbotnew(n,i,j)=cbotnew(n,i,j)-c_adjustA*cbotnew(n,i,j)-c_adjustB*ccnew(n,i,j,kbed(i,j))
+!!     &						+(morfac2-1.)*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+!						ccnew(n,i,j,kbed(i,j)+1)=ccnew(n,i,j,kbed(i,j)+1)+(morfac2-1.)/morfac2*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+!						drdt(i,j,kbed(i,j)+1) = drdt(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!						rnew(i,j,kbed(i,j)+1) = rnew(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!						rold(i,j,kbed(i,j)+1) = rold(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density						
+!						ccnew(n,i,j,kbed(i,j))=0. 
+!						drdt(i,j,kbed(i,j)) = drdt(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!						rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!						rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density							
+!					ENDDO
+					cctot=0.
+					DO k=kbed(i,j)+1,kmax 
+						cctot=cctot+SUM(ccfd(1:nfrac,i,j,k))
+					ENDDO
 					DO n=1,nfrac 
 						Clivebed(n,i,j,kbed(i,j))=ccnew(n,i,j,kbed(i,j))+
      &						c_adjustA*cbotnew(n,i,j)+c_adjustB*ccnew(n,i,j,kbed(i,j))  ! apply sedimentation ratio between fractions new sediment concentration of cells within bed
 						cbotnew(n,i,j)=cbotnew(n,i,j)-c_adjustA*cbotnew(n,i,j)-c_adjustB*ccnew(n,i,j,kbed(i,j))
 !     &						+(morfac2-1.)*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
-						ccnew(n,i,j,kbed(i,j)+1)=ccnew(n,i,j,kbed(i,j)+1)+(morfac2-1.)/morfac2*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
-						drdt(i,j,kbed(i,j)+1) = drdt(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-						rnew(i,j,kbed(i,j)+1) = rnew(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-						rold(i,j,kbed(i,j)+1) = rold(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density						
+						IF (cctot<1e-12) THEN
+						 ccnew(n,i,j,kbed(i,j)+1)=ccnew(n,i,j,kbed(i,j)+1)+(morfac2-1.)/morfac2*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+						 drdt(i,j,kbed(i,j)+1) = drdt(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						 rnew(i,j,kbed(i,j)+1) = rnew(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						 rold(i,j,kbed(i,j)+1) = rold(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density												
+						ELSE
+						 DO k=kbed(i,j)+1,kmax !redistribute morfac2 buried sediment over water column above 
+						  ccnew(n,i,j,k)=ccnew(n,i,j,k)+(morfac2-1.)/morfac2*SUM(ccfd(1:nfrac,i,j,k))/cctot*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+						  drdt(i,j,k) = drdt(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						  rnew(i,j,k) = rnew(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						  rold(i,j,k) = rold(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density	
+						 ENDDO
+						ENDIF
 						ccnew(n,i,j,kbed(i,j))=0. 
 						drdt(i,j,kbed(i,j)) = drdt(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 						rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 						rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density							
-					ENDDO
+					ENDDO					
 				ELSEIF (cbotnewtot.gt.1.e-12.and.SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).lt.cfixedbed.and.kbed(i,j).gt.0
      &                 .and.MINVAL(cbotnew(1:nfrac,i,j)).ge.0) THEN !only allowed if kbed>0, because Clivebed(:,:,0)=0
 					! add sediment to Clivebed to bring it to cfixedbed again 
@@ -960,7 +1013,7 @@
 					sl7=SQRT((Rp(i)*sin_u(j-1)-Rp(i)*sin_u(j))**2+(Rp(i)-Rp(i+1))**2)/MAX(zb_all(i,j)-zb_all(i+1,j-1),1.e-18)
 					sl8=SQRT((Rp(i)*sin_u(j-1)-Rp(i)*sin_u(j))**2+(Rp(i)-Rp(i-1))**2)/MAX(zb_all(i,j)-zb_all(i-1,j-1),1.e-18)
 					maxbedslope(i,j)=MIN(sl1,sl2,sl3,sl4,sl5,sl6,sl7,sl8)
-					IF (maxbedslope(i,j).lt.0.9999*av_slope(kbed(i,j))*bednotfixed(i,j,kbed(i,j)).and.kbed(i,j).ge.1) THEN
+					IF (maxbedslope(i,j).lt.0.9999*av_slope(i,j,kbed(i,j))*bednotfixed(i,j,kbed(i,j)).and.kbed(i,j).ge.1) THEN
 					! avalanche...
 						have_avalanched=have_avalanched+1.
 						IF (sl1.le.maxbedslope(i,j)) THEN
@@ -1007,7 +1060,7 @@
 							write(*,*),'Warning avalanche cell not found,i,j:',i,j
 							CYCLE 
 						ENDIF
-						dbed_allowed = dl/MAX(av_slope(kbed(i,j))*bednotfixed(i,j,kbed(i,j)),1.e-18)
+						dbed_allowed = dl/MAX(av_slope(i,j,kbed(i,j))*bednotfixed(i,j,kbed(i,j)),1.e-18)
 						dbed_adjust = vol_Vp(itrgt,jtrgt)/(vol_Vp(i,j)+vol_Vp(itrgt,jtrgt))*(dbed - dbed_allowed)
 						dz_botlayer =SUM(cbotnew(1:nfrac,i,j))/cfixedbed*dz
       ! write(*,*),'rank,i,j:',rank,i,j,dbed,dbed_allowed,dbed_adjust,dz_botlayer,maxbedslope(i,j),av_slope(kbed(i,j))	

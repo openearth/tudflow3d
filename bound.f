@@ -1552,6 +1552,18 @@ c get stuff from other CPU's
         enddo
        enddo
 
+	DO n=1,nbedplume !make all forces zero before new forces are applied for bedplume
+		IF (bp(n)%u.ne.-99999.) THEN ! apply bedplume velocity boundary condition:
+			IF ((bp(n)%forever.eq.1.and.time_np.gt.bp(n)%t0.and.time_np.lt.bp(n)%t_end)
+     &     .or.(bp(n)%forever.eq.0.and.time_n.lt.bp(n)%t0.and.time_np.gt.bp(n)%t0)) THEN
+				Ppropx=0.
+				Ppropy=0.
+				Ppropz=0.
+			ENDIF
+		ENDIF 
+	ENDDO
+	 
+	   
 	DO n=1,nbedplume
 	IF (bp(n)%u.ne.-99999.) THEN ! apply bedplume velocity boundary condition:
 	IF ((bp(n)%forever.eq.1.and.time_np.gt.bp(n)%t0.and.time_np.lt.bp(n)%t_end)
@@ -1563,28 +1575,28 @@ c get stuff from other CPU's
 	  phi=atan2(V_b,(U_TSHD-U_b))
 	endif
 
-      !! Search for P,V:
-      do k=CEILING(bp(n)%zbottom/dz),FLOOR(bp(n)%height/dz)! do k=k1,0,-1 !from top to bottom
-       do i=0,i1  
-         do j=j1,0,-1       ! bedplume loop is only initial condition: do not bother to have U,V,W initial staggering perfect 
-			xx=Rp(i)*cos_u(j)-schuif_x
-			yy=Rp(i)*sin_u(j)
-			xTSHD(1:4)=bp(n)%x*cos(phi)-bp(n)%y*sin(phi)
-			yTSHD(1:4)=bp(n)%x*sin(phi)+bp(n)%y*cos(phi)
-			CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
-			if (inout.eq.1) then
-				Ppropx(i,j,k) = 0. 
-				Ppropx(MAX(i-1,0),j,k) = 0.
-				Ppropy(i,j,k) = 0.
-				Ppropy(i,MAX(j-1,0),k) = 0.
-				Ppropz(i,j,k) = 0.
-				Ppropz(i,j,MAX(k-1,0)) = 0. 
-			endif
-		 enddo
-	   enddo
-	  enddo
+!      !! Search for P,V:
+!      do k=MAX(1,CEILING(bp(n)%zbottom/dz)),MIN(kmax,FLOOR(bp(n)%height/dz)) ! do k=k1,0,-1 !from top to bottom
+!       do i=0,i1  
+!         do j=j1,0,-1       ! bedplume loop is only initial condition: do not bother to have U,V,W initial staggering perfect 
+!			xx=Rp(i)*cos_u(j)-schuif_x
+!			yy=Rp(i)*sin_u(j)
+!			xTSHD(1:4)=bp(n)%x*cos(phi)-bp(n)%y*sin(phi)
+!			yTSHD(1:4)=bp(n)%x*sin(phi)+bp(n)%y*cos(phi)
+!			CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+!			if (inout.eq.1) then
+!				Ppropx(i,j,k) = 0. 
+!				Ppropx(MAX(i-1,0),j,k) = 0.
+!				Ppropy(i,j,k) = 0.
+!				Ppropy(i,MAX(j-1,0),k) = 0.
+!				Ppropz(i,j,k) = 0.
+!				Ppropz(i,j,MAX(k-1,0)) = 0. 
+!			endif
+!		 enddo
+!	   enddo
+!	  enddo
 	
-      do k=CEILING(bp(n)%zbottom/dz),FLOOR(bp(n)%height/dz)! do k=k1,0,-1 !from top to bottom
+      do k=MAX(1,CEILING(bp(n)%zbottom/dz)),MIN(kmax,FLOOR(bp(n)%height/dz))! do k=k1,0,-1 !from top to bottom
        do i=0,i1  
          do j=j1,0,-1       ! bedplume loop is only initial condition: do not bother to have U,V,W initial staggering perfect 
 			xx=Rp(i)*cos_u(j)-schuif_x
@@ -1597,24 +1609,26 @@ c get stuff from other CPU's
 !	 			inout=0
 !	  		ENDIF
 			if (inout.eq.1) then
-				!Ubound(i,j,k)=(bp(n)%u*cos_u(j)+bp(n)%v*sin_u(j))*rhU(i,j,k) !rho(i,j,k)
-				!Ubound(MAX(i-1,0),j,k)=(bp(n)%u*cos_u(j)+bp(n)%v*sin_u(j))*rhU(MAX(i-1,0),j,k) !rho(MAX(i-1,0),j,k)
-				!Vbound(i,j,k)=(-bp(n)%u*sin_v(j)+bp(n)%v*cos_v(j))*rhV(i,j,k) !rho(i,j,k)
-				!Vbound(i,MAX(j-1,0),k)=(-bp(n)%u*sin_v(MAX(j-1,0))+bp(n)%v*cos_v(MAX(j-1,0)))*rhV(i,MAX(j-1,0),k) !rho(i,MAX(j-1,0),k)
-				!Wbound(i,j,k)=bp(n)%w*rhW(i,j,k) !rho(i,j,k)
-				!Wbound(i,j,MAX(k-1,0))=bp(n)%w*rhW(i,j,MAX(k-1,0)) !rho(i,j,MAX(k-1,0))
-				
-				fbx2=rhU(i,j,k)*ABS(bp(n)%u)*bp(n)%u/(bp(n)%x(2)-bp(n)%x(1))
-				fby2=rhV(i,j,k)*ABS(bp(n)%v)*bp(n)%v/(bp(n)%y(3)-bp(n)%y(2))
-				fbz2=rhW(i,j,k)*ABS(bp(n)%w)*bp(n)%w/(bp(n)%height-bp(n)%zbottom)
-				fbx   =  fbx2 * cos(phi) - fby2 * sin(phi)
-				fby   =  fbx2 * sin(phi) + fby2 * cos(phi)		
-				Ppropx(i,j,k) = Ppropx(i,j,k)+0.5*(cos_u(j)*fbx+sin_u(j)*fby)
-				Ppropx(MAX(i-1,0),j,k) = Ppropx(MAX(i-1,0),j,k) + 0.5*(cos_u(j)*fbx+sin_u(j)*fby)
-				Ppropy(i,j,k) = Ppropy(i,j,k)+0.5*(-sin_v(j)*fbx+cos_v(j)*fby)
-				Ppropy(i,MAX(j-1,0),k) = Ppropy(i,MAX(j-1,0),k) + 0.5*(-sin_v(MAX(j-1,0))*fbx+cos_v(MAX(j-1,0))*fby)
-				Ppropz(i,j,k) = Ppropz(i,j,k)+0.5*fbz2
-				Ppropz(i,j,MAX(k-1,0)) = Ppropz(i,j,MAX(k-1,0)) + 0.5*fbz2
+				IF (bp(n)%velocity_force.eq.0) THEN
+				  Ubound(i,j,k)=(bp(n)%u*cos_u(j)+bp(n)%v*sin_u(j))*rhU(i,j,k) !rho(i,j,k)
+				  Ubound(MAX(i-1,0),j,k)=(bp(n)%u*cos_u(j)+bp(n)%v*sin_u(j))*rhU(MAX(i-1,0),j,k) !rho(MAX(i-1,0),j,k)
+				  Vbound(i,j,k)=(-bp(n)%u*sin_v(j)+bp(n)%v*cos_v(j))*rhV(i,j,k) !rho(i,j,k)
+				  Vbound(i,MAX(j-1,0),k)=(-bp(n)%u*sin_v(MAX(j-1,0))+bp(n)%v*cos_v(MAX(j-1,0)))*rhV(i,MAX(j-1,0),k) !rho(i,MAX(j-1,0),k)
+				  Wbound(i,j,k)=bp(n)%w*rhW(i,j,k) !rho(i,j,k)
+				  Wbound(i,j,MAX(k-1,0))=bp(n)%w*rhW(i,j,MAX(k-1,0)) !rho(i,j,MAX(k-1,0))
+				ELSE
+				  fbx2=rhU(i,j,k)*ABS(bp(n)%u)*bp(n)%u/(bp(n)%x(2)-bp(n)%x(1))
+				  fby2=rhV(i,j,k)*ABS(bp(n)%v)*bp(n)%v/(bp(n)%y(3)-bp(n)%y(2))
+				  fbz2=rhW(i,j,k)*ABS(bp(n)%w)*bp(n)%w/(bp(n)%height-bp(n)%zbottom)
+				  fbx   =  fbx2 * cos(phi) - fby2 * sin(phi)
+				  fby   =  fbx2 * sin(phi) + fby2 * cos(phi)		
+				  Ppropx(i,j,k) = Ppropx(i,j,k)+0.5*(cos_u(j)*fbx+sin_u(j)*fby)
+				  Ppropx(MAX(i-1,0),j,k) = Ppropx(MAX(i-1,0),j,k) + 0.5*(cos_u(j)*fbx+sin_u(j)*fby)
+				  Ppropy(i,j,k) = Ppropy(i,j,k)+0.5*(-sin_v(j)*fbx+cos_v(j)*fby)
+				  Ppropy(i,MAX(j-1,0),k) = Ppropy(i,MAX(j-1,0),k) + 0.5*(-sin_v(MAX(j-1,0))*fbx+cos_v(MAX(j-1,0))*fby)
+				  Ppropz(i,j,k) = Ppropz(i,j,k)+0.5*fbz2
+				  Ppropz(i,j,MAX(k-1,0)) = Ppropz(i,j,MAX(k-1,0)) + 0.5*fbz2
+				ENDIF
 			endif
 		 enddo
 	   enddo
@@ -2175,7 +2189,7 @@ c get stuff from other CPU's
 	else
 	  phi=atan2(V_b,(U_TSHD-U_b))
 	endif
-      do k=CEILING(bp(n2)%zbottom/dz),FLOOR(bp(n2)%height/dz)! do k=0,k1
+      do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz))! do k=0,k1
        do i=0,i1  
          do j=j1,0,-1       
 	  xx=Rp(i)*cos_u(j)-schuif_x
@@ -2512,8 +2526,9 @@ c*************************************************************
 	implicit none
 	
 	real tt
-	integer n2,inout
+	integer n2,inout,n
 	real xTSHD(4),yTSHD(4),phi,interpseries,xx,yy
+	real fbx2,fbx,fby2,fby,fbz2
 
 	! rotation ship for ambient side current
 	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
@@ -2521,8 +2536,39 @@ c*************************************************************
 	else
 	  phi=atan2(V_b,(U_TSHD-U_b))
 	endif	
+	DO n2=1,nbedplume !make all forces zero before new forces are applied for bedplume
+		IF ((bp(n2).h_tseriesfile.ne.''.or.bp(n2).zb_tseriesfile.ne.''.or.bp(n2).nmove>0).and.bp(n2)%u.ne.-99999.) THEN ! apply bedplume velocity boundary condition:
+			IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end)) THEN
+				Ppropx=0.
+				Ppropy=0.
+				Ppropz=0.
+			ENDIF
+		ENDIF 
+	ENDDO	
 	DO n2=1,nbedplume
-		IF (bp(n2).h_tseriesfile.ne.''.or.bp(n2).zb_tseriesfile.ne.'') THEN !necessary to update volncells!
+		IF (bp(n2).h_tseriesfile.ne.''.or.bp(n2).zb_tseriesfile.ne.''.or.bp(n2).nmove>0) THEN !necessary to update volncells!
+!		 IF (bp(n2)%u.ne.-99999.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end) THEN ! make propx,y,z forces zero of old bedplume location:
+!		  !! first make propx 0 for old zbottom and heigth
+!		  do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz))! do k=k1,0,-1 !from top to bottom
+!		   do i=0,i1  
+!			 do j=j1,0,-1       ! bedplume loop is only initial condition: do not bother to have U,V,W initial staggering perfect 
+!				xx=Rp(i)*cos_u(j)-schuif_x
+!				yy=Rp(i)*sin_u(j)
+!				xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
+!				yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
+!				CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+!				if (inout.eq.1) then
+!					Ppropx(i,j,k) = 0. 
+!					Ppropx(MAX(i-1,0),j,k) = 0.
+!					Ppropy(i,j,k) = 0.
+!					Ppropy(i,MAX(j-1,0),k) = 0.
+!					Ppropz(i,j,k) = 0.
+!					Ppropz(i,j,MAX(k-1,0)) = 0. 
+!				endif
+!			 enddo
+!		   enddo
+!		  enddo	
+!		 ENDIF
 		  IF (bp(n2).h_tseriesfile.ne.'') THEN
 			bp(n2)%height=interpseries(bp(n2)%h_tseries,bp(n2)%h_series,bp(n2)%h_seriesloc,tt)
 		  ENDIF
@@ -2544,6 +2590,20 @@ c*************************************************************
 !		  ENDIF
 		  if (inout.eq.1) then
 		   bp(n2)%volncells=bp(n2)%volncells+vol_V(i,j)
+		   IF (bp(n2)%u.ne.-99999.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end) THEN
+				  fbx2=rhU(i,j,k)*ABS(bp(n2)%u)*bp(n2)%u/(bp(n2)%x(2)-bp(n2)%x(1))
+				  fby2=rhV(i,j,k)*ABS(bp(n2)%v)*bp(n2)%v/(bp(n2)%y(3)-bp(n2)%y(2))
+				  fbz2=rhW(i,j,k)*ABS(bp(n2)%w)*bp(n2)%w/(bp(n2)%height-bp(n2)%zbottom)
+				  fbx   =  fbx2 * cos(phi) - fby2 * sin(phi)
+				  fby   =  fbx2 * sin(phi) + fby2 * cos(phi)		
+				  Ppropx(i,j,k) = Ppropx(i,j,k)+0.5*(cos_u(j)*fbx+sin_u(j)*fby)
+				  Ppropx(MAX(i-1,0),j,k) = Ppropx(MAX(i-1,0),j,k) + 0.5*(cos_u(j)*fbx+sin_u(j)*fby)
+				  Ppropy(i,j,k) = Ppropy(i,j,k)+0.5*(-sin_v(j)*fbx+cos_v(j)*fby)
+				  Ppropy(i,MAX(j-1,0),k) = Ppropy(i,MAX(j-1,0),k) + 0.5*(-sin_v(MAX(j-1,0))*fbx+cos_v(MAX(j-1,0))*fby)
+				  Ppropz(i,j,k) = Ppropz(i,j,k)+0.5*fbz2
+				  Ppropz(i,j,MAX(k-1,0)) = Ppropz(i,j,MAX(k-1,0)) + 0.5*fbz2		   
+		   ENDIF
+		   
 		   endif
 		  enddo
 		 enddo
@@ -2565,11 +2625,25 @@ c*************************************************************
 	
 	real tt
 	integer n2,inout,n3
-	real interpseries
+	real interpseries,Utot
 	
 	DO n2=1,nbedplume
 		  IF (bp(n2).Q_tseriesfile.ne.'') THEN
 			bp(n2)%Q=interpseries(bp(n2)%Q_tseries,bp(n2)%Q_series,bp(n2)%Q_seriesloc,tt)
+		  ENDIF
+		  IF (bp(n2).u_tseriesfile.ne.'') THEN
+			bp(n2)%u=interpseries(bp(n2)%u_tseries,bp(n2)%u_series,bp(n2)%u_seriesloc,tt)
+		  ENDIF		  
+		  IF (bp(n2).v_tseriesfile.ne.'') THEN
+			bp(n2)%v=interpseries(bp(n2)%v_tseries,bp(n2)%v_series,bp(n2)%v_seriesloc,tt)
+		  ENDIF			  
+		  IF (bp(n2).w_tseriesfile.ne.'') THEN
+			bp(n2)%w=interpseries(bp(n2)%w_tseries,bp(n2)%w_series,bp(n2)%w_seriesloc,tt)
+		  ENDIF			  
+		  IF (bp(n2).nmove.gt.0.and.bp(n2)%u.ne.-99999.) THEN 
+			Utot = SQRT(bp(n2)%u**2+bp(n2)%v**2)
+			bp(n2)%u = Utot*bp(n2)%move_nx_series(MAX(bp(n2)%nmove_present,1))
+			bp(n2)%v = Utot*bp(n2)%move_ny_series(MAX(bp(n2)%nmove_present,1))			
 		  ENDIF
 		  IF (bp(n2).S_tseriesfile.ne.'') THEN
 			CALL interpseries3(bp(n2)%S_tseries,bp(n2)%S_series(1:nfrac,:),bp(n2)%S_seriesloc,tt,nfrac,bp(n2)%sedflux(1:nfrac))
@@ -2610,7 +2684,7 @@ c*************************************************************
 	include 'mpif.h'
 	
 	integer inout,n,ierr
-	real xx,yy,phi,xTSHD(1:4),yTSHD(1:4),zbed_max,zbed_max_tot,zb
+	real xx,yy,phi,xTSHD(1:4),yTSHD(1:4),zbed_max,zbed_max_tot,zb,Utot
 	
 	DO n=1,nbedplume
 	  IF ((bp(n)%forever.eq.1.and.time_np.gt.bp(n)%t0.and.time_np.lt.bp(n)%t_end).and.
@@ -2678,13 +2752,20 @@ c*************************************************************
 				bp(n)%y = bp(n)%y+bp(n)%move_dy_series(bp(n)%nmove_present)
 				bp(n)%height = bp(n)%height+bp(n)%move_dz_series(bp(n)%nmove_present)
 				bp(n)%zbottom = bp(n)%zbottom+bp(n)%move_dz_series(bp(n)%nmove_present)
+				IF (bp(n)%u.ne.-99999.) THEN
+					Utot = SQRT(bp(n)%u**2+bp(n)%v**2)
+					bp(n)%u = Utot*bp(n)%move_nx_series(bp(n)%nmove_present)
+					bp(n)%v = Utot*bp(n)%move_ny_series(bp(n)%nmove_present)
+				ENDIF
 				
 				IF (rank.eq.0) THEN
-				  write(*,'(a,i6,a,f8.4,a,i4,a)'),'* Bedplume : ',n,' with max bedlevel: ',zbed_max_tot,
-     &			  ' has been moved for the ',bp(n)%nmove_present,' time.'
-				  write(*,'(a,f7.2,f7.2,f7.2)'),'Move dx,dy,dz:',
-     &				bp(n)%move_dx_series(bp(n)%nmove_present),bp(n)%move_dy_series(bp(n)%nmove_present),
-     &	 bp(n)%move_dz_series(bp(n)%nmove_present)
+				  write(*,'(a,i6,a,f8.4,f8.4,a,i4,a)'),'* Bedplume : ',n,' with max bedlevel and criterium: ',zbed_max_tot,
+     &			  bp(n)%move_zbed_criterium(MAX(bp(n)%nmove_present-1,1)),' has been moved for the ',bp(n)%nmove_present,' time.'
+				  write(*,'(a,f11.2,f11.2,f11.2,f11.2)'),'Location after move: x=',bp(n)%x
+				  write(*,'(a,f11.2,f11.2,f11.2,f11.2)'),'Location after move: y=',bp(n)%y
+				  write(*,'(a,f11.2,f11.2,a,f8.4)'),'Location after move: z=',bp(n)%zbottom,bp(n)%height,
+     &			  '; z-criterium after move=',bp(n)%move_zbed_criterium(MAX(bp(n)%nmove_present,1))
+
 				ENDIF
 				IF (bp(n)%move_outputfile_series(bp(n)%nmove_present).eq.1) THEN
 					call output_nc('mvbp3D_',istep_output_bpmove,time_np)

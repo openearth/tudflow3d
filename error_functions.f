@@ -346,9 +346,11 @@
 	CASE(173)
 		write(*,*) '# namelist &plume -->bedplume                    #'			
 		write(*,*) '# move_dx_series,move_dy_series,move_dz_series   #'			
-		write(*,*) '# or move_zbed_criterium not same length         #'
+		write(*,*) '# move_nx_series,move_ny_series,                 #'
+		write(*,*) '# move_zbed_criterium not same length            #'
 		write(*,*) '# make all series same length                    #'			
-		write(*,*) '# move_zbed_criterium may be length 1 or length series #'	
+		write(*,*) '# EXCEPTION: move_zbed_criterium,move_nx_series, #'	
+		write(*,*) '# move_ny_series may be length 1 or length series #'	
 	CASE(174)
 		write(*,*) '# namelist &plume -->bedplume                    #'			
 		write(*,*) '# move_filename_series  must have length         #'			
@@ -574,7 +576,13 @@
 		write(*,*) '# restart_dir does not give correct files        #'	
 	CASE(702)
 		write(*,*) '# namelist &simulation                           #'			
-		write(*,*) '# restart_dir does not contain correct size data #'			
+		write(*,*) '# restart_dir does not contain correct size data #'	
+	CASE(703)
+		write(*,*) '# namelist &constants                            #'			
+		write(*,*) '# avfile does not exist                          #'	
+	CASE(704)
+		write(*,*) '# namelist &constants                            #'			
+		write(*,*) '# avfile does not contain correct data           #'			
 	CASE(1001)
 		write(*,*) '# namelist &timeseries                           #'			
 		write(*,*) '# file cannot be found                           #'	

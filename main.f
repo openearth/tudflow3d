@@ -220,11 +220,11 @@
 			call RK3(ib,ie,jb,je,kb,ke)
 		endif
 		call bound_rhoU(dUdt,dVdt,dWdt,drdt,slip_bot,time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new) !bound_rhoU on rhou^*
-		call update_nvol_bedplume(time_np)
 		call update_QSc_bedplume(time_np)
 		call update_Qc_plume(time_np)
 		call update_location_bedplume
-
+		call update_nvol_bedplume(time_np)
+		
 		if (comp_filter_n>0) then
 			if (mod(istep,comp_filter_n).eq.0) then
 			  call compact_filter(dUdt,dVdt,dWdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,comp_filter_a,
