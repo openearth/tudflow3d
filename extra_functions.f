@@ -25,7 +25,7 @@
       include 'mpif.h'
       integer ierr
       real  dr2,dz2,df,df2,kcoeff,tmp1,tmp2,tmp3,Courant,dtmp,dtold
-	  double precision Tadapt,Uav,Vav,localsum,globalsum,du,duu
+	  double precision Tadapt,Uav,Vav,localsum,globalsum,du,duu,wsettlingmax,wsettlingmin
 
 	  
 !		IF (nobst>0.and.bp(1)%forever.eq.0.and.time_np+dt.gt.bp(1)%t0.and.counter<10) THEN
@@ -52,6 +52,13 @@
       ELSE
         dz2 = dz    * dz
       ENDIF
+	  IF (nfrac>0) THEN
+		wsettlingmax=MAXVAL(frac(1:nfrac)%ws) !positive downward
+		wsettlingmin=MIN(0.,MINVAL(frac(1:nfrac)%ws)) !find air rise velocity (otherwise zero)
+	  ELSE
+		wsettlingmax=0.
+		wsettlingmin=0.
+	  ENDIF
       do k=1,kmax
          do j=1,jmax
             do i=1,imax
@@ -61,7 +68,7 @@
             kcoeff = ekm(i,j,k) /rnew(i,j,k)
             tmp1 = ( abs(Unew(i,j,k)) / ( Rp(i+1)-Rp(i) ) ) +
      &             ( abs(Vnew(i,j,k)) /         df        ) +
-     &             ( abs(Wnew(i,j,k)) /         dz        )             
+     &             ( MAX(abs(Wnew(i,j,k)-wsettlingmax),abs(Wnew(i,j,k)-wsettlingmin)) /         dz        )             
 !			tmp1 = ( abs(Unew(i,j,k)) / ( Rp(i+1)-Rp(i) ) )              !2D TVD tests show that taking MAX of 3 dirs is not sufficient for stable results without overshoot/undershoot
 !			tmp1 = MAX(tmp1,( abs(Vnew(i,j,k)) /         df        ))
 !			tmp1 = MAX(tmp1,( abs(Wnew(i,j,k)) /         dz        ))
