@@ -408,7 +408,7 @@
 	REAL d_cbotnew(nfrac,0:i1,0:j1),dbed,dl,dbed_allowed,dbed_adjust,dz_botlayer,c_adjust,c_adjustA,c_adjustB
 	REAL*8 cbf(nfrac,0:i1),cbb(nfrac,0:i1),zbf(0:i1),zbb(0:i1),reduced_sed
 	INTEGER itrgt,jtrgt,nav,n_av
-	REAL ws_botsand2,rho_botsand2,mbottot_sand2,PSD_bot_sand_massfrac2(nfr_sand),have_avalanched,have_avalanched_tmp
+	REAL ws_botsand2,rho_botsand2,mbottot_sand2,PSD_bot_sand_massfrac2(nfr_sand),have_avalanched,have_avalanched_tmp,cctot
 	erosion=0.
 	deposition=0.
 
@@ -490,7 +490,7 @@
 				!! 1 determine erosion/sedimentation of mixture of all silt fractions
 				DO n1=1,nfr_silt
 					n=nfrac_silt(n1)
-					cbottot=cbottot+cbotnew(n,i,j)
+					cbottot=cbottot+MAX(cbotnew(n,i,j),0.)
 					cbedtot=cbedtot+Clivebed(n,i,j,kbed(i,j))
 				ENDDO
 				
@@ -500,9 +500,9 @@
 				IF (cbottot>0.) THEN
 					DO n1=1,nfr_silt
 						n=nfrac_silt(n1)
-						kn_sed_avg=kn_sed_avg+(cbotnew(n,i,j)/cbottot)*frac(n)%kn_sed
-						Mr_avg=Mr_avg+(cbotnew(n,i,j)/cbottot)*frac(n)%M/frac(n)%rho
-						tau_e_avg=tau_e_avg+(cbotnew(n,i,j)/cbottot)*frac(n)%tau_e
+						kn_sed_avg=kn_sed_avg+(MAX(cbotnew(n,i,j),0.)/cbottot)*frac(n)%kn_sed
+						Mr_avg=Mr_avg+(MAX(cbotnew(n,i,j),0.)/cbottot)*frac(n)%M/frac(n)%rho
+						tau_e_avg=tau_e_avg+(MAX(cbotnew(n,i,j),0.)/cbottot)*frac(n)%tau_e
 					ENDDO
 				ELSEIF (cbedtot>0.) THEN ! determine avg sediment characteristics from bed:
 					DO n1=1,nfr_silt
@@ -549,7 +549,7 @@
 					IF (interaction_bed.ge.6.and.kbed(i,j).eq.0) THEN !unlimited erosion in case kbed.eq.0
 						erosionf(n) = erosion_avg(n) * (c_bed(n)/cfixedbed) !erosion per fraction					
 					ELSEIF (cbottot>0.) THEN
-						erosionf(n) = erosion_avg(n) * (cbotnew(n,i,j)/cbottot) !erosion per fraction
+						erosionf(n) = erosion_avg(n) * (MAX(cbotnew(n,i,j),0.)/cbottot) !erosion per fraction
 						erosionf(n) = MIN(erosionf(n),(cbotnew(n,i,j)+Clivebed(n,i,j,kbed(i,j)))*dz/morfac2) ! m3/m2, not more material can be eroded than there was in top layer cbotnew
 						erosionf(n) = MAX(erosionf(n),0.)
 					ELSEIF (cbedtot>0.) THEN
@@ -616,18 +616,18 @@
 					ELSE
 						diameter_sand_PSD(0)=0.
 					ENDIF					
-					cbottot_sand=cbottot_sand+cbotnew(n,i,j)
+					cbottot_sand=cbottot_sand+MAX(cbotnew(n,i,j),0.)
 					cbedtot_sand=cbedtot_sand+Clivebed(n,i,j,kbed(i,j))
-					mbottot_sand=mbottot_sand+cbotnew(n,i,j)*frac(n)%rho
+					mbottot_sand=mbottot_sand+MAX(cbotnew(n,i,j),0.)*frac(n)%rho
 					mbottot_sand2=mbottot_sand2+c_bed(n)*frac(n)%rho
 					mbedtot_sand=mbedtot_sand+Clivebed(n,i,j,kbed(i,j))*frac(n)%rho
 					PSD_bot_sand_massfrac(n1)=mbottot_sand
 					PSD_bot_sand_massfrac2(n1)=mbottot_sand2
 					PSD_bed_sand_massfrac(n1)=mbedtot_sand
-					rho_botsand=rho_botsand+cbotnew(n,i,j)*frac(n)%rho
+					rho_botsand=rho_botsand+MAX(cbotnew(n,i,j),0.)*frac(n)%rho
 					rho_botsand2=rho_botsand2+c_bed(n)*frac(n)%rho
 					rho_bedsand=rho_bedsand+Clivebed(n,i,j,kbed(i,j))*frac(n)%rho
-					ws_botsand=ws_botsand+cbotnew(n,i,j)*frac(n)%ws
+					ws_botsand=ws_botsand+MAX(cbotnew(n,i,j),0.)*frac(n)%ws
 					ws_botsand2=ws_botsand2+c_bed(n)*frac(n)%ws
 					ws_bedsand=ws_bedsand+Clivebed(n,i,j,kbed(i,j))*frac(n)%ws					
 				ENDDO
@@ -751,7 +751,7 @@
 					IF (interaction_bed.ge.6.and.kbed(i,j).eq.0) THEN !unlimited erosion in case kbed.eq.0
 						erosionf(n) = erosion_avg(n) * (c_bed(n)/cfixedbed) !erosion per fraction
 					ELSEIF (cbottot_sand>0.) THEN
-						erosionf(n) = erosion_avg(n) * (cbotnew(n,i,j)/cbottot_sand) !erosion per fraction
+						erosionf(n) = erosion_avg(n) * (MAX(cbotnew(n,i,j),0.)/cbottot_sand) !erosion per fraction
 						erosionf(n) = MIN(erosionf(n),(cbotnew(n,i,j)+Clivebed(n,i,j,kbed(i,j)))*dz/morfac2) ! m3/m2, not more material can be eroded than there was in top layer cbotnew
 						erosionf(n) = MAX(erosionf(n),0.)
 					ELSEIF (cbedtot_sand>0.) THEN
@@ -858,15 +858,20 @@
 !						rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 !						rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density							
 !					ENDDO
-					cctot=0.
-					DO k=kbed(i,j)+1,kmax 
-						cctot=cctot+SUM(ccfd(1:nfrac,i,j,k))
-					ENDDO
+!					cctot=0.
+!					DO k=kbed(i,j)+1,kmax 
+!						cctot=cctot+SUM(ccfd(1:nfrac,i,j,k))
+!					ENDDO
 					DO n=1,nfrac 
 						Clivebed(n,i,j,kbed(i,j))=ccnew(n,i,j,kbed(i,j))+
      &						c_adjustA*cbotnew(n,i,j)+c_adjustB*ccnew(n,i,j,kbed(i,j))  ! apply sedimentation ratio between fractions new sediment concentration of cells within bed
 						cbotnew(n,i,j)=cbotnew(n,i,j)-c_adjustA*cbotnew(n,i,j)-c_adjustB*ccnew(n,i,j,kbed(i,j))
 !     &						+(morfac2-1.)*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+
+						cctot=0.
+						DO k=kbed(i,j)+1,kmax 
+							cctot=cctot+MAX(ccfd(n,i,j,k),0.)
+						ENDDO						
 						IF (cctot<1e-12) THEN
 						 ccnew(n,i,j,kbed(i,j)+1)=ccnew(n,i,j,kbed(i,j)+1)+(morfac2-1.)/morfac2*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
 						 drdt(i,j,kbed(i,j)+1) = drdt(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
@@ -874,7 +879,7 @@
 						 rold(i,j,kbed(i,j)+1) = rold(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density												
 						ELSE
 						 DO k=kbed(i,j)+1,kmax !redistribute morfac2 buried sediment over water column above 
-						  ccnew(n,i,j,k)=ccnew(n,i,j,k)+(morfac2-1.)/morfac2*SUM(ccfd(1:nfrac,i,j,k))/cctot*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+						  ccnew(n,i,j,k)=ccnew(n,i,j,k)+(morfac2-1.)/morfac2*MAX(ccfd(n,i,j,k),0.)/cctot*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
 						  drdt(i,j,k) = drdt(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 						  rnew(i,j,k) = rnew(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 						  rold(i,j,k) = rold(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density	

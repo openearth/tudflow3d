@@ -165,7 +165,7 @@
 	    REAL ::	x(4),y(4),height,u,v,w,c(30),t0,t_end,zbottom,Q,sedflux(30),volncells,changesedsuction !c(30) matches with size frac_init
 		REAL :: move_zbed_criterium(10000),move_dx_series(10000),move_dy_series(10000),move_dz_series(10000)
 		REAL :: move_nx_series(10000),move_ny_series(10000)
-		REAL :: move_outputfile_series(10000)
+		REAL :: move_outputfile_series(10000),uinput
 	    INTEGER :: forever,h_seriesloc,zb_seriesloc,Q_seriesloc,S_seriesloc,c_seriesloc,velocity_force
 		INTEGER :: u_seriesloc,v_seriesloc,w_seriesloc
 		CHARACTER*256 :: h_tseriesfile,zb_tseriesfile,Q_tseriesfile,S_tseriesfile,c_tseriesfile
@@ -177,7 +177,7 @@
 		REAL :: Q_tseries(10000),c_tseries(10000),S_tseries(10000),Q_series(10000),c_series(30,10000),S_series(30,10000)
 		REAL :: move_zbed_criterium(10000),move_dx_series(10000),move_dy_series(10000),move_dz_series(10000)
 		REAL :: move_nx_series(10000),move_ny_series(10000)
-		REAL :: move_outputfile_series(10000)
+		REAL :: move_outputfile_series(10000),uinput
 		REAL :: u_tseries(10000),v_tseries(10000),w_tseries(10000)
 		REAL :: u_series(10000),v_series(10000),w_series(10000)
 	    INTEGER :: forever,h_seriesloc,zb_seriesloc,Q_seriesloc,S_seriesloc,c_seriesloc,nmove,nmove_present,velocity_force
@@ -800,6 +800,7 @@
 	  bp(n)%y=bedplume(n)%y
 	  bp(n)%height=bedplume(n)%height
 	  bp(n)%u=bedplume(n)%u
+	  bp(n)%uinput=bedplume(n)%u
 	  bp(n)%v=bedplume(n)%v
 	  bp(n)%w=bedplume(n)%w
 	  bp(n)%c=bedplume(n)%c
@@ -848,7 +849,7 @@
 		n1=n1+1
 	  END DO
 	  IF (n1.eq.1) THEN 
-	    bp(n)%move_zbed_criterium(1:1000)=bp(n)%move_zbed_criterium(1)
+	    bp(n)%move_zbed_criterium(1:10000)=bp(n)%move_zbed_criterium(1)
 		n1=n3
 	  ENDIF 
 	  IF (n3.ne.bp(n)%nmove.or.n2.ne.bp(n)%nmove.or.n1.ne.bp(n)%nmove) THEN
@@ -860,7 +861,7 @@
 		n2=n2+1
 	  END DO
 	  IF (n2.eq.1) THEN 
-	    bp(n)%move_nx_series(1:1000)=bp(n)%move_nx_series(1)
+	    bp(n)%move_nx_series(1:10000)=bp(n)%move_nx_series(1)
 		n2=bp(n)%nmove
 	  ENDIF 	  
 	  n1=0
@@ -868,7 +869,7 @@
 		n1=n1+1
 	  END DO
 	  IF (n1.eq.1) THEN 
-	    bp(n)%move_ny_series(1:1000)=bp(n)%move_ny_series(1)
+	    bp(n)%move_ny_series(1:10000)=bp(n)%move_ny_series(1)
 		n1=bp(n)%nmove
 	  ENDIF 
 	  IF (n1.ne.bp(n)%nmove.or.n2.ne.bp(n)%nmove) THEN
@@ -881,7 +882,7 @@
 		n1=n1+1
 	  END DO
 	  IF (n1.eq.0) THEN 
-	    bp(n)%move_outputfile_series(1:1000)=1
+	    bp(n)%move_outputfile_series(1:10000)=1
 		n1=n3
 	  ENDIF 
 	  IF (n1.ne.bp(n)%nmove) THEN
