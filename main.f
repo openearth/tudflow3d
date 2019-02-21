@@ -224,6 +224,9 @@
 		call update_Qc_plume(time_np)
 		call update_location_bedplume
 		call update_nvol_bedplume(time_np)
+		IF (MAXVAL(bp(1:nbedplume)%dt_history)>0.) THEN 
+		   call update_his_bedplume(time_n)
+		ENDIF
 		
 		if (comp_filter_n>0) then
 			if (mod(istep,comp_filter_n).eq.0) then
@@ -362,6 +365,10 @@
       call mpi_finalize(ierr,istep)
 	
 	if (rank.eq.0) then
+		IF (MAXVAL(bp(1:nbedplume)%dt_history)>0.) THEN 
+		   call output_his_bedplume
+		ENDIF	
+	
 	call cpu_time(cput2)
 	!call SYSTEM_CLOCK(cput2) !SYSTEM_CLOCK works correctly in case a processor is overloaded with more partitions than physical cores, but strangely sometimes results in incorrect negative runtime...
 	

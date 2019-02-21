@@ -30,7 +30,7 @@
 	real y(1:imax,1:jmax,1:kmax)
 	real z(1:imax,1:jmax,1:kmax)
 	real uu(1:imax,1:jmax,1:kmax)
-	real vv(1:imax,1:jmax,1:kmax)
+	real vv(1:imax,1:jmax,1:kmax),obstacle(1:imax,1:jmax,1:kmax)
 	real mass_bed(1:nfrac,1:imax,1:jmax)
 	real tt,ddxx(1:imax,1:jmax),ddyy(1:imax,1:jmax)
 	integer tel,n,ios
@@ -52,7 +52,7 @@
        ! an ID for each one.
        integer :: ncid, varid1,varid2,varid3, varid4, varid5, varid6, varid7, varid8, dimids(NDIMS), dimids2(NDIMS2)
        integer :: x_dimid, y_dimid, z_dimid, nfrac_dimid, par_dimid,dimids3(NDIMS3),dimids5(NDIMS5)
-       integer :: dimids4(NDIMS),varid20,varid21,obstacle(1:imax,1:jmax,1:kmax),t
+       integer :: dimids4(NDIMS),varid20,varid21,t
 	   integer :: varid22,varid23	   
 	character(1024) :: svnversion
 	character(1024) :: svnurl
@@ -143,11 +143,9 @@
        call check( nf90_put_att(ncid, varid23, 'units', 'm') )
        call check( nf90_put_att(ncid, varid23, 'long_name', 'grid size dy C-grid') )
 	   
-	IF (tmax_inPpuntTSHD>0) THEN
-       call check( nf90_def_var(ncid, "obstacle", NF90_SHORT, dimids, varid21) )
+       call check( nf90_def_var(ncid, "obstacle", NF90_REAL, dimids, varid21) )
        call check( nf90_put_att(ncid, varid21, 'units', '-') )
        call check( nf90_put_att(ncid, varid21, 'long_name', 'If cell is in obstacle 1 else 0') )
-	ENDIF   
 	   
 
 	! also add svn info in output files:
@@ -165,10 +163,8 @@
        call check( nf90_put_var(ncid, varid3, z) )
        call check( nf90_put_var(ncid, varid22, ddxx) )
        call check( nf90_put_var(ncid, varid23, ddyy) )
-	   
-	IF (tmax_inPpuntTSHD>0) THEN
-		call check( nf90_put_var(ncid, varid21, obstacle) )
-	ENDIF
+       call check( nf90_put_var(ncid, varid21, obstacle) )
+
 	
 
 	 
@@ -1045,6 +1041,89 @@
 
 	end
 
+	
+		subroutine output_his_bedplume
+		USE nlist
+        USE netcdf
+	implicit none
+
+!       include 'param.txt'
+      include 'mpif.h'
+!	real UU(1:200000)
+	integer ierr,n,r,tag,status(MPI_STATUS_SIZE),nf
+	INTEGER (8) :: ps
+
+       ! We are writing 3D, 2D data data
+       integer, parameter :: NDIMS2 = 2
+       integer, parameter :: NDIMS3 = 3
+     
+       ! When we create netCDF files, variables and dimensions, we get back
+       ! an ID for each one.
+       integer :: ncid, varid1,varid2,varid3
+       integer :: dimids2(NDIMS2),dimids3(NDIMS3)
+       integer :: nhis_dimid,time_dimid,nfrac_dimid,istep2
+	character(1024) :: svnversion
+	character(1024) :: svnurl
+      include 'version.inc'
+
+       ! Create the netCDF file. The nf90_clobber parameter tells netCDF to
+       ! overwrite this file, if it already exists.
+       call check( nf90_create('history_bedplume.nc', NF90_CLOBBER, ncid) )
+     
+       ! Define the dimensions. NetCDF will hand back an ID for each.
+       call check( nf90_def_dim(ncid, "nhis_bp_dim", nbedplume, nhis_dimid) )
+       call check( nf90_def_dim(ncid, "time_dim", 20000, time_dimid) )
+		if (nfrac>0) then
+		   call check( nf90_def_dim(ncid, "nfrac_dim", nfrac, nfrac_dimid) )
+		endif
+     
+       ! The dimids array is used to pass the IDs of the dimensions of
+       ! the variables. Note that in fortran arrays are stored in
+       ! column-major format.
+       dimids2 =  (/ nhis_dimid, time_dimid/)
+	if (nfrac>0) then
+       dimids3 =  (/ nfrac_dimid, nhis_dimid, time_dimid/)
+	endif
+    
+       ! Define the variable. The type of the variable in this case is
+       ! NF90_DOUBLE (4-byte double).
+       call check( nf90_def_var(ncid, "this_bp", NF90_DOUBLE, dimids2, varid1) )
+       call check( nf90_put_att(ncid, varid1, 'units', 's') )
+       call check( nf90_put_att(ncid, varid1, 'long_name', 'Time series at specific bedplume location') )
+
+       call check( nf90_def_var(ncid, "zhis_bp", NF90_DOUBLE, dimids2, varid2) )
+       call check( nf90_put_att(ncid, varid2, 'units', 'm') )
+       call check( nf90_put_att(ncid, varid2, 'long_name', 'Z coordinate history at specific bedplume location') )
+
+       if (nfrac>0) then
+       call check( nf90_def_var(ncid, "Chis_bp", NF90_DOUBLE, dimids3, varid3) )
+       call check( nf90_put_att(ncid, varid3, 'units', '-') )
+       call check( nf90_put_att(ncid, varid3, 'long_name', 'Time history of volume concentration 
+     & of each fraction at specific bedplume location') )
+	endif
+
+
+	! also add svn info in output files:
+       CALL check( nf90_put_att(ncid,nf90_global, "svnversion", trim(svnversion)))
+       CALL check( nf90_put_att(ncid,nf90_global, "svnurl", trim(svnurl)))
+
+       ! End define mode. This tells netCDF we are done defining metadata.
+       call check( nf90_enddef(ncid) )
+     
+       ! Write the pretend data to the file. Although netCDF supports
+       ! reading and writing subsets of data, in this case we write all the
+       ! data in one operation.
+       call check( nf90_put_var(ncid, varid1, thisbp) )
+       call check( nf90_put_var(ncid, varid2, zhisbp) )
+	if (nfrac>0) then
+       call check( nf90_put_var(ncid, varid3, Chisbp) )
+	endif
+
+       call check( nf90_close(ncid) )
+
+	END SUBROUTINE
+	
+	
 
 
 	  ! Error handling of netcdf errors 

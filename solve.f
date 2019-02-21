@@ -221,7 +221,7 @@ c********************************************************************
       call diffw_com4(dnew,Szr,Spz,Szz,Ru,Rp,dr,phipt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	endif
 	if ((slipvel.eq.1.or.slipvel.eq.2).and.nfrac>0) then
-	 call advecw_driftfluxCDS2(dnew,sumWkm,
+	 call advecw_driftfluxCDS2(dnew,driftfluxforce_calfac*sumWkm,
      &   rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke)
 	endif
 		
@@ -527,7 +527,7 @@ c********************************************************************
       call diffw_com4(dnew,Szr,Spz,Szz,Ru,Rp,dr,phipt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	endif
 	if ((slipvel.eq.1.or.slipvel.eq.2).and.nfrac>0) then
-	 call advecw_driftfluxCDS2(dnew,sumWkm,
+	 call advecw_driftfluxCDS2(dnew,driftfluxforce_calfac*sumWkm,
      &   rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke)
 	endif
 	
@@ -970,7 +970,7 @@ c********************************************************************
       call diffw_com4(dnew,Szr,Spz,Szz,Ru,Rp,dr,phipt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	endif
 	if ((slipvel.eq.1.or.slipvel.eq.2).and.nfrac>0) then
-	 call advecw_driftfluxCDS2(dnew,sumWkm,
+	 call advecw_driftfluxCDS2(dnew,driftfluxforce_calfac*sumWkm,
      &   rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke)
 	endif
 	
@@ -1459,7 +1459,7 @@ c********************************************************************
       call diffw_com4(k1w,Szr,Spz,Szz,Ru,Rp,dr,phipt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	endif
 	if ((slipvel.eq.1.or.slipvel.eq.2).and.nfrac>0) then
-	 call advecw_driftfluxCDS2(k1w,sumWkm,
+	 call advecw_driftfluxCDS2(k1w,driftfluxforce_calfac*sumWkm,
      &   rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke)
 	endif
 	
@@ -1930,7 +1930,7 @@ c********************************************************************
 	endif
 	
 	if ((slipvel.eq.1.or.slipvel.eq.2).and.nfrac>0) then
-	 call advecw_driftfluxCDS2(k2w,sumWkm,
+	 call advecw_driftfluxCDS2(k2w,driftfluxforce_calfac*sumWkm,
      &   drdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke)
 	endif
 	
@@ -2401,7 +2401,7 @@ c********************************************************************
       call diffw_com4(k3w,Szr,Spz,Szz,Ru,Rp,dr,phipt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	endif
 	if ((slipvel.eq.1.or.slipvel.eq.2).and.nfrac>0) then
-	 call advecw_driftfluxCDS2(k3w,sumWkm,
+	 call advecw_driftfluxCDS2(k3w,driftfluxforce_calfac*sumWkm,
      &   drdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke)
 	endif
 	
@@ -2863,7 +2863,7 @@ c********************************************************************
       call diffw_com4(dnew,Szr,Spz,Szz,Ru,Rp,dr,phipt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	endif
 	if ((slipvel.eq.1.or.slipvel.eq.2).and.nfrac>0) then
-	 call advecw_driftfluxCDS2(dnew,sumWkm,
+	 call advecw_driftfluxCDS2(dnew,driftfluxforce_calfac*sumWkm,
      &   rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke)
 	endif
 	
@@ -3127,20 +3127,23 @@ c
 		dVdt(1:imax,1:jmax,1:kmax)=dVdt(1:imax,1:jmax,1:kmax)/rhV(1:imax,1:jmax,1:kmax)
 		dWdt(1:imax,1:jmax,1:kmax)=dWdt(1:imax,1:jmax,1:kmax)/rhW(1:imax,1:jmax,1:kmax)		
 	 else 
-      do k=1,kmax
-        do j=1,jmax
-          do i=1,imax
-           dUdt(i,j,k)=dUdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i+1,j,k)))
-           dVdt(i,j,k)=dVdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i,j+1,k)))
-           dWdt(i,j,k)=dWdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i,j,k+1)))
-          enddo
-        enddo
-      enddo 
+!      do k=1,kmax
+!        do j=1,jmax
+!          do i=1,imax
+!           dUdt(i,j,k)=dUdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i+1,j,k)))
+!           dVdt(i,j,k)=dVdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i,j+1,k)))
+!           dWdt(i,j,k)=dWdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i,j,k+1)))
+!          enddo
+!        enddo
+!      enddo 
+		dUdt(1:imax,1:jmax,1:kmax)=dUdt(1:imax,1:jmax,1:kmax)/rhU(1:imax,1:jmax,1:kmax)
+		dVdt(1:imax,1:jmax,1:kmax)=dVdt(1:imax,1:jmax,1:kmax)/rhV(1:imax,1:jmax,1:kmax)
+		dWdt(1:imax,1:jmax,1:kmax)=dWdt(1:imax,1:jmax,1:kmax)/rhW(1:imax,1:jmax,1:kmax)		  
 	 endif
 	 IF (slipvel.eq.2) THEN
-      do k=1,kmax
-        do j=1,jmax
-          do i=1,imax   
+	  do j=1,jmax
+	    do i=1,imax   
+		  do k=kbed(i,j)+1,kmax !1,kmax ! all cells below kbed no correction needed as dwdt=dwdt 	  
 		    sum_c_ws=0.
 			do n=1,nfrac
 				ws(n)=-frac(n)%ws !ws defined positive downwards
@@ -3151,9 +3154,9 @@ c
         enddo
       enddo
 	 ELSE
-      do k=1,kmax
-        do j=1,jmax
-          do i=1,imax   
+	  do j=1,jmax
+	    do i=1,imax   
+		  do k=kbed(i,j)+1,kmax !1,kmax ! all cells below kbed no correction needed as dwdt=dwdt  
 		    sum_c_ws=0.
 		    ctot=0.
 		    do n=1,nfrac
@@ -3169,7 +3172,37 @@ c
         enddo
       enddo
 	 ENDIF
-	  call bound(dUdt,dVdt,dWdt,drdt,0,time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
+	  call bound_incljet(dUdt,dVdt,dWdt,drdt,0,time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
+	 IF (slipvel.eq.2) THEN  ! make Wmix at interface kbed zero --> Wvol=-sum_c_ws 
+	  do j=0,j1
+	    do i=0,i1 
+		    k=kbed(i,j) 	  
+		    sum_c_ws=0.
+			do n=1,nfrac
+				ws(n)=-frac(n)%ws !ws defined positive downwards
+				sum_c_ws=sum_c_ws+ws(n)*(cW(n,i,j,k)*frac(n)%rho/rhW(i,j,k)-cW(n,i,j,k))
+			enddo
+			dWdt(i,j,k)=-sum_c_ws  !go from mixture velocity (centre of mass velocity) to velocity of volume centre
+        enddo
+      enddo
+	 ELSE
+	  do j=0,j1
+	    do i=0,i1 
+		    k=kbed(i,j)  
+		    sum_c_ws=0.
+		    ctot=0.
+		    do n=1,nfrac
+				ctot=cW(n,i,j,k)*frac(n)%dfloc/frac(n)%dpart*0.5*(rhocorr_air_z(n,k)+rhocorr_air_z(n,k+1))+ctot
+			enddo
+			ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
+			do n=1,nfrac
+				ws(n)=-frac(n)%ws*(1.-ctot)**(frac(n)%n) !ws defined positive downwards
+				sum_c_ws=sum_c_ws+ws(n)*(cW(n,i,j,k)*frac(n)%rho/rhW(i,j,k)-cW(n,i,j,k))
+			enddo
+			dWdt(i,j,k)=-sum_c_ws  !go from mixture velocity (centre of mass velocity) to velocity of volume centre
+        enddo
+      enddo
+	 ENDIF 
       do  k=1,kmax
         do j=1,jmax
           do i=1,imax
@@ -3557,9 +3590,9 @@ c
 		p=p(1:imax,1:jmax,1:kmax)*drdt(1:imax,1:jmax,1:kmax) !scale P back with rho
 	ELSEIF (continuity_solver.eq.34) THEN 
 	 IF (slipvel.eq.2) THEN
-      do k=1,kmax
-        do j=1,jmax
-          do i=1,imax   
+	  do j=1,jmax
+	    do i=1,imax   
+		  do k=kbed(i,j),kmax !1,kmax ! all cells below kbed no correction needed as dwdt=dwdt
 		    sum_c_ws=0.
 			do n=1,nfrac
 				ws(n)=-frac(n)%ws !ws defined positive downwards
@@ -3570,9 +3603,9 @@ c
         enddo
       enddo
 	 ELSE
-      do k=1,kmax
-        do j=1,jmax
-          do i=1,imax   
+	  do j=1,jmax
+	    do i=1,imax   
+		  do k=kbed(i,j),kmax !1,kmax ! all cells below kbed no correction needed as dwdt=dwdt 
 		    sum_c_ws=0.
 		    ctot=0.
 		    do n=1,nfrac
@@ -3588,6 +3621,7 @@ c
         enddo
       enddo
 	 ENDIF	
+	 
 !	 if (split_rho_cont.eq.'VL2') then
 !!			do n=1,nfrac
 !!			  call c_edges_TVD_nocfl(cU(n,:,:,:),cV(n,:,:,:),cW(n,:,:,:),dcdt(n,:,:,:),dUdt,dVdt,dWdt,drdt,Ru,Rp,dr,phiv,phipt,dz,

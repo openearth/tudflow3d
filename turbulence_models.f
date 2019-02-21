@@ -315,7 +315,7 @@
       !include 'mpif.h'
 	real shear
       real xx,yy,f,dzi,uu,vv,absU,ust,z0,yplus
-      integer n,t,tel,kt
+      integer n,t,tel,kt,n2
       real ebb(0:i1,0:k1)
       real ebf(0:i1,0:k1)
       real Lm2,dRpp_i,dRp_i,divergentie
@@ -465,8 +465,14 @@ c*************************************************************
 			DO i=1,imax
 			  DO j=1,jmax
 			    DO k=1,kmax
-					ctot=SUM(cnew(fracs_included,i,j,k))
-					ekm(i,j,k)=ekm(i,j,k)+ekm_mol*(1.-ctot/cref)**pwr
+				  !ctot=SUM(cnew(fracs_included,i,j,k))
+				  ctot=0.
+				  DO n2=1,tel
+				    n=fracs_included(n2)
+					ctot = ctot + cnew(n,i,j,k)*frac(n)%dfloc/frac(n)%dpart
+					ctot = MIN(cfixedbed,ctot)
+				  ENDDO 
+				  ekm(i,j,k)=ekm(i,j,k)+ekm_mol*(1.-ctot/cref)**pwr
 				ENDDO
 			  ENDDO
 			ENDDO
@@ -633,7 +639,7 @@ c*************************************************************
       !include 'mpif.h'
 	real shear
       real xx,yy,f,dzi,uu,vv,absU,ust,z0,yplus
-      integer n,t,tel,kt
+      integer n,t,tel,kt,n2
       real ebb(0:i1,0:k1)
       real ebf(0:i1,0:k1)
       real Lm2,dRpp_i,dRp_i,divergentie
@@ -732,7 +738,7 @@ c*************************************************************
 		Ri = -gz/rr(i,j,k)*drdz/(dudz**2+dvdz**2+1.e-18)
 		Ri = MuAn_factor*MAX(0.,Ri)	
 		z=MAX(0.,(k-kbed(i,j))*dz-0.5*dz)
-		Lm2_Bak=(kappa*z)**2*(1.-z/(MAX(depth-kbed(i,j)*dz,1.e-8)))		
+		Lm2_Bak=Cs*Cs*(kappa*z)**2*(1.-z/(MAX(depth-kbed(i,j)*dz,1.e-8)))		
 		ekm(i,j,k) = rr(i,j,k) * Lm2_Bak * sqrt(shear) ! Mixing length model with Ri-damping
 
 		ekm(i,j,k) = ekm(i,j,k) * (1.+damping_a1*Ri)**damping_b1
@@ -756,8 +762,14 @@ c*************************************************************
 			DO i=1,imax
 			  DO j=1,jmax
 			    DO k=1,kmax
-					ctot=SUM(cnew(fracs_included,i,j,k))
-					ekm(i,j,k)=ekm(i,j,k)+ekm_mol*(1.-ctot/cref)**pwr
+				  !ctot=SUM(cnew(fracs_included,i,j,k))
+				  ctot=0.
+				  DO n2=1,tel
+				    n=fracs_included(n2)
+					ctot = ctot + cnew(n,i,j,k)*frac(n)%dfloc/frac(n)%dpart
+					ctot = MIN(cfixedbed,ctot)
+				  ENDDO 
+				  ekm(i,j,k)=ekm(i,j,k)+ekm_mol*(1.-ctot/cref)**pwr
 				ENDDO
 			  ENDDO
 			ENDDO
@@ -972,7 +984,7 @@ c*************************************************************
       !include 'mpif.h'
 	real SijSij,SdijSdij
       real xx,yy,f,dzi,uu,vv,absU,ust,z0,yplus
-      integer n,t,tel
+      integer n,t,tel,n2
       real ebb(0:i1,0:k1)
       real ebf(0:i1,0:k1)
       real Lm2,dRpp_i,dRp_i,divergentie
@@ -1087,8 +1099,14 @@ c*************************************************************
 			DO i=1,imax
 			  DO j=1,jmax
 			    DO k=1,kmax
-					ctot=SUM(cnew(fracs_included,i,j,k))
-					ekm(i,j,k)=ekm(i,j,k)+ekm_mol*(1.-ctot/cref)**pwr
+				  !ctot=SUM(cnew(fracs_included,i,j,k))
+				  ctot=0.
+				  DO n2=1,tel
+				    n=fracs_included(n2)
+					ctot = ctot + cnew(n,i,j,k)*frac(n)%dfloc/frac(n)%dpart
+					ctot = MIN(cfixedbed,ctot)
+				  ENDDO 
+				  ekm(i,j,k)=ekm(i,j,k)+ekm_mol*(1.-ctot/cref)**pwr
 				ENDDO
 			  ENDDO
 			ENDDO
@@ -1212,7 +1230,7 @@ c*************************************************************
       implicit none
       !include 'mpif.h'
       real xx,yy,dzi
-      integer n,t,tel
+      integer n,t,tel,n2
       real ebb(0:i1,0:k1)
       real ebf(0:i1,0:k1)
       real Lm2,dRpp_i,dRp_i,divergentie
@@ -1358,8 +1376,14 @@ c*************************************************************
 			DO i=1,imax
 			  DO j=1,jmax
 			    DO k=1,kmax
-					ctot=SUM(cnew(fracs_included,i,j,k))
-					ekm(i,j,k)=ekm(i,j,k)+ekm_mol*(1.-ctot/cref)**pwr
+				  !ctot=SUM(cnew(fracs_included,i,j,k))
+				  ctot=0.
+				  DO n2=1,tel
+				    n=fracs_included(n2)
+					ctot = ctot + cnew(n,i,j,k)*frac(n)%dfloc/frac(n)%dpart
+					ctot = MIN(cfixedbed,ctot)
+				  ENDDO 
+				  ekm(i,j,k)=ekm(i,j,k)+ekm_mol*(1.-ctot/cref)**pwr
 				ENDDO
 			  ENDDO
 			ENDDO
@@ -1483,7 +1507,7 @@ c*************************************************************
       !include 'mpif.h'
 	real SijSij,SdijSdij
       real xx,yy,f,dzi,uu,vv,absU,ust,z0,yplus
-      integer n,t,tel
+      integer n,t,tel,n2
       real ebb(0:i1,0:k1)
       real ebf(0:i1,0:k1)
       real Lm2,dRpp_i,dRp_i,divergentie
@@ -1944,8 +1968,14 @@ c*************************************************************
 			DO i=1,imax
 			  DO j=1,jmax
 			    DO k=1,kmax
-					ctot=SUM(cnew(fracs_included,i,j,k))
-					ekm(i,j,k)=ekm(i,j,k)+ekm_mol*(1.-ctot/cref)**pwr
+				  !ctot=SUM(cnew(fracs_included,i,j,k))
+				  ctot=0.
+				  DO n2=1,tel
+				    n=fracs_included(n2)
+					ctot = ctot + cnew(n,i,j,k)*frac(n)%dfloc/frac(n)%dpart
+					ctot = MIN(cfixedbed,ctot)
+				  ENDDO 
+				  ekm(i,j,k)=ekm(i,j,k)+ekm_mol*(1.-ctot/cref)**pwr
 				ENDDO
 			  ENDDO
 			ENDDO
@@ -2074,7 +2104,7 @@ c*************************************************************
       !include 'mpif.h'
 	real shear
       real xx,yy,f,dzi,uu,vv,absU,ust,z0,yplus
-      integer n,t,tel
+      integer n,t,tel,n2
       real ebb(0:i1,0:k1)
       real ebf(0:i1,0:k1)
       real Lm2,dRpp_i,dRp_i,divergentie
@@ -2353,8 +2383,14 @@ c get stuff from other CPU's
 			DO i=1,imax
 			  DO j=1,jmax
 			    DO k=1,kmax
-					ctot=SUM(cnew(fracs_included,i,j,k))
-					ekm(i,j,k)=ekm(i,j,k)+ekm_mol*(1.-ctot/cref)**pwr
+				  !ctot=SUM(cnew(fracs_included,i,j,k))
+				  ctot=0.
+				  DO n2=1,tel
+				    n=fracs_included(n2)
+					ctot = ctot + cnew(n,i,j,k)*frac(n)%dfloc/frac(n)%dpart
+					ctot = MIN(cfixedbed,ctot)
+				  ENDDO 
+				  ekm(i,j,k)=ekm(i,j,k)+ekm_mol*(1.-ctot/cref)**pwr
 				ENDDO
 			  ENDDO
 			ENDDO

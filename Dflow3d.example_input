@@ -49,6 +49,8 @@ continuity_solver =3    !nerd option, default is 1 (drdt+drudx=0). Optional: 2 (
 !transporteq_fracs = 'volufrac' !nerd option default volume fractions, but as option also 'massfrac' can be used internally (input/output still is volume frac!)
 !split_rho_cont = 'SB2'  ! optional 'VL2' or 'SB2' TVD scheme (via CDS2 without 1-cfl term) to split off rho from rho*U, default 'CDS' scheme
 CNdiffz = 1			! 1 is implicit CN treatment of diffusion in z-dir 0 is explicit in z-dir (default 0)
+driftfluxforce_calfac = 1. ! calibration factor for driftflux force (default 1.) 0. gives no force
+depo_implicit = 0			! 1=calculate deposition at the bed implicit; 0=explicit with old cfluid (default)
 /
 
 &ambient
@@ -158,6 +160,11 @@ bedplume(1)%move_outputfile_series = 	! series 1/0 to create a output 'mvbp3D' f
 bedplume(1)%velocity_force = 1 			! default 1 velocity is implemented with body force, when 0 then velocity is implemented as immersed velocity straightforward
 bedplume(1)%move_nx_series = 			! series [-] to have momentum sqrt(u^2,v^2) in desired direction when bedplume has moved (length 1 or length move_dx_series; when nx,ny both 0 no momentum)
 bedplume(1)%move_ny_series = 			! series [-] to have momentum sqrt(u^2,v^2) in desired direction when bedplume has moved (length 1 or length move_dx_series; when nx,ny both 0 no momentum)
+bedplume(1)%x2 = -500. 50. 50. -500. ! (optional) x coordinate 4 corners location where check on move_zbed_criterium is carried out [m] (default bedplume()%x is used)
+bedplume(1)%y2 = -500. -500. 500. 500. ! (optional) y coordinate 4 corners location where check on move_zbed_criterium is carried out [m] (default bedplume()%y is used)
+bedplume(1)%move_dx2_series =			! (optional) series [m] to move bedplume()%x2 
+bedplume(1)%move_dy2_series =			! (optional) series [m] to move bedplume()%y2
+bedplume(1)%dt_history= 				! (optional) time interval output [s]; when >0 a history is made of z-position and concentration of bedplume location 
 /
 
 &fractions_in_plume

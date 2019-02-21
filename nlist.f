@@ -52,7 +52,7 @@
       REAL plumetseries2(1:10000) 
       REAL plumeUseries2(1:10000),c_bed(100)
       INTEGER plumeseriesloc,plumeseriesloc2,plumeQseriesloc,plumecseriesloc
-      INTEGER nr_HPfilter
+      INTEGER nr_HPfilter,depo_implicit
       REAL timeAB_real(1:4),dpdx,dpdy,kn_d50_multiplier,avalanche_slope(100),av_slope_z(100),dpdx1,dpdy1,Uavold,Vavold
       INTEGER periodicx,periodicy,wallup
       REAL U_b3,V_b3,surf_layer,reduction_sedimentation_shields
@@ -61,7 +61,7 @@
       INTEGER iparm(64)
       CHARACTER*256 plumeQtseriesfile,plumectseriesfile,avfile      
       REAL Q_j,plumeQseries(1:10000),plumeQtseries(1:10000),plumectseries(1:10000),plumecseries(30,1:10000) !c(30) matches with size frac_init
-      REAL Aplume
+      REAL Aplume,driftfluxforce_calfac
 	  
       CHARACTER*4 convection,diffusion
       REAL numdiff,comp_filter_a
@@ -128,6 +128,8 @@
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: rhs3
 	  REAL, DIMENSION(:,:,:),ALLOCATABLE :: rhU,rhV,rhW
 	  REAL, DIMENSION(:,:,:,:),ALLOCATABLE :: cU,cV,cW
+	  REAL, DIMENSION(:,:),ALLOCATABLE :: thisbp,zhisbp
+	  REAL, DIMENSION(:,:,:),ALLOCATABLE :: Chisbp
 
  !     REAL, DIMENSION(:,:,:),ALLOCATABLE :: Uf,Vf,Wf
 
@@ -163,11 +165,11 @@
 	end type bed_obstacles
 	type bed_plumes
 	    REAL ::	x(4),y(4),height,u,v,w,c(30),t0,t_end,zbottom,Q,sedflux(30),volncells,changesedsuction !c(30) matches with size frac_init
-		REAL :: move_zbed_criterium(10000),move_dx_series(10000),move_dy_series(10000),move_dz_series(10000)
-		REAL :: move_nx_series(10000),move_ny_series(10000)
-		REAL :: move_outputfile_series(10000),uinput
+		REAL :: move_zbed_criterium(100000),move_dx_series(100000),move_dy_series(100000),move_dz_series(100000)
+		REAL :: move_nx_series(100000),move_ny_series(100000),x2(4),y2(4),move_dx2_series(100000),move_dy2_series(100000)
+		REAL :: move_outputfile_series(100000),uinput,dt_history,t_bphis_output
 	    INTEGER :: forever,h_seriesloc,zb_seriesloc,Q_seriesloc,S_seriesloc,c_seriesloc,velocity_force
-		INTEGER :: u_seriesloc,v_seriesloc,w_seriesloc
+		INTEGER :: u_seriesloc,v_seriesloc,w_seriesloc,istep_bphis_output
 		CHARACTER*256 :: h_tseriesfile,zb_tseriesfile,Q_tseriesfile,S_tseriesfile,c_tseriesfile
 		CHARACTER*256 :: u_tseriesfile,v_tseriesfile,w_tseriesfile
 	end type bed_plumes
@@ -175,13 +177,13 @@
 	    REAL ::	x(4),y(4),height,u,v,w,c(30),t0,t_end,zbottom,Q,sedflux(30),volncells,changesedsuction !c(30) matches with size frac_init
 		REAL :: h_tseries(10000),h_series(10000),zb_tseries(10000),zb_series(10000)
 		REAL :: Q_tseries(10000),c_tseries(10000),S_tseries(10000),Q_series(10000),c_series(30,10000),S_series(30,10000)
-		REAL :: move_zbed_criterium(10000),move_dx_series(10000),move_dy_series(10000),move_dz_series(10000)
-		REAL :: move_nx_series(10000),move_ny_series(10000)
-		REAL :: move_outputfile_series(10000),uinput
+		REAL :: move_zbed_criterium(100000),move_dx_series(100000),move_dy_series(100000),move_dz_series(100000)
+		REAL :: move_nx_series(100000),move_ny_series(100000),x2(4),y2(4),move_dx2_series(100000),move_dy2_series(100000)
+		REAL :: move_outputfile_series(100000),uinput,dt_history,t_bphis_output
 		REAL :: u_tseries(10000),v_tseries(10000),w_tseries(10000)
 		REAL :: u_series(10000),v_series(10000),w_series(10000)
 	    INTEGER :: forever,h_seriesloc,zb_seriesloc,Q_seriesloc,S_seriesloc,c_seriesloc,nmove,nmove_present,velocity_force
-		INTEGER :: u_seriesloc,v_seriesloc,w_seriesloc
+		INTEGER :: u_seriesloc,v_seriesloc,w_seriesloc,istep_bphis_output
 		CHARACTER*256 :: h_tseriesfile,zb_tseriesfile,Q_tseriesfile,S_tseriesfile,c_tseriesfile
 		CHARACTER*256 :: u_tseriesfile,v_tseriesfile,w_tseriesfile
 !		INTEGER :: tmax_iP,tmax_iU,iP_inbp(10000),jP_inbp(10000),kP_inbp(10000),iU_inbp(10000),jU_inbp(10000),kU_inbp(10000)		
@@ -212,7 +214,7 @@
 	end type frac_init
 	TYPE(frac_init), DIMENSION(30) :: fract
 
-	ALLOCATE(bedplume(30)) !temporary array to read namelist with unknown size
+	ALLOCATE(bedplume(40)) !temporary array to read namelist with unknown size
 	ALLOCATE(obst(10000)) !temporary array to read namelist with unknown size
 ! 	TYPE(gridtype), DIMENSION(1) :: grid
 
@@ -221,7 +223,7 @@
 	NAMELIST /times/t_end,t0_output,dt_output,te_output,tstart_rms,dt_max,dt_ini,time_int,CFL,
      & t0_output_movie,dt_output_movie,te_output_movie,tstart_morf,te_rms
 	NAMELIST /num_scheme/convection,numdiff,diffusion,comp_filter_a,comp_filter_n,CNdiffz,npresIBM,advec_conc,continuity_solver
-     & ,transporteq_fracs,split_rho_cont
+     & ,transporteq_fracs,split_rho_cont,driftfluxforce_calfac,depo_implicit
 	NAMELIST /ambient/U_b,V_b,W_b,bcfile,rho_b,SEM,nmax2,nmax1,nmax3,lm_min,lm_min3,slip_bot,kn,interaction_bed,
      & periodicx,periodicy,dpdx,dpdy,W_ox,Hs,Tp,nx_w,ny_w,obst,bc_obst_h,U_b3,V_b3,surf_layer,wallup,bedlevelfile,
      & U_bSEM,V_bSEM,U_w,V_w,c_bed,cfixedbed,U_init,V_init,initconditionsfile
@@ -287,6 +289,8 @@
 	continuity_solver = 1 !nerd option, default is 1 (drdt+drudx=0). Optional: 2 (neglect drdt), 3 (dudx almost 0 U-mix), 33 (dudx=0 U-mix), 34 (dudx=0 U-vol with proper U-mix)
 	transporteq_fracs = 'volufrac' !nerd option default volume fractions, but as option also 'massfrac' can be used internally (input/output still is volume frac!)
 	split_rho_cont='CDS'  ! optional 'VL2' or 'SB2' TVD scheme (via CDS2 without 1-cfl term) to split off rho from rho*U, default 'CDS' scheme
+	driftfluxforce_calfac=1.
+	depo_implicit=0
 	!! ambient:
 	U_b = -999.
 	V_b = -999.
@@ -381,6 +385,8 @@
 	DO i=1,4
 		bedplume(:)%x(i) = -99999.
 		bedplume(:)%y(i) = -99999. 
+		bedplume(:)%x2(i) = -99999.
+		bedplume(:)%y2(i) = -99999. 		
 	ENDDO
 	bedplume(:)%height = -99999. 
 	bedplume(:)%u = -99999. 
@@ -410,12 +416,13 @@
 	bedplume(:)%u_seriesloc=1
 	bedplume(:)%v_seriesloc=1
 	bedplume(:)%w_seriesloc=1
+	bedplume(:)%dt_history=0.
 	
 	DO i=1,30
 		bedplume(:)%c(i) = 0.
 		bedplume(:)%sedflux(i) = 0. 
 	ENDDO
-	DO i=1,10000
+	DO i=1,100000
 		bedplume(:)%move_dx_series(i)=-99999999.
 		bedplume(:)%move_dy_series(i)=-99999999.
 		bedplume(:)%move_dz_series(i)=-99999999.
@@ -423,6 +430,8 @@
 		bedplume(:)%move_outputfile_series(i)=-1
 		bedplume(:)%move_nx_series(i)=-99999999.
 		bedplume(:)%move_ny_series(i)=-99999999.
+		bedplume(:)%move_dx2_series(i)=-99999999.
+		bedplume(:)%move_dy2_series(i)=-99999999.		
 	ENDDO
 	plume_z_outflow_belowsurf=-999.
 	!! Fractions_in_plume
@@ -823,6 +832,7 @@
 	  bp(n)%u_seriesloc=bedplume(n)%u_seriesloc
 	  bp(n)%v_seriesloc=bedplume(n)%v_seriesloc
 	  bp(n)%w_seriesloc=bedplume(n)%w_seriesloc
+	  bp(n)%dt_history=bedplume(n)%dt_history
 	  
 	  bp(n)%move_zbed_criterium=bedplume(n)%move_zbed_criterium
 	  bp(n)%move_dx_series=bedplume(n)%move_dx_series
@@ -830,6 +840,11 @@
 	  bp(n)%move_dz_series=bedplume(n)%move_dz_series
 	  bp(n)%move_nx_series=bedplume(n)%move_nx_series
 	  bp(n)%move_ny_series=bedplume(n)%move_ny_series
+	  bp(n)%x2=bedplume(n)%x2
+	  bp(n)%y2=bedplume(n)%y2	  
+	  bp(n)%move_dx2_series=bedplume(n)%move_dx2_series
+	  bp(n)%move_dy2_series=bedplume(n)%move_dy2_series	  
+	  
 	  bp(n)%move_outputfile_series=bedplume(n)%move_outputfile_series
 	  bp(n)%nmove_present=0
 	  bp(n)%nmove=0
@@ -849,7 +864,7 @@
 		n1=n1+1
 	  END DO
 	  IF (n1.eq.1) THEN 
-	    bp(n)%move_zbed_criterium(1:10000)=bp(n)%move_zbed_criterium(1)
+	    bp(n)%move_zbed_criterium(1:100000)=bp(n)%move_zbed_criterium(1)
 		n1=n3
 	  ENDIF 
 	  IF (n3.ne.bp(n)%nmove.or.n2.ne.bp(n)%nmove.or.n1.ne.bp(n)%nmove) THEN
@@ -861,7 +876,7 @@
 		n2=n2+1
 	  END DO
 	  IF (n2.eq.1) THEN 
-	    bp(n)%move_nx_series(1:10000)=bp(n)%move_nx_series(1)
+	    bp(n)%move_nx_series(1:100000)=bp(n)%move_nx_series(1)
 		n2=bp(n)%nmove
 	  ENDIF 	  
 	  n1=0
@@ -869,7 +884,7 @@
 		n1=n1+1
 	  END DO
 	  IF (n1.eq.1) THEN 
-	    bp(n)%move_ny_series(1:10000)=bp(n)%move_ny_series(1)
+	    bp(n)%move_ny_series(1:100000)=bp(n)%move_ny_series(1)
 		n1=bp(n)%nmove
 	  ENDIF 
 	  IF (n1.ne.bp(n)%nmove.or.n2.ne.bp(n)%nmove) THEN
@@ -882,13 +897,45 @@
 		n1=n1+1
 	  END DO
 	  IF (n1.eq.0) THEN 
-	    bp(n)%move_outputfile_series(1:10000)=1
+	    bp(n)%move_outputfile_series(1:100000)=1
 		n1=n3
 	  ENDIF 
 	  IF (n1.ne.bp(n)%nmove) THEN
 		write(*,*),' Bedplume : ',n
 		CALL writeerror(174)
 	  ENDIF
+	  n3=0
+	  DO WHILE (bp(n)%move_dx2_series(n3+1).NE.-99999999.)
+		n3=n3+1
+	  END DO
+	  IF (n3.eq.0) THEN
+	    bp(n)%move_dx2_series=bp(n)%move_dx_series
+      ELSEIF (n3.eq.1) THEN 
+	    bp(n)%move_dx2_series(1:100000)=bp(n)%move_dx2_series(1)
+      ELSEIF (n3.ne.bp(n)%nmove) THEN
+		write(*,*),' Bedplume : ',n
+		write(*,*),'Error in move_dx2_series'
+		CALL writeerror(174)	    
+	  ENDIF 
+	  n3=0
+	  DO WHILE (bp(n)%move_dy2_series(n3+1).NE.-99999999.)
+		n3=n3+1
+	  END DO
+	  IF (n3.eq.0) THEN
+	    bp(n)%move_dy2_series=bp(n)%move_dy_series
+      ELSEIF (n3.eq.1) THEN 
+	    bp(n)%move_dy2_series(1:100000)=bp(n)%move_dy2_series(1)
+      ELSEIF (n3.ne.bp(n)%nmove) THEN
+		write(*,*),' Bedplume : ',n
+		write(*,*),'Error in move_dy2_series'
+		CALL writeerror(174)	    
+	  ENDIF 
+	  IF (bp(n)%x2(1).eq.-99999.or.bp(n)%x2(2).eq.-99999.or.bp(n)%x2(3).eq.-99999.or.bp(n)%x2(4).eq.-99999.) THEN 
+	    bp(n)%x2=bp(n)%x
+	  ENDIF
+	  IF (bp(n)%y2(1).eq.-99999.or.bp(n)%y2(2).eq.-99999.or.bp(n)%y2(3).eq.-99999.or.bp(n)%y2(4).eq.-99999.) THEN 
+	    bp(n)%y2=bp(n)%y
+	  ENDIF	  
 	  
 	  DO i=1,10000
 	  	bp(n)%h_tseries(i)=-99999.
@@ -1147,6 +1194,20 @@
 	ENDDO
 
 	DEALLOCATE(bedplume)
+	
+	IF (MAXVAL(bp(1:nbedplume)%dt_history)>0) THEN
+	  ALLOCATE(thisbp(nbedplume,20000))
+	  ALLOCATE(zhisbp(nbedplume,20000))
+	  ALLOCATE(Chisbp(nfrac,nbedplume,20000))
+	  DO n=1,nbedplume 
+		bp(n)%istep_bphis_output=0
+		bp(n)%t_bphis_output=0.
+	  ENDDO
+	  thisbp=0.
+	  zhisbp=0.
+	  Chisbp=0.
+	ENDIF
+	
 	  
 	READ (UNIT=1,NML=LESmodel,IOSTAT=ios)
 	!! check input LESmodel
