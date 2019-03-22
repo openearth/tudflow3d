@@ -135,7 +135,7 @@ c get stuff from other CPU's
 		   enddo
 		enddo
 	endif
-	if (periodicx.eq.0) then
+	if (periodicx.eq.0.or.periodicx.eq.2) then
 		Uvel2(-2,0:j1,0:k1)=Uvel(0,0:j1,0:k1)
 		Uvel2(-1,0:j1,0:k1)=Uvel(0,0:j1,0:k1)
 		Uvel2(i1+1,0:j1,0:k1)=Uvel(ie,0:j1,0:k1)
@@ -354,7 +354,7 @@ c get stuff from other CPU's
 		enddo
 	endif
 
-	if (periodicx.eq.0) then
+	if (periodicx.eq.0.or.periodicx.eq.2) then
 		Vvel2(-2,0:j1,0:k1)=Vvel(0,0:j1,0:k1)
 		Vvel2(-1,0:j1,0:k1)=Vvel(0,0:j1,0:k1)
 		Vvel2(i1+1,0:j1,0:k1)=Vvel(ie,0:j1,0:k1)
@@ -579,7 +579,7 @@ c get stuff from other CPU's
 		enddo
 	endif
 
-	if (periodicx.eq.0) then
+	if (periodicx.eq.0.or.periodicx.eq.2) then
 		Wvel2(-2,0:j1,0:k1)=Wvel(0,0:j1,0:k1)
 		Wvel2(-1,0:j1,0:k1)=Wvel(0,0:j1,0:k1)
 		Wvel2(i1+1,0:j1,0:k1)=Wvel(ie,0:j1,0:k1)
@@ -806,7 +806,7 @@ c get stuff from other CPU's
 		   enddo
 		enddo
 	endif
-	if (periodicx.eq.0) then
+	if (periodicx.eq.0.or.periodicx.eq.2) then
 		putin2(-2,0:j1,0:k1)=putin(0,0:j1,0:k1)
 		putin2(-1,0:j1,0:k1)=putin(0,0:j1,0:k1)
 		putin2(i1+1,0:j1,0:k1)=putin(ie,0:j1,0:k1)

@@ -51,6 +51,7 @@ continuity_solver =3    !nerd option, default is 1 (drdt+drudx=0). Optional: 2 (
 CNdiffz = 1			! 1 is implicit CN treatment of diffusion in z-dir 0 is explicit in z-dir (default 0)
 driftfluxforce_calfac = 1. ! calibration factor for driftflux force (default 1.) 0. gives no force
 depo_implicit = 0			! 1=calculate deposition at the bed implicit; 0=explicit with old cfluid (default)
+depo_cbed_option = 0 		! 0=burry cfluid first cell during sedimentation grid cell (default), 1=redistribute cfluid first cell over vertical above bed during sedimentation grid cell and increase sedflux with (1-cfluid_firstcel) factor
 /
 
 &ambient
@@ -165,6 +166,8 @@ bedplume(1)%y2 = -500. -500. 500. 500. ! (optional) y coordinate 4 corners locat
 bedplume(1)%move_dx2_series =			! (optional) series [m] to move bedplume()%x2 
 bedplume(1)%move_dy2_series =			! (optional) series [m] to move bedplume()%y2
 bedplume(1)%dt_history= 				! (optional) time interval output [s]; when >0 a history is made of z-position and concentration of bedplume location 
+bedplume(1)%move_dz_height_factor =		! (optional) [-] factor to apply move_dz_series to bedplume height (e.g. make 0 to not apply move_dz_series to bedplume height)
+bedplume(1)%move_dz_zbottom_factor =		! (optional) [-] factor to apply move_dz_series to bedplume zbottom (e.g. make 0 to not apply move_dz_series to bedplume zbottom)
 /
 
 &fractions_in_plume
@@ -209,7 +212,7 @@ avalanche_slope = 2. ! Max bedslope 1:as; all slopes steeper avalanche towards 1
 av_slope_z =         ! To define variable avalanche_slope over depth --> make av_slope_z and avalanche_slope series over vertical; when av_slope_z not defined a uniform avalanche_slope is used
 avfile = './inputfiles/av_SQDA2_v01.nc'         ! Input netcdf file for spatially variable av_slope (filled with av_slope(1:imax,1:jmax*px,0:k1) [-]) 
 avalanche_until_done =0	!1 = repeat avalanche until all bedslopes in domain agree with avalanche_slope (default 0 only do morfac times avalanche each timestep)
-reduction_sedimentation_shields = 0. ! Reduction of sedimentation at the bed by shear or perhaps grain-grain interactions (sheet flow) default 0. no reduction, value should be 4-5 PhD thesis vRhee p146 eq 7.74
+reduction_sedimentation_shields = 0. ! Reduction of sedimentation at the bed by shear or perhaps grain-grain interactions (sheet flow) default 0. no reduction, value should be 4-5 PhD thesis vRhee p87, p99, p146 eq 7.74
 morfac = 1. 		! Factor applied to erosion and sedimentation fluxes to speed up morfology simulation (default 1.)
 morfac2 = 1. 		! Factor applied to erosion and sedimentation fluxes in bed (not in fluid) to speed up morfology simulation (default 1.); only dz_bed is accelerated but concentrations in fluid remain unaltered 
 !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 

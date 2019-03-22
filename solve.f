@@ -3173,36 +3173,36 @@ c
       enddo
 	 ENDIF
 	  call bound_incljet(dUdt,dVdt,dWdt,drdt,0,time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
-	 IF (slipvel.eq.2) THEN  ! make Wmix at interface kbed zero --> Wvol=-sum_c_ws 
-	  do j=0,j1
-	    do i=0,i1 
-		    k=kbed(i,j) 	  
-		    sum_c_ws=0.
-			do n=1,nfrac
-				ws(n)=-frac(n)%ws !ws defined positive downwards
-				sum_c_ws=sum_c_ws+ws(n)*(cW(n,i,j,k)*frac(n)%rho/rhW(i,j,k)-cW(n,i,j,k))
-			enddo
-			dWdt(i,j,k)=-sum_c_ws  !go from mixture velocity (centre of mass velocity) to velocity of volume centre
-        enddo
-      enddo
-	 ELSE
-	  do j=0,j1
-	    do i=0,i1 
-		    k=kbed(i,j)  
-		    sum_c_ws=0.
-		    ctot=0.
-		    do n=1,nfrac
-				ctot=cW(n,i,j,k)*frac(n)%dfloc/frac(n)%dpart*0.5*(rhocorr_air_z(n,k)+rhocorr_air_z(n,k+1))+ctot
-			enddo
-			ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
-			do n=1,nfrac
-				ws(n)=-frac(n)%ws*(1.-ctot)**(frac(n)%n) !ws defined positive downwards
-				sum_c_ws=sum_c_ws+ws(n)*(cW(n,i,j,k)*frac(n)%rho/rhW(i,j,k)-cW(n,i,j,k))
-			enddo
-			dWdt(i,j,k)=-sum_c_ws  !go from mixture velocity (centre of mass velocity) to velocity of volume centre
-        enddo
-      enddo
-	 ENDIF 
+!	 IF (slipvel.eq.2) THEN  ! make Wmix at interface kbed zero --> Wvol=-sum_c_ws 
+!	  do j=0,j1
+!	    do i=0,i1 
+!		    k=kbed(i,j) 	  
+!		    sum_c_ws=0.
+!			do n=1,nfrac
+!				ws(n)=-frac(n)%ws !ws defined positive downwards
+!				sum_c_ws=sum_c_ws+ws(n)*(cW(n,i,j,k)*frac(n)%rho/rhW(i,j,k)-cW(n,i,j,k))
+!			enddo
+!			dWdt(i,j,k)=-sum_c_ws  !go from mixture velocity (centre of mass velocity) to velocity of volume centre
+!        enddo
+!      enddo
+!	 ELSE
+!	  do j=0,j1
+!	    do i=0,i1 
+!		    k=kbed(i,j)  
+!		    sum_c_ws=0.
+!		    ctot=0.
+!		    do n=1,nfrac
+!				ctot=cW(n,i,j,k)*frac(n)%dfloc/frac(n)%dpart*0.5*(rhocorr_air_z(n,k)+rhocorr_air_z(n,k+1))+ctot
+!			enddo
+!			ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
+!			do n=1,nfrac
+!				ws(n)=-frac(n)%ws*(1.-ctot)**(frac(n)%n) !ws defined positive downwards
+!				sum_c_ws=sum_c_ws+ws(n)*(cW(n,i,j,k)*frac(n)%rho/rhW(i,j,k)-cW(n,i,j,k))
+!			enddo
+!			dWdt(i,j,k)=-sum_c_ws  !go from mixture velocity (centre of mass velocity) to velocity of volume centre
+!        enddo
+!      enddo
+!	 ENDIF 
       do  k=1,kmax
         do j=1,jmax
           do i=1,imax

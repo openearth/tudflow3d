@@ -1111,11 +1111,11 @@ c*****************************************************************
       enddo
 
 	  
-!	 DO i=0,i1 ! not needed anymore because Diffcoff is made 0 around kbed
-!	  DO j=0,j1
-!	  	putin2(i,j,0)=putin2(i,j,1) ! neumann boundary to prevent vertical diffusion into bed
-!	  ENDDO
-!	 ENDDO
+	 DO i=0,i1 ! not needed anymore because Diffcoff is made 0 around kbed
+	  DO j=0,j1
+	  	putin2(i,j,kbed(i,j))=putin2(i,j,kbed(i,j)+1) ! neumann boundary to prevent vertical diffusion into bed
+	  ENDDO
+	 ENDDO
 
 	
 	  

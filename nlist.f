@@ -52,7 +52,7 @@
       REAL plumetseries2(1:10000) 
       REAL plumeUseries2(1:10000),c_bed(100)
       INTEGER plumeseriesloc,plumeseriesloc2,plumeQseriesloc,plumecseriesloc
-      INTEGER nr_HPfilter,depo_implicit
+      INTEGER nr_HPfilter,depo_implicit,depo_cbed_option
       REAL timeAB_real(1:4),dpdx,dpdy,kn_d50_multiplier,avalanche_slope(100),av_slope_z(100),dpdx1,dpdy1,Uavold,Vavold
       INTEGER periodicx,periodicy,wallup
       REAL U_b3,V_b3,surf_layer,reduction_sedimentation_shields
@@ -167,7 +167,7 @@
 	    REAL ::	x(4),y(4),height,u,v,w,c(30),t0,t_end,zbottom,Q,sedflux(30),volncells,changesedsuction !c(30) matches with size frac_init
 		REAL :: move_zbed_criterium(100000),move_dx_series(100000),move_dy_series(100000),move_dz_series(100000)
 		REAL :: move_nx_series(100000),move_ny_series(100000),x2(4),y2(4),move_dx2_series(100000),move_dy2_series(100000)
-		REAL :: move_outputfile_series(100000),uinput,dt_history,t_bphis_output
+		REAL :: move_outputfile_series(100000),uinput,dt_history,t_bphis_output,move_dz_height_factor,move_dz_zbottom_factor
 	    INTEGER :: forever,h_seriesloc,zb_seriesloc,Q_seriesloc,S_seriesloc,c_seriesloc,velocity_force
 		INTEGER :: u_seriesloc,v_seriesloc,w_seriesloc,istep_bphis_output
 		CHARACTER*256 :: h_tseriesfile,zb_tseriesfile,Q_tseriesfile,S_tseriesfile,c_tseriesfile
@@ -179,7 +179,7 @@
 		REAL :: Q_tseries(10000),c_tseries(10000),S_tseries(10000),Q_series(10000),c_series(30,10000),S_series(30,10000)
 		REAL :: move_zbed_criterium(100000),move_dx_series(100000),move_dy_series(100000),move_dz_series(100000)
 		REAL :: move_nx_series(100000),move_ny_series(100000),x2(4),y2(4),move_dx2_series(100000),move_dy2_series(100000)
-		REAL :: move_outputfile_series(100000),uinput,dt_history,t_bphis_output
+		REAL :: move_outputfile_series(100000),uinput,dt_history,t_bphis_output,move_dz_height_factor,move_dz_zbottom_factor
 		REAL :: u_tseries(10000),v_tseries(10000),w_tseries(10000)
 		REAL :: u_series(10000),v_series(10000),w_series(10000)
 	    INTEGER :: forever,h_seriesloc,zb_seriesloc,Q_seriesloc,S_seriesloc,c_seriesloc,nmove,nmove_present,velocity_force
@@ -223,7 +223,7 @@
 	NAMELIST /times/t_end,t0_output,dt_output,te_output,tstart_rms,dt_max,dt_ini,time_int,CFL,
      & t0_output_movie,dt_output_movie,te_output_movie,tstart_morf,te_rms
 	NAMELIST /num_scheme/convection,numdiff,diffusion,comp_filter_a,comp_filter_n,CNdiffz,npresIBM,advec_conc,continuity_solver
-     & ,transporteq_fracs,split_rho_cont,driftfluxforce_calfac,depo_implicit
+     & ,transporteq_fracs,split_rho_cont,driftfluxforce_calfac,depo_implicit,depo_cbed_option
 	NAMELIST /ambient/U_b,V_b,W_b,bcfile,rho_b,SEM,nmax2,nmax1,nmax3,lm_min,lm_min3,slip_bot,kn,interaction_bed,
      & periodicx,periodicy,dpdx,dpdy,W_ox,Hs,Tp,nx_w,ny_w,obst,bc_obst_h,U_b3,V_b3,surf_layer,wallup,bedlevelfile,
      & U_bSEM,V_bSEM,U_w,V_w,c_bed,cfixedbed,U_init,V_init,initconditionsfile
@@ -291,6 +291,7 @@
 	split_rho_cont='CDS'  ! optional 'VL2' or 'SB2' TVD scheme (via CDS2 without 1-cfl term) to split off rho from rho*U, default 'CDS' scheme
 	driftfluxforce_calfac=1.
 	depo_implicit=0
+	depo_cbed_option=0
 	!! ambient:
 	U_b = -999.
 	V_b = -999.
@@ -417,6 +418,8 @@
 	bedplume(:)%v_seriesloc=1
 	bedplume(:)%w_seriesloc=1
 	bedplume(:)%dt_history=0.
+	bedplume(:)%move_dz_height_factor=1. 
+	bedplume(:)%move_dz_zbottom_factor=1. 
 	
 	DO i=1,30
 		bedplume(:)%c(i) = 0.
@@ -833,6 +836,8 @@
 	  bp(n)%v_seriesloc=bedplume(n)%v_seriesloc
 	  bp(n)%w_seriesloc=bedplume(n)%w_seriesloc
 	  bp(n)%dt_history=bedplume(n)%dt_history
+	  bp(n)%move_dz_height_factor=bedplume(n)%move_dz_height_factor
+	  bp(n)%move_dz_zbottom_factor=bedplume(n)%move_dz_zbottom_factor
 	  
 	  bp(n)%move_zbed_criterium=bedplume(n)%move_zbed_criterium
 	  bp(n)%move_dx_series=bedplume(n)%move_dx_series
@@ -1201,7 +1206,7 @@
 	  ALLOCATE(Chisbp(nfrac,nbedplume,20000))
 	  DO n=1,nbedplume 
 		bp(n)%istep_bphis_output=0
-		bp(n)%t_bphis_output=0.
+		bp(n)%t_bphis_output=bp(n)%t0
 	  ENDDO
 	  thisbp=0.
 	  zhisbp=0.

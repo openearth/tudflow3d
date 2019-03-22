@@ -1034,7 +1034,7 @@ c
 !       include 'common.txt'
 
 c
-      integer jtmp,botstress,n,t,jp,inout,im,jm,kplus
+      integer jtmp,botstress,n,t,jp,inout,im,jm,kplus,kplus2
 	real xTSHD(1:4),yTSHD(1:4)
 c
       real  Ubound(0:i1,0:j1,0:k1),Vbound(0:i1,0:j1,0:k1),rho(0:i1,0:j1,0:k1),
@@ -1106,9 +1106,12 @@ c	x,y,z coordinate system, not in r,theta,z like this code
 		 DO i=0,i1
 		  DO j=0,j1
 			kplus = MIN(kbed(i,j)+1,k1)
-			rhW(i,j,kbed(i,j))=rho(i,j,kplus) ! make rhW(kbed) equal to rho fluid first cell above to get correct drift flux settling
+			kplus2 = MIN(kbed(i,j)+2,k1)
+			!rhW(i,j,kbed(i,j))=rho(i,j,kplus) ! make rhW(kbed) equal to rho fluid first cell above to get correct drift flux settling
+			rhW(i,j,kbed(i,j))=1.5*rho(i,j,kplus)-0.5*rho(i,j,kplus2)
 			DO n=1,nfrac
-				cW(n,i,j,kbed(i,j))=dcdt(n,i,j,kplus) ! apply neumann boundary over obstacles to get correct drift flux settling
+				!cW(n,i,j,kbed(i,j))=dcdt(n,i,j,kplus) ! apply neumann boundary over obstacles to get correct drift flux settling
+				cW(n,i,j,kbed(i,j))=1.5*dcdt(n,i,j,kplus)-0.5*dcdt(n,i,j,kplus2)
 			ENDDO
 		  ENDDO
 		 ENDDO
@@ -1125,9 +1128,12 @@ c	x,y,z coordinate system, not in r,theta,z like this code
 		 DO i=0,i1
 		  DO j=0,j1
 			kplus = MIN(kbed(i,j)+1,k1)
-			rhW(i,j,kbed(i,j))=rho(i,j,kplus) ! make rhW(kbed) equal to rho fluid first cell above to get correct drift flux settling
+			kplus2 = MIN(kbed(i,j)+2,k1)
+			!rhW(i,j,kbed(i,j))=rho(i,j,kplus) ! make rhW(kbed) equal to rho fluid first cell above to get correct drift flux settling
+			rhW(i,j,kbed(i,j))=1.5*rho(i,j,kplus)-0.5*rho(i,j,kplus2)
 			DO n=1,nfrac
-				cW(n,i,j,kbed(i,j))=dcdt(n,i,j,kplus) ! apply neumann boundary over obstacles to get correct drift flux settling
+				!cW(n,i,j,kbed(i,j))=dcdt(n,i,j,kplus) ! apply neumann boundary over obstacles to get correct drift flux settling
+				cW(n,i,j,kbed(i,j))=1.5*dcdt(n,i,j,kplus)-0.5*dcdt(n,i,j,kplus2)
 			ENDDO
 		  ENDDO
 		 ENDDO
@@ -1458,7 +1464,7 @@ c get stuff from other CPU's
 	Wbound2(0:i1,0:j1,0:k1)=Wbound
 	rho2(0:i1,0:j1,0:k1)=rho
 	! fill Ubound2,Vbound2 with one extra row positive and negative in i,j direction for shear stress 
-	if (periodicx.eq.0) then
+	if (periodicx.eq.0.or.periodicx.eq.2) then
 		Ubound2(-1,0:j1,0:k1)=Ubound(0,0:j1,0:k1)
 		Ubound2(i1+1,0:j1,0:k1)=Ubound(imax,0:j1,0:k1)
 		Vbound2(-1,0:j1,0:k1)=Vbound(0,0:j1,0:k1)
@@ -2078,6 +2084,54 @@ c
 c*************************************************************
 c
 c*************************************************************
+
+	! start with placing bedplume concentrations in order to get lateral boundaries j=0 and j=jmax*px+1 correct (no error in diffusion out of domain)
+
+	DO n2=1,nbedplume
+	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end)
+     &     .or.(bp(n2)%forever.eq.0.and.time_n.lt.bp(n2)%t0.and.time_np.gt.bp(n2)%t0)) THEN
+	! rotation ship for ambient side current
+	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
+	  phi=atan2(V_b,1.e-12)
+	else
+	  phi=atan2(V_b,(U_TSHD-U_b))
+	endif
+      do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz))! do k=0,k1
+       do i=0,i1  
+         do j=j1,0,-1       
+	  xx=Rp(i)*cos_u(j)-schuif_x
+	  yy=Rp(i)*sin_u(j)
+!	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
+		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
+		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
+		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+!	  ELSE 
+!	 	inout=0
+!	  ENDIF
+	  if (inout.eq.1.and.k>kbed(i,j)) then
+	    if (bp(n2)%c(n)>0.) then
+		  Cbound(i,j,k)=bp(n2)%c(n)
+		else
+		  Cbound(i,j,k)=(Cbound(i,j,k)+bp(n2)%sedflux(n)*ddtt/bp(n2)%volncells/frac(n)%rho)
+     &  /(1.-MIN(0.,bp(n2)%Q*bp(n2)%changesedsuction)*ddtt/bp(n2)%volncells) !when Q negative, remove sediment from cell as well   IMPLICIT 
+	 ! IMPLICIT: c^n+1-c^n=-Qout_cel/Vol_cel*dt*c^n+1 --> c^n+1 = c^n/(1+Qout_cel/Vol_cel*dt)
+		endif
+		! rho is calculated in state called after fkdat
+	   endif
+	  enddo
+	 enddo
+	enddo
+	  ! remove sediment from obstacles/TSHD after placement of bedplume:
+!	  do t=1,tmax_inPpuntTSHD ! when no TSHD then this loop is skipped
+!	    k=k_inPpuntTSHD(t)		
+!	    i=i_inPpuntTSHD(t)
+!            j=j_inPpuntTSHD(t)
+!            Cbound(i,j,k)=0.  ! remove sediment from hull
+!	  enddo
+	ENDIF
+	ENDDO ! bedplume loop
+	
+
 c get stuff from other CPU's
 
 	
@@ -2163,8 +2217,8 @@ c get stuff from other CPU's
        elseif (periodicx.eq.2) then ! no outflow in x direction:
 	      do k=1,kmax ! boundaries in i-direction
 		 do j=0,j1
-			   Cbound(0,j,k)    =    0. 
-			   Cbound(i1,j,k)   =    0. 
+			   Cbound(0,j,k)    =    Cbound(1,j,k) !0. 
+			   Cbound(i1,j,k)   =    Cbound(imax,j,k) !0. 
 		 enddo   
 	      enddo
 	else
@@ -2213,49 +2267,6 @@ c get stuff from other CPU's
 
 	
 
-	DO n2=1,nbedplume
-	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end)
-     &     .or.(bp(n2)%forever.eq.0.and.time_n.lt.bp(n2)%t0.and.time_np.gt.bp(n2)%t0)) THEN
-	! rotation ship for ambient side current
-	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-	  phi=atan2(V_b,1.e-12)
-	else
-	  phi=atan2(V_b,(U_TSHD-U_b))
-	endif
-      do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz))! do k=0,k1
-       do i=0,i1  
-         do j=j1,0,-1       
-	  xx=Rp(i)*cos_u(j)-schuif_x
-	  yy=Rp(i)*sin_u(j)
-!	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
-		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
-		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
-		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
-!	  ELSE 
-!	 	inout=0
-!	  ENDIF
-	  if (inout.eq.1.and.k>kbed(i,j)) then
-	    if (bp(n2)%c(n)>0.) then
-		  Cbound(i,j,k)=bp(n2)%c(n)
-		else
-		  Cbound(i,j,k)=(Cbound(i,j,k)+bp(n2)%sedflux(n)*ddtt/bp(n2)%volncells/frac(n)%rho)
-     &  /(1.-MIN(0.,bp(n2)%Q*bp(n2)%changesedsuction)*ddtt/bp(n2)%volncells) !when Q negative, remove sediment from cell as well   IMPLICIT 
-	 ! IMPLICIT: c^n+1-c^n=-Qout_cel/Vol_cel*dt*c^n+1 --> c^n+1 = c^n/(1+Qout_cel/Vol_cel*dt)
-		endif
-		! rho is calculated in state called after fkdat
-	   endif
-	  enddo
-	 enddo
-	enddo
-	  ! remove sediment from obstacles/TSHD after placement of bedplume:
-!	  do t=1,tmax_inPpuntTSHD ! when no TSHD then this loop is skipped
-!	    k=k_inPpuntTSHD(t)		
-!	    i=i_inPpuntTSHD(t)
-!            j=j_inPpuntTSHD(t)
-!            Cbound(i,j,k)=0.  ! remove sediment from hull
-!	  enddo
-	ENDIF
-	ENDDO ! bedplume loop
 	
 	Cbound2=Cbound
 
@@ -2371,6 +2382,11 @@ c get stuff from other CPU's
 		   Cbound(0,j)    =    0. !Cbound(1,j)
 		   Cbound(i1,j)   =    Cbound(imax,j)
          enddo   
+	elseif (periodicx.eq.2) then
+         do j=0,j1
+		   Cbound(0,j)    =    Cbound(1,j)
+		   Cbound(i1,j)   =    Cbound(imax,j)
+         enddo   	
 	else 
          do j=0,j1
 		   Cbound(0,j)    =    Cbound(imax,j)
@@ -2429,7 +2445,7 @@ c get stuff from other CPU's
 	endif
 	
 	 ! boundaries in i-direction
-	if (periodicx.eq.0) then
+	if (periodicx.eq.0.or.periodicx.eq.2) then
          do j=0,j1
 		   Cbound(0,j)    =    Cbound(1,j)
 		   Cbound(i1,j)   =    Cbound(imax,j)
@@ -2703,21 +2719,28 @@ c*************************************************************
 	
 	implicit none
 	
-	real tt
-	integer n2,inout,n
+	include 'mpif.h'
+	real tt,globalsum
+	integer n2,inout,n,ierr
 	real xTSHD(4),yTSHD(4),phi,xx,yy
 
+	! rotation ship for ambient side current
+	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
+	  phi=atan2(V_b,1.e-12)
+	else
+	  phi=atan2(V_b,(U_TSHD-U_b))
+	endif	
 	DO n2=1,nbedplume
 		IF (bp(n2)%dt_history>0.AND.tt.ge.bp(n2)%t_bphis_output.AND.bp(n2)%t_bphis_output.le.te_output+1e-12
      &        .and.bp(n2)%istep_bphis_output.le.20000) THEN 
 		bp(n2)%istep_bphis_output=bp(n2)%istep_bphis_output+1
 		bp(n2)%t_bphis_output=bp(n2)%t_bphis_output+bp(n2)%dt_history
-		write(*,*),rank,n2,bp(n2)%dt_history,tt,bp(n2)%t_bphis_output,te_output,bp(n2)%istep_bphis_output	 
+		!write(*,*),rank,n2,bp(n2)%dt_history,tt,bp(n2)%t_bphis_output,te_output,bp(n2)%istep_bphis_output	 
 		  do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
 		   do i=1,imax 
-			 do j=1,jmax*px        
-		  xx=Rp(i)*cos_ut(j)-schuif_x !global xx over different processors
-		  yy=Rp(i)*sin_ut(j)          !global yy over different processors
+			 do j=1,jmax        
+		  xx=Rp(i)*cos_u(j)-schuif_x 
+		  yy=Rp(i)*sin_u(j)          
 !		  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle: 
 			xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
 			yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
@@ -2727,14 +2750,15 @@ c*************************************************************
 !		  ENDIF
 		  if (inout.eq.1) then
 		     DO n=1,nfrac
-				Chisbp(n,n2,bp(n2)%istep_bphis_output)=Chisbp(n,n2,bp(n2)%istep_bphis_output)+vol_V(i,j)*cnew(n,i,j,k)				
+				Chisbp(n,n2,bp(n2)%istep_bphis_output)=Chisbp(n,n2,bp(n2)%istep_bphis_output)+vol_V(i,j+rank*jmax)*cnew(n,i,j,k)				
 		     ENDDO
 		   endif
 		  enddo
 		 enddo
 		enddo
 		DO n=1,nfrac
-		  Chisbp(n,n2,bp(n2)%istep_bphis_output)=Chisbp(n,n2,bp(n2)%istep_bphis_output)/bp(n2)%volncells
+		  call mpi_allreduce(Chisbp(n,n2,bp(n2)%istep_bphis_output),globalsum,1,mpi_double_precision,mpi_sum,mpi_comm_world,ierr)
+		  Chisbp(n,n2,bp(n2)%istep_bphis_output)=globalsum/bp(n2)%volncells
 		ENDDO 
 		thisbp(n2,bp(n2)%istep_bphis_output)=tt 
 		zhisbp(n2,bp(n2)%istep_bphis_output)=(MAX(1,CEILING(bp(n2)%zbottom/dz))+MIN(kmax,FLOOR(bp(n2)%height/dz)))/2.*dz+0.5*dz 		
@@ -2857,8 +2881,8 @@ c*************************************************************
 			ELSE
 				bp(n)%x = bp(n)%x+bp(n)%move_dx_series(bp(n)%nmove_present)
 				bp(n)%y = bp(n)%y+bp(n)%move_dy_series(bp(n)%nmove_present)
-				bp(n)%height = bp(n)%height+bp(n)%move_dz_series(bp(n)%nmove_present)
-				bp(n)%zbottom = bp(n)%zbottom+bp(n)%move_dz_series(bp(n)%nmove_present)
+				bp(n)%height = bp(n)%height+bp(n)%move_dz_series(bp(n)%nmove_present)*bp(n)%move_dz_height_factor
+				bp(n)%zbottom = bp(n)%zbottom+bp(n)%move_dz_series(bp(n)%nmove_present)*bp(n)%move_dz_zbottom_factor
 				bp(n)%x2 = bp(n)%x2+bp(n)%move_dx2_series(bp(n)%nmove_present)
 				bp(n)%y2 = bp(n)%y2+bp(n)%move_dy2_series(bp(n)%nmove_present)				
 				IF (bp(n)%u.ne.-99999.) THEN

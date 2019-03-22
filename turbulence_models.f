@@ -609,22 +609,21 @@ c*************************************************************
 		  Diffcof(0:i1,0:j1,kmax-kjet+1:k1)=0.
 		ENDIF
 		! no diffusion allowed into bed:
-			DO i=1,imax
-				DO j=1,jmax
+			DO i=0,i1
+				DO j=0,j1
 					DO k=0,kbed(i,j)
-						im=i-1
-						ip=i+1
-						jm=j-1
-						jp=j+1
-						km=k-1
-						kp=MIN(k+1,k1)
+						im=MAX(0,i-1)
+						ip=MIN(i1,i+1)
+						jm=MAX(0,j-1)
+						jp=MIN(j1,j+1)
+						km=MAX(0,k-1)
+						kp=MIN(k1,k+1)					
 						Diffcof(im,j,k)=0.
 						Diffcof(ip,j,k)=0.
 						Diffcof(i,jm,k)=0.
 						Diffcof(i,jp,k)=0.
 						Diffcof(i,j,k)=0.
 						Diffcof(i,j,kp)=0.									
-
 					ENDDO
 				ENDDO
 			ENDDO
@@ -915,15 +914,15 @@ c*************************************************************
           Diffcof(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
 	ENDIF
 		!no diffusion allowed into bed:
-			DO i=1,imax
-				DO j=1,jmax
+			DO i=0,i1
+				DO j=0,j1
 					DO k=0,kbed(i,j)
-						im=i-1
-						ip=i+1
-						jm=j-1
-						jp=j+1
-						km=k-1
-						kp=MIN(k+1,k1)
+						im=MAX(0,i-1)
+						ip=MIN(i1,i+1)
+						jm=MAX(0,j-1)
+						jp=MIN(j1,j+1)
+						km=MAX(0,k-1)
+						kp=MIN(k1,k+1)					
 						Diffcof(im,j,k)=0.
 						Diffcof(ip,j,k)=0.
 						Diffcof(i,jm,k)=0.
@@ -1203,22 +1202,21 @@ c*************************************************************
 		  Diffcof(0:i1,0:j1,kmax-kjet+1:k1)=0.
 	ENDIF		
 		 ! no horizontal or vertical diffusion allowed into bed:
-			DO i=1,imax
-				DO j=1,jmax
+			DO i=0,i1
+				DO j=0,j1
 					DO k=0,kbed(i,j)
-						im=i-1
-						ip=i+1
-						jm=j-1
-						jp=j+1
-						km=k-1
-						kp=k+1
+						im=MAX(0,i-1)
+						ip=MIN(i1,i+1)
+						jm=MAX(0,j-1)
+						jp=MIN(j1,j+1)
+						km=MAX(0,k-1)
+						kp=MIN(k1,k+1)					
 						Diffcof(im,j,k)=0.
 						Diffcof(ip,j,k)=0.
 						Diffcof(i,jm,k)=0.
 						Diffcof(i,jp,k)=0.
 						Diffcof(i,j,k)=0.
 						Diffcof(i,j,kp)=0.									
-
 					ENDDO
 				ENDDO
 			ENDDO
@@ -1480,15 +1478,15 @@ c*************************************************************
 			  Diffcof(0:i1,0:j1,kmax-kjet+1:k1)=0.
 		ENDIF
 		 ! no horizontal or vertical diffusion allowed into bed:
-			DO i=1,imax
-				DO j=1,jmax
+			DO i=0,i1
+				DO j=0,j1
 					DO k=0,kbed(i,j)
-						im=i-1
-						ip=i+1
-						jm=j-1
-						jp=j+1
-						km=k-1
-						kp=MIN(k+1,k1)
+						im=MAX(0,i-1)
+						ip=MIN(i1,i+1)
+						jm=MAX(0,j-1)
+						jp=MIN(j1,j+1)
+						km=MAX(0,k-1)
+						kp=MIN(k1,k+1)					
 						Diffcof(im,j,k)=0.
 						Diffcof(ip,j,k)=0.
 						Diffcof(i,jm,k)=0.
@@ -2072,15 +2070,15 @@ c*************************************************************
 			  Diffcof(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
 		ENDIF		
 		 ! no horizontal or vertical diffusion allowed into bed:
-			DO i=1,imax
-				DO j=1,jmax
+			DO i=0,i1
+				DO j=0,j1
 					DO k=0,kbed(i,j)
-						im=i-1
-						ip=i+1
-						jm=j-1
-						jp=j+1
-						km=k-1
-						kp=MIN(k+1,k1)
+						im=MAX(0,i-1)
+						ip=MIN(i1,i+1)
+						jm=MAX(0,j-1)
+						jp=MIN(j1,j+1)
+						km=MAX(0,k-1)
+						kp=MIN(k1,k+1)					
 						Diffcof(im,j,k)=0.
 						Diffcof(ip,j,k)=0.
 						Diffcof(i,jm,k)=0.
@@ -2478,15 +2476,15 @@ c get stuff from other CPU's
 			  Diffcof(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
 		ENDIF		
 		 ! no horizontal or vertical diffusion allowed into bed:
-			DO i=1,imax
-				DO j=1,jmax
+			DO i=0,i1
+				DO j=0,j1
 					DO k=0,kbed(i,j)
-						im=i-1
-						ip=i+1
-						jm=j-1
-						jp=j+1
-						km=k-1
-						kp=MIN(k+1,k1)
+						im=MAX(0,i-1)
+						ip=MIN(i1,i+1)
+						jm=MAX(0,j-1)
+						jp=MIN(j1,j+1)
+						km=MAX(0,k-1)
+						kp=MIN(k1,k+1)					
 						Diffcof(im,j,k)=0.
 						Diffcof(ip,j,k)=0.
 						Diffcof(i,jm,k)=0.
@@ -2496,7 +2494,6 @@ c get stuff from other CPU's
 					ENDDO
 				ENDDO
 			ENDDO
-		
       end
 
 
