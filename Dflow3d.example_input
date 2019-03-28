@@ -37,7 +37,7 @@ tstart_morf = 1. 	! Start time bedupdate [s] (default 0)
 /
 
 &num_scheme
-convection = 'HYB6'		! Numerical scheme for convection term, options: 'CDS2','CDS6','COM4','HYB4','HYB6'
+convection = 'HYB6'		! Numerical scheme for convection term, options: 'CDS2','CDS6','COM4','HYB4','HYB6','uTVD'
 numdiff = 0.001953125		! Amount of extra diffusion in case of 'CDS6','HYB4','HYB6' ('CDS6' -> 1/60=UPW5, 0=CDS6) 
 diffusion = 'CDS2'		! Numerical scheme for diffusion term, options: 'CDS2','COM4'
 comp_filter_a = 0.495		! Alpha in compact filter (0-0.5), default 0.5 (no filtering) [-]
@@ -168,6 +168,10 @@ bedplume(1)%move_dy2_series =			! (optional) series [m] to move bedplume()%y2
 bedplume(1)%dt_history= 				! (optional) time interval output [s]; when >0 a history is made of z-position and concentration of bedplume location 
 bedplume(1)%move_dz_height_factor =		! (optional) [-] factor to apply move_dz_series to bedplume height (e.g. make 0 to not apply move_dz_series to bedplume height)
 bedplume(1)%move_dz_zbottom_factor =		! (optional) [-] factor to apply move_dz_series to bedplume zbottom (e.g. make 0 to not apply move_dz_series to bedplume zbottom)
+bedplume(1)%move_u = 					! (optional) velocity [m/s] to move bedplume in x direction 
+bedplume(1)%move_v = 					! (optional) velocity [m/s] to move bedplume in y direction 
+bedplume(1)%move_w = 					! (optional) velocity [m/s] to move bedplume in z direction 
+bedplume(1)%radius = 					! (optional) radius [m] to define circle around bp()%x(1) and bp()%y(1) instead of square defined with bp()%x(1-4),bp()%y(1-4)
 /
 
 &fractions_in_plume

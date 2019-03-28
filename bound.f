@@ -2907,6 +2907,15 @@ c*************************************************************
 		ENDIF
 	  ENDIF
 	ENDDO
+	
+	DO n=1,nbedplume
+	  IF ((bp(n)%forever.eq.1.and.time_np.gt.bp(n)%t0.and.time_np.lt.bp(n)%t_end)) THEN
+        bp(n)%x=bp(n)%x+dt*bp(n)%move_u 
+		bp(n)%y=bp(n)%y+dt*bp(n)%move_v
+		bp(n)%height=bp(n)%height+dt*bp(n)%move_w
+		bp(n)%zbottom=bp(n)%zbottom+dt*bp(n)%move_w
+	  ENDIF
+	ENDDO
 	end	
 
 

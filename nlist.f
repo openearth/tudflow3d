@@ -172,6 +172,7 @@
 		INTEGER :: u_seriesloc,v_seriesloc,w_seriesloc,istep_bphis_output
 		CHARACTER*256 :: h_tseriesfile,zb_tseriesfile,Q_tseriesfile,S_tseriesfile,c_tseriesfile
 		CHARACTER*256 :: u_tseriesfile,v_tseriesfile,w_tseriesfile
+		REAL :: move_u,move_v,move_w,radius
 	end type bed_plumes
 	type bed_plumes2
 	    REAL ::	x(4),y(4),height,u,v,w,c(30),t0,t_end,zbottom,Q,sedflux(30),volncells,changesedsuction !c(30) matches with size frac_init
@@ -186,7 +187,8 @@
 		INTEGER :: u_seriesloc,v_seriesloc,w_seriesloc,istep_bphis_output
 		CHARACTER*256 :: h_tseriesfile,zb_tseriesfile,Q_tseriesfile,S_tseriesfile,c_tseriesfile
 		CHARACTER*256 :: u_tseriesfile,v_tseriesfile,w_tseriesfile
-!		INTEGER :: tmax_iP,tmax_iU,iP_inbp(10000),jP_inbp(10000),kP_inbp(10000),iU_inbp(10000),jU_inbp(10000),kU_inbp(10000)		
+!		INTEGER :: tmax_iP,tmax_iU,iP_inbp(10000),jP_inbp(10000),kP_inbp(10000),iU_inbp(10000),jU_inbp(10000),kU_inbp(10000)
+		REAL :: move_u,move_v,move_w,radius		
 	end type bed_plumes2
 	
 	TYPE(fractions), DIMENSION(:), ALLOCATABLE :: frac
@@ -419,7 +421,12 @@
 	bedplume(:)%w_seriesloc=1
 	bedplume(:)%dt_history=0.
 	bedplume(:)%move_dz_height_factor=1. 
-	bedplume(:)%move_dz_zbottom_factor=1. 
+	bedplume(:)%move_dz_zbottom_factor=1.
+	bedplume(:)%move_u=0.
+	bedplume(:)%move_v=0.
+	bedplume(:)%move_w=0.
+	bedplume(:)%radius=-9.
+	
 	
 	DO i=1,30
 		bedplume(:)%c(i) = 0.
@@ -849,6 +856,14 @@
 	  bp(n)%y2=bedplume(n)%y2	  
 	  bp(n)%move_dx2_series=bedplume(n)%move_dx2_series
 	  bp(n)%move_dy2_series=bedplume(n)%move_dy2_series	  
+	  bp(n)%move_u=bedplume(n)%move_u
+	  bp(n)%move_v=bedplume(n)%move_v
+	  bp(n)%move_w=bedplume(n)%move_w
+	  bp(n)%radius=bedplume(n)%radius
+	  IF (bp(n)%radius>0.) THEN
+		bp(n)%x(2:4)=0.
+		bp(n)%y(2:4)=0.
+	  ENDIF
 	  
 	  bp(n)%move_outputfile_series=bedplume(n)%move_outputfile_series
 	  bp(n)%nmove_present=0
