@@ -168,9 +168,9 @@ bedplume(1)%move_dy2_series =			! (optional) series [m] to move bedplume()%y2
 bedplume(1)%dt_history= 				! (optional) time interval output [s]; when >0 a history is made of z-position and concentration of bedplume location 
 bedplume(1)%move_dz_height_factor =		! (optional) [-] factor to apply move_dz_series to bedplume height (e.g. make 0 to not apply move_dz_series to bedplume height)
 bedplume(1)%move_dz_zbottom_factor =		! (optional) [-] factor to apply move_dz_series to bedplume zbottom (e.g. make 0 to not apply move_dz_series to bedplume zbottom)
-bedplume(1)%move_u = 					! (optional) velocity [m/s] to move bedplume in x direction 
-bedplume(1)%move_v = 					! (optional) velocity [m/s] to move bedplume in y direction 
-bedplume(1)%move_w = 					! (optional) velocity [m/s] to move bedplume in z direction 
+bedplume(1)%move_u = 					! (optional) velocity [m/s] to move bedplume in x direction (default 0)
+bedplume(1)%move_v = 					! (optional) velocity [m/s] to move bedplume in y direction (default 0)
+bedplume(1)%move_w = 					! (optional) velocity [m/s] to move bedplume in z direction: it adjusts both bp()heigth and bp()zbottom (default 0)
 bedplume(1)%radius = 					! (optional) radius [m] to define circle around bp()%x(1) and bp()%y(1) instead of square defined with bp()%x(1-4),bp()%y(1-4)
 /
 

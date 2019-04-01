@@ -1034,7 +1034,7 @@ c
 !       include 'common.txt'
 
 c
-      integer jtmp,botstress,n,t,jp,inout,im,jm,kplus,kplus2
+      integer jtmp,botstress,n,t,jp,inout,im,jm,kplus,kplus2,tel
 	real xTSHD(1:4),yTSHD(1:4)
 c
       real  Ubound(0:i1,0:j1,0:k1),Vbound(0:i1,0:j1,0:k1),rho(0:i1,0:j1,0:k1),
@@ -1609,26 +1609,29 @@ c get stuff from other CPU's
 	endif
 	 IF (bp(n)%velocity_force.eq.0.) THEN
       do k=MAX(1,CEILING(bp(n)%zbottom/dz)),MIN(kmax,FLOOR(bp(n)%height/dz))! do k=k1,0,-1 !from top to bottom
-       do i=0,i1  
-         do j=0,j1       ! bedplume loop is only initial condition: do not bother to have U,V,W initial staggering perfect 
-			xx=Rp(i)*cos_u(j)-schuif_x
-			yy=Rp(i)*sin_u(j)
-!	  		IF (k.le.FLOOR(bp(n)%height/dz).and.k.ge.CEILING(bp(n)%zbottom/dz)) THEN ! obstacle:
-			xTSHD(1:4)=bp(n)%x*cos(phi)-bp(n)%y*sin(phi)
-			yTSHD(1:4)=bp(n)%x*sin(phi)+bp(n)%y*cos(phi)
-			CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
-!	  		ELSE 
-!	 			inout=0
-!	  		ENDIF
-			if (inout.eq.1) then
+	   do tel=1,bp(n)%tmax 
+	     i=bp(n)%i(tel) 
+		 j=bp(n)%j(tel) 
+!!       do i=0,i1  
+!!         do j=0,j1       ! bedplume loop is only initial condition: do not bother to have U,V,W initial staggering perfect 
+!!			xx=Rp(i)*cos_u(j)-schuif_x
+!!			yy=Rp(i)*sin_u(j)
+!!!	  		IF (k.le.FLOOR(bp(n)%height/dz).and.k.ge.CEILING(bp(n)%zbottom/dz)) THEN ! obstacle:
+!!			xTSHD(1:4)=bp(n)%x*cos(phi)-bp(n)%y*sin(phi)
+!!			yTSHD(1:4)=bp(n)%x*sin(phi)+bp(n)%y*cos(phi)
+!!			CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+!!!	  		ELSE 
+!!!	 			inout=0
+!!!	  		ENDIF
+!!			if (inout.eq.1) then
 			  Ubound(i,j,k)=(bp(n)%u*cos_u(j)+bp(n)%v*sin_u(j))*rhU(i,j,k) !rho(i,j,k)
 			  Ubound(MAX(i-1,0),j,k)=(bp(n)%u*cos_u(j)+bp(n)%v*sin_u(j))*rhU(MAX(i-1,0),j,k) !rho(MAX(i-1,0),j,k)
 			  Vbound(i,j,k)=(-bp(n)%u*sin_v(j)+bp(n)%v*cos_v(j))*rhV(i,j,k) !rho(i,j,k)
 			  Vbound(i,MAX(j-1,0),k)=(-bp(n)%u*sin_v(MAX(j-1,0))+bp(n)%v*cos_v(MAX(j-1,0)))*rhV(i,MAX(j-1,0),k) !rho(i,MAX(j-1,0),k)
 			  Wbound(i,j,k)=bp(n)%w*rhW(i,j,k) !rho(i,j,k)
 			  Wbound(i,j,MAX(k-1,0))=bp(n)%w*rhW(i,j,MAX(k-1,0)) !rho(i,j,MAX(k-1,0))
-			endif
-		 enddo
+!			endif
+!		 enddo
 	   enddo
 	  enddo
 	 ELSE
@@ -2061,7 +2064,7 @@ c
 !       include 'common.txt'
 
 c
-      integer jtmp,t,kcheck,n,n2,inout
+      integer jtmp,t,kcheck,n,n2,inout,tel
 c
       real Cbound(0:i1,0:j1,0:k1),cjet,Cbound2(0:i1,0:j1,0:k1)
       real ubb(0:i1,0:k1),val,theta,rbc,xx,yy,r_orifice2,rjet,theta_U,theta_V
@@ -2091,24 +2094,28 @@ c*************************************************************
 	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end)
      &     .or.(bp(n2)%forever.eq.0.and.time_n.lt.bp(n2)%t0.and.time_np.gt.bp(n2)%t0)) THEN
 	! rotation ship for ambient side current
-	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-	  phi=atan2(V_b,1.e-12)
-	else
-	  phi=atan2(V_b,(U_TSHD-U_b))
-	endif
+!!	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
+!!	  phi=atan2(V_b,1.e-12)
+!!	else
+!!	  phi=atan2(V_b,(U_TSHD-U_b))
+!!	endif
       do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz))! do k=0,k1
-       do i=0,i1  
-         do j=j1,0,-1       
-	  xx=Rp(i)*cos_u(j)-schuif_x
-	  yy=Rp(i)*sin_u(j)
-!	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
-		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
-		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
-		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
-!	  ELSE 
-!	 	inout=0
-!	  ENDIF
-	  if (inout.eq.1.and.k>kbed(i,j)) then
+	   do tel=1,bp(n2)%tmax 
+	     i=bp(n2)%i(tel) 
+		 j=bp(n2)%j(tel) 	  
+!!       do i=0,i1  
+!!         do j=j1,0,-1       
+!!	  xx=Rp(i)*cos_u(j)-schuif_x
+!!	  yy=Rp(i)*sin_u(j)
+!!!	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
+!!		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
+!!		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
+!!		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+!!!	  ELSE 
+!!!	 	inout=0
+!!!	  ENDIF
+!!	  if (inout.eq.1.and.k>kbed(i,j)) then
+      if (k>kbed(i,j)) then
 	    if (bp(n2)%c(n)>0.) then
 		  Cbound(i,j,k)=bp(n2)%c(n)
 		else
@@ -2118,7 +2125,7 @@ c*************************************************************
 		endif
 		! rho is calculated in state called after fkdat
 	   endif
-	  enddo
+!	  enddo
 	 enddo
 	enddo
 	  ! remove sediment from obstacles/TSHD after placement of bedplume:
@@ -2575,7 +2582,7 @@ c*************************************************************
 	implicit none
 	
 	real tt
-	integer n2,inout,n
+	integer n2,inout,n,tel
 	real xTSHD(4),yTSHD(4),phi,interpseries,xx,yy
 	real fbx2,fbx,fby2,fby,fbz2
 	real Propx_dummy(0:i1,0:px*jmax+1,1:kmax)
@@ -2650,14 +2657,17 @@ c*************************************************************
 !		IF (bp(n2).h_tseriesfile.ne.''.or.bp(n2).zb_tseriesfile.ne.''.or.bp(n2).nmove>0) THEN ! apply bedplume velocity boundary condition:	
 		   IF (bp(n2)%u.ne.-99999.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end) THEN
 			do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz))! do k=k1,0,-1 !from top to bottom
-			  do i=0,i1  
-				do j=0,j1 !jmax*px+1       ! bedplume loop is only initial condition: do not bother to have U,V,W initial staggering perfect 
-					xx=Rp(i)*cos_u(j)-schuif_x
-					yy=Rp(i)*sin_u(j)
-					xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
-					yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
-					CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
-					if (inout.eq.1) then		   
+			   do tel=1,bp(n2)%tmax 
+				 i=bp(n2)%i(tel) 
+				 j=bp(n2)%j(tel) 			
+!!			  do i=0,i1  
+!!				do j=0,j1 !jmax*px+1       ! bedplume loop is only initial condition: do not bother to have U,V,W initial staggering perfect 
+!!					xx=Rp(i)*cos_u(j)-schuif_x
+!!					yy=Rp(i)*sin_u(j)
+!!					xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
+!!					yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
+!!					CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+!!					if (inout.eq.1) then		   
 					  fbx2=ABS(bp(n2)%u)*bp(n2)%u/(bp(n2)%x(2)-bp(n2)%x(1))
 					  fby2=ABS(bp(n2)%v)*bp(n2)%v/(bp(n2)%y(3)-bp(n2)%y(2))
 					  fbz2=ABS(bp(n2)%w)*bp(n2)%w/(bp(n2)%height-bp(n2)%zbottom)
@@ -2669,8 +2679,8 @@ c*************************************************************
 					  Ppropy(i,MAX(j-1,0),k) = Ppropy(i,MAX(j-1,0),k) + 0.5*(-sin_v(MAX(j-1,0))*fbx+cos_v(MAX(j-1,0))*fby)*rhV(i,MAX(j-1,0),k)
 					  Ppropz(i,j,k) = Ppropz(i,j,k)+0.5*fbz2*rhW(i,j,k)
 					  Ppropz(i,j,MAX(k-1,0)) = Ppropz(i,j,MAX(k-1,0)) + 0.5*fbz2*rhW(i,j,MAX(k-1,0))
-					endif
-				enddo
+!!					endif
+!!				enddo
 			  enddo
 			enddo
 		   ENDIF
@@ -2694,7 +2704,14 @@ c*************************************************************
 !		  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle: 
 			xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
 			yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
-			CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+		    if (bp(n)%radius.gt.0.) then
+			  inout=0
+		      IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n)%radius)**2) THEN
+			    inout=1
+			  ENDIF
+			else 
+			  CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+			endif 
 !		  ELSE 
 !			inout=0
 !		  ENDIF
@@ -2721,7 +2738,7 @@ c*************************************************************
 	
 	include 'mpif.h'
 	real tt,globalsum
-	integer n2,inout,n,ierr
+	integer n2,inout,n,ierr,tel
 	real xTSHD(4),yTSHD(4),phi,xx,yy
 
 	! rotation ship for ambient side current
@@ -2737,23 +2754,26 @@ c*************************************************************
 		bp(n2)%t_bphis_output=bp(n2)%t_bphis_output+bp(n2)%dt_history
 		!write(*,*),rank,n2,bp(n2)%dt_history,tt,bp(n2)%t_bphis_output,te_output,bp(n2)%istep_bphis_output	 
 		  do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
-		   do i=1,imax 
-			 do j=1,jmax        
-		  xx=Rp(i)*cos_u(j)-schuif_x 
-		  yy=Rp(i)*sin_u(j)          
-!		  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle: 
-			xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
-			yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
-			CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
-!		  ELSE 
-!			inout=0
-!		  ENDIF
-		  if (inout.eq.1) then
+		   do tel=1,bp(n2)%tmax 
+			 i=bp(n2)%i(tel) 
+			 j=bp(n2)%j(tel) 			  
+!!		   do i=1,imax 
+!!			 do j=1,jmax        
+!!		  xx=Rp(i)*cos_u(j)-schuif_x 
+!!		  yy=Rp(i)*sin_u(j)          
+!!!		  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle: 
+!!			xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
+!!			yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
+!!			CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+!!!		  ELSE 
+!!!			inout=0
+!!!		  ENDIF
+!!		  if (inout.eq.1) then
 		     DO n=1,nfrac
 				Chisbp(n,n2,bp(n2)%istep_bphis_output)=Chisbp(n,n2,bp(n2)%istep_bphis_output)+vol_V(i,j+rank*jmax)*cnew(n,i,j,k)				
 		     ENDDO
-		   endif
-		  enddo
+!!		   endif
+!!		  enddo
 		 enddo
 		enddo
 		DO n=1,nfrac
@@ -2836,33 +2856,36 @@ c*************************************************************
 	implicit none
 	include 'mpif.h'
 	
-	integer inout,n,ierr
+	integer inout,n,ierr,tel
 	real xx,yy,phi,xTSHD(1:4),yTSHD(1:4),zbed_max,zbed_max_tot,zb,Utot
 	
 	DO n=1,nbedplume
 	  IF ((bp(n)%forever.eq.1.and.time_np.gt.bp(n)%t0.and.time_np.lt.bp(n)%t_end).and.
      & bp(n)%move_zbed_criterium(MAX(bp(n)%nmove_present,1))<depth) THEN
 		! rotation ship for ambient side current
-		if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-		  phi=atan2(V_b,1.e-12)
-		else
-		  phi=atan2(V_b,(U_TSHD-U_b))
-		endif
+!!		if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
+!!		  phi=atan2(V_b,1.e-12)
+!!		else
+!!		  phi=atan2(V_b,(U_TSHD-U_b))
+!!		endif
 		zbed_max=0.
-		do i=0,i1  
-		 do j=j1,0,-1       ! bedplume loop is only initial condition: do not bother to have U,V,W initial staggering perfect 
-			xx=Rp(i)*cos_u(j)-schuif_x
-			yy=Rp(i)*sin_u(j)
-			xTSHD(1:4)=bp(n)%x2*cos(phi)-bp(n)%y2*sin(phi)
-			yTSHD(1:4)=bp(n)%x2*sin(phi)+bp(n)%y2*cos(phi)
-			CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
-			
-			if (inout.eq.1) then
+		   do tel=1,bp(n)%tmax 
+			 i=bp(n)%i(tel) 
+			 j=bp(n)%j(tel) 			
+!!		do i=0,i1  
+!!		 do j=j1,0,-1       ! bedplume loop is only initial condition: do not bother to have U,V,W initial staggering perfect 
+!!			xx=Rp(i)*cos_u(j)-schuif_x
+!!			yy=Rp(i)*sin_u(j)
+!!			xTSHD(1:4)=bp(n)%x2*cos(phi)-bp(n)%y2*sin(phi)
+!!			yTSHD(1:4)=bp(n)%x2*sin(phi)+bp(n)%y2*cos(phi)
+!!			CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+!!			
+!!			if (inout.eq.1) then
 				!zb=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(dcdtbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
 				zb=REAL(MAX(kbed(i,j),0))*dz !use zb = kbed*dz as this corresponds with bed cells that are blocked in flow, buffer layer is not real bed but bookkeeping
 				zbed_max=MAX(zbed_max,zb)
-			endif
-		 enddo
+!!			endif
+!!		 enddo
 		enddo
 		call mpi_allreduce(zbed_max,zbed_max_tot,1,mpi_real8,mpi_max,mpi_comm_world,ierr)
 		IF(zbed_max_tot>bp(n)%move_zbed_criterium(MAX(bp(n)%nmove_present,1))) THEN
@@ -2916,9 +2939,99 @@ c*************************************************************
 		bp(n)%zbottom=bp(n)%zbottom+dt*bp(n)%move_w
 	  ENDIF
 	ENDDO
+	
+	DO n=1,nbedplume
+	  IF ((bp(n)%forever.eq.1.and.time_np.gt.bp(n)%t0.and.time_np.lt.bp(n)%t_end).and.
+     & bp(n)%move_zbed_criterium(MAX(bp(n)%nmove_present,1))<depth) THEN
+	    bp(n)%tmax=0
+		! rotation ship for ambient side current
+		if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
+		  phi=atan2(V_b,1.e-12)
+		else
+		  phi=atan2(V_b,(U_TSHD-U_b))
+		endif
+		do i=0,i1  
+		 do j=j1,0,-1       ! bedplume loop is only initial condition: do not bother to have U,V,W initial staggering perfect 
+			xx=Rp(i)*cos_u(j)-schuif_x
+			yy=Rp(i)*sin_u(j)
+			xTSHD(1:4)=bp(n)%x2*cos(phi)-bp(n)%y2*sin(phi)
+			yTSHD(1:4)=bp(n)%x2*sin(phi)+bp(n)%y2*cos(phi)			
+		    if (bp(n)%radius.gt.0.) then
+			  inout=0
+		      IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n)%radius)**2) THEN
+			    inout=1
+			  ENDIF
+			else 
+			  CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+			endif 
+			if (inout.eq.1) then
+			  bp(n)%tmax = bp(n)%tmax+1
+			  if (bp(n)%tmax.le.10000) then
+				  bp(n)%i(bp(n)%tmax)=i 
+				  bp(n)%j(bp(n)%tmax)=j
+			  else 
+				write(*,*),'Bedplume : ',n 
+			    CALL writeerror(281)
+			  endif 
+			endif
+		 enddo
+		enddo
+	  ENDIF
+	ENDDO
+	
 	end	
 
-
+	subroutine init_location_bedplume 
+	
+	USE nlist
+	
+	implicit none
+	include 'mpif.h'
+	
+	integer inout,n,ierr
+	real xx,yy,phi,xTSHD(1:4),yTSHD(1:4)
+	
+	DO n=1,nbedplume
+	  IF ((bp(n)%forever.eq.1.and.time_np.gt.bp(n)%t0.and.time_np.lt.bp(n)%t_end).and.
+     & bp(n)%move_zbed_criterium(MAX(bp(n)%nmove_present,1))<depth) THEN
+	    bp(n)%tmax=0
+		! rotation ship for ambient side current
+		if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
+		  phi=atan2(V_b,1.e-12)
+		else
+		  phi=atan2(V_b,(U_TSHD-U_b))
+		endif
+		do i=0,i1  
+		 do j=j1,0,-1       ! bedplume loop is only initial condition: do not bother to have U,V,W initial staggering perfect 
+			xx=Rp(i)*cos_u(j)-schuif_x
+			yy=Rp(i)*sin_u(j)
+			xTSHD(1:4)=bp(n)%x2*cos(phi)-bp(n)%y2*sin(phi)
+			yTSHD(1:4)=bp(n)%x2*sin(phi)+bp(n)%y2*cos(phi)			
+		    if (bp(n)%radius.gt.0.) then
+			  inout=0
+		      IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n)%radius)**2) THEN
+			    inout=1
+			  ENDIF
+			else 
+			  CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+			endif 
+			if (inout.eq.1) then
+			  bp(n)%tmax = bp(n)%tmax+1
+			  if (bp(n)%tmax.le.10000) then
+				  bp(n)%i(bp(n)%tmax)=i 
+				  bp(n)%j(bp(n)%tmax)=j
+			  else 
+				write(*,*),'Bedplume : ',n 
+			    CALL writeerror(281)
+			  endif 
+			endif
+		 enddo
+		enddo
+	  ENDIF
+	ENDDO
+	
+	end	
+	
 	
 	REAL function interpseries(tseries,series,sloc,tt)
 

@@ -490,7 +490,14 @@ c******************************************************************
 	  IF (k.le.FLOOR(bp(n)%height/dz).and.k.ge.CEILING(bp(n)%zbottom/dz)) THEN ! obstacle: 
 		xTSHD(1:4)=bp(n)%x*cos(phi)-bp(n)%y*sin(phi)
 		yTSHD(1:4)=bp(n)%x*sin(phi)+bp(n)%y*cos(phi)
-		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+		if (bp(n)%radius.gt.0.) then
+		  inout=0
+		  IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n)%radius)**2) THEN
+			inout=1
+		  ENDIF
+		else 
+		  CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+		endif 		
 	  ELSE 
 	 	inout=0
 	  ENDIF
@@ -536,7 +543,14 @@ c******************************************************************
 	  IF (k.le.FLOOR(bp(n)%height/dz).and.k.ge.CEILING(bp(n)%zbottom/dz)) THEN ! obstacle: 
 		xTSHD(1:4)=bp(n)%x*cos(phi)-bp(n)%y*sin(phi)
 		yTSHD(1:4)=bp(n)%x*sin(phi)+bp(n)%y*cos(phi)
-		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+		if (bp(n)%radius.gt.0.) then
+		  inout=0
+		  IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n)%radius)**2) THEN
+			inout=1
+		  ENDIF
+		else 
+		  CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+		endif 		
 	  ELSE 
 	 	inout=0
 	  ENDIF
@@ -2728,6 +2742,8 @@ C ...  Locals
 	
 	! bedlevel file obstacles have no i=0 or i=i1 in zbed3, but do have j=0 and j=j1
 	kbed3=0
+	zbed3(0,0:j1)=zbed3(1,0:j1)
+	zbed3(i1,0:j1)=zbed3(imax,0:j1)
 	!! search for zbed and kbed on each proc (j=0,j1): (used for deposition and bc in solver [adjusted for ob(n)%zbottom])
 	      do j=0,j1 
 	       do i=0,i1 !imax  !including i1 strangely gives crash (13/4/15) !1,imax !0,i1
@@ -3104,7 +3120,7 @@ C ...  Locals
 		j=jmax 
 	    ENDIF	
 	    do k=1,kmax
-		do i=1,imax
+		 do i=1,imax
 		  if (zbed(i,j).lt.depth) then
 	  	    correction=1. !13-4-15 correction switched off !(depth-bc_obst_h)/(depth-zbed(i,j))
 	          else !if obstacle persists through full watercolumn then U_b should be zero at this location
@@ -3123,27 +3139,27 @@ C ...  Locals
 		   endif
 		    if (k.gt.kbed(i,j)) then
 		      if (slip_bot.eq.1) then
-			if (wallup.eq.1) then
-		    	  z=depth-((k-kbed(i,j))*dz-0.5*dz)
-			else
-			  z=(k-kbed(i,j))*dz-0.5*dz
-			endif
+				if (wallup.eq.1) then
+					  z=depth-((k-kbed(i,j))*dz-0.5*dz)
+				else
+				  z=(k-kbed(i,j))*dz-0.5*dz
+				endif
 		    	Ubc1(i,k)=-ust_U_b/kappa*log(z/z0_U)*signU_b*cos(phi)+ust_V_b/kappa*log(z/z0_V)*signV_b*sin(phi)
      &                   +U_TSHD*cos(phi)*correction
 		    	Vbc1(i,k)=-ust_V_b/kappa*log(z/z0_V)*signV_b*cos(phi)-ust_U_b/kappa*log(z/z0_U)*signU_b*sin(phi)
      &                   +U_TSHD*sin(phi)*correction
 	 	      else
-			if (k.gt.ksurf_bc) then
-  			  Ubc1(i,k)=(-U_b3*cos(phi)+V_b3*sin(phi)+U_TSHD*cos(phi))*correction
-			  Vbc1(i,k)=(-V_b3*cos(phi)-U_b3*sin(phi)+U_TSHD*sin(phi))*correction
-			else
-			  Ubc1(i,k)=sqrt((U_TSHD-U_b)**2+V_b**2)*correction
-			  Vbc1(i,k)=0.
-			endif
+				if (k.gt.ksurf_bc) then
+				  Ubc1(i,k)=(-U_b3*cos(phi)+V_b3*sin(phi)+U_TSHD*cos(phi))*correction
+				  Vbc1(i,k)=(-V_b3*cos(phi)-U_b3*sin(phi)+U_TSHD*sin(phi))*correction
+				else
+				  Ubc1(i,k)=sqrt((U_TSHD-U_b)**2+V_b**2)*correction
+				  Vbc1(i,k)=0.
+				endif
 		      endif
 		    else
-			Ubc1(i,k)=Ubot_TSHD(j) !0.
-			Vbc1(i,k)=Vbot_TSHD(j) !0.
+			  Ubc1(i,k)=Ubot_TSHD(j) !0.
+			  Vbc1(i,k)=Vbot_TSHD(j) !0.
 		    endif
 		  else ! no ship, then plate:
 		    ust_U_b=MAX(ABS(U_b),1.e-6)
@@ -3158,29 +3174,29 @@ C ...  Locals
 		    endif
 		      if (k.le.(kmax-kjet).and.k.gt.kbed(i,j)) then
 			    if (slip_bot.eq.1) then
-                              if (wallup.eq.1) then
-                                z=depth-((k-kbed(i,j))*dz-0.5*dz)
-                              else
-                                z=(k-kbed(i,j))*dz-0.5*dz
-                              endif
-			    	Ubc1(i,k)=ust_U_b/kappa*log(z/z0_U) 
-			    	Vbc1(i,k)=ust_V_b/kappa*log(z/z0_V)
+				  if (wallup.eq.1) then
+					z=depth-((k-kbed(i,j))*dz-0.5*dz)
+				  else
+					z=(k-kbed(i,j))*dz-0.5*dz
+				  endif
+			      Ubc1(i,k)=ust_U_b/kappa*log(z/z0_U) 
+			      Vbc1(i,k)=ust_V_b/kappa*log(z/z0_V)
 		 	    else
-				Ubc1(i,k)=U_b*correction 
-				Vbc1(i,k)=0.
+				  Ubc1(i,k)=U_b*correction 
+				  Vbc1(i,k)=0.
 			    endif
 		      else
 			    Ubc1(i,k)=0.
 			    Vbc1(i,k)=0.
 		      endif
 		  endif
-		enddo
-	      enddo
+		 enddo
+	    enddo
 
 	!! fill Ubc2,Vbc2 (front boundary at i=0):
 	    i=0
 	    do k=1,kmax
-		do j=0,j1
+		 do j=0,j1
 		  if (zbed(i,j).lt.depth) then
 	  	    correction=1. !13-4-15 correction switched off !(depth-bc_obst_h)/(depth-zbed(i,j))
 	          else !if obstacle persists through full watercolumn then U_b should be zero at this location
@@ -3199,28 +3215,27 @@ C ...  Locals
 		   endif
 		    if (k.gt.kbed(i,j)) then
 		     if (slip_bot.eq.1) then
-                        if (wallup.eq.1) then
-                          z=depth-((k-kbed(i,j))*dz-0.5*dz)
-                        else
-                          z=(k-kbed(i,j))*dz-0.5*dz
-                        endif
+				if (wallup.eq.1) then
+				  z=depth-((k-kbed(i,j))*dz-0.5*dz)
+				else
+				  z=(k-kbed(i,j))*dz-0.5*dz
+				endif
 		    	Ubc2(j,k)=-ust_U_b/kappa*log(z/z0_U)*signU_b*cos(phi)+ust_V_b/kappa*log(z/z0_V)*signV_b*sin(phi)
      &                   +U_TSHD*cos(phi)*correction
 		    	Vbc2(j,k)=-ust_V_b/kappa*log(z/z0_V)*signV_b*cos(phi)-ust_U_b/kappa*log(z/z0_U)*signU_b*sin(phi)
      &                   +U_TSHD*sin(phi)*correction
 	 	     else
-			if (k.gt.ksurf_bc) then
-  			  Ubc2(j,k)=(-U_b3*cos(phi)+V_b3*sin(phi)+U_TSHD*cos(phi))*correction
-			  Vbc2(j,k)=(-V_b3*cos(phi)-U_b3*sin(phi)+U_TSHD*sin(phi))*correction
-			else
-			  Ubc2(j,k)=sqrt((U_TSHD-U_b)**2+V_b**2)*correction
-			  Vbc2(j,k)=0.
-			endif
+				if (k.gt.ksurf_bc) then
+				  Ubc2(j,k)=(-U_b3*cos(phi)+V_b3*sin(phi)+U_TSHD*cos(phi))*correction
+				  Vbc2(j,k)=(-V_b3*cos(phi)-U_b3*sin(phi)+U_TSHD*sin(phi))*correction
+				else
+				  Ubc2(j,k)=sqrt((U_TSHD-U_b)**2+V_b**2)*correction
+				  Vbc2(j,k)=0.
+				endif
 		     endif
 		    else
-			Ubc2(j,k)=Ubot_TSHD(j) !0.
-			Vbc2(j,k)=Vbot_TSHD(j) !0.
-!			write (*,*), '1, rank,j,k Ubot_TSHD(j),Vbot_TSHD(j)',rank,j,k,Ubot_TSHD(j),Vbot_TSHD(j)
+			  Ubc2(j,k)=Ubot_TSHD(j) !0.
+			  Vbc2(j,k)=Vbot_TSHD(j) !0.
 		    endif
 		  else ! no ship, then plate:
 		   ust_U_b=MAX(ABS(U_b),1.e-6)
@@ -3251,8 +3266,8 @@ C ...  Locals
 			Vbc2(j,k)=0.
 		      endif
 		  endif
-		enddo
-	      enddo
+		 enddo
+	    enddo
 
 	
 	! called as last therefore now kbedt (used to apply tau wall) can be defined:

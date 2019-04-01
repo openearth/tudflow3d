@@ -72,7 +72,9 @@
       call init_propeller
       call determine_indices_ship_in
       call bedroughness_init
+	  call init_location_bedplume
 	  call fkdat
+	  
 
       dt    = MIN(dt_ini,dt_max) 
       ekm   =0. 

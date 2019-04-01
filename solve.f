@@ -3290,7 +3290,16 @@ c
 !	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
 		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
 		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
-		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+!!		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+		!! do not use bp(n2)%i,j indices as they are defined from 0,j1 instead of 1,jmax needed for pressure !!
+		if (bp(n2)%radius.gt.0.) then 
+		  inout=0
+		  IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n2)%radius)**2) THEN
+			inout=1
+		  ENDIF
+		else 
+		  CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+		endif 		
 !	  ELSE 
 !	 	inout=0
 !	  ENDIF
@@ -5122,23 +5131,26 @@ c  J --> direction      (yrt)
 	endif
       !! Search for P,V:
       do k=CEILING(bp(n2)%zbottom/dz),FLOOR(bp(n2)%height/dz) !do k=0,k1
-       do i=0,i1  
-         do j=j1,0,-1       ! bedplume loop is only initial condition: do not bother to have U,V,W initial staggering perfect 
-	  xx=Rp(i)*cos_u(j)-schuif_x
-	  yy=Rp(i)*sin_u(j)
-!	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
-		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
-		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
-		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
-!	  ELSE 
-!	 	inout=0
-!	  ENDIF
-	  if (inout.eq.1) then
+	   do tel=1,bp(n2)%tmax 
+		 i=bp(n2)%i(tel) 
+		 j=bp(n2)%j(tel) 	  
+!!       do i=0,i1  
+!!         do j=j1,0,-1       ! bedplume loop is only initial condition: do not bother to have U,V,W initial staggering perfect 
+!!	  xx=Rp(i)*cos_u(j)-schuif_x
+!!	  yy=Rp(i)*sin_u(j)
+!!!	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
+!!		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
+!!		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
+!!		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+!!!	  ELSE 
+!!!	 	inout=0
+!!!	  ENDIF
+!!	  if (inout.eq.1) then
 		rnew(i,j,k)=rho(i,j,k)
 		rold(i,j,k)=rho(i,j,k)
 		! prevent large source in pres-corr by sudden increase in density with bp%c 
-	   endif
-	  enddo
+!!	   endif
+!!	  enddo
 	 enddo
 	enddo
 	ENDIF
@@ -5205,23 +5217,26 @@ c  J --> direction      (yrt)
 	endif
       !! Search for P,V:
       do k=CEILING(bp(n2)%zbottom/dz),FLOOR(bp(n2)%height/dz) !do k=0,k1
-       do i=0,i1  
-         do j=j1,0,-1       ! bedplume loop is only initial condition: do not bother to have U,V,W initial staggering perfect 
-	  xx=Rp(i)*cos_u(j)-schuif_x
-	  yy=Rp(i)*sin_u(j)
-!	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
-		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
-		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
-		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
-!	  ELSE 
-!	 	inout=0
-!	  ENDIF
-	  if (inout.eq.1) then
+	   do tel=1,bp(n2)%tmax 
+		 i=bp(n2)%i(tel) 
+		 j=bp(n2)%j(tel) 	  
+!!       do i=0,i1  
+!!         do j=j1,0,-1       ! bedplume loop is only initial condition: do not bother to have U,V,W initial staggering perfect 
+!!	  xx=Rp(i)*cos_u(j)-schuif_x
+!!	  yy=Rp(i)*sin_u(j)
+!!!	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
+!!		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
+!!		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
+!!		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+!!!	  ELSE 
+!!!	 	inout=0
+!!!	  ENDIF
+!!	  if (inout.eq.1) then
 		rnew(i,j,k)=rho(i,j,k)
 		rold(i,j,k)=rho(i,j,k)
 		! prevent large source in pres-corr by sudden increase in density with bp%c 
-	   endif
-	  enddo
+!!	   endif
+!!	  enddo
 	 enddo
 	enddo
 	ENDIF

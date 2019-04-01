@@ -226,7 +226,14 @@
 		  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
 			xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
 			yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
-			CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+		    if (bp(n2)%radius.gt.0.) then
+			  inout=0
+		      IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n2)%radius)**2) THEN
+			    inout=1
+			  ENDIF
+			else 
+			  CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+			endif 			
 		  ELSE 
 			inout=0
 		  ENDIF

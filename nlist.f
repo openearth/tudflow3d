@@ -183,12 +183,13 @@
 		REAL :: move_outputfile_series(100000),uinput,dt_history,t_bphis_output,move_dz_height_factor,move_dz_zbottom_factor
 		REAL :: u_tseries(10000),v_tseries(10000),w_tseries(10000)
 		REAL :: u_series(10000),v_series(10000),w_series(10000)
-	    INTEGER :: forever,h_seriesloc,zb_seriesloc,Q_seriesloc,S_seriesloc,c_seriesloc,nmove,nmove_present,velocity_force
+	    INTEGER :: forever,h_seriesloc,zb_seriesloc,Q_seriesloc,S_seriesloc,c_seriesloc,nmove,nmove_present,velocity_force,tmax
 		INTEGER :: u_seriesloc,v_seriesloc,w_seriesloc,istep_bphis_output
 		CHARACTER*256 :: h_tseriesfile,zb_tseriesfile,Q_tseriesfile,S_tseriesfile,c_tseriesfile
 		CHARACTER*256 :: u_tseriesfile,v_tseriesfile,w_tseriesfile
 !		INTEGER :: tmax_iP,tmax_iU,iP_inbp(10000),jP_inbp(10000),kP_inbp(10000),iU_inbp(10000),jU_inbp(10000),kU_inbp(10000)
-		REAL :: move_u,move_v,move_w,radius		
+		REAL :: move_u,move_v,move_w,radius
+		INTEGER*2 :: i(10000),j(10000) 
 	end type bed_plumes2
 	
 	TYPE(fractions), DIMENSION(:), ALLOCATABLE :: frac

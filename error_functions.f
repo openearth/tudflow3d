@@ -424,6 +424,9 @@
 	CASE(280)
 		write(*,*) '# namelist &plume                                #'			
 		write(*,*) '# hindered_settling should be 1,2,3              #'		
+	CASE(281)
+		write(*,*) '# namelist &plume                                #'			
+		write(*,*) '# bedplume covers >10000 cells in x,y plane      #'		
 	CASE(301)
 		write(*,*) '# namelist &ship                                 #'			
 		write(*,*) '# please prescribe U_TSHD                        #'	
