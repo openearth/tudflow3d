@@ -109,10 +109,10 @@
       REAL*8, DIMENSION(:,:),ALLOCATABLE :: epsSEM1,epsSEM2,epsSEM3,Lmix2,Lmix2hat,vol_V,vol_Vp
       REAL*8, DIMENSION(:),ALLOCATABLE :: lmxSEM2,lmySEM2,lmzSEM2
 	  REAL*8, DIMENSION(:),ALLOCATABLE :: rSEM3,thetaSEM3,zSEM3,wSEM3,xSEM3,ySEM3
-	  REAL, DIMENSION(:,:,:,:),ALLOCATABLE :: AA3
+	  REAL, DIMENSION(:,:,:,:),ALLOCATABLE :: AA1,AA2,AA3
       REAL*8, DIMENSION(:),ALLOCATABLE :: lmrSEM3,lmzSEM3
       REAL, DIMENSION(:,:),ALLOCATABLE :: azi_angle_p,azi_angle_u,azi_angle_v,zbed,Ubc1,Vbc1,Ubc2,Vbc2,rhocorr_air_z
-      REAL, DIMENSION(:,:,:),ALLOCATABLE :: ekm,AA,Diffcof,bednotfixed,bednotfixed_depo
+      REAL, DIMENSION(:,:,:),ALLOCATABLE :: ekm,Diffcof,bednotfixed,bednotfixed_depo
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: Uold,Vold,Wold,Rold
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: Unew,Vnew,Wnew,Rnew
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: dUdt,dVdt,dWdt,drdt
@@ -1446,7 +1446,8 @@
 	  ALLOCATE(llmax1(0:i1,1:kmax))
 	  ALLOCATE(llmax2(0:j1,1:kmax))	  	  
 	ENDIF	
-	ALLOCATE(AA(3,3,1:kmax))
+	ALLOCATE(AA1(3,3,0:i1,1:kmax))
+	ALLOCATE(AA2(3,3,0:j1,1:kmax))
 	ALLOCATE(xSEM1(nmax1))
 	ALLOCATE(ySEM1(nmax1))
 	ALLOCATE(zSEM1(nmax1))

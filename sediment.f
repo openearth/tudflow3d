@@ -839,13 +839,13 @@
 					ENDIF
 				ENDDO
 			ENDIF	
-			IF (MINVAL(Clivebed(1:nfrac,i,j,kbed(i,j)))<0) THEN !.or.MINVAL(Clivebed(1:nfrac,i,j,kbed(i,j)-1)<0
-!     & .or.MINVAL(Clivebed(1:nfrac,i,j,kbed(i,j)+1)<0) THEN
-				write(*,*),'A',rank,i,j,kbed(i,j),cbotnewtot
-				DO n=1,nfrac
-					write(*,*),Clivebed(n,i,j,kbed(i,j)),cbotnew(n,i,j),ccnew(n,i,j,kbed(i,j)+1)
-				ENDDO
-			ENDIF			
+!			IF (MINVAL(Clivebed(1:nfrac,i,j,kbed(i,j)))<0) THEN !.or.MINVAL(Clivebed(1:nfrac,i,j,kbed(i,j)-1)<0
+!!     & .or.MINVAL(Clivebed(1:nfrac,i,j,kbed(i,j)+1)<0) THEN
+!				write(*,*),'A',rank,i,j,kbed(i,j),cbotnewtot
+!				DO n=1,nfrac
+!					write(*,*),Clivebed(n,i,j,kbed(i,j)),cbotnew(n,i,j),ccnew(n,i,j,kbed(i,j)+1)
+!				ENDDO
+!			ENDIF			
 !update bedlevel for combined erosion deposition silt plus sand fractions: 
 !combination silt and sand gives that in eroding cases sand will erode faster than silt from cbotnew and once all sand is eroded 
 !it can take a while before all silt has eroded and next bed-cell is reached with sand again 
@@ -1000,13 +1000,13 @@
 					ENDDO				
 				ENDIF
 			ENDIF
-			IF (MINVAL(Clivebed(1:nfrac,i,j,kbed(i,j)))<0) THEN !.or.MINVAL(Clivebed(1:nfrac,i,j,kbed(i,j)-1)<0
-!     & .or.MINVAL(Clivebed(1:nfrac,i,j,kbed(i,j)+1)<0) THEN
-				write(*,*),'B',rank,i,j,kbed(i,j),cbotnewtot,ctot_firstcel
-				DO n=1,nfrac
-					write(*,*),Clivebed(n,i,j,kbed(i,j)),cbotnew(n,i,j),ccnew(n,i,j,kbed(i,j)+1)
-				ENDDO
-			ENDIF
+!			IF (MINVAL(Clivebed(1:nfrac,i,j,kbed(i,j)))<0) THEN !.or.MINVAL(Clivebed(1:nfrac,i,j,kbed(i,j)-1)<0
+!!     & .or.MINVAL(Clivebed(1:nfrac,i,j,kbed(i,j)+1)<0) THEN
+!				write(*,*),'B',rank,i,j,kbed(i,j),cbotnewtot,ctot_firstcel
+!				DO n=1,nfrac
+!					write(*,*),Clivebed(n,i,j,kbed(i,j)),cbotnew(n,i,j),ccnew(n,i,j,kbed(i,j)+1)
+!				ENDDO
+!			ENDIF
 		  ENDDO
 		ENDDO
 		

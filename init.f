@@ -3270,6 +3270,8 @@ C ...  Locals
 	    enddo
 
 	
+	
+	call bound_cbot_integer(kbed)
 	! called as last therefore now kbedt (used to apply tau wall) can be defined:
 	IF (wallup.eq.1) THEN
 	  kbedt=kmax-1 ! apply tau wall at upper boundary kmax

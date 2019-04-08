@@ -2152,11 +2152,11 @@ c get stuff from other CPU's
 
 	if (bcfile.eq.'') then
 		if (rank.eq.0) then
-			Cbcoarse1(n,1:imax,1:kmax)=Cbound(1:imax,1,1:kmax)
+			Cbcoarse1(n,1:imax,1:kmax)=0. !Cbound(1:imax,1,1:kmax)
 		elseif (rank.eq.px-1) then	
-			Cbcoarse1(n,1:imax,1:kmax)=Cbound(1:imax,jmax,1:kmax)
+			Cbcoarse1(n,1:imax,1:kmax)=0. !Cbound(1:imax,jmax,1:kmax)
 		endif
-		Cbcoarse2(n,0:j1,1:kmax)=Cbound(1,0:j1,1:kmax)
+		Cbcoarse2(n,0:j1,1:kmax)=0. !Cbound(1,0:j1,1:kmax)
 	endif
 		
 	if (periodicy.eq.0) then
@@ -2189,7 +2189,7 @@ c get stuff from other CPU's
 			   Cbound(i,j1,k) =cbb(i,k) 
 		   enddo
 		enddo
-	elseif (periodicy.eq.2) then ! free slip in y:
+	elseif (periodicy.eq.2) then ! free slip in y: no advective flux through lateral walls; hence dcdn prevents loss of sediment via diff over walls
 		if (rank.eq.0) then ! boundaries in j-direction
 			do k=1,kmax
 			   do i=1,imax
@@ -2228,7 +2228,7 @@ c get stuff from other CPU's
 			   Cbound(i1,j,k)   =    Cbound(imax,j,k) !0. 
 		 enddo   
 	      enddo
-	else
+	else ! periodic x boundaries
 	      do k=1,kmax ! boundaries in i-direction
 		 do j=0,j1
 			   Cbound(0,j,k)    =    Cbound(imax,j,k)
@@ -2704,9 +2704,9 @@ c*************************************************************
 !		  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle: 
 			xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
 			yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
-		    if (bp(n)%radius.gt.0.) then
+		    if (bp(n2)%radius.gt.0.) then
 			  inout=0
-		      IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n)%radius)**2) THEN
+		      IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n2)%radius)**2) THEN
 			    inout=1
 			  ENDIF
 			else 
@@ -2721,10 +2721,10 @@ c*************************************************************
 		  enddo
 		 enddo
 		enddo	  
-		 if (bp(n2)%volncells.le.0.and.tt<bp(n2)%t_end) then
-		   write(*,*),'WARNING, no cells found for bedplume number: ',n2,bp(n2)%volncells,rank
-		   write(*,*),'In case a sedflux or Q has been defined the code will crash because of division by a zero volncells'
-		 endif
+!		 if (bp(n2)%volncells.le.0.and.tt<bp(n2)%t_end) then
+!		   write(*,*),'WARNING, no cells found for bedplume number: ',n2,bp(n2)%volncells,rank
+!		   write(*,*),'In case a sedflux or Q has been defined the code will crash because of division by a zero volncells'
+!		 endif
 		ENDIF ! bedplume loop
 	ENDDO	
 	
@@ -2863,29 +2863,34 @@ c*************************************************************
 	  IF ((bp(n)%forever.eq.1.and.time_np.gt.bp(n)%t0.and.time_np.lt.bp(n)%t_end).and.
      & bp(n)%move_zbed_criterium(MAX(bp(n)%nmove_present,1))<depth) THEN
 		! rotation ship for ambient side current
-!!		if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-!!		  phi=atan2(V_b,1.e-12)
-!!		else
-!!		  phi=atan2(V_b,(U_TSHD-U_b))
-!!		endif
+		if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
+		  phi=atan2(V_b,1.e-12)
+		else
+		  phi=atan2(V_b,(U_TSHD-U_b))
+		endif
 		zbed_max=0.
-		   do tel=1,bp(n)%tmax 
-			 i=bp(n)%i(tel) 
-			 j=bp(n)%j(tel) 			
-!!		do i=0,i1  
-!!		 do j=j1,0,-1       ! bedplume loop is only initial condition: do not bother to have U,V,W initial staggering perfect 
-!!			xx=Rp(i)*cos_u(j)-schuif_x
-!!			yy=Rp(i)*sin_u(j)
-!!			xTSHD(1:4)=bp(n)%x2*cos(phi)-bp(n)%y2*sin(phi)
-!!			yTSHD(1:4)=bp(n)%x2*sin(phi)+bp(n)%y2*cos(phi)
-!!			CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
-!!			
-!!			if (inout.eq.1) then
+		do i=0,i1  
+		 do j=j1,0,-1       
+			xx=Rp(i)*cos_u(j)-schuif_x
+			yy=Rp(i)*sin_u(j)
+		    if (bp(n)%radius.gt.0.) then !use bp()%x(1),y(1) and radius for zbed-check
+			  xTSHD(1:4)=bp(n)%x*cos(phi)-bp(n)%y*sin(phi)
+			  yTSHD(1:4)=bp(n)%x*sin(phi)+bp(n)%y*cos(phi)			
+			  inout=0
+		      IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n)%radius)**2) THEN
+			    inout=1
+			  ENDIF
+			else 
+			  xTSHD(1:4)=bp(n)%x2*cos(phi)-bp(n)%y2*sin(phi)
+			  yTSHD(1:4)=bp(n)%x2*sin(phi)+bp(n)%y2*cos(phi)			
+			  CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+			endif 			
+			if (inout.eq.1) then
 				!zb=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(dcdtbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
 				zb=REAL(MAX(kbed(i,j),0))*dz !use zb = kbed*dz as this corresponds with bed cells that are blocked in flow, buffer layer is not real bed but bookkeeping
 				zbed_max=MAX(zbed_max,zb)
-!!			endif
-!!		 enddo
+			endif
+		 enddo
 		enddo
 		call mpi_allreduce(zbed_max,zbed_max_tot,1,mpi_real8,mpi_max,mpi_comm_world,ierr)
 		IF(zbed_max_tot>bp(n)%move_zbed_criterium(MAX(bp(n)%nmove_present,1))) THEN
@@ -2935,6 +2940,8 @@ c*************************************************************
 	  IF ((bp(n)%forever.eq.1.and.time_np.gt.bp(n)%t0.and.time_np.lt.bp(n)%t_end)) THEN
         bp(n)%x=bp(n)%x+dt*bp(n)%move_u 
 		bp(n)%y=bp(n)%y+dt*bp(n)%move_v
+        bp(n)%x2=bp(n)%x2+dt*bp(n)%move_u 
+		bp(n)%y2=bp(n)%y2+dt*bp(n)%move_v		
 		bp(n)%height=bp(n)%height+dt*bp(n)%move_w
 		bp(n)%zbottom=bp(n)%zbottom+dt*bp(n)%move_w
 	  ENDIF
@@ -2942,7 +2949,7 @@ c*************************************************************
 	
 	DO n=1,nbedplume
 	  IF ((bp(n)%forever.eq.1.and.time_np.gt.bp(n)%t0.and.time_np.lt.bp(n)%t_end).and.
-     & bp(n)%move_zbed_criterium(MAX(bp(n)%nmove_present,1))<depth) THEN
+     & (bp(n)%move_zbed_criterium(MAX(bp(n)%nmove_present,1))<depth.or.(ABS(bp(n)%move_u)+ABS(bp(n)%move_v).ge.0.))) THEN
 	    bp(n)%tmax=0
 		! rotation ship for ambient side current
 		if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
@@ -2954,8 +2961,8 @@ c*************************************************************
 		 do j=j1,0,-1       ! bedplume loop is only initial condition: do not bother to have U,V,W initial staggering perfect 
 			xx=Rp(i)*cos_u(j)-schuif_x
 			yy=Rp(i)*sin_u(j)
-			xTSHD(1:4)=bp(n)%x2*cos(phi)-bp(n)%y2*sin(phi)
-			yTSHD(1:4)=bp(n)%x2*sin(phi)+bp(n)%y2*cos(phi)			
+			xTSHD(1:4)=bp(n)%x*cos(phi)-bp(n)%y*sin(phi)
+			yTSHD(1:4)=bp(n)%x*sin(phi)+bp(n)%y*cos(phi)			
 		    if (bp(n)%radius.gt.0.) then
 			  inout=0
 		      IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n)%radius)**2) THEN
@@ -2992,8 +2999,6 @@ c*************************************************************
 	real xx,yy,phi,xTSHD(1:4),yTSHD(1:4)
 	
 	DO n=1,nbedplume
-	  IF ((bp(n)%forever.eq.1.and.time_np.gt.bp(n)%t0.and.time_np.lt.bp(n)%t_end).and.
-     & bp(n)%move_zbed_criterium(MAX(bp(n)%nmove_present,1))<depth) THEN
 	    bp(n)%tmax=0
 		! rotation ship for ambient side current
 		if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
@@ -3005,9 +3010,11 @@ c*************************************************************
 		 do j=j1,0,-1       ! bedplume loop is only initial condition: do not bother to have U,V,W initial staggering perfect 
 			xx=Rp(i)*cos_u(j)-schuif_x
 			yy=Rp(i)*sin_u(j)
-			xTSHD(1:4)=bp(n)%x2*cos(phi)-bp(n)%y2*sin(phi)
-			yTSHD(1:4)=bp(n)%x2*sin(phi)+bp(n)%y2*cos(phi)			
+			xTSHD(1:4)=bp(n)%x*cos(phi)-bp(n)%y*sin(phi)
+			yTSHD(1:4)=bp(n)%x*sin(phi)+bp(n)%y*cos(phi)			
 		    if (bp(n)%radius.gt.0.) then
+			  bp(n)%x(2)=bp(n)%x(1)+2.*bp(n)%radius !to get dpdx force correct for bp()%u
+			  bp(n)%y(3)=bp(n)%y(2)+2.*bp(n)%radius !to get dpdy force correct for bp()%v			
 			  inout=0
 		      IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n)%radius)**2) THEN
 			    inout=1
@@ -3027,7 +3034,6 @@ c*************************************************************
 			endif
 		 enddo
 		enddo
-	  ENDIF
 	ENDDO
 	
 	end	

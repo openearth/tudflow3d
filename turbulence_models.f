@@ -2543,36 +2543,35 @@ c get stuff from other CPU's
 
       !! boundary at i=0
 	      i=0
-	      do k=kbed_bc+1,kmax
-		z=(k-kbed_bc)*dz-0.5*dz
-		do j=0,j1
-		  x=Ru(0)*cos_u(j)-schuif_x
-		  y=Ru(0)*sin_u(j)
-		  uu=0.
-		  vv=0.
-		  ww=0.
-		  do ii=1,llmax2(j,k)
-		      tt=llist2(j,k,ii)
-	! 	  do tt=1,nmax2
-		      fun=sqrt(Vbox2/(lmxSEM2(tt)*lmySEM2(tt)*lmzSEM2(tt)))*(1.-MIN(ABS(x-xSEM2(tt))/lmxSEM2(tt),1.))
+		  do j=0,j1
+			do k=kbed(i,j)+kbed_bc+1,kmax
+			  z=(k-kbed_bc-kbed(i,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
+			  x=Ru(0)*cos_u(j)-schuif_x
+			  y=Ru(0)*sin_u(j)
+			  uu=0.
+			  vv=0.
+			  ww=0.
+			  do ii=1,llmax2(j,k)
+				  tt=llist2(j,k,ii)
+		! 	  do tt=1,nmax2
+				  fun=sqrt(Vbox2/(lmxSEM2(tt)*lmySEM2(tt)*lmzSEM2(tt)))*(1.-MIN(ABS(x-xSEM2(tt))/lmxSEM2(tt),1.))
      & *(1.-MIN(ABS(y-ySEM2(tt))/lmySEM2(tt),1.))*(1.-MIN(ABS(z-zSEM2(tt))/lmzSEM2(tt),1.))
-			uu=uu+epsSEM2(1,tt)*fun*fac2
-			vv=vv+epsSEM2(2,tt)*fun*fac2
-			ww=ww+epsSEM2(3,tt)*fun*fac2
-		  enddo
-		  do ii=1,llmax1(i,k)	!also interaction with SEM points at side
-		      tt=llist1(i,k,ii)
-		      fun=sqrt(Vbox1/(lmxSEM1(tt)*lmySEM1(tt)*lmzSEM1(tt)))*(1.-MIN(ABS(x-xSEM1(tt))/lmxSEM1(tt),1.))
+				uu=uu+epsSEM2(1,tt)*fun*fac2
+				vv=vv+epsSEM2(2,tt)*fun*fac2
+				ww=ww+epsSEM2(3,tt)*fun*fac2
+			  enddo
+			  do ii=1,llmax1(i,k)	!also interaction with SEM points at side
+				  tt=llist1(i,k,ii)
+				  fun=sqrt(Vbox1/(lmxSEM1(tt)*lmySEM1(tt)*lmzSEM1(tt)))*(1.-MIN(ABS(x-xSEM1(tt))/lmxSEM1(tt),1.))
      & *(1.-MIN(ABS(y-ySEM1(tt))/lmySEM1(tt),1.))*(1.-MIN(ABS(z-zSEM1(tt))/lmzSEM1(tt),1.))
-			uu=uu+epsSEM1(1,tt)*fun*fac1
-			vv=vv+epsSEM1(2,tt)*fun*fac1
-			ww=ww+epsSEM1(3,tt)*fun*fac1
-		  enddo
-
-		    Ub2new(j,k)=uu*AA(1,1,k)+vv*AA(1,2,k)+ww*AA(1,3,k) 
-		    Wb2new(j,k)=uu*AA(2,1,k)+vv*AA(2,2,k)+ww*AA(2,3,k)
-		    Vb2new(j,k)=uu*AA(3,1,k)+vv*AA(3,2,k)+ww*AA(3,3,k)
-		enddo
+				uu=uu+epsSEM1(1,tt)*fun*fac1
+				vv=vv+epsSEM1(2,tt)*fun*fac1
+				ww=ww+epsSEM1(3,tt)*fun*fac1
+			  enddo
+		      Ub2new(j,k)=uu*AA2(1,1,j,k)+vv*AA2(1,2,j,k)+ww*AA2(1,3,j,k) 
+		      Wb2new(j,k)=uu*AA2(2,1,j,k)+vv*AA2(2,2,j,k)+ww*AA2(2,3,j,k)
+		      Vb2new(j,k)=uu*AA2(3,1,j,k)+vv*AA2(3,2,j,k)+ww*AA2(3,3,j,k)
+			enddo
 	      enddo
       endif
 
@@ -2592,9 +2591,9 @@ c get stuff from other CPU's
 
 	       if (rank.eq.0) then	      !! boundary at j=0
 	       j=0
-	 	do k=kbed_bc+1,kmax
-	 	  z=(k-kbed_bc)*dz-0.5*dz
-	 	  do i=0,i1
+	 	do i=0,i1
+		  do k=kbed(i,j)+kbed_bc+1,kmax
+		    z=(k-kbed_bc-kbed(i,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
 	 	    x=Rp(i)*cos_v(0)-schuif_x
 	 	    y=Rp(i)*sin_v(0)
 	 	    uu=0.
@@ -2616,17 +2615,17 @@ c get stuff from other CPU's
 	 		vv=vv+epsSEM2(2,tt)*fun*fac2
 	 		ww=ww+epsSEM2(3,tt)*fun*fac2
 	 	    enddo
-	 	    Ub1new(i,k)=uu*AA(1,1,k)+vv*AA(1,2,k)+ww*AA(1,3,k) 
-	 	    Wb1new(i,k)=uu*AA(2,1,k)+vv*AA(2,2,k)+ww*AA(2,3,k)
-	 	    Vb1new(i,k)=uu*AA(3,1,k)+vv*AA(3,2,k)+ww*AA(3,3,k)
+	 	    Ub1new(i,k)=uu*AA1(1,1,i,k)+vv*AA1(1,2,i,k)+ww*AA1(1,3,i,k) 
+	 	    Wb1new(i,k)=uu*AA1(2,1,i,k)+vv*AA1(2,2,i,k)+ww*AA1(2,3,i,k)
+	 	    Vb1new(i,k)=uu*AA1(3,1,i,k)+vv*AA1(3,2,i,k)+ww*AA1(3,3,i,k)
 	 	  enddo
 	 	enddo   
 	       ! boundary at j=px*jmax  
 	       elseif (rank.eq.px-1) then
 		j=jmax
-	 	do k=kbed_bc+1,kmax
-	 	  z=(k-kbed_bc)*dz-0.5*dz
 	 	  do i=0,i1
+ 		   do k=kbed(i,j)+kbed_bc+1,kmax
+		    z=(k-kbed_bc-kbed(i,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
 	 	    x=Rp(i)*cos_v(jmax)-schuif_x
 	 	    y=Rp(i)*sin_v(jmax)
 	 	    uu=0.
@@ -2648,9 +2647,9 @@ c get stuff from other CPU's
 	 		vv=vv+epsSEM2(2,tt)*fun*fac2
 	 		ww=ww+epsSEM2(3,tt)*fun*fac2
 	 	    enddo
-	 	    Ub1new(i,k)=uu*AA(1,1,k)+vv*AA(1,2,k)+ww*AA(1,3,k)
-	 	    Wb1new(i,k)=uu*AA(2,1,k)+vv*AA(2,2,k)+ww*AA(2,3,k)
-	 	    Vb1new(i,k)=uu*AA(3,1,k)+vv*AA(3,2,k)+ww*AA(3,3,k)
+	 	    Ub1new(i,k)=uu*AA1(1,1,i,k)+vv*AA1(1,2,i,k)+ww*AA1(1,3,i,k)
+	 	    Wb1new(i,k)=uu*AA1(2,1,i,k)+vv*AA1(2,2,i,k)+ww*AA1(2,3,i,k)
+	 	    Vb1new(i,k)=uu*AA1(3,1,i,k)+vv*AA1(3,2,i,k)+ww*AA1(3,3,i,k)
 	 	  enddo
 	 	enddo
 	       endif
@@ -2720,7 +2719,7 @@ c get stuff from other CPU's
 
       integer m,n,ierr,clock,ii,t
       INTEGER, DIMENSION(:), ALLOCATABLE :: seed
-      real yy(nmax2),xx(nmax2),y,z
+      real yy(nmax2),xx(nmax2),y,z,AAdummy(3,3)
       real z0,xxmin,xxmax,yymin,yymax,zzmin,zzmax,x0,y0,phi,ust,fac,phi2
       character*60 fmatname
       real boxside_x,ttmin,ttmax,jetcorr,x,rr,rrmin,rrmax,ust3,dxx,dyy
@@ -2787,9 +2786,10 @@ c get stuff from other CPU's
 	
 !!	make linked list on every node for SEM2:
 	llmax2=0
- 	do k=kbed_bc+1,kmax
- 	  z=(k-kbed_bc)*dz-0.5*dz
-	  do j=0,j1
+	i=0
+	do j=0,j1
+ 	  do k=kbed_bc+1,kmax
+	    z=(k-kbed_bc-kbed(i,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
 	    y=Ru(0)*sin_u(j)
 	    do ii=1,nmax2
 	      if(ABS(y-ySEM2(ii))/lmySEM2(ii).lt.1..and.ABS(z-zSEM2(ii))/lmzSEM2(ii).lt.1.) then
@@ -2835,9 +2835,10 @@ c get stuff from other CPU's
  
    !!	make linked list for SEM1:
  	  llmax1=0
- 	do k=kbed_bc+1,kmax
- 	  z=(k-kbed_bc)*dz-0.5*dz
- 	    do i=0,i1
+	  j=0 
+	  do i=0,i1
+ 	    do k=kbed_bc+1,kmax
+	      z=(k-kbed_bc-kbed(i,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
  	      y=Rp(i)*sin_v(0)
  	      do ii=1,nmax1
  		if(ABS(y-ySEM1(ii))/lmySEM1(ii).lt.1..and.ABS(z-zSEM1(ii))/lmzSEM1(ii).lt.1.) then
@@ -2882,9 +2883,10 @@ c get stuff from other CPU's
  
    !!	make linked list for SEM1:
  	  llmax1=0
- 	do k=kbed_bc+1,kmax
- 	  z=(k-kbed_bc)*dz-0.5*dz
- 	    do i=0,i1
+	  j=jmax
+	  do i=0,i1
+		do k=kbed_bc+1,kmax
+		  z=(k-kbed_bc-kbed(i,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
  	      y=Rp(i)*sin_v(jmax)
  	      do ii=1,nmax1
  		if(ABS(y-ySEM1(ii))/lmySEM1(ii).lt.1..and.ABS(z-zSEM1(ii))/lmzSEM1(ii).lt.1.) then
@@ -2979,40 +2981,80 @@ c get stuff from other CPU's
 			
 
 	!! create Cholesky decomposition of Re stress tensor
+	AA1=0. 
+	IF (rank.eq.0) THEN 
+	  j=0 
+	ELSE 
+	  j=jmax 
+	ENDIF	
 	if (LOA<0.and.kjet>0) then
+	  do i=0,i1 
         do k=1,kmax-kjet
-	 if(k.gt.kbed_bc) then
-	  IF (wallup.eq.1) THEN
-	    z=depth-((k-kbed_bc)*dz-0.5*dz)
-	  ELSE
-	    z=(k-kbed_bc)*dz-0.5*dz
-	  ENDIF
-          call Chol_tensor_from_DNS_Ret395(z/(depth-kbed_bc*dz),AA(:,:,k))
-          AA(:,:,k)=AA(:,:,k)*ust ! scale back with ust
-	 else 
-	  AA(:,:,k)=0.
-	 endif
+			if(k.gt.kbed_bc+kbed(i,j)) then
+				IF (wallup.eq.1) THEN
+					z=depth-((k-kbed_bc)*dz-0.5*dz)
+			    ELSE
+					z=(k-kbed(i,j)-kbed_bc)*dz-0.5*dz
+				ENDIF
+				call Chol_tensor_from_DNS_Ret395(z/(depth-(kbed(i,j)+kbed_bc)*dz),AAdummy(:,:))
+				AA1(:,:,i,k)=AAdummy(:,:)*ust ! scale back with ust
+			else 
+				AA1(:,:,i,k)=0.
+			endif
         enddo
-
+	  enddo 
 	else
-
-	do k=1,kmax
-	 if(k.gt.kbed_bc) then
-	  IF (wallup.eq.1) THEN
-	    z=depth-((k-kbed_bc)*dz-0.5*dz)
-	  ELSE
-	    z=(k-kbed_bc)*dz-0.5*dz
-	  ENDIF
-	  call Chol_tensor_from_DNS_Ret395(z/(depth-kbed_bc*dz),AA(:,:,k))
-	  AA(:,:,k)=AA(:,:,k)*ust ! scale back with ust
-	 else 
-	  AA(:,:,k)=0. 
-	 endif
-	enddo
+	  do i=0,i1
+		do k=1,kmax
+			if(k.gt.kbed_bc+kbed(i,j)) then
+				IF (wallup.eq.1) THEN
+					z=depth-((k-kbed_bc)*dz-0.5*dz)
+				ELSE
+					z=(k-kbed(i,j)-kbed_bc)*dz-0.5*dz
+				ENDIF
+				call Chol_tensor_from_DNS_Ret395(z/(depth-(kbed(i,j)+kbed_bc)*dz),AAdummy(:,:))
+				AA1(:,:,i,k)=AAdummy(:,:)*ust ! scale back with ust
+			else 
+				AA1(:,:,i,k)=0. 
+			endif
+		enddo
+	  enddo
 	endif
-	
-
-
+	AA2=0. 
+	i=0
+	if (LOA<0.and.kjet>0) then
+	  do j=0,j1 
+        do k=1,kmax-kjet
+			if(k.gt.kbed_bc+kbed(i,j)) then
+				IF (wallup.eq.1) THEN
+					z=depth-((k-kbed_bc)*dz-0.5*dz)
+			    ELSE
+					z=(k-kbed(i,j)-kbed_bc)*dz-0.5*dz
+				ENDIF
+				call Chol_tensor_from_DNS_Ret395(z/(depth-(kbed(i,j)+kbed_bc)*dz),AAdummy(:,:))
+				AA2(:,:,j,k)=AAdummy(:,:)*ust ! scale back with ust
+			else 
+				AA2(:,:,j,k)=0.
+			endif
+        enddo
+	  enddo 
+	else
+	  do j=0,j1
+		do k=1,kmax
+			if(k.gt.kbed_bc+kbed(i,j)) then
+				IF (wallup.eq.1) THEN
+					z=depth-((k-kbed_bc)*dz-0.5*dz)
+				ELSE
+					z=(k-kbed(i,j)-kbed_bc)*dz-0.5*dz
+				ENDIF
+				call Chol_tensor_from_DNS_Ret395(z/(depth-(kbed(i,j)+kbed_bc)*dz),AAdummy(:,:))
+				AA2(:,:,j,k)=AAdummy(:,:)*ust ! scale back with ust
+			else 
+				AA2(:,:,j,k)=0. 
+			endif
+		enddo
+	  enddo
+	endif	
 
 	end
 
@@ -3071,6 +3113,7 @@ c get stuff from other CPU's
       yymax=Rp(imax)*sin(phi2)+0.22*(depth-bc_obst_h)
       if (rank.eq.0) then
    !! 	grens op j=0
+      j=0
  	do i=1,nmax1
  	  xSEM1(i)=xSEM1(i)+uSEM1(i)*dt
 	  xxmax=-ySEM1(i)/tan(phi2)-schuif_x+boxside_x ! xxmax is positive
@@ -3083,8 +3126,8 @@ c get stuff from other CPU's
 		  kmaxSEM=MAX(kmaxSEM,1)
 		  kmaxSEM=MIN(kmaxSEM,kmax)
 		  do k=kminSEM,kmaxSEM
-	 	    z=(k-kbed_bc)*dz-0.5*dz
 		    do ii=0,i1 
+			  z=(k-kbed_bc-kbed(ii,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
 		      y=Rp(ii)*sin_v(0)	
 		      if(ABS(y-ySEM1(i))/lmySEM1(i).lt.1..and.ABS(z-zSEM1(i))/lmzSEM1(i).lt.1.) then
 			do tel=1,llmax1(ii,k)
@@ -3122,8 +3165,8 @@ c get stuff from other CPU's
 		  kmaxSEM=MAX(kmaxSEM,1)
 		  kmaxSEM=MIN(kmaxSEM,kmax)
 	 	  do k=kminSEM,kmaxSEM
-	 	    z=(k-kbed_bc)*dz-0.5*dz
 	 	    do ii=0,i1
+			  z=(k-kbed_bc-kbed(ii,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
 	 	      y=Rp(ii)*sin_v(0)
 	 	      if(ABS(y-ySEM1(i))/lmySEM1(i).lt.1..and.ABS(z-zSEM1(i))/lmzSEM1(i).lt.1.) then
 	 		  llmax1(ii,k)=llmax1(ii,k)+1
@@ -3136,6 +3179,7 @@ c get stuff from other CPU's
        endif
        if (rank.eq.px-1) then
  !! 	grens op j=jmax
+		j=jmax
  	do i=1,nmax1
  	  xSEM1(i)=xSEM1(i)+uSEM1(i)*dt
 	  xxmax=ySEM1(i)/tan(phi2)-schuif_x+boxside_x ! xxmax is positive
@@ -3148,8 +3192,8 @@ c get stuff from other CPU's
 		  kmaxSEM=MAX(kmaxSEM,1)
 		  kmaxSEM=MIN(kmaxSEM,kmax)
 		  do k=kminSEM,kmaxSEM
- 	 	    z=(k-kbed_bc)*dz-0.5*dz
 		    do ii=0,i1 
+			  z=(k-kbed_bc-kbed(ii,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
 		      y=Rp(ii)*sin_v(jmax)	
 		      if(ABS(y-ySEM1(i))/lmySEM1(i).lt.1..and.ABS(z-zSEM1(i))/lmzSEM1(i).lt.1.) then
 			do tel=1,llmax1(ii,k)
@@ -3186,8 +3230,8 @@ c get stuff from other CPU's
 		  kmaxSEM=MAX(kmaxSEM,1)
 		  kmaxSEM=MIN(kmaxSEM,kmax)
 	 	  do k=kminSEM,kmaxSEM
-	 	    z=(k-kbed_bc)*dz-0.5*dz
 	 	    do ii=0,i1
+			  z=(k-kbed_bc-kbed(ii,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
 	 	      y=Rp(ii)*sin_v(jmax)
 	 	      if(ABS(y-ySEM1(i))/lmySEM1(i).lt.1..and.ABS(z-zSEM1(i))/lmzSEM1(i).lt.1.) then
 	 		  llmax1(ii,k)=llmax1(ii,k)+1
@@ -3247,6 +3291,7 @@ c get stuff from other CPU's
 	call mpi_bcast(iimax,1,MPI_INTEGER,1,MPI_COMM_WORLD,ierr)
 	call mpi_bcast(ind(1:iimax),iimax,MPI_INTEGER,1,MPI_COMM_WORLD,ierr)
 	! remove old location moved items from linked list on every node for SEM2:
+	i=0
 	do iii=1,iimax
 	  ii=ind(iii)
 	  kminSEM=INT(FLOOR((zSEM2old(ii)-lmzSEM2old(ii))/dz))+kbed_bc
@@ -3275,8 +3320,8 @@ c get stuff from other CPU's
 !           endif
 
 	  do k=kminSEM,kmaxSEM
-	    z=(k-kbed_bc)*dz-0.5*dz
 	    do j=0,j1 !j=jminSEM,jmaxSEM
+		  z=(k-kbed_bc-kbed(i,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
 	      y=Ru(0)*sin_u(j)	
 	      if(ABS(y-ySEM2old(ii))/lmySEM2old(ii).lt.1..and.ABS(z-zSEM2old(ii))/lmzSEM2old(ii).lt.1.) then
 		do tel=1,llmax2(j,k)
@@ -3300,6 +3345,7 @@ c get stuff from other CPU's
 	call mpi_bcast(lmzSEM2,nmax2,MPI_REAL8,1,MPI_COMM_WORLD,ierr)
 
 	! add new location moved items in linked list on every node for SEM2:
+	i=0
 	do iii=1,iimax
 	  ii=ind(iii)
 	  kminSEM=INT(FLOOR((zSEM2(ii)-lmzSEM2(ii))/dz))+kbed_bc
@@ -3318,8 +3364,8 @@ c get stuff from other CPU's
 ! 	  jmaxSEM=MAX(jmaxSEM,1)
 ! 	  jmaxSEM=MIN(jmaxSEM,j1)
 	  do k=kminSEM,kmaxSEM
- 	    z=(k-kbed_bc)*dz-0.5*dz
 	    do j=0,j1 !jminSEM,jmaxSEM
+		  z=(k-kbed_bc-kbed(i,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
 	      y=Ru(0)*sin_u(j)	
 	      if(ABS(y-ySEM2(ii))/lmySEM2(ii).lt.1..and.ABS(z-zSEM2(ii))/lmzSEM2(ii).lt.1.) then
 		llmax2(j,k)=llmax2(j,k)+1
