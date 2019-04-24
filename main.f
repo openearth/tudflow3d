@@ -387,7 +387,7 @@
 		WRITE(*,'(a,f9.6,a,f9.6,a)') ' # dt end : ',dt,' s, dt avg :',time_n/istep,' s        #' 
 		WRITE(*,'(a,a,a)') ' # Time integration : ',time_int,'                           #' 
 		WRITE(*,'(a,a,a)') ' # Convection integration : ',convection,'                    #' 
-                if (convection.eq.'CDS6'.or.convection.eq.'HYB4'.or.convection.eq.'HYB6'.or.convection.eq.'C4A6') then
+                if (convection.eq.'CDS6'.or.convection.eq.'CDS4'.or.convection.eq.'HYB6'.or.convection.eq.'C4A6') then
                         WRITE(*,'(a,f9.6,a)') ' # Blend factor                  : ',numdiff/2.,'        #'
 		endif
 		WRITE(*,'(a,a,a)') ' # Diffusion integration : ',diffusion,'                     #' 

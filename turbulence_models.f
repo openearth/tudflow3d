@@ -2137,7 +2137,7 @@ c*************************************************************
 	ke=kmax
 	do t=1,nr_HPfilter
 	Uvel2(0:ie,0:j1,0:k1)=Uvel(0:ie,0:j1,0:k1)
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(Uvel,ubf)
 	  call shiftb2(Uvel,ubb) 
 
@@ -2170,7 +2170,7 @@ c get stuff from other CPU's
 	Uvel2(0:i1,0:j1,k1+1)=Uvel(0:i1,0:j1,k1)
 
 	Vvel2(0:i1,0:j1,0:k1)=Vvel(0:i1,0:j1,0:k1)
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(Vvel,ubf)
 	  call shiftb2(Vvel,ubb) 
 
@@ -2203,7 +2203,7 @@ c get stuff from other CPU's
 	Vvel2(0:i1,0:j1,k1+1)=Vvel(0:i1,0:j1,k1)
 
 	Wvel2(0:i1,0:j1,0:k1)=Wvel(0:i1,0:j1,0:k1)
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(Wvel,ubf)
 	  call shiftb2(Wvel,ubb) 
 

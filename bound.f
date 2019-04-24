@@ -134,7 +134,7 @@ c 	influence of waves on lateral boundaries:
 	
 
 
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf(Ubound,ubf)
 	  call shiftf(Vbound,vbf) 
 	  call shiftf(Wbound,wbf) 
@@ -571,7 +571,7 @@ c 	influence of waves on lateral boundaries:
 	  Wb2=Wb2in
 	ENDIF
 
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf(Ubound,ubf)
 	  call shiftf(Vbound,vbf) 
 	  call shiftf(Wbound,wbf) 
@@ -1167,7 +1167,7 @@ c	x,y,z coordinate system, not in r,theta,z like this code
 	rhW(0:i1,0:j1,0)=    0.5*(rho(0:i1,0:j1,0)+rho(0:i1,0:j1,1))
 	
 		!! boundary conditions in y-dir as last to prevail (especially for internal partitions this is essential)
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	call shiftf(rhU,ubf) 
 	call shiftf(rhV,vbf)
 	call shiftf(rhW,wbf)
@@ -1284,7 +1284,7 @@ c 	influence of waves on lateral boundaries:
 	  Wb2=Wb2in
 	ENDIF
 
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	call shiftf(Ubound,ubf)
 	call shiftf(Vbound,vbf) 
 	call shiftf(Wbound,wbf) 
@@ -1480,7 +1480,7 @@ c get stuff from other CPU's
 		rho2(i1+1,0:j1,0:k1)=rho(2,0:j1,0:k1)		
 	endif
 
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(Ubound,ubf)
 	  call shiftb2(Ubound,ubb) 
 	  call shiftf2(Vbound,vbf)
@@ -2139,7 +2139,7 @@ c*************************************************************
 	ENDDO ! bedplume loop
 	
 
-c get stuff from other CPU's
+!c get stuff from other CPU's
 
 	
 	call shiftf(Cbound,cbf) 
@@ -2354,7 +2354,7 @@ c
 c*************************************************************
 c
 c*************************************************************
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  
 	call shiftf_l(Cbound,cbf) 
 	call shiftb_l(Cbound,cbb) 
@@ -2422,7 +2422,7 @@ c     Subroutine sets the boundary conditions for Cbound for integer array
 c
 c
 c*************************************************************
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  
 	call shiftf_intl(Cbound,cbf) 
 	call shiftb_intl(Cbound,cbb) 

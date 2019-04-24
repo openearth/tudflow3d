@@ -329,7 +329,7 @@ c******************************************************************
 		integer, dimension(nf90_max_var_dims) :: dimids
 		REAL dummy_var(1:imax,1:px*jmax,1:kmax),dummy_var2(1:imax,1:px*jmax,1:kmax) 
 		CHARACTER(len=256) :: command,dummy,restart_file(1000)
-		INTEGER ressystem, io, nfound,jpx,size1,size2,size3,size4
+		INTEGER ressystem, io, nfound,jpx,size1,size2,size3,size4,load_Cbed
 
 !       include 'param.txt'
 !       include 'common.txt'
@@ -629,7 +629,7 @@ c******************************************************************
      &                       start=(/1,1,1/),count=(/imax,jpx,kmax/)) )
 			else
 				write(*,*),'initconditionsfile =',restart_file(n2),' variable "U" not found and not used as initial condition'
-				dummy_var(1:imax,(n2-1)*jpx+1:jpx,1:kmax)=0.
+				dummy_var(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1:kmax)=0.
 			endif
 			call check( nf90_close(ncid) )
 		ENDDO
@@ -650,7 +650,7 @@ c******************************************************************
      &                       start=(/1,1,1/),count=(/imax,jpx,kmax/)) )
 			else
 				write(*,*),'initconditionsfile =',restart_file(n2),' variable "V" not found and not used as initial condition'
-				dummy_var2(1:imax,(n2-1)*jpx+1:jpx,1:kmax)=0.
+				dummy_var2(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1:kmax)=0.
 			endif
 			call check( nf90_close(ncid) )
 		ENDDO
@@ -679,7 +679,7 @@ c******************************************************************
      &                       start=(/1,1,1/),count=(/imax,jpx,kmax/)) )
 			else
 				write(*,*),'initconditionsfile =',restart_file(n2),' variable "W" not found and not used as initial condition'
-				dummy_var(1:imax,(n2-1)*jpx+1:jpx,1:kmax)=0.
+				dummy_var(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1:kmax)=0.
 			endif
 			call check( nf90_close(ncid) )
 		ENDDO
@@ -709,7 +709,7 @@ c******************************************************************
      &                       start=(/n,1,1,1/),count=(/1,imax,jpx,kmax/)) )
 				else
 					write(*,*),'initconditionsfile =',restart_file(n2),' variable "C" not found and not used as initial condition'
-					dummy_var(1:imax,(n2-1)*jpx+1:jpx,1:kmax)=0.
+					dummy_var(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1:kmax)=0.
 				endif
 				call check( nf90_close(ncid) )
 			ENDDO
@@ -721,7 +721,9 @@ c******************************************************************
 			  enddo
 			enddo
 		ENDDO
-		DO n=1,nfrac
+		load_Cbed=0
+		IF (interaction_bed.ge.4) THEN
+		 DO n=1,nfrac
 			DO n2=1,nfound
 				status2 = nf90_open(restart_file(n2), nf90_NoWrite, ncid) 
 				IF (status2/= nf90_noerr) THEN
@@ -730,6 +732,7 @@ c******************************************************************
 				ENDIF
 				status = nf90_inq_varid(ncid, "Cbed",rhVarid)
 				if (status.eq.nf90_NoErr) then
+					load_Cbed=1
 					call check( nf90_inquire_variable(ncid, rhVarid, dimids = dimIDs))
 					call check( nf90_inquire_dimension(ncid, dimIDs(1), len = size1))
 					call check( nf90_inquire_dimension(ncid, dimIDs(2), len = size2))
@@ -740,7 +743,7 @@ c******************************************************************
      &                       start=(/n,1,1,1/),count=(/1,imax,jpx,kmax/)) )
 				else
 					write(*,*),'initconditionsfile =',restart_file(n2),' variable "Cbed" not found and not used as initial condition'
-					dummy_var(1:imax,(n2-1)*jpx+1:jpx,1:kmax)=0.
+					dummy_var(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1:kmax)=0.
 				endif
 				call check( nf90_close(ncid) )
 			ENDDO
@@ -751,7 +754,8 @@ c******************************************************************
 				enddo 
 			  enddo
 			enddo
-		ENDDO
+		 ENDDO
+		ENDIF
 		DO n=1,nfrac
 			DO n2=1,nfound
 				status2 = nf90_open(restart_file(n2), nf90_NoWrite, ncid) 
@@ -770,7 +774,7 @@ c******************************************************************
      &                       start=(/n,1,1/),count=(/1,imax,jpx/)) )
 				else
 					write(*,*),'initconditionsfile =',restart_file(n2),' variable "mass_bed" not found and not used as initial condition'
-					dummy_var(1:imax,(n2-1)*jpx+1:jpx,1)=0.
+					dummy_var(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1)=0.
 				endif
 				call check( nf90_close(ncid) )
 			ENDDO
@@ -786,27 +790,33 @@ c******************************************************************
 		Wold=Wnew 
 		Cold=Cnew
 		
-
-		kbed=0
-		do i=1,imax
-		  do j=1,jmax
-			k=1
-		    do WHILE (SUM(Clivebed(1:nfrac,i,j,k)).gt.0.)
-			  k=k+1
-			  kbed(i,j)=k
-			  kbedt(i,j)=k
+		IF (interaction_bed.ge.4.and.load_Cbed.eq.1) THEN
+			kbed=0
+			kbedt=0
+			do i=1,imax
+			  do j=1,jmax
+				k=1
+				do WHILE (SUM(Clivebed(1:nfrac,i,j,k)).gt.0.)
+				  k=k+1
+				  kbed(i,j)=k
+				  kbedt(i,j)=k
+				enddo
+			  enddo
 			enddo
-		  enddo
-		enddo
-!		call state(cnew,rnew)
-!		CALL erosion_deposition(Cnew,cnewbot,Unew,Vnew,Wnew,Rnew,Cnew,Cnewbot,dt,dz)
+		  call bound_cbot_integer(kbed) 
+		  call bound_cbot_integer(kbedt)	
 
-      do n=1,nfrac
-	     call bound_c(Clivebed(n,:,:,:),0.,n,0.)
-	     call bound_cbot(Cnewbot(n,:,:))
-      enddo	
-	  call bound_cbot_integer(kbed) 
-	  call bound_cbot_integer(kbedt)
+	!		call state(cnew,rnew)
+	!		CALL erosion_deposition(Cnew,cnewbot,Unew,Vnew,Wnew,Rnew,Cnew,Cnewbot,dt,dz)
+
+		  do n=1,nfrac
+			 IF (interaction_bed.ge.4) THEN
+			   call bound_c(Clivebed(n,:,:,:),0.,n,0.)
+			 ENDIF
+			 call bound_cbot(Cnewbot(n,:,:))
+		  enddo	
+	  ENDIF
+
 	
 	ENDIF
 	
@@ -2886,7 +2896,7 @@ C ...  Locals
 !		facIBMu=0. !initialise all facIBM zero because for all ibm cells velocity must be zero
 !		facIBMv=0.
 !		facIBMw=0.
-!c get stuff from other CPU's
+!!c get stuff from other CPU's
 !
 !	zbed4(0:i1,0:j1)=zbed(0:i1,0:j1)	  
 !	!call shiftf_l2(zbed4,cbf) 

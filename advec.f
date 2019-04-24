@@ -485,7 +485,7 @@ c********************************************************************
 		putin2(-1,0:j1,0:k1)=putin(ie-1,0:j1,0:k1)
 		putin2(i1+1,0:j1,0:k1)=putin(2,0:j1,0:k1)
 	endif
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(putin,pbf)
 	  call shiftb2(putin,pbb) 
 
@@ -759,7 +759,7 @@ c********************************************************************
 		putin2(-1,0:j1,0:k1)=putin(ie-1,0:j1,0:k1)
 		putin2(i1+1,0:j1,0:k1)=putin(2,0:j1,0:k1)
 	endif
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(putin,pbf)
 	  call shiftb2(putin,pbb) 
 
@@ -1118,7 +1118,7 @@ c********************************************************************
 		putin2(-1,0:j1,0:k1)=putin(ie-1,0:j1,0:k1)
 		putin2(i1+1,0:j1,0:k1)=putin(2,0:j1,0:k1)
 	endif
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(putin,pbf)
 	  call shiftb2(putin,pbb) 
 
@@ -1470,7 +1470,7 @@ c********************************************************************
 		putin2(-1,0:j1,0:k1)=putin(ie-1,0:j1,0:k1)
 		putin2(i1+1,0:j1,0:k1)=putin(2,0:j1,0:k1)
 	endif
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(putin,pbf)
 	  call shiftb2(putin,pbb) 
 
@@ -1809,7 +1809,7 @@ c********************************************************************
 		putin2(-1,0:j1,0:k1)=putin(ie-1,0:j1,0:k1)
 		putin2(i1+1,0:j1,0:k1)=putin(2,0:j1,0:k1)
 	endif
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(putin,pbf)
 	  call shiftb2(putin,pbb) 
 
@@ -2152,7 +2152,7 @@ c********************************************************************
 		putin2(-1,0:j1,0:k1)=putin(ie-1,0:j1,0:k1)
 		putin2(i1+1,0:j1,0:k1)=putin(2,0:j1,0:k1)
 	endif
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(putin,pbf)
 	  call shiftb2(putin,pbb) 
 
@@ -2453,7 +2453,7 @@ c********************************************************************
 		putin2(-1,0:j1,0:k1)=putin(ie-1,0:j1,0:k1)
 		putin2(i1+1,0:j1,0:k1)=putin(2,0:j1,0:k1)
 	endif
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(putin,pbf)
 	  call shiftb2(putin,pbb) 
 
@@ -2772,7 +2772,7 @@ c********************************************************************
 		putin2(-1,0:j1,0:k1)=putin(ie-1,0:j1,0:k1)
 		putin2(i1+1,0:j1,0:k1)=putin(2,0:j1,0:k1)
 	endif
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(putin,pbf)
 	  call shiftb2(putin,pbb) 
 
@@ -3133,7 +3133,7 @@ c********************************************************************
 	endif
 
 
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(putin,pbf)
 	  call shiftb2(putin,pbb) 
 
@@ -3710,7 +3710,7 @@ c********************************************************************
 		putin2(-1,0:j1,0:k1)=putin(ie-1,0:j1,0:k1)
 		putin2(i1+1,0:j1,0:k1)=putin(2,0:j1,0:k1)
 	endif
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(putin,pbf)
 	  call shiftb2(putin,pbb) 
 
@@ -4231,7 +4231,7 @@ c********************************************************************
 		putin2(-1,0:j1,0:k1)=putin(ie-1,0:j1,0:k1)
 		putin2(i1+1,0:j1,0:k1)=putin(2,0:j1,0:k1)
 	endif
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(putin,pbf)
 	  call shiftb2(putin,pbb) 
 
@@ -4717,7 +4717,7 @@ c********************************************************************
 		putin2(-1,0:j1,0:k1)=putin(ie-1,0:j1,0:k1)
 		putin2(i1+1,0:j1,0:k1)=putin(2,0:j1,0:k1)
 	endif
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(putin,pbf)
 	  call shiftb2(putin,pbb) 
 
@@ -4949,7 +4949,7 @@ c********************************************************************
 		putin2(-1,0:j1)=putin(ie-1,0:j1)
 		putin2(i1+1,0:j1)=putin(2,0:j1)
 	endif
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf_l2(putin,pbf)
 	  call shiftb_l2(putin,pbb) 
 
@@ -5148,7 +5148,7 @@ c********************************************************************
 		putin2(-1,0:j1,0:k1)=putin(ie-1,0:j1,0:k1)
 		putin2(i1+1,0:j1,0:k1)=putin(2,0:j1,0:k1)
 	endif
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(putin,pbf)
 	  call shiftb2(putin,pbb) 
 

@@ -112,17 +112,19 @@ c********************************************************************
       	if (convection.eq.'CDS2') then
       call advecu_CDS2(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	elseif(convection.eq.'CDS6') then
-      call advecu_CDS6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecu_CDS6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,
+     & periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'COM4') then
       call advecu_COM4(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
-	elseif(convection.eq.'HYB4') then
-      call advecu_HYB4(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
+	elseif(convection.eq.'CDS4') then
+      call advecu_CDS4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,
+     & periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecu_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed)
+     & numdiff,periodicx,periodicy,kbed,wf,wd)
 	elseif(convection.eq.'C4A6') then
       call advecu_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv,wf,ekm,ekm_mol,p+pold)
+     &,phiv,wf,wd)
 	elseif(convection.eq.'uTVD') then
       call advecu_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)	  
@@ -156,17 +158,19 @@ c********************************************************************
       	if (convection.eq.'CDS2') then
       call advecv_CDS2(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	elseif(convection.eq.'CDS6') then
-      call advecv_CDS6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecv_CDS6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,
+     & periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'COM4') then
       call advecv_COM4(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
-	elseif(convection.eq.'HYB4') then
-      call advecv_HYB4(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
+	elseif(convection.eq.'CDS4') then
+      call advecv_CDS4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,
+     & periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecv_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed)
+     & numdiff,periodicx,periodicy,kbed,wf,wd)
 	elseif(convection.eq.'C4A6') then
       call advecv_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv,wf)	  
+     &,phiv,wf,wd)	  
 	elseif(convection.eq.'uTVD') then
       call advecv_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)	  
@@ -199,17 +203,19 @@ c********************************************************************
       	if (convection.eq.'CDS2') then
       call advecw_CDS2(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	elseif(convection.eq.'CDS6') then
-      call advecw_CDS6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecw_CDS6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,
+     &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'COM4') then
       call advecw_COM4(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
-	elseif(convection.eq.'HYB4') then
-      call advecw_HYB4(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
+	elseif(convection.eq.'CDS4') then
+      call advecw_CDS4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,
+     &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecw_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed)
+     & numdiff,periodicx,periodicy,kbed,wf,wd)
 	elseif(convection.eq.'C4A6') then
       call advecw_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv,wf)	  
+     &,phiv,wf,wd)	  
 	elseif(convection.eq.'uTVD') then
       call advecw_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)	  
@@ -415,17 +421,19 @@ c********************************************************************
       	if (convection.eq.'CDS2') then
       call advecu_CDS2(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	elseif(convection.eq.'CDS6') then
-      call advecu_CDS6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecu_CDS6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff
+     & ,periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'COM4') then
       call advecu_COM4(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
-	elseif(convection.eq.'HYB4') then
-      call advecu_HYB4(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
+	elseif(convection.eq.'CDS4') then
+      call advecu_CDS4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff
+     & ,periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecu_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed)
+     & numdiff,periodicx,periodicy,kbed,wf,wd)
 	elseif(convection.eq.'C4A6') then
       call advecu_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv,wf,ekm,ekm_mol,p+pold)	  
+     &,phiv,wf,wd)	  
 	elseif(convection.eq.'uTVD') then
       call advecu_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)	  
@@ -462,17 +470,19 @@ c********************************************************************
       	if (convection.eq.'CDS2') then
       call advecv_CDS2(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	elseif(convection.eq.'CDS6') then
-      call advecv_CDS6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecv_CDS6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,
+     & periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'COM4') then
       call advecv_COM4(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
-	elseif(convection.eq.'HYB4') then
-      call advecv_HYB4(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
+	elseif(convection.eq.'CDS4') then
+      call advecv_CDS4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,
+     & periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecv_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed)
+     & numdiff,periodicx,periodicy,kbed,wf,wd)
 	elseif(convection.eq.'C4A6') then
       call advecv_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv,wf)	  
+     &,phiv,wf,wd)	  
 	elseif(convection.eq.'uTVD') then
       call advecv_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)	  
@@ -505,17 +515,19 @@ c********************************************************************
       	if (convection.eq.'CDS2') then
       call advecw_CDS2(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	elseif(convection.eq.'CDS6') then
-      call advecw_CDS6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecw_CDS6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,
+     &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'COM4') then
       call advecw_COM4(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
-	elseif(convection.eq.'HYB4') then
-      call advecw_HYB4(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
+	elseif(convection.eq.'CDS4') then
+      call advecw_CDS4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,
+     &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecw_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed)
+     & numdiff,periodicx,periodicy,kbed,wf,wd)
 	elseif(convection.eq.'C4A6') then
       call advecw_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv,wf)	  
+     &,phiv,wf,wd)	  
 	elseif(convection.eq.'uTVD') then
       call advecw_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)	  
@@ -858,17 +870,19 @@ c********************************************************************
       	if (convection.eq.'CDS2') then
       call advecu_CDS2(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	elseif(convection.eq.'CDS6') then
-      call advecu_CDS6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecu_CDS6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff
+     & ,periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'COM4') then
       call advecu_COM4(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
-	elseif(convection.eq.'HYB4') then
-      call advecu_HYB4(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
+	elseif(convection.eq.'CDS4') then
+      call advecu_CDS4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff
+     & ,periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecu_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed)
+     & numdiff,periodicx,periodicy,kbed,wf,wd)
 	elseif(convection.eq.'C4A6') then
       call advecu_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv,wf,ekm,ekm_mol,p)	  
+     &,phiv,wf,wd)	  
 	elseif(convection.eq.'uTVD') then
       call advecu_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)		  
@@ -904,17 +918,19 @@ c********************************************************************
       	if (convection.eq.'CDS2') then
       call advecv_CDS2(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	elseif(convection.eq.'CDS6') then
-      call advecv_CDS6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecv_CDS6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff
+     & ,periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'COM4') then
       call advecv_COM4(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
-	elseif(convection.eq.'HYB4') then
-      call advecv_HYB4(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
+	elseif(convection.eq.'CDS4') then
+      call advecv_CDS4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff
+     & ,periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecv_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed)
+     & numdiff,periodicx,periodicy,kbed,wf,wd)
 	elseif(convection.eq.'C4A6') then
       call advecv_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv,wf)	  
+     &,phiv,wf,wd)	  
 	elseif(convection.eq.'uTVD') then
       call advecv_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)	  
@@ -948,17 +964,19 @@ c********************************************************************
       	if (convection.eq.'CDS2') then
       call advecw_CDS2(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	elseif(convection.eq.'CDS6') then
-      call advecw_CDS6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecw_CDS6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,
+     &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'COM4') then
       call advecw_COM4(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
-	elseif(convection.eq.'HYB4') then
-      call advecw_HYB4(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
+	elseif(convection.eq.'CDS4') then
+      call advecw_CDS4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,
+     &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecw_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed)
+     & numdiff,periodicx,periodicy,kbed,wf,wd)
 	elseif(convection.eq.'C4A6') then
       call advecw_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv,wf)	  
+     &,phiv,wf,wd)	  
 	elseif(convection.eq.'uTVD') then
       call advecw_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)	  
@@ -1390,17 +1408,19 @@ c********************************************************************
       	if (convection.eq.'CDS2') then
       call advecu_CDS2(k1u,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	elseif(convection.eq.'CDS6') then
-      call advecu_CDS6(k1u,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecu_CDS6(k1u,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,
+     & periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'COM4') then
       call advecu_COM4(k1u,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
-	elseif(convection.eq.'HYB4') then
-      call advecu_HYB4(k1u,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
+	elseif(convection.eq.'CDS4') then
+      call advecu_CDS4(k1u,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,
+     & periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecu_HYB6(k1u,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed)
+     & numdiff,periodicx,periodicy,kbed,wf,wd)
 	elseif(convection.eq.'C4A6') then
       call advecu_C4A6(k1u,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv,wf,ekm,ekm_mol,p+pold)	  
+     &,phiv,wf,wd)	  
 	elseif(convection.eq.'uTVD') then
       call advecu_TVD(k1u,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)	  
@@ -1414,17 +1434,19 @@ c********************************************************************
 	if(convection.eq.'CDS2') then
       call advecv_CDS2(k1v,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	elseif(convection.eq.'CDS6') then
-      call advecv_CDS6(k1v,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecv_CDS6(k1v,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,
+     & periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'COM4') then
       call advecv_COM4(k1v,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
-	elseif(convection.eq.'HYB4') then
-      call advecv_HYB4(k1v,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
+	elseif(convection.eq.'CDS4') then
+      call advecv_CDS4(k1v,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,
+     & periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecv_HYB6(k1v,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed)
+     & numdiff,periodicx,periodicy,kbed,wf,wd)
 	elseif(convection.eq.'C4A6') then
       call advecv_C4A6(k1v,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv,wf)	  
+     &,phiv,wf,wd)	  
 	elseif(convection.eq.'uTVD') then
       call advecv_TVD(k1v,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)		  
@@ -1438,17 +1460,19 @@ c********************************************************************
       	if (convection.eq.'CDS2') then
       call advecw_CDS2(k1w,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	elseif(convection.eq.'CDS6') then
-      call advecw_CDS6(k1w,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecw_CDS6(k1w,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,
+     &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'COM4') then
       call advecw_COM4(k1w,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
-	elseif(convection.eq.'HYB4') then
-      call advecw_HYB4(k1w,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
+	elseif(convection.eq.'CDS4') then
+      call advecw_CDS4(k1w,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,
+     &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecw_HYB6(k1w,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed)
+     & numdiff,periodicx,periodicy,kbed,wf,wd)
 	elseif(convection.eq.'C4A6') then
       call advecw_C4A6(k1w,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv,wf)	  
+     &,phiv,wf,wd)	  
 	elseif(convection.eq.'uTVD') then
       call advecw_TVD(k1w,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)		  
@@ -1860,17 +1884,19 @@ c********************************************************************
       	if (convection.eq.'CDS2') then
       call advecu_CDS2(k2u,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	elseif(convection.eq.'CDS6') then
-      call advecu_CDS6(k2u,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecu_CDS6(k2u,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,
+     & periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'COM4') then
       call advecu_COM4(k2u,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
-	elseif(convection.eq.'HYB4') then
-      call advecu_HYB4(k2u,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
+	elseif(convection.eq.'CDS4') then
+      call advecu_CDS4(k2u,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,
+     & periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecu_HYB6(k2u,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed)
+     & numdiff,periodicx,periodicy,kbed,wf,wd)
 	elseif(convection.eq.'C4A6') then
       call advecu_C4A6(k2u,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv,wf,ekm,ekm_mol,p+pold)	  
+     &,phiv,wf,wd)	  
 	elseif(convection.eq.'uTVD') then
       call advecu_TVD(k2u,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)	  
@@ -1884,17 +1910,19 @@ c********************************************************************
       	if (convection.eq.'CDS2') then
       call advecv_CDS2(k2v,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	elseif(convection.eq.'CDS6') then
-      call advecv_CDS6(k2v,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecv_CDS6(k2v,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,
+     & periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'COM4') then
       call advecv_COM4(k2v,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
-	elseif(convection.eq.'HYB4') then
-      call advecv_HYB4(k2v,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
+	elseif(convection.eq.'CDS4') then
+      call advecv_CDS4(k2v,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,
+     & periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecv_HYB6(k2v,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed)
+     & numdiff,periodicx,periodicy,kbed,wf,wd)
 	elseif(convection.eq.'C4A6') then
       call advecv_C4A6(k2v,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv,wf)	  
+     &,phiv,wf,wd)	  
 	elseif(convection.eq.'uTVD') then
       call advecv_TVD(k2v,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)	  
@@ -1908,17 +1936,19 @@ c********************************************************************
       	if (convection.eq.'CDS2') then
       call advecw_CDS2(k2w,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	elseif(convection.eq.'CDS6') then
-      call advecw_CDS6(k2w,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecw_CDS6(k2w,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,
+     &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'COM4') then
       call advecw_COM4(k2w,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
-	elseif(convection.eq.'HYB4') then
-      call advecw_HYB4(k2w,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
+	elseif(convection.eq.'CDS4') then
+      call advecw_CDS4(k2w,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,
+     &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecw_HYB6(k2w,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed)
+     & numdiff,periodicx,periodicy,kbed,wf,wd)
 	elseif(convection.eq.'C4A6') then
       call advecw_C4A6(k2w,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv,wf)	  
+     &,phiv,wf,wd)	  
 	elseif(convection.eq.'uTVD') then
       call advecw_TVD(k2w,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)	  
@@ -2331,17 +2361,19 @@ c********************************************************************
       	if (convection.eq.'CDS2') then
       call advecu_CDS2(k3u,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	elseif(convection.eq.'CDS6') then
-      call advecu_CDS6(k3u,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecu_CDS6(k3u,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,
+     & periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'COM4') then
       call advecu_COM4(k3u,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
-	elseif(convection.eq.'HYB4') then
-      call advecu_HYB4(k3u,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
+	elseif(convection.eq.'CDS4') then
+      call advecu_CDS4(k3u,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,
+     & periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecu_HYB6(k3u,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed)
+     & numdiff,periodicx,periodicy,kbed,wf,wd)
 	elseif(convection.eq.'C4A6') then
       call advecu_C4A6(k3u,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv,wf,ekm,ekm_mol,p+pold)	  
+     &,phiv,wf,wd)	  
 	elseif(convection.eq.'uTVD') then
       call advecu_TVD(k3u,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)	  
@@ -2356,17 +2388,19 @@ c********************************************************************
       	if (convection.eq.'CDS2') then
       call advecv_CDS2(k3v,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	elseif(convection.eq.'CDS6') then
-      call advecv_CDS6(k3v,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecv_CDS6(k3v,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,
+     & periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'COM4') then
       call advecv_COM4(k3v,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
-	elseif(convection.eq.'HYB4') then
-      call advecv_HYB4(k3v,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
+	elseif(convection.eq.'CDS4') then
+      call advecv_CDS4(k3v,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,
+     & periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecv_HYB6(k3v,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed)
+     & numdiff,periodicx,periodicy,kbed,wf,wd)
 	elseif(convection.eq.'C4A6') then
       call advecv_C4A6(k3v,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv,wf)	  
+     &,phiv,wf,wd)	  
 	elseif(convection.eq.'uTVD') then
       call advecv_TVD(k3v,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)	  
@@ -2380,17 +2414,19 @@ c********************************************************************
       	if (convection.eq.'CDS2') then
       call advecw_CDS2(k3w,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	elseif(convection.eq.'CDS6') then
-      call advecw_CDS6(k3w,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecw_CDS6(k3w,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,
+     &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'COM4') then
       call advecw_COM4(k3w,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
-	elseif(convection.eq.'HYB4') then
-      call advecw_HYB4(k3w,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
+	elseif(convection.eq.'CDS4') then
+      call advecw_CDS4(k3w,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,
+     &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecw_HYB6(k3w,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed)
+     & numdiff,periodicx,periodicy,kbed,wf,wd)
 	elseif(convection.eq.'C4A6') then
       call advecw_C4A6(k3w,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv,wf)	  
+     &,phiv,wf,wd)	  
 	elseif(convection.eq.'uTVD') then
       call advecw_TVD(k3w,dUdt,dVdt,dWdt,dRdt,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)	  
@@ -2762,17 +2798,19 @@ c********************************************************************
       	if (convection.eq.'CDS2') then
       call advecu_CDS2(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	elseif(convection.eq.'CDS6') then
-      call advecu_CDS6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecu_CDS6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,
+     & periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'COM4') then
       call advecu_COM4(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
-	elseif(convection.eq.'HYB4') then
-      call advecu_HYB4(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
+	elseif(convection.eq.'CDS4') then
+      call advecu_CDS4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,
+     & periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecu_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed)
+     & numdiff,periodicx,periodicy,kbed,wf,wd)
 	elseif(convection.eq.'C4A6') then
       call advecu_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv,wf,ekm,ekm_mol,p+pold)
+     &,phiv,wf,wd)
 	elseif(convection.eq.'uTVD') then
       call advecu_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)		  
@@ -2803,17 +2841,19 @@ c********************************************************************
       	if (convection.eq.'CDS2') then
       call advecv_CDS2(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	elseif(convection.eq.'CDS6') then
-      call advecv_CDS6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecv_CDS6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,
+     &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'COM4') then
       call advecv_COM4(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
-	elseif(convection.eq.'HYB4') then
-      call advecv_HYB4(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
+	elseif(convection.eq.'CDS4') then
+      call advecv_CDS4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,
+     &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecv_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,
-     & rank,px,numdiff,periodicx,periodicy,kbed)
+     & rank,px,numdiff,periodicx,periodicy,kbed,wf,wd)
 	elseif(convection.eq.'C4A6') then
       call advecv_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv,wf)	  
+     &,phiv,wf,wd)	  
 	elseif(convection.eq.'uTVD') then
       call advecv_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)	  
@@ -2841,17 +2881,19 @@ c********************************************************************
       	if (convection.eq.'CDS2') then
       call advecw_CDS2(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	elseif(convection.eq.'CDS6') then
-      call advecw_CDS6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy)
+      call advecw_CDS6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,
+     &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'COM4') then
       call advecw_COM4(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
-	elseif(convection.eq.'HYB4') then
-      call advecw_HYB4(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff)
+	elseif(convection.eq.'CDS4') then
+      call advecw_CDS4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,
+     &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecw_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed)
+     & numdiff,periodicx,periodicy,kbed,wf,wd)
 	elseif(convection.eq.'C4A6') then
       call advecw_C4A6(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdiff,periodicx,periodicy
-     &,phiv,wf)	  
+     &,phiv,wf,wd)	  
 	elseif(convection.eq.'uTVD') then
       call advecw_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
      & ,periodicx,periodicy,istep)	  

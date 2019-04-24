@@ -24,7 +24,7 @@
       SAVE
       
       INTEGER i,j,k,imax,jmax,kmax,i1,j1,k1,px,rank,kjet,nmax1,nmax2,nmax3,istep,CNdiffz,npresIBM,counter
-      INTEGER Lmix_type,slip_bot,SEM,azi_n,outflow_overflow_down,azi_n2
+      INTEGER Lmix_type,slip_bot,SEM,azi_n,outflow_overflow_down,azi_n2,wiggle_detector,wd
       REAL ekm_mol,nu_mol,pi,kappa,gx,gy,gz,Cs,Sc,calibfac_sand_pickup,calibfac_Shields_cr,morfac,morfac2
       REAL dt,time_nm,time_n,time_np,t_end,t0_output,dt_output,te_output,dt_max,tstart_rms,CFL,dt_ini,tstart_morf,trestart
       REAL dt_output_movie,t0_output_movie,te_output_movie,te_rms
@@ -225,8 +225,8 @@
      & ,lim_r_grid,fac_r_grid,jmax_grid,lim_y_grid,fac_y_grid,sym_grid_y,dy_grid
 	NAMELIST /times/t_end,t0_output,dt_output,te_output,tstart_rms,dt_max,dt_ini,time_int,CFL,
      & t0_output_movie,dt_output_movie,te_output_movie,tstart_morf,te_rms
-	NAMELIST /num_scheme/convection,numdiff,diffusion,comp_filter_a,comp_filter_n,CNdiffz,npresIBM,advec_conc,continuity_solver
-     & ,transporteq_fracs,split_rho_cont,driftfluxforce_calfac,depo_implicit,depo_cbed_option
+	NAMELIST /num_scheme/convection,numdiff,wiggle_detector,diffusion,comp_filter_a,comp_filter_n,CNdiffz,npresIBM,advec_conc,
+     & continuity_solver,transporteq_fracs,split_rho_cont,driftfluxforce_calfac,depo_implicit,depo_cbed_option
 	NAMELIST /ambient/U_b,V_b,W_b,bcfile,rho_b,SEM,nmax2,nmax1,nmax3,lm_min,lm_min3,slip_bot,kn,interaction_bed,
      & periodicx,periodicy,dpdx,dpdy,W_ox,Hs,Tp,nx_w,ny_w,obst,bc_obst_h,U_b3,V_b3,surf_layer,wallup,bedlevelfile,
      & U_bSEM,V_bSEM,U_w,V_w,c_bed,cfixedbed,U_init,V_init,initconditionsfile
@@ -283,6 +283,7 @@
 	!! num_scheme
 	convection = 'ARGH'
 	numdiff = 0.
+	wiggle_detector = 0
 	diffusion = 'ARGH'
 	comp_filter_a = 0.5
 	comp_filter_n = 0
@@ -570,9 +571,11 @@
 
 	READ (UNIT=1,NML=num_scheme,IOSTAT=ios)
 	!! check input num_scheme
-	IF (convection.ne.'CDS2'.AND.convection.ne.'CDS6'.AND.convection.ne.'COM4'.AND.convection.ne.'HYB4'
+	IF (convection.ne.'CDS2'.AND.convection.ne.'CDS6'.AND.convection.ne.'COM4'.AND.convection.ne.'CDS4'
      &      .AND.convection.ne.'HYB6'.AND.convection.ne.'C4A6'.AND.convection.ne.'uTVD' ) CALL writeerror(401) 
 	IF (numdiff<0.or.numdiff>1.) CALL writeerror(402)
+	IF (wiggle_detector.ne.0.and.wiggle_detector.ne.1) CALL writeerror(408) 
+	wd = wiggle_detector 
 	IF (diffusion.ne.'CDS2'.AND.diffusion.ne.'COM4') CALL writeerror(403) 
 	IF (comp_filter_a<0.or.comp_filter_a>0.5) CALL writeerror(404)
 	IF (comp_filter_n<0) CALL writeerror(405)
@@ -1661,7 +1664,7 @@
 	ALLOCATE(LHS2(nm1)) !LHS
 	ALLOCATE(lhs(nm1,kmax/px)) !LHS
 	ALLOCATE(wf(0:i1,0:j1,0:k1)) !Wiggle factor blend --> 1=apply AV6 dissipation  0=no AV6 dissipation
-	wf = 0.
+	wf = 1.
 
 ! 	ALLOCATE(UT(0:i1,0:j1,0:k1))
 ! 	ALLOCATE(UP(0:i1,0:k1))

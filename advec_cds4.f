@@ -16,7 +16,7 @@
 !    You should have received a copy of the GNU General Public License
 !    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-      subroutine advecu_CDS6(putout,Uvel,Vvel,Wvel,RHO,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,
+      subroutine advecu_CDS4(putout,Uvel,Vvel,Wvel,RHO,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,
      +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy,wf,wd)
       implicit none
 c
@@ -373,17 +373,17 @@ c********************************************************************
 	endif ! wf=1. is already default when wiggle_detector==0
 
 	
-		  Ax=37.
-		  Bx=-8.
-		  Cx=1.
+		  Ax=9.   !CDS4-Wicker: 7 !CDS4-Morinishi: 9
+		  Bx=-1.  !CDS4-Wicker:-1 !CDS4-Morinishi:-1
+		  Cx=0.
 		  DDx=1./(Ax+Bx+Cx)
-		  Ay=37.
-		  By=-8.
-		  Cy=1.
+		  Ay=9.
+		  By=-1.
+		  Cy=0.
 		  DDy=1./(Ay+By+Cy)
-		  Az=37.
-		  Bz=-8.
-		  Cz=1.
+		  Az=9.
+		  Bz=-1.
+		  Cz=0.
 		  DDz=1./(Az+Bz+Cz)
 	dzi=1./dz 
       do k=kb,ke
@@ -464,7 +464,7 @@ c********************************************************************
       end
 
 
-      subroutine advecv_CDS6(putout,Uvel,Vvel,Wvel,RHO,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,
+      subroutine advecv_CDS4(putout,Uvel,Vvel,Wvel,RHO,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,
      +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy,wf,wd)
       implicit none
 c
@@ -604,17 +604,17 @@ c********************************************************************
 	Vvel2(0:i1,0:j1,k1+1)=Vvel(0:i1,0:j1,ke)
 	Vvel2(0:i1,0:j1,k1+2)=Vvel(0:i1,0:j1,ke)
 
-		  Ax=37.
-		  Bx=-8.
-		  Cx=1.
+		  Ax=9.   !CDS4-Wicker: 7 !CDS4-Morinishi: 9
+		  Bx=-1.  !CDS4-Wicker:-1 !CDS4-Morinishi:-1
+		  Cx=0.
 		  DDx=1./(Ax+Bx+Cx)
-		  Ay=37.
-		  By=-8.
-		  Cy=1.
+		  Ay=9.
+		  By=-1.
+		  Cy=0.
 		  DDy=1./(Ay+By+Cy)
-		  Az=37.
-		  Bz=-8.
-		  Cz=1.
+		  Az=9.
+		  Bz=-1.
+		  Cz=0.
 		  DDz=1./(Az+Bz+Cz)
 	dzi=1./dz 
       do k=kb,ke
@@ -701,7 +701,7 @@ c********************************************************************
       return
       end
 
-      subroutine advecw_CDS6(putout,Uvel,Vvel,Wvel,RHO,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,
+      subroutine advecw_CDS4(putout,Uvel,Vvel,Wvel,RHO,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,
      +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy,wf,wd)
       implicit none
 c
@@ -845,17 +845,17 @@ c********************************************************************
 	dzi=1./dz 
 
 
-		  Ax=37.
-		  Bx=-8.
-		  Cx=1.
+		  Ax=9.   !CDS4-Wicker: 7 !CDS4-Morinishi: 9
+		  Bx=-1.  !CDS4-Wicker:-1 !CDS4-Morinishi:-1
+		  Cx=0.
 		  DDx=1./(Ax+Bx+Cx)
-		  Ay=37.
-		  By=-8.
-		  Cy=1.
+		  Ay=9.
+		  By=-1.
+		  Cy=0.
 		  DDy=1./(Ay+By+Cy)
-		  Az=37.
-		  Bz=-8.
-		  Cz=1.
+		  Az=9.
+		  Bz=-1.
+		  Cz=0.
 		  DDz=1./(Az+Bz+Cz)
       do k=kb,ke
       kp=k+1
@@ -932,348 +932,3 @@ c********************************************************************
       end
 
 
-      subroutine advecc_UPW5(putout,putin,Uvel,Vvel,Wvel,RHO,Ru,Rp,dr,phiv,dz,
-     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)
-      implicit none
-c
-c********************************************************************
-c
-c     advecc_UPW5 calculates the advection for a scalar variable, which is
-c     situated in the center point of the grid cell.
-c     UPW5 schematization is used, but in test turned out to be unstable because of too large under/overshoot
-c
-c     In formula:
-c
-c         1 d(ruC)     1 d(vC)     d(wC)
-c    - (  - ------  +  - -----  +  -----  )
-c         r   dr       r  dphi      dz
-c
-c      on input :
-c
-c          putout            : "empty" (initialised to zero)
-c          putin             : variable for which the advection has
-c                              to be calculated
-c          Uvel,Vvel,Wvel    : contain velocities at former timestep
-c          putinn            : contains subgrid energy at oldest timestep
-c          dr,phiv,dz        : grid spacing in r, phi and z-direction
-c          i1,j1,k1          : parameters for array-dimensions
-c          ib,ie,jb,je,kb,ke : range of gridpoints for which the
-c                              advection has to be calculated
-c          Ru,Rp             : radial positions of the U-velocity
-c                              component and the pressure location
-c                              respectively
-c
-c      on output :
-c
-c          putout            : advection part
-c          other parameters  : all unchanged
-c
-c********************************************************************
-
-      integer  i,j,k,im,ip,jm,jp,km,kp,i1,j1,k1,ib,ie,jb,je,kb,ke
-      real     putout(0:i1,0:j1,0:k1),putin(0:i1,0:j1,0:k1),Uvel(0:i1,0:j1,0:k1),
-     +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
-     +         dr(0:i1),phiv(0:j1),dz,Ru(0:i1),Rp(0:i1),dt
-      real rho(0:i1,0:j1,0:k1),numdif,dzi
-      real rhoip,rhoim,rhojp,rhojm,rhokp,rhokm
-
-	real Ax,Bx,Cx,DDx
-	real Ay,By,Cy,DDy
-	real Az,Bz,Cz,DDz
-	real uuR,uuL,vvR,vvL,wwR,wwL
-	integer kpp,kppp,kmm,kmmm,jpp,jppp,jmm,jmmm,ipp,ippp,imm,immm,rank,px,periodicx,periodicy
-	real*8 pbb(0:i1,0:k1),pbf(0:i1,0:k1),putin2(-2:i1+2,-2:j1+2,-2:k1+2)
-
-
-	numdif=1./60. ! upwind5
-	putin2(0:i1,0:j1,0:k1)=putin
-
-!c get stuff from other CPU's
-	  call shiftf2(putin,pbf)
-	  call shiftb2(putin,pbb) 
-
-	if (periodicy.eq.0.or.periodicy.eq.2) then
-	  if (rank.eq.0) then
-		do k=1,ke
-		   do i=1,ie
-		   putin2(i,-1,k) = putin(i,0,k)
-		   putin2(i,j1+1,k) =pbb(i,k)
-		   enddo
-		enddo
-	  elseif (rank.eq.px-1) then
-		do k=1,ke
-		   do i=1,ie
-		   putin2(i,-1,k) = pbf(i,k)
-		   putin2(i,j1+1,k) =putin(i,j1,k)
-		   enddo
-		enddo
-	  else 
-		do k=1,ke
-		   do i=1,ie
-		   putin2(i,-1,k) = pbf(i,k)
-		   putin2(i,j1+1,k) =pbb(i,k)
-		   enddo
-		enddo
-	  endif
-	else 
-		do k=1,ke
-		   do i=1,ie
-		   putin2(i,-1,k) = pbf(i,k)
-		   putin2(i,j1+1,k) =pbb(i,k)
-		   enddo
-		enddo
-	endif
-	  call shiftf3(putin,pbf)
-	  call shiftb3(putin,pbb) 
-
-	if (periodicy.eq.0.or.periodicy.eq.2) then
-	  if (rank.eq.0) then
-		do k=1,ke
-		   do i=1,ie
-		   putin2(i,-2,k) = putin(i,0,k)
-		   putin2(i,j1+2,k) =pbb(i,k)
-		   enddo
-		enddo
-	  elseif (rank.eq.px-1) then
-		do k=1,ke
-		   do i=1,ie
-		   putin2(i,-2,k) = pbf(i,k)
-		   putin2(i,j1+2,k) =putin(i,j1,k)
-		   enddo
-		enddo
-	  else 
-		do k=1,ke
-		   do i=1,ie
-		   putin2(i,-2,k) = pbf(i,k)
-		   putin2(i,j1+2,k) =pbb(i,k)
-		   enddo
-		enddo
-	  endif
-	else 
-		do k=1,ke
-		   do i=1,ie
-		   putin2(i,-2,k) = pbf(i,k)
-		   putin2(i,j1+2,k) =pbb(i,k)
-		   enddo
-		enddo
-	endif
-	if (periodicx.eq.0.or.periodicx.eq.2) then
-		putin2(-2,0:j1,0:k1)=putin(0,0:j1,0:k1)
-		putin2(-1,0:j1,0:k1)=putin(0,0:j1,0:k1)
-		putin2(i1+1,0:j1,0:k1)=putin(ie,0:j1,0:k1)
-		putin2(i1+2,0:j1,0:k1)=putin(ie,0:j1,0:k1)
-	else 
-		putin2(-2,0:j1,0:k1)=putin(ie-2,0:j1,0:k1)
-		putin2(-1,0:j1,0:k1)=putin(ie-1,0:j1,0:k1)
-		putin2(i1+1,0:j1,0:k1)=putin(2,0:j1,0:k1)
-		putin2(i1+2,0:j1,0:k1)=putin(3,0:j1,0:k1)
-	endif
-
-	putin2(0:i1,0:j1,-2)=putin(0:i1,0:j1,0)
-	putin2(0:i1,0:j1,-1)=putin(0:i1,0:j1,0)
-	putin2(0:i1,0:j1,k1+1)=putin(0:i1,0:j1,ke)
-	putin2(0:i1,0:j1,k1+2)=putin(0:i1,0:j1,ke)
-
-		  Az=37.
-		  Bz=-8.
-		  Cz=1.
-		  DDz=1./60.
-		  Ay=37.
-		  By=-8.
-		  Cy=1.
-		  DDy=1./60.
-		  Ax=37.
-		  Bx=-8.
-		  Cx=1.
-		  DDx=1./60.
-	dzi=1./dz 
-      do k=kb,ke
-      kp=k+1
-      km=k-1
-		  kpp=k+2
-		  kppp=k+3
-		  kmm=k-2
-		  kmmm=k-3
-        do j=jb,je
-        jp=j+1
-        jm=j-1
-		  jpp=j+2
-		  jppp=j+3
-		  jmm=j-2
-		  jmmm=j-3
-          do  i=ib,ie
-          ip=i+1
-          im=i-1
-		  ipp=i+2
-		  ippp=i+3
-		  imm=i-2
-		  immm=i-3
-      uuR=Uvel(i,j,k)*Ru(i)
-      uuL=Uvel(im,j,k)*Ru(im)
-      vvR=Vvel(i,j,k)
-      vvL=Vvel(i,jm,k)
-      wwR=Wvel(i,j,k)
-      wwL=Wvel(i,j,km)
-
-      putout(i,j,k) = - (
-     1 (uuR    *DDx*(Ax*(putin2(i,j,k)+putin2(ip,j,k))+Bx*(putin2(im,j,k)+putin2(ipp,j,k))+Cx*(putin2(imm,j,k)+putin2(ippp,j,k)))-
-     1 numdif*
-     1 ABS(uuR)*(10.*(-putin2(i,j,k)+putin2(ip,j,k))-5.*(-putin2(im,j,k)+putin2(ipp,j,k))+(-putin2(imm,j,k)+putin2(ippp,j,k)))-
-     1 (uuL    *DDx*(Ax*(putin2(im,j,k)+putin2(i,j,k))+Bx*(putin2(imm,j,k)+putin2(ip,j,k))+Cx*(putin2(immm,j,k)+putin2(ipp,j,k)))-
-     1 numdif*
-     1 ABS(uuL)*(10.*(-putin2(im,j,k)+putin2(i,j,k))-5.*(-putin2(imm,j,k)+putin2(ip,j,k))+(-putin2(immm,j,k)+putin2(ipp,j,k)))))
-     1  / ( Rp(i) * dr(i) )
-     +                         + 
-     2 (vvR    *DDy*(Ay*(putin2(i,j,k)+putin2(i,jp,k))+By*(putin2(i,jm,k)+putin2(i,jpp,k))+Cy*(putin2(i,jmm,k)+putin2(i,jppp,k)))-
-     2 numdif*
-     2 ABS(vvR)*(10.*(-putin2(i,j,k)+putin2(i,jp,k))-5.*(-putin2(i,jm,k)+putin2(i,jpp,k))+(-putin2(i,jmm,k)+putin2(i,jppp,k)))-
-     2 (vvL    *DDy*(Ay*(putin2(i,jm,k)+putin2(i,j,k))+By*(putin2(i,jmm,k)+putin2(i,jp,k))+Cy*(putin2(i,jmmm,k)+putin2(i,jpp,k)))-
-     2 numdif*
-     2 ABS(vvL)*(10.*(-putin2(i,jm,k)+putin2(i,j,k))-5.*(-putin2(i,jmm,k)+putin2(i,jp,k))+(-putin2(i,jmmm,k)+putin2(i,jpp,k)))))
-     2  / ( Rp(i) * (phiv(j)-phiv(jm)) )
-     +                         +
-     3 (wwR    *DDz*(Az*(putin2(i,j,k)+putin2(i,j,kp))+Bz*(putin2(i,j,km)+putin2(i,j,kpp))+Cz*(putin2(i,j,kmm)+putin2(i,j,kppp)))-
-     3 numdif*
-     3 ABS(wwR)*(10.*(-putin2(i,j,k)+putin2(i,j,kp))-5.*(-putin2(i,j,km)+putin2(i,j,kpp))+(-putin2(i,j,kmm)+putin2(i,j,kppp)))-
-     3 (wwL    *DDz*(Az*(putin2(i,j,km)+putin2(i,j,k))+Bz*(putin2(i,j,kmm)+putin2(i,j,kp))+Cz*(putin2(i,j,kmmm)+putin2(i,j,kpp)))-
-     3 numdif*
-     3 ABS(wwL)*(10.*(-putin2(i,j,km)+putin2(i,j,k))-5.*(-putin2(i,j,kmm)+putin2(i,j,kp))+(-putin2(i,j,kmmm)+putin2(i,j,kpp)))))
-     3  *dzi
-     +                         )
-           enddo
-        enddo
-      enddo
-      return
-      end
-
-
-
-	subroutine shiftb2(UT,UP)
-
-      USE nlist
-
-
-      implicit none
-      integer ileng,rankb,rankf,ierr
-      include 'mpif.h'
-      integer itag,status(MPI_STATUS_SIZE),l
-      real*8 ut(0:i1,0:j1,0:k1)
-      real*8 up(0:i1,0:k1),UTMP(0:I1,0:K1)
-	!real up(0:i1,0:k1),UTMP(0:I1,0:K1)
-      do i=0,i1
-	 do k=0,k1
-	  utmp(i,k) =UT(i,2,k)
-          enddo
-      enddo
-      itag = 10
-      ileng = (k1+1)*(i1+1)
-      rankf=rank+1
-      rankb=rank-1
-	if (periodicy.eq.0.or.periodicy.eq.2) then
-           if(rank.eq.px-1)rankf=MPI_PROC_NULL
-           if(rank.eq.   0)rankb=MPI_PROC_NULL
-	else 
-      	   if(rank.eq.px-1)rankf=0 ! MPI_PROC_NULL
-	   if(rank.eq.   0)rankb=px-1 !MPI_PROC_NULL
-	endif
-      call mpi_sendrecv(utmp ,ileng,MPI_REAL8,rankb,itag,
-     $                  up ,ileng,MPI_REAL8,rankf,itag, MPI_COMM_WORLD,status,ierr)
-
-      end
-
-	subroutine shiftf2(UT,UP)
-      USE nlist
-
-      implicit none
-
-      integer ileng,rankb,rankf
-      include 'mpif.h'
-      real*8 UT(0:i1,0:j1,0:k1),UP(0:i1,0:k1),UTMP(0:i1,0:k1)
-	!real UT(0:i1,0:j1,0:k1),UP(0:i1,0:k1),UTMP(0:i1,0:k1)
-      integer  itag,status(MPI_STATUS_SIZE),l,ierr
-      itag = 11
-      ileng = (k1+1)*(i1+1)
-      do k=0,k1
-        do i=0,i1
-	  UTMP(i,k) =UT(i,jmax-1,k)
-          enddo
-      enddo
-      rankf=rank+1
-      rankb=rank-1
-	if (periodicy.eq.0.or.periodicy.eq.2) then
-           if(rank.eq.px-1)rankf=MPI_PROC_NULL
-           if(rank.eq.   0)rankb=MPI_PROC_NULL
-	else 
-      	   if(rank.eq.px-1)rankf=0 ! MPI_PROC_NULL
-	   if(rank.eq.   0)rankb=px-1 !MPI_PROC_NULL
-	endif
-
-      call mpi_sendrecv(utmp ,ileng,MPI_REAL8,rankf,itag,
-     $                  up   ,ileng,MPI_REAL8,rankb,itag, MPI_COMM_WORLD,status,ierr)
-
-      end
-
-	subroutine shiftb3(UT,UP)
-
-      USE nlist
-
-
-      implicit none
-      integer ileng,rankb,rankf,ierr
-      include 'mpif.h'
-      integer itag,status(MPI_STATUS_SIZE),l
-      real*8 ut(0:i1,0:j1,0:k1)
-      real*8 up(0:i1,0:k1),UTMP(0:I1,0:K1)
-	!real up(0:i1,0:k1),UTMP(0:I1,0:K1)
-      do i=0,i1
-	 do k=0,k1
-	  utmp(i,k) =UT(i,3,k)
-          enddo
-      enddo
-      itag = 12
-      ileng = (k1+1)*(i1+1)
-      rankf=rank+1
-      rankb=rank-1
-	if (periodicy.eq.0.or.periodicy.eq.2) then
-           if(rank.eq.px-1)rankf=MPI_PROC_NULL
-           if(rank.eq.   0)rankb=MPI_PROC_NULL
-	else 
-      	   if(rank.eq.px-1)rankf=0 ! MPI_PROC_NULL
-	   if(rank.eq.   0)rankb=px-1 !MPI_PROC_NULL
-	endif
-      call mpi_sendrecv(utmp ,ileng,MPI_REAL8,rankb,itag,
-     $                  up ,ileng,MPI_REAL8,rankf,itag, MPI_COMM_WORLD,status,ierr)
-
-      end
-
-	subroutine shiftf3(UT,UP)
-      USE nlist
-
-      implicit none
-
-      integer ileng,rankb,rankf
-      include 'mpif.h'
-      real*8 UT(0:i1,0:j1,0:k1),UP(0:i1,0:k1),UTMP(0:i1,0:k1)
-	!real UT(0:i1,0:j1,0:k1),UP(0:i1,0:k1),UTMP(0:i1,0:k1)
-      integer  itag,status(MPI_STATUS_SIZE),l,ierr
-      itag = 13
-      ileng = (k1+1)*(i1+1)
-      do k=0,k1
-        do i=0,i1
-	  UTMP(i,k) =UT(i,jmax-2,k)
-          enddo
-      enddo
-      rankf=rank+1
-      rankb=rank-1
-	if (periodicy.eq.0.or.periodicy.eq.2) then
-           if(rank.eq.px-1)rankf=MPI_PROC_NULL
-           if(rank.eq.   0)rankb=MPI_PROC_NULL
-	else 
-      	   if(rank.eq.px-1)rankf=0 ! MPI_PROC_NULL
-	   if(rank.eq.   0)rankb=px-1 !MPI_PROC_NULL
-	endif
-
-      call mpi_sendrecv(utmp ,ileng,MPI_REAL8,rankf,itag,
-     $                  up   ,ileng,MPI_REAL8,rankb,itag, MPI_COMM_WORLD,status,ierr)
-
-      end

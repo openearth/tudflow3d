@@ -37,8 +37,9 @@ tstart_morf = 1. 	! Start time bedupdate [s] (default 0)
 /
 
 &num_scheme
-convection = 'HYB6'		! Numerical scheme for convection term, options: 'CDS2','CDS6','COM4','HYB4','HYB6','uTVD'
-numdiff = 0.001953125		! Amount of extra diffusion in case of 'CDS6','HYB4','HYB6' ('CDS6' -> 1/60=UPW5, 0=CDS6) 
+convection = 'HYB6'		! Numerical scheme for convection term, options: 'CDS2','CDS4','CDS6','HYB6','C4A6','uTVD','COM4'
+numdiff = 0.001953125		! Amount of extra diffusion in case of 'CDS6','CDS4','HYB6','C4A6' ('CDS6' -> 1/60=UPW5, 0=CDS6) 
+wiggle_detector = 0			! Use wiggle detector to adjust amount of numdiff for each individual grid cell (default 0-->numdiff applied for all cells; optional 1)
 diffusion = 'CDS2'		! Numerical scheme for diffusion term, options: 'CDS2','COM4'
 comp_filter_a = 0.495		! Alpha in compact filter (0-0.5), default 0.5 (no filtering) [-]
 comp_filter_n = 0		! Compact filter is applied every comp_filter_n timesteps, default 0 (no filtering) [-]

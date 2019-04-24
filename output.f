@@ -89,6 +89,14 @@
 			obstacle(i,j,k)=1
 		ENDIF
 	  enddo
+      
+		do j=1,jmax
+			do i=1,imax
+				do k=1,kbed(i,j)
+					obstacle(i,j,k)=1
+				enddo
+			enddo
+		enddo	  
 	  
 
 	

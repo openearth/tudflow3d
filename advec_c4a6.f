@@ -17,7 +17,7 @@
 !    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
       subroutine advecu_C4A6(putout,Uvel,Vvel,Wvel,RHO,Ru,Rp,dr,phivt,dz,
-     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy,phiv,wf,ekm,ekm_mol,pp)
+     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy,phiv,wf,wd)
 	 
       implicit none
 c
@@ -52,7 +52,7 @@ c          other parameters  : all unchanged
 c
 c********************************************************************
       integer  i,j,k,im,ip,jm,jp,km,kp,i1,j1,k1,ib,ie,jb,je,kb,ke,tel
-	integer kpp,kppp,kmm,kmmm,jpp,jppp,jmm,jmmm,ipp,ippp,imm,immm,rank,px,periodicx,periodicy	  
+	integer kpp,kppp,kmm,kmmm,jpp,jppp,jmm,jmmm,ipp,ippp,imm,immm,rank,px,periodicx,periodicy,wd  
       real     putout(0:i1,0:j1,0:k1),Uvel(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
      +         dr(0:i1),phivt(0:je*px+1),dz,Ru(0:i1),Rp(0:i1)
@@ -65,9 +65,8 @@ c********************************************************************
 	real ubb(0:i1,0:k1),ubf(0:i1,0:k1),Uvel2(-2:i1+2,-2:j1+2,-2:k1+2)
 	real Vvel2(-2:i1+2,-2:j1+2,-2:k1+2),Wvel2(-2:i1+2,-2:j1+2,-2:k1+2)
 	real rho2(-1:i1+1,-1:j1+1,-1:k1+1),phivt2(-1:je*px+2),Rp2(-1:i1+1)
-	real wd(1:9),wf(0:i1,0:j1,0:k1),numdif2
-	real om1(-2:i1+2,-2:j1+2,-2:k1+2),om2(-2:i1+2,-2:j1+2,-2:k1+2),om3(-2:i1+2,-2:j1+2,-2:k1+2),dwdy,dvdz,dudz,dwdx,dvdx,dudy
-	real dRpp_i,dRp_i,phip3(0:j1),u4mag,ekm(0:i1,0:j1,0:k1),ekm_mol,pp(1:ie,1:je,1:ke),pp2(-2:i1+2,-2:j1+2,-2:k1+2),wd2(1:9)
+	real wwdd(1:3),wf(0:i1,0:j1,0:k1),numdif2,u4mag
+	real dRpp_i,dRp_i,phip3(0:j1)
 	
 	
 	Rp2(0:i1)=Rp
@@ -80,567 +79,8 @@ c********************************************************************
 	Uvel2(0:i1,0:j1,0:k1)=Uvel
 
 	dzi=1./dz
-	  do j=0,j1  !takes quite some programming effort to share phip; so calculate again....
-		phip3(j) = ( phivt2(j+rank*je) + phivt2(j-1+rank*je) ) / 2.0
-	  ENDDO
-      do i=ib,ie
-	  dRpp_i=1./(Rp(i+1)-Rp(i))
-	  dRp_i=1./(Rp(i)-Rp(i-1))	
-      do j=jb,je  
-		do k=kb,ke	
-		!! try wiggle detector on omega_1;omega_2;omega_3 instead of U,V,W:
-		dudy = ((Uvel(i  ,j+1,k  )-Uvel(i  ,j  ,k  ))/(Ru(i)*(phip3(j+1)-phip3(j))) + 
-     &		        (Uvel(i  ,j  ,k  )-Uvel(i  ,j-1,k  ))/(Ru(i)*(phip3(j)-phip3(j-1))) +
-     &		        (Uvel(i-1,j+1,k  )-Uvel(i-1,j  ,k  ))/(Ru(i-1)*(phip3(j+1)-phip3(j))) +
-     &		        (Uvel(i-1,j  ,k  )-Uvel(i-1,j-1,k  ))/(Ru(i-1)*(phip3(j)-phip3(j-1))) ) * 0.25
-		dudz = ((Uvel(i  ,j  ,k+1)-Uvel(i  ,j  ,k  ))*dzi +
-     &		        (Uvel(i  ,j  ,k  )-Uvel(i  ,j  ,k-1))*dzi +
-     &		        (Uvel(i-1,j  ,k+1)-Uvel(i-1,j  ,k  ))*dzi +
-     &		        (Uvel(i-1,j  ,k  )-Uvel(i-1,j  ,k-1))*dzi ) * 0.25
-		dvdx =(( Vvel(i+1,j  ,k  )/Rp(i+1)-Vvel(i  ,j  ,k  )/Rp(i))*dRpp_i*Ru(i) +
-     &		       ( Vvel(i+1,j-1,k  )/Rp(i+1)-Vvel(i  ,j-1,k  )/Rp(i))*dRpp_i*Ru(i) + 
-     &		       ( Vvel(i  ,j  ,k  )/Rp(i)-Vvel(i-1,j  ,k  )/Rp(i-1))*dRp_i*Ru(i-1)  +
-     &		       ( Vvel(i  ,j-1,k  )/Rp(i)-Vvel(i-1,j-1,k  )/Rp(i-1))*dRp_i*Ru(i-1) ) * 0.25
-		dvdz = ((Vvel(i  ,j  ,k+1)-Vvel(i  ,j  ,k  ))*dzi +
-     &		        (Vvel(i  ,j  ,k  )-Vvel(i  ,j  ,k-1))*dzi +
-     &		        (Vvel(i  ,j-1,k+1)-Vvel(i  ,j-1,k  ))*dzi +
-     &		        (Vvel(i  ,j-1,k  )-Vvel(i  ,j-1,k-1))*dzi ) * 0.25
-		dwdx =(( Wvel(i+1,j  ,k  )-Wvel(i  ,j  ,k  ))*dRpp_i + 
-     &		       ( Wvel(i+1,j  ,k-1)-Wvel(i  ,j  ,k-1))*dRpp_i +
-     &		       ( Wvel(i  ,j  ,k  )-Wvel(i-1,j  ,k  ))*dRp_i +
-     &		       ( Wvel(i  ,j  ,k-1)-Wvel(i-1,j  ,k-1))*dRp_i ) * 0.25
-		dwdy =(( Wvel(i  ,j+1,k  )-Wvel(i  ,j  ,k  ))/(Rp(i)*(phip3(j+1)-phip3(j))) +
-     &		       ( Wvel(i  ,j+1,k-1)-Wvel(i  ,j  ,k-1))/(Rp(i)*(phip3(j+1)-phip3(j))) +
-     &		       ( Wvel(i  ,j  ,k  )-Wvel(i  ,j-1,k  ))/(Rp(i)*(phip3(j)-phip3(j-1))) +
-     &		       ( Wvel(i  ,j  ,k-1)-Wvel(i  ,j-1,k-1))/(Rp(i)*(phip3(j)-phip3(j-1))) ) * 0.25	
-		om1(i,j,k)=dwdy-dvdz
-		om2(i,j,k)=dudz-dwdx
-		om3(i,j,k)=dvdx-dudy
-		enddo
-	  enddo
-	enddo
 
-	pp2(1:ie,1:je,1:ke)=pp
 !c get stuff from other CPU's
-	  call shiftf(pp,ubf)
-	  call shiftb(pp,ubb) 
-	if (periodicy.eq.0.or.periodicy.eq.2) then
-	  if (rank.eq.0) then
-		do k=1,ke
-			do i=1,ie !passing inflow bc at i=0 and i=i1 correctly 
-		   pp2(i,0,k) = pp2(i,1,k)
-		   pp2(i,j1,k) =Ubb(i,k)
-		   enddo
-		enddo
-	  elseif (rank.eq.px-1) then
-		do k=1,ke
-			do i=1,ie !passing inflow bc at i=0 and i=i1 correctly 
-		   pp2(i,0,k) = Ubf(i,k)
-		   pp2(i,j1,k) =pp2(i,j1-1,k)
-		   enddo
-		enddo
-	  else 
-		do k=1,ke
-			do i=1,ie !passing inflow bc at i=0 and i=i1 correctly 
-		   pp2(i,0,k) = Ubf(i,k)
-		   pp2(i,j1,k) =Ubb(i,k)
-		   enddo
-		enddo
-	  endif
-	else 
-		do k=1,ke
-			do i=1,ie !passing inflow bc at i=0 and i=i1 correctly 
-		   pp2(i,0,k) = Ubf(i,k)
-		   pp2(i,j1,k) =Ubb(i,k)
-		   enddo
-		enddo
-	endif
-	if (periodicx.eq.0.or.periodicx.eq.2) then
-		pp2(0,0:j1,1:ke)=  pp2(1,0:j1,1:ke)
-		pp2(i1,0:j1,1:ke)=pp2(i1-1,0:j1,1:ke)
-	else
-		pp2(0,0:j1,1:ke)=  pp2(ie,0:j1,1:ke)
-		pp2(i1,0:j1,1:ke)=pp2(1,0:j1,1:ke)
-	endif
-	pp2(0:i1,0:j1,0)=  pp2(0:i1,0:j1,1)
-	pp2(0:i1,0:j1,k1)=pp2(0:i1,0:j1,k1-1)
-c get stuff from other CPU's
-	  call shiftf2(pp,ubf)
-	  call shiftb2(pp,ubb) 
-
-	if (periodicy.eq.0.or.periodicy.eq.2) then
-	  if (rank.eq.0) then
-		do k=0,k1
-		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly 
-		   pp2(i,-1,k) = pp2(i,0,k)
-		   pp2(i,j1+1,k) =Ubb(i,k)
-		   enddo
-		enddo
-	  elseif (rank.eq.px-1) then
-		do k=0,k1
-		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
-		   pp2(i,-1,k) = Ubf(i,k)
-		   pp2(i,j1+1,k) =pp2(i,j1,k)
-		   enddo
-		enddo
-	  else 
-		do k=0,k1
-		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
-		   pp2(i,-1,k) = Ubf(i,k)
-		   pp2(i,j1+1,k) =Ubb(i,k)
-		   enddo
-		enddo
-	  endif
-	else 
-		do k=0,k1
-		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
-		   pp2(i,-1,k) = Ubf(i,k)
-		   pp2(i,j1+1,k) =Ubb(i,k)
-		   enddo
-		enddo
-	endif
-	  call shiftf3(pp,ubf)
-	  call shiftb3(pp,ubb) 
-
-	if (periodicy.eq.0.or.periodicy.eq.2) then
-	  if (rank.eq.0) then
-		do k=0,k1
-		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
-		   pp2(i,-2,k) = pp2(i,0,k)
-		   pp2(i,j1+2,k) =Ubb(i,k)
-		   enddo
-		enddo
-	  elseif (rank.eq.px-1) then
-		do k=0,k1
-		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
-		   pp2(i,-2,k) = Ubf(i,k)
-		   pp2(i,j1+2,k) =pp2(i,j1,k)
-		   enddo
-		enddo
-	  else 
-		do k=0,k1
-		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
-		   pp2(i,-2,k) = Ubf(i,k)
-		   pp2(i,j1+2,k) =Ubb(i,k)
-		   enddo
-		enddo
-	  endif
-	else 
-		do k=0,k1
-		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
-		   pp2(i,-2,k) = Ubf(i,k)
-		   pp2(i,j1+2,k) =Ubb(i,k)
-		   enddo
-		enddo
-	endif
-	if (periodicx.eq.0.or.periodicx.eq.2) then
-		pp2(-1,-2:j1+2,0:k1)=  pp2(0,-2:j1+2,0:k1)
-		pp2(-2,-2:j1+2,0:k1)=  pp2(0,-2:j1+2,0:k1)
-		pp2(i1+1,-2:j1+2,0:k1)=pp2(i1,-2:j1+2,0:k1)
-		pp2(i1+2,-2:j1+2,0:k1)=pp2(i1,-2:j1+2,0:k1)
-	else
-		pp2(-1,-2:j1+2,0:k1)=  pp2(ie-1,-2:j1+2,0:k1)
-		pp2(-2,-2:j1+2,0:k1)=  pp2(ie-2,-2:j1+2,0:k1)
-		pp2(i1+1,-2:j1+2,0:k1)=pp2(2,-2:j1+2,0:k1)
-		pp2(i1+2,-2:j1+2,0:k1)=pp2(3,-2:j1+2,0:k1)
-	endif
-	pp2(-2:i1+2,-2:j1+2,-1)=  pp2(-2:i1+2,-2:j1+2,0)
-	pp2(-2:i1+2,-2:j1+2,-2)=  pp2(-2:i1+2,-2:j1+2,0)	
-	pp2(-2:i1+2,-2:j1+2,k1+1)=pp2(-2:i1+2,-2:j1+2,k1)
-	pp2(-2:i1+2,-2:j1+2,k1+2)=pp2(-2:i1+2,-2:j1+2,k1)		
-	
-	
-!c get stuff from other CPU's
-	  call shiftf(om1(1:ie,1:je,1:ke),ubf)
-	  call shiftb(om1(1:ie,1:je,1:ke),ubb) 
-	if (periodicy.eq.0.or.periodicy.eq.2) then
-	  if (rank.eq.0) then
-		do k=1,ke
-			do i=1,ie !passing inflow bc at i=0 and i=i1 correctly 
-		   om1(i,0,k) = om1(i,1,k)
-		   om1(i,j1,k) =Ubb(i,k)
-		   enddo
-		enddo
-	  elseif (rank.eq.px-1) then
-		do k=1,ke
-			do i=1,ie !passing inflow bc at i=0 and i=i1 correctly 
-		   om1(i,0,k) = Ubf(i,k)
-		   om1(i,j1,k) =om1(i,j1-1,k)
-		   enddo
-		enddo
-	  else 
-		do k=1,ke
-			do i=1,ie !passing inflow bc at i=0 and i=i1 correctly 
-		   om1(i,0,k) = Ubf(i,k)
-		   om1(i,j1,k) =Ubb(i,k)
-		   enddo
-		enddo
-	  endif
-	else 
-		do k=1,ke
-			do i=1,ie !passing inflow bc at i=0 and i=i1 correctly 
-		   om1(i,0,k) = Ubf(i,k)
-		   om1(i,j1,k) =Ubb(i,k)
-		   enddo
-		enddo
-	endif
-	if (periodicx.eq.0.or.periodicx.eq.2) then
-		om1(0,0:j1,1:ke)=  om1(1,0:j1,1:ke)
-		om1(i1,0:j1,1:ke)=om1(i1-1,0:j1,1:ke)
-	else
-		om1(0,0:j1,1:ke)=  om1(ie,0:j1,1:ke)
-		om1(i1,0:j1,1:ke)=om1(1,0:j1,1:ke)
-	endif
-	om1(0:i1,0:j1,0)=  om1(0:i1,0:j1,1)
-	om1(0:i1,0:j1,k1)=om1(0:i1,0:j1,k1-1)
-	
-!c get stuff from other CPU's
-	  call shiftf(om2(1:ie,1:je,1:ke),ubf)
-	  call shiftb(om2(1:ie,1:je,1:ke),ubb) 
-	if (periodicy.eq.0.or.periodicy.eq.2) then
-	  if (rank.eq.0) then
-		do k=1,ke
-			do i=1,ie !passing inflow bc at i=0 and i=i1 correctly 
-		   om2(i,0,k) = om2(i,1,k)
-		   om2(i,j1,k) =Ubb(i,k)
-		   enddo
-		enddo
-	  elseif (rank.eq.px-1) then
-		do k=1,ke
-			do i=1,ie !passing inflow bc at i=0 and i=i1 correctly 
-		   om2(i,0,k) = Ubf(i,k)
-		   om2(i,j1,k) =om2(i,j1-1,k)
-		   enddo
-		enddo
-	  else 
-		do k=1,ke
-			do i=1,ie !passing inflow bc at i=0 and i=i1 correctly 
-		   om2(i,0,k) = Ubf(i,k)
-		   om2(i,j1,k) =Ubb(i,k)
-		   enddo
-		enddo
-	  endif
-	else 
-		do k=1,ke
-			do i=1,ie !passing inflow bc at i=0 and i=i1 correctly 
-		   om2(i,0,k) = Ubf(i,k)
-		   om2(i,j1,k) =Ubb(i,k)
-		   enddo
-		enddo
-	endif
-	if (periodicx.eq.0.or.periodicx.eq.2) then
-		om2(0,0:j1,1:ke)=  om2(1,0:j1,1:ke)
-		om2(i1,0:j1,1:ke)=om2(i1-1,0:j1,1:ke)
-	else
-		om2(0,0:j1,1:ke)=  om2(ie,0:j1,1:ke)
-		om2(i1,0:j1,1:ke)=om2(1,0:j1,1:ke)
-	endif
-	om2(0:i1,0:j1,0)=  om2(0:i1,0:j1,1)
-	om2(0:i1,0:j1,k1)=om2(0:i1,0:j1,k1-1)
-	
-!	c get stuff from other CPU's
-	  call shiftf(om3(1:ie,1:je,1:ke),ubf)
-	  call shiftb(om3(1:ie,1:je,1:ke),ubb) 
-	if (periodicy.eq.0.or.periodicy.eq.2) then
-	  if (rank.eq.0) then
-		do k=1,ke
-			do i=1,ie !passing inflow bc at i=0 and i=i1 correctly 
-		   om3(i,0,k) = om3(i,1,k)
-		   om3(i,j1,k) =Ubb(i,k)
-		   enddo
-		enddo
-	  elseif (rank.eq.px-1) then
-		do k=1,ke
-			do i=1,ie !passing inflow bc at i=0 and i=i1 correctly 
-		   om3(i,0,k) = Ubf(i,k)
-		   om3(i,j1,k) =om3(i,j1-1,k)
-		   enddo
-		enddo
-	  else 
-		do k=1,ke
-			do i=1,ie !passing inflow bc at i=0 and i=i1 correctly 
-		   om3(i,0,k) = Ubf(i,k)
-		   om3(i,j1,k) =Ubb(i,k)
-		   enddo
-		enddo
-	  endif
-	else 
-		do k=1,ke
-			do i=1,ie !passing inflow bc at i=0 and i=i1 correctly 
-		   om3(i,0,k) = Ubf(i,k)
-		   om3(i,j1,k) =Ubb(i,k)
-		   enddo
-		enddo
-	endif
-	
-
-	if (periodicx.eq.0.or.periodicx.eq.2) then
-		om3(0,0:j1,1:ke)=  om3(1,0:j1,1:ke)
-		om3(i1,0:j1,1:ke)=om3(i1-1,0:j1,1:ke)
-	else
-		om3(0,0:j1,1:ke)=  om3(ie,0:j1,1:ke)
-		om3(i1,0:j1,1:ke)=om3(1,0:j1,1:ke)
-	endif
-	om3(0:i1,0:j1,0)=  om3(0:i1,0:j1,1)
-	om3(0:i1,0:j1,k1)=om3(0:i1,0:j1,k1-1)	
-	
-	
-c get stuff from other CPU's
-	  call shiftf2(om1(1:ie,1:je,1:ke),ubf)
-	  call shiftb2(om1(1:ie,1:je,1:ke),ubb) 
-
-	if (periodicy.eq.0.or.periodicy.eq.2) then
-	  if (rank.eq.0) then
-		do k=0,k1
-		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly 
-		   om1(i,-1,k) = om1(i,0,k)
-		   om1(i,j1+1,k) =Ubb(i,k)
-		   enddo
-		enddo
-	  elseif (rank.eq.px-1) then
-		do k=0,k1
-		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
-		   om1(i,-1,k) = Ubf(i,k)
-		   om1(i,j1+1,k) =om1(i,j1,k)
-		   enddo
-		enddo
-	  else 
-		do k=0,k1
-		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
-		   om1(i,-1,k) = Ubf(i,k)
-		   om1(i,j1+1,k) =Ubb(i,k)
-		   enddo
-		enddo
-	  endif
-	else 
-		do k=0,k1
-		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
-		   om1(i,-1,k) = Ubf(i,k)
-		   om1(i,j1+1,k) =Ubb(i,k)
-		   enddo
-		enddo
-	endif
-	  call shiftf3(om1(1:ie,1:je,1:ke),ubf)
-	  call shiftb3(om1(1:ie,1:je,1:ke),ubb) 
-
-	if (periodicy.eq.0.or.periodicy.eq.2) then
-	  if (rank.eq.0) then
-		do k=0,k1
-		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
-		   om1(i,-2,k) = om1(i,0,k)
-		   om1(i,j1+2,k) =Ubb(i,k)
-		   enddo
-		enddo
-	  elseif (rank.eq.px-1) then
-		do k=0,k1
-		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
-		   om1(i,-2,k) = Ubf(i,k)
-		   om1(i,j1+2,k) =om1(i,j1,k)
-		   enddo
-		enddo
-	  else 
-		do k=0,k1
-		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
-		   om1(i,-2,k) = Ubf(i,k)
-		   om1(i,j1+2,k) =Ubb(i,k)
-		   enddo
-		enddo
-	  endif
-	else 
-		do k=0,k1
-		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
-		   om1(i,-2,k) = Ubf(i,k)
-		   om1(i,j1+2,k) =Ubb(i,k)
-		   enddo
-		enddo
-	endif
-	if (periodicx.eq.0.or.periodicx.eq.2) then
-		om1(-1,-2:j1+2,0:k1)=  om1(0,-2:j1+2,0:k1)
-		om1(-2,-2:j1+2,0:k1)=  om1(0,-2:j1+2,0:k1)
-		om1(i1+1,-2:j1+2,0:k1)=om1(i1,-2:j1+2,0:k1)
-		om1(i1+2,-2:j1+2,0:k1)=om1(i1,-2:j1+2,0:k1)
-	else
-		om1(-1,-2:j1+2,0:k1)=  om1(ie-1,-2:j1+2,0:k1)
-		om1(-2,-2:j1+2,0:k1)=  om1(ie-2,-2:j1+2,0:k1)
-		om1(i1+1,-2:j1+2,0:k1)=om1(2,-2:j1+2,0:k1)
-		om1(i1+2,-2:j1+2,0:k1)=om1(3,-2:j1+2,0:k1)
-	endif
-	om1(-2:i1+2,-2:j1+2,-1)=  om1(-2:i1+2,-2:j1+2,0)
-	om1(-2:i1+2,-2:j1+2,-2)=  om1(-2:i1+2,-2:j1+2,0)	
-	om1(-2:i1+2,-2:j1+2,k1+1)=om1(-2:i1+2,-2:j1+2,k1)
-	om1(-2:i1+2,-2:j1+2,k1+2)=om1(-2:i1+2,-2:j1+2,k1)	
-
-c get stuff from other CPU's
-	  call shiftf2(om2(1:ie,1:je,1:ke),ubf)
-	  call shiftb2(om2(1:ie,1:je,1:ke),ubb) 
-
-	if (periodicy.eq.0.or.periodicy.eq.2) then
-	  if (rank.eq.0) then
-		do k=0,k1
-		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly 
-		   om2(i,-1,k) = om2(i,0,k)
-		   om2(i,j1+1,k) =Ubb(i,k)
-		   enddo
-		enddo
-	  elseif (rank.eq.px-1) then
-		do k=0,k1
-		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
-		   om2(i,-1,k) = Ubf(i,k)
-		   om2(i,j1+1,k) =om2(i,j1,k)
-		   enddo
-		enddo
-	  else 
-		do k=0,k1
-		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
-		   om2(i,-1,k) = Ubf(i,k)
-		   om2(i,j1+1,k) =Ubb(i,k)
-		   enddo
-		enddo
-	  endif
-	else 
-		do k=0,k1
-		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
-		   om2(i,-1,k) = Ubf(i,k)
-		   om2(i,j1+1,k) =Ubb(i,k)
-		   enddo
-		enddo
-	endif
-	  call shiftf3(om2(1:ie,1:je,1:ke),ubf)
-	  call shiftb3(om2(1:ie,1:je,1:ke),ubb) 
-
-	if (periodicy.eq.0.or.periodicy.eq.2) then
-	  if (rank.eq.0) then
-		do k=0,k1
-		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
-		   om2(i,-2,k) = om2(i,0,k)
-		   om2(i,j1+2,k) =Ubb(i,k)
-		   enddo
-		enddo
-	  elseif (rank.eq.px-1) then
-		do k=0,k1
-		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
-		   om2(i,-2,k) = Ubf(i,k)
-		   om2(i,j1+2,k) =om2(i,j1,k)
-		   enddo
-		enddo
-	  else 
-		do k=0,k1
-		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
-		   om2(i,-2,k) = Ubf(i,k)
-		   om2(i,j1+2,k) =Ubb(i,k)
-		   enddo
-		enddo
-	  endif
-	else 
-		do k=0,k1
-		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
-		   om2(i,-2,k) = Ubf(i,k)
-		   om2(i,j1+2,k) =Ubb(i,k)
-		   enddo
-		enddo
-	endif
-	if (periodicx.eq.0.or.periodicx.eq.2) then
-		om2(-1,-2:j1+2,0:k1)=  om2(0,-2:j1+2,0:k1)
-		om2(-2,-2:j1+2,0:k1)=  om2(0,-2:j1+2,0:k1)
-		om2(i1+1,-2:j1+2,0:k1)=om2(i1,-2:j1+2,0:k1)
-		om2(i1+2,-2:j1+2,0:k1)=om2(i1,-2:j1+2,0:k1)
-	else
-		om2(-1,-2:j1+2,0:k1)=  om2(ie-1,-2:j1+2,0:k1)
-		om2(-2,-2:j1+2,0:k1)=  om2(ie-2,-2:j1+2,0:k1)
-		om2(i1+1,-2:j1+2,0:k1)=om2(2,-2:j1+2,0:k1)
-		om2(i1+2,-2:j1+2,0:k1)=om2(3,-2:j1+2,0:k1)
-	endif
-	om2(-2:i1+2,-2:j1+2,-1)=  om2(-2:i1+2,-2:j1+2,0)
-	om2(-2:i1+2,-2:j1+2,-2)=  om2(-2:i1+2,-2:j1+2,0)	
-	om2(-2:i1+2,-2:j1+2,k1+1)=om2(-2:i1+2,-2:j1+2,k1)
-	om2(-2:i1+2,-2:j1+2,k1+2)=om2(-2:i1+2,-2:j1+2,k1)		
-
-c get stuff from other CPU's
-	  call shiftf2(om3(1:ie,1:je,1:ke),ubf)
-	  call shiftb2(om3(1:ie,1:je,1:ke),ubb) 
-
-	if (periodicy.eq.0.or.periodicy.eq.2) then
-	  if (rank.eq.0) then
-		do k=0,k1
-		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly 
-		   om3(i,-1,k) = om3(i,0,k)
-		   om3(i,j1+1,k) =Ubb(i,k)
-		   enddo
-		enddo
-	  elseif (rank.eq.px-1) then
-		do k=0,k1
-		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
-		   om3(i,-1,k) = Ubf(i,k)
-		   om3(i,j1+1,k) =om3(i,j1,k)
-		   enddo
-		enddo
-	  else 
-		do k=0,k1
-		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
-		   om3(i,-1,k) = Ubf(i,k)
-		   om3(i,j1+1,k) =Ubb(i,k)
-		   enddo
-		enddo
-	  endif
-	else 
-		do k=0,k1
-		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
-		   om3(i,-1,k) = Ubf(i,k)
-		   om3(i,j1+1,k) =Ubb(i,k)
-		   enddo
-		enddo
-	endif
-	  call shiftf3(om3(1:ie,1:je,1:ke),ubf)
-	  call shiftb3(om3(1:ie,1:je,1:ke),ubb) 
-
-	if (periodicy.eq.0.or.periodicy.eq.2) then
-	  if (rank.eq.0) then
-		do k=0,k1
-		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
-		   om3(i,-2,k) = om3(i,0,k)
-		   om3(i,j1+2,k) =Ubb(i,k)
-		   enddo
-		enddo
-	  elseif (rank.eq.px-1) then
-		do k=0,k1
-		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
-		   om3(i,-2,k) = Ubf(i,k)
-		   om3(i,j1+2,k) =om3(i,j1,k)
-		   enddo
-		enddo
-	  else 
-		do k=0,k1
-		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
-		   om3(i,-2,k) = Ubf(i,k)
-		   om3(i,j1+2,k) =Ubb(i,k)
-		   enddo
-		enddo
-	  endif
-	else 
-		do k=0,k1
-		   do i=0,i1 !passing inflow bc at i=0 and i=i1 correctly
-		   om3(i,-2,k) = Ubf(i,k)
-		   om3(i,j1+2,k) =Ubb(i,k)
-		   enddo
-		enddo
-	endif
-	if (periodicx.eq.0.or.periodicx.eq.2) then
-		om3(-1,-2:j1+2,0:k1)=  om3(0,-2:j1+2,0:k1)
-		om3(-2,-2:j1+2,0:k1)=  om3(0,-2:j1+2,0:k1)
-		om3(i1+1,-2:j1+2,0:k1)=om3(i1,-2:j1+2,0:k1)
-		om3(i1+2,-2:j1+2,0:k1)=om3(i1,-2:j1+2,0:k1)
-	else
-		om3(-1,-2:j1+2,0:k1)=  om3(ie-1,-2:j1+2,0:k1)
-		om3(-2,-2:j1+2,0:k1)=  om3(ie-2,-2:j1+2,0:k1)
-		om3(i1+1,-2:j1+2,0:k1)=om3(2,-2:j1+2,0:k1)
-		om3(i1+2,-2:j1+2,0:k1)=om3(3,-2:j1+2,0:k1)
-	endif
-	om3(-2:i1+2,-2:j1+2,-1)=  om3(-2:i1+2,-2:j1+2,0)
-	om3(-2:i1+2,-2:j1+2,-2)=  om3(-2:i1+2,-2:j1+2,0)	
-	om3(-2:i1+2,-2:j1+2,k1+1)=om3(-2:i1+2,-2:j1+2,k1)
-	om3(-2:i1+2,-2:j1+2,k1+2)=om3(-2:i1+2,-2:j1+2,k1)	
-	
-c get stuff from other CPU's
 	  call shiftf2(Uvel,ubf)
 	  call shiftb2(Uvel,ubb) 
 
@@ -732,7 +172,7 @@ c get stuff from other CPU's
 	
 	Vvel2(0:i1,0:j1,0:k1)=Vvel
 
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(Vvel,ubf)
 	  call shiftb2(Vvel,ubb) 
 
@@ -825,7 +265,7 @@ c get stuff from other CPU's
 
 		Wvel2(0:i1,0:j1,0:k1)=Wvel
 
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(Wvel,ubf)
 	  call shiftb2(Wvel,ubb) 
 	if (periodicy.eq.0.or.periodicy.eq.2) then
@@ -914,7 +354,7 @@ c get stuff from other CPU's
 
 	rho2(0:i1,0:j1,0:k1)=rho
 
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(rho,ubf)
 	  call shiftb2(rho,ubb) 
 
@@ -962,7 +402,7 @@ c get stuff from other CPU's
 
 
 
-	if (.true.) then
+	if (wd.eq.1) then
       do k=1,k1
         kp=k+1
         km=k-1
@@ -978,159 +418,29 @@ c get stuff from other CPU's
             im=i-1
 		    ipp=i+2
 		    imm=i-2
-			!Wiggle detector on U,V,W: Sagaut 2001/PhD Simon 2003:
-			!! try wiggle detector on omega_1;omega_2;omega_3 instead of U,V,W:
-			wd(1)=MIN((Uvel2(ip,j ,k )-Uvel2(i,j,k))*(Uvel2(i,j,k)-Uvel2(im,j ,k )),0.)
+			!Wiggle detector Sagaut 2001/PhD Simon 2003:
+			!wwdd only on own directions of U,V,W gave best results in combination with grow/decrease factor 0.001
+			wwdd(1)=MIN((Uvel2(ip,j ,k )-Uvel2(i,j,k))*(Uvel2(i,j,k)-Uvel2(im,j ,k )),0.)
      & 				*MIN((Uvel2(i,j,k)-Uvel2(im,j ,k ))*(Uvel2(im,j ,k )-Uvel2(imm,j  ,k  )),0.)
-			wd(2)=MAX(
-     &				 MIN((Uvel2(i ,jp ,k  )-Uvel2(i ,j  ,k  ))*(Uvel2(i ,j  ,k  )-Uvel2(i  ,jm ,k  )),0.)
-     &				*MIN((Uvel2(i ,j  ,k  )-Uvel2(i ,jm ,k  ))*(Uvel2(i ,jm ,k  )-Uvel2(i  ,jmm,k  )),0.),
-     &				 MIN((Uvel2(i ,jpp,k  )-Uvel2(i ,jp ,k  ))*(Uvel2(i ,jp ,k  )-Uvel2(i  ,j  ,k  )),0.)
-     &				*MIN((Uvel2(i ,jp ,k  )-Uvel2(i ,j  ,k  ))*(Uvel2(i ,j  ,k  )-Uvel2(i  ,jm ,k  )),0.),
-     &				 MIN((Uvel2(im,jp ,k  )-Uvel2(im,j  ,k  ))*(Uvel2(im,j  ,k  )-Uvel2(im ,jm ,k  )),0.)
-     &				*MIN((Uvel2(im,j  ,k  )-Uvel2(im,jm ,k  ))*(Uvel2(im,jm ,k  )-Uvel2(im ,jmm,k  )),0.),
-     &				 MIN((Uvel2(im,jpp,k  )-Uvel2(im,jp ,k  ))*(Uvel2(im,jp ,k  )-Uvel2(im ,j  ,k  )),0.)
-     &				*MIN((Uvel2(im,jp ,k  )-Uvel2(im,j  ,k  ))*(Uvel2(im,j  ,k  )-Uvel2(im ,jm ,k  )),0.))	 
-			wd(3)=MAX(
-     &				 MIN((Uvel2(i ,j  ,kp )-Uvel2(i ,j  ,k  ))*(Uvel2(i ,j  ,k   )-Uvel2(i  ,j  ,km )),0.)
-     &				*MIN((Uvel2(i ,j  ,k  )-Uvel2(i ,j  ,km ))*(Uvel2(i ,j  ,km  )-Uvel2(i  ,j  ,kmm)),0.),
-     &				 MIN((Uvel2(i ,j  ,kpp)-Uvel2(i ,j  ,kp ))*(Uvel2(i ,j  ,kp  )-Uvel2(i  ,j  ,k  )),0.)
-     &				*MIN((Uvel2(i ,j  ,kp )-Uvel2(i ,j  ,k  ))*(Uvel2(i ,j  ,k   )-Uvel2(i  ,j  ,km )),0.),
-     &				 MIN((Uvel2(im,j  ,kp )-Uvel2(im,j  ,k  ))*(Uvel2(im,j  ,k   )-Uvel2(im ,j  ,km )),0.)
-     &				*MIN((Uvel2(im,j  ,k  )-Uvel2(im,j  ,km ))*(Uvel2(im,j  ,km  )-Uvel2(im ,j  ,kmm)),0.),
-     &				 MIN((Uvel2(im,j  ,kpp)-Uvel2(im,j  ,kp ))*(Uvel2(im,j  ,kp  )-Uvel2(im ,j  ,k  )),0.)
-     &				*MIN((Uvel2(im,j  ,kp )-Uvel2(im,j  ,k  ))*(Uvel2(im,j  ,k   )-Uvel2(im ,j  ,km )),0.))	
-
-			wd(4)=MAX(
-     &				 MIN((Vvel2(ip ,j ,k  )-Vvel2(i ,j  ,k  ))*(Vvel2(i ,j  ,k  )-Vvel2(im ,j  ,k  )),0.)
-     &				*MIN((Vvel2(i  ,j ,k  )-Vvel2(im,j  ,k  ))*(Vvel2(im,j  ,k  )-Vvel2(imm,j  ,k  )),0.),
-     &				 MIN((Vvel2(ipp,j ,k  )-Vvel2(ip,j  ,k  ))*(Vvel2(ip,j  ,k  )-Vvel2(i  ,j  ,k  )),0.)
-     &				*MIN((Vvel2(ip ,j ,k  )-Vvel2(i ,j  ,k  ))*(Vvel2(i ,j  ,k  )-Vvel2(im ,j  ,k  )),0.),
-     &				 MIN((Vvel2(ip ,jm,k  )-Vvel2(i ,jm ,k  ))*(Vvel2(i ,jm ,k  )-Vvel2(im ,jm ,k  )),0.)
-     &				*MIN((Vvel2(i  ,jm,k  )-Vvel2(im,jm ,k  ))*(Vvel2(im,jm ,k  )-Vvel2(imm,jm ,k  )),0.),
-     &				 MIN((Vvel2(ipp,jm,k  )-Vvel2(ip,jm ,k  ))*(Vvel2(ip,jm ,k  )-Vvel2(i  ,jm ,k  )),0.)
-     &				*MIN((Vvel2(ip ,jm,k  )-Vvel2(i ,jm ,k  ))*(Vvel2(i ,jm ,k  )-Vvel2(im ,jm ,k  )),0.))		 
-
-!			wd(4)=MIN((om2(ip ,j ,k  )-om2(i ,j  ,k  ))*(om2(i ,j  ,k  )-om2(im ,j  ,k  )),0.)
-!     &				*MIN((om2(i  ,j ,k  )-om2(im,j  ,k  ))*(om2(im,j  ,k  )-om2(imm,j  ,k  )),0.)	
-	 
-			wd(5)=MIN((Vvel2(i ,jp,k )-Vvel2(i,j,k))*(Vvel2(i,j,k)-Vvel2(i ,jm,k )),0.)
+			wwdd(2)=MIN((Vvel2(i ,jp,k )-Vvel2(i,j,k))*(Vvel2(i,j,k)-Vvel2(i ,jm,k )),0.)
      &				*MIN((Vvel2(i,j,k)-Vvel2(i ,jm,k ))*(Vvel2(i ,jm,k )-Vvel2(i  ,jmm,k  )),0.)
-	 
-			wd(6)=MAX(
-     &				 MIN((Vvel2(i ,j ,kp )-Vvel2(i,j  ,k  ))*(Vvel2(i,j  ,k )-Vvel2(i ,j  ,km )),0.)
-     &				*MIN((Vvel2(i ,j ,k  )-Vvel2(i,j  ,km ))*(Vvel2(i,j  ,km)-Vvel2(i ,j  ,kmm)),0.),
-     &				 MIN((Vvel2(i ,j ,kpp)-Vvel2(i,j  ,kp ))*(Vvel2(i,j  ,kp)-Vvel2(i ,j  ,k  )),0.)
-     &				*MIN((Vvel2(i ,j ,kp )-Vvel2(i,j  ,k  ))*(Vvel2(i,j  ,k )-Vvel2(i ,j  ,km )),0.),
-     &				 MIN((Vvel2(i ,jm,kp )-Vvel2(i,jm ,k  ))*(Vvel2(i,jm ,k )-Vvel2(i ,jm ,km )),0.)
-     &				*MIN((Vvel2(i ,jm,k  )-Vvel2(i,jm ,km ))*(Vvel2(i,jm ,km)-Vvel2(i ,jm ,kmm)),0.),
-     &				 MIN((Vvel2(i ,jm,kpp)-Vvel2(i,jm ,kp ))*(Vvel2(i,jm ,kp)-Vvel2(i ,jm ,k  )),0.)
-     &				*MIN((Vvel2(i ,jm,kp )-Vvel2(i,jm ,k  ))*(Vvel2(i,jm ,k )-Vvel2(i ,jm ,km )),0.))	
-
-			wd(7)=MAX(
-     &				 MIN((Wvel2(ip ,j ,k   )-Wvel2(i ,j,k   ))*(Wvel2(i ,j,k   )-Wvel2(im ,j ,k   )),0.)
-     &				*MIN((Wvel2(i  ,j ,k   )-Wvel2(im,j,k   ))*(Wvel2(im,j,k   )-Wvel2(imm,j ,k   )),0.),
-     &				 MIN((Wvel2(ipp,j ,k   )-Wvel2(ip,j,k   ))*(Wvel2(ip,j,k   )-Wvel2(i  ,j ,k   )),0.)
-     &				*MIN((Wvel2(ip ,j ,k   )-Wvel2(i ,j,k   ))*(Wvel2(i ,j,k   )-Wvel2(im ,j ,k   )),0.),
-     &				 MIN((Wvel2(ip ,j ,km  )-Wvel2(i ,j,km  ))*(Wvel2(i ,j,km  )-Wvel2(im ,j ,km  )),0.)
-     &				*MIN((Wvel2(i  ,j ,km  )-Wvel2(im,j,km  ))*(Wvel2(im,j,km  )-Wvel2(imm,j ,km  )),0.),
-     &				 MIN((Wvel2(ipp,j ,km  )-Wvel2(ip,j,km  ))*(Wvel2(ip,j,km  )-Wvel2(i  ,j ,km  )),0.)
-     &				*MIN((Wvel2(ip ,j ,km  )-Wvel2(i ,j,km  ))*(Wvel2(i ,j,km  )-Wvel2(im ,j ,km  )),0.))
-	 
-			wd(8)=MAX(
-     &				 MIN((Wvel2(i,jp  ,k   )-Wvel2(i,j ,k   ))*(Wvel2(i,j ,k   )-Wvel2(i,jm  ,k   )),0.)
-     &				*MIN((Wvel2(i,j   ,k   )-Wvel2(i,jm,k   ))*(Wvel2(i,jm,k   )-Wvel2(i,jmm ,k   )),0.),
-     &				 MIN((Wvel2(i,jpp ,k   )-Wvel2(i,jp,k   ))*(Wvel2(i,jp,k   )-Wvel2(i,j   ,k   )),0.)
-     &				*MIN((Wvel2(i,jp  ,k   )-Wvel2(i,j ,k   ))*(Wvel2(i,j ,k   )-Wvel2(i,jm  ,k   )),0.),
-     &				 MIN((Wvel2(i,jp  ,km  )-Wvel2(i,j ,km  ))*(Wvel2(i,j ,km  )-Wvel2(i,jm  ,km  )),0.)
-     &				*MIN((Wvel2(i,j   ,km  )-Wvel2(i,jm,km  ))*(Wvel2(i,jm,km  )-Wvel2(i,jmm ,km  )),0.),
-     &				 MIN((Wvel2(i,jpp ,km  )-Wvel2(i,jp,km  ))*(Wvel2(i,jp,km  )-Wvel2(i,j   ,km  )),0.)
-     &				*MIN((Wvel2(i,jp  ,km  )-Wvel2(i,j ,km  ))*(Wvel2(i,j ,km  )-Wvel2(i,jm  ,km  )),0.))
-	 
-			wd(9)=MIN((Wvel2(i ,j ,kp)-Wvel2(i,j,k))*(Wvel2(i,j,k)-Wvel2(i ,j ,km)),0.)
+			wwdd(3)=MIN((Wvel2(i ,j ,kp)-Wvel2(i,j,k))*(Wvel2(i,j,k)-Wvel2(i ,j ,km)),0.)
      &				*MIN((Wvel2(i,j,k)-Wvel2(i ,j ,km))*(Wvel2(i ,j ,km)-Wvel2(i  ,j  ,kmm)),0.)	
 	 
-	 
-			wd2(1)=MAX(
-     &				 MIN((pp2(ip ,j ,k  )-pp2(i ,j  ,k  ))*(pp2(i ,j  ,k  )-pp2(im ,j  ,k  )),0.)
-     &				*MIN((pp2(i  ,j ,k  )-pp2(im,j  ,k  ))*(pp2(im,j  ,k  )-pp2(imm,j  ,k  )),0.),
-     &				 MIN((pp2(ipp,j ,k  )-pp2(ip,j  ,k  ))*(pp2(ip,j  ,k  )-pp2(i  ,j  ,k  )),0.)
-     &				*MIN((pp2(ip ,j ,k  )-pp2(i ,j  ,k  ))*(pp2(i ,j  ,k  )-pp2(im ,j  ,k  )),0.))	 
-			wd2(2)=MAX(
-     &				 MIN((pp2(i,jp ,k  )-pp2(i,j  ,k  ))*(pp2(i,j  ,k  )-pp2(i,jm ,k  )),0.)
-     &				*MIN((pp2(i,j  ,k  )-pp2(i,jm ,k  ))*(pp2(i,jm ,k  )-pp2(i,jmm,k  )),0.),
-     &				 MIN((pp2(i,jpp,k  )-pp2(i,jp ,k  ))*(pp2(i,jp ,k  )-pp2(i,j  ,k  )),0.)
-     &				*MIN((pp2(i,jp ,k  )-pp2(i,j  ,k  ))*(pp2(i,j  ,k  )-pp2(i,jm ,k  )),0.))	
-			wd2(3)=MAX(
-     &				 MIN((pp2(i,j,kp )-pp2(i,j,k  ))*(pp2(i,j,k  )-pp2(i,j,km )),0.)
-     &				*MIN((pp2(i,j,k  )-pp2(i,j,km ))*(pp2(i,j,km )-pp2(i,j,kmm)),0.),
-     &				 MIN((pp2(i,j,kpp)-pp2(i,j,kp ))*(pp2(i,j,kp )-pp2(i,j,k  )),0.)
-     &				*MIN((pp2(i,j,kp )-pp2(i,j,k  ))*(pp2(i,j,k  )-pp2(i,j,km )),0.))
-!			wd2(4)=MAX(
-!     &				 MIN((om2(ip ,j ,k  )-om2(i ,j  ,k  ))*(om2(i ,j  ,k  )-om2(im ,j  ,k  )),0.)
-!     &				*MIN((om2(i  ,j ,k  )-om2(im,j  ,k  ))*(om2(im,j  ,k  )-om2(imm,j  ,k  )),0.),
-!     &				 MIN((om2(ipp,j ,k  )-om2(ip,j  ,k  ))*(om2(ip,j  ,k  )-om2(i  ,j  ,k  )),0.)
-!     &				*MIN((om2(ip ,j ,k  )-om2(i ,j  ,k  ))*(om2(i ,j  ,k  )-om2(im ,j  ,k  )),0.))	 
-!			wd2(5)=MAX(
-!     &				 MIN((om2(i,jp ,k  )-om2(i,j  ,k  ))*(om2(i,j  ,k  )-om2(i,jm ,k  )),0.)
-!     &				*MIN((om2(i,j  ,k  )-om2(i,jm ,k  ))*(om2(i,jm ,k  )-om2(i,jmm,k  )),0.),
-!     &				 MIN((om2(i,jpp,k  )-om2(i,jp ,k  ))*(om2(i,jp ,k  )-om2(i,j  ,k  )),0.)
-!     &				*MIN((om2(i,jp ,k  )-om2(i,j  ,k  ))*(om2(i,j  ,k  )-om2(i,jm ,k  )),0.))	
-!			wd2(6)=MAX(
-!     &				 MIN((om2(i,j,kp )-om2(i,j,k  ))*(om2(i,j,k  )-om2(i,j,km )),0.)
-!     &				*MIN((om2(i,j,k  )-om2(i,j,km ))*(om2(i,j,km )-om2(i,j,kmm)),0.),
-!     &				 MIN((om2(i,j,kpp)-om2(i,j,kp ))*(om2(i,j,kp )-om2(i,j,k  )),0.)
-!     &				*MIN((om2(i,j,kp )-om2(i,j,k  ))*(om2(i,j,k  )-om2(i,j,km )),0.))
-!			wd2(7)=MAX(
-!     &				 MIN((om3(ip ,j ,k  )-om3(i ,j  ,k  ))*(om3(i ,j  ,k  )-om3(im ,j  ,k  )),0.)
-!     &				*MIN((om3(i  ,j ,k  )-om3(im,j  ,k  ))*(om3(im,j  ,k  )-om3(imm,j  ,k  )),0.),
-!     &				 MIN((om3(ipp,j ,k  )-om3(ip,j  ,k  ))*(om3(ip,j  ,k  )-om3(i  ,j  ,k  )),0.)
-!     &				*MIN((om3(ip ,j ,k  )-om3(i ,j  ,k  ))*(om3(i ,j  ,k  )-om3(im ,j  ,k  )),0.))	 
-!			wd2(8)=MAX(
-!     &				 MIN((om3(i,jp ,k  )-om3(i,j  ,k  ))*(om3(i,j  ,k  )-om3(i,jm ,k  )),0.)
-!     &				*MIN((om3(i,j  ,k  )-om3(i,jm ,k  ))*(om3(i,jm ,k  )-om3(i,jmm,k  )),0.),
-!     &				 MIN((om3(i,jpp,k  )-om3(i,jp ,k  ))*(om3(i,jp ,k  )-om3(i,j  ,k  )),0.)
-!     &				*MIN((om3(i,jp ,k  )-om3(i,j  ,k  ))*(om3(i,j  ,k  )-om3(i,jm ,k  )),0.))	
-!			wd2(9)=MAX(
-!     &				 MIN((om3(i,j,kp )-om3(i,j,k  ))*(om3(i,j,k  )-om3(i,j,km )),0.)
-!     &				*MIN((om3(i,j,k  )-om3(i,j,km ))*(om3(i,j,km )-om3(i,j,kmm)),0.),
-!     &				 MIN((om3(i,j,kpp)-om3(i,j,kp ))*(om3(i,j,kp )-om3(i,j,k  )),0.)
-!     &				*MIN((om3(i,j,kp )-om3(i,j,k  ))*(om3(i,j,k  )-om3(i,j,km )),0.))	 
-
-	 
-	 !IF (ABS(Uvel2(i,j,k))>ABS(Vvel2(i,j,k)).and.ABS(Uvel2(i,j,k))>ABS(Wvel2(i,j,k))) wd(1:3)=0.
-	 !IF (ABS(Vvel2(i,j,k))>ABS(Uvel2(i,j,k)).and.ABS(Vvel2(i,j,k))>ABS(Wvel2(i,j,k))) wd(4:6)=0.
-	 !IF (ABS(Wvel2(i,j,k))>ABS(Vvel2(i,j,k)).and.ABS(Wvel2(i,j,k))>ABS(Uvel2(i,j,k))) wd(7:9)=0.
-
-	  !u4mag=MAX((0.5*(Uvel2(i,j,k)+Uvel2(im,j,k)))**2,(0.5*(Vvel2(i,j,k)+Vvel2(i,jm,k)))**2,(0.5*(Wvel2(i,j,k)+Wvel2(i,j,km)))**2) 
-	  
-!	  wd(4:6)=wd(4:6)/(0.5*(ABS(Vvel2(i,j,k))+ABS(Vvel2(i,jm,k)))**2+1.e-38) 
-!	  wd(7:9)=wd(7:9)/(0.5*(ABS(Wvel2(i,j,k))+ABS(Wvel2(i,j,km)))**2+1.e-38) 
-
-				!wd(2:4)=0.
-				!wd(6:8)=0.
-				wd2(4:9)=0.
-
-			
-			!IF (MAXVAL(wd).gt.1.e-12.and.ekm(i,j,k).lt.2.*ekm_mol) THEN ! wiggle found .and.(wd(1)+wd(5)+wd(9))/3.lt.1.e-8
-			
-			!dL=(dr(i)*Rp(i)*dphi(j)*dz)**0.33333
-			IF (MAXVAL(wd).gt.MAXVAL(wd2).and.MAXVAL(wd).gt.1.e-12) THEN
-			!IF (MAXVAL(wd).gt.1.e-12.and.(wd(1)+wd(5)+wd(9)).gt.(ekm(i,j,k)/rho(i,j,k))**2/(0.086*dL)) THEN
-				wf(i,j,k)=1. !SUM(wd)/9.
+			u4mag=((0.5*(Uvel2(i,j,k)+Uvel2(im,j,k)))**2+(0.5*(Vvel2(i,j,k)+Vvel2(i,jm,k)))**2+
+     &			(0.5*(Wvel2(i,j,k)+Wvel2(i,j,km)))**2)
+			u4mag=u4mag+1e-12
+			wwdd=wwdd/u4mag
+			IF (MAXVAL(wwdd).gt.1.e-12) THEN
+				wf(i,j,k)=MIN(1.,wf(i,j,k)+0.001) !wf(i,j,k)=1. 
 			ELSE
-				wf(i,j,k)=0.
+				wf(i,j,k)=MAX(0.,wf(i,j,k)-0.001) !wf(i,j,k)=0.
 			ENDIF
-			!wf(i,j,k)=(wd(1)+wd(5)+wd(9)) !(wd(1)+wd(5)+wd(9))/9.
+		  enddo
+	    enddo
+	  enddo
+	endif ! wf=1. is already default when wiggle_detector==0
 
-	 
-			
-			enddo
-		enddo
-	enddo
-	endif
-
-	!wf=1.
 			
 	dzi=1./dz 
       do k=kb,ke
@@ -1182,8 +492,8 @@ c get stuff from other CPU's
 !     &     .or.((periodicy.eq.1.and.periodicx.ne.1).and.(i.le.2.or.i.ge.ie-1.or.k.le.2.or.k.ge.ke-1))
 !     &     .or.((periodicy.ne.1.and.periodicx.ne.1).and.
 !     &           (i.le.2.or.i.ge.ie-1.or.k.le.2.or.k.ge.ke-1.or.(rank.eq.0.and.j.le.2).or.(rank.eq.px-1.and.j.ge.je-1)))) then  !switch to cds2
-!			if (.false.) then
-			if (.true.) then
+			if (.false.) then
+!			if (.true.) then
 			  Axa=1.
 			  Bxa=0.
 			  DDxa=1./(Axa+Bxa)
@@ -1199,20 +509,20 @@ c get stuff from other CPU's
 			  facA=1.
 			  facB=0.
 		  else
-			  Axa=1. !9.
-			  Bxa=0. !-1.
+			  Axa=1. !Adomis=1 !Morinishi=9.
+			  Bxa=0. !Adomis=0 !Morinishi=-1.
 			  DDxa=1./(Axa+Bxa)
-			  Axb=0. !9.
-			  Bxb=-1. !1. !-1.
+			  Axb=0. !Adomis=0 !Morinishi=9.
+			  Bxb=1. !Adomis=1 !Morinishi=-1.
 			  DDxb=1./(Axb+Bxb)	
-			  Axa2=1. !9. !1. 
-			  Bxa2=0. !-1. !0. 
+			  Axa2=1. !Adomis=1 !Morinishi=1. 
+			  Bxa2=0. !Adomis=0 !Morinishi=0. 
 			  DDxa2=1./(Axa2+Bxa2)
-			  Axb2=0. 
-			  Bxb2=1. 
+			  Axb2=0. !Adomis=0 !Morinishi=0.
+			  Bxb2=1. !Adomis=1 !Morinishi=1.
 			  DDxb2=1./(Axb2+Bxb2)				  
-			  facA=9./8. !1.+MIN(1.,DBLE(k-1)/3.)*1./8. !9./8.
-			  facB=-1./8. !MIN(1.,DBLE(k-1)/3.)*-1./8.    !-1./8.							  
+			  facA=9./8. !Adomis=9./8. !Morinishi=9./8.
+			  facB=-1./8. 	!Adomis=-1./8. !Morinishi=-1./8.						  
 			  order4yes=0.
 		  endif	
 
@@ -1333,7 +643,7 @@ c get stuff from other CPU's
 
 
       subroutine advecv_C4A6(putout,Uvel,Vvel,Wvel,RHO,Ru,Rp,dr,phivt,dz,
-     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy,phiv,wf)
+     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy,phiv,wf,wd)
       implicit none
 c
 c********************************************************************
@@ -1367,7 +677,7 @@ c          other parameters  : all unchanged
 c
 c********************************************************************
       integer  i,j,k,im,ip,jm,jp,km,kp,i1,j1,k1,ib,ie,jb,je,kb,ke
-	  integer kpp,kppp,kmm,kmmm,jpp,jppp,jmm,jmmm,ipp,ippp,imm,immm,rank,px,periodicx,periodicy
+	  integer kpp,kppp,kmm,kmmm,jpp,jppp,jmm,jmmm,ipp,ippp,imm,immm,rank,px,periodicx,periodicy,wd
       real     putout(0:i1,0:j1,0:k1),Uvel(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
      +         dr(0:i1),phivt(0:je*px+1),dz,Ru(0:i1),Rp(0:i1),Ru2(-1:i1+1)
@@ -1381,8 +691,7 @@ c********************************************************************
 	real uuRA,uuLA,vvRA,vvLA,wwRA,wwLA,uuRB,uuLB,vvRB,vvLB,wwRB,wwLB
 	real vvXRA,vvXLA,vvYRA,vvYLA,vvZRA,vvZLA,vvXRB,vvXLB,vvYRB,vvYLB,vvZRB,vvZLB
 	real rho2(-1:i1+1,-1:j1+1,-1:k1+1),phivt2(-1:je*px+2)
-	real wd(1:9),wf(0:i1,0:j1,0:k1),numdif2
-
+	real wwdd(1:3),wf(0:i1,0:j1,0:k1),numdif2
 	
 	
 	Ru2(0:i1)=Ru
@@ -1394,7 +703,7 @@ c********************************************************************
 	
 	Uvel2(0:i1,0:j1,0:k1)=Uvel
 
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(Uvel,ubf)
 	  call shiftb2(Uvel,ubb) 
 
@@ -1486,7 +795,7 @@ c get stuff from other CPU's
 	
 	Vvel2(0:i1,0:j1,0:k1)=Vvel
 
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(Vvel,ubf)
 	  call shiftb2(Vvel,ubb) 
 
@@ -1579,7 +888,7 @@ c get stuff from other CPU's
 
 		Wvel2(0:i1,0:j1,0:k1)=Wvel
 
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(Wvel,ubf)
 	  call shiftb2(Wvel,ubb) 
 	if (periodicy.eq.0.or.periodicy.eq.2) then
@@ -1668,7 +977,7 @@ c get stuff from other CPU's
 
 	rho2(0:i1,0:j1,0:k1)=rho
 
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(rho,ubf)
 	  call shiftb2(rho,ubb) 
 
@@ -1736,7 +1045,7 @@ c get stuff from other CPU's
 		  ippp=i+3
 		  imm=i-2
 		  immm=i-3
-	  
+
           rhoip =0.25*(rho(i,j,k)+rho(ip,j,k)+rho(i,jp,k)+rho(ip,jp,k))
           rhoim =0.25*(rho(i,j,k)+rho(im,j,k)+rho(i,jp,k)+rho(im,jp,k))
           rhojp =rho(i,jp,k)
@@ -1763,8 +1072,8 @@ c get stuff from other CPU's
 !     &     .or.((periodicy.eq.1.and.periodicx.ne.1).and.(i.le.2.or.i.ge.ie-1.or.k.le.2.or.k.ge.ke-1))
 !     &     .or.((periodicy.ne.1.and.periodicx.ne.1).and.
 !     &           (i.le.2.or.i.ge.ie-1.or.k.le.2.or.k.ge.ke-1.or.(rank.eq.0.and.j.le.2).or.(rank.eq.px-1.and.j.ge.je-1)))) then  !switch to cds2
-!			if (.false.) then
-			if (.true.) then
+			if (.false.) then
+!			if (.true.) then
 			  Axa=1.
 			  Bxa=0.
 			  DDxa=1./(Axa+Bxa)
@@ -1780,21 +1089,21 @@ c get stuff from other CPU's
 			  facA=1.
 			  facB=0.
 		  else
-			  Axa=1. !9.
-			  Bxa=0. !-1.
+			  Axa=1. !Adomis=1 !Morinishi=9.
+			  Bxa=0. !Adomis=0 !Morinishi=-1.
 			  DDxa=1./(Axa+Bxa)
-			  Axb=0. !9.
-			  Bxb=-1. !1. !-1.
+			  Axb=0. !Adomis=0 !Morinishi=9.
+			  Bxb=1. !Adomis=1 !Morinishi=-1.
 			  DDxb=1./(Axb+Bxb)	
-			  Axa2=1. !9. !1. 
-			  Bxa2=0. !-1. !0. 
+			  Axa2=1. !Adomis=1 !Morinishi=1. 
+			  Bxa2=0. !Adomis=0 !Morinishi=0. 
 			  DDxa2=1./(Axa2+Bxa2)
-			  Axb2=0. 
-			  Bxb2=1. 
+			  Axb2=0. !Adomis=0 !Morinishi=0.
+			  Bxb2=1. !Adomis=1 !Morinishi=1.
 			  DDxb2=1./(Axb2+Bxb2)				  
-			  facA=9./8. !1.+MIN(1.,DBLE(k-1)/3.)*1./8. !9./8.
-			  facB=-1./8. !MIN(1.,DBLE(k-1)/3.)*-1./8.    !-1./8.								
-			  order4yes=0.
+			  facA=9./8. !Adomis=9./8. !Morinishi=9./8.
+			  facB=-1./8. 	!Adomis=-1./8. !Morinishi=-1./8.					  
+			  order4yes=0.								
 		  endif	
 
 	  ! advection velocities:
@@ -1825,49 +1134,6 @@ c get stuff from other CPU's
       vvZRB=DDxb2*(Axb2*(Vvel2(i   ,j   ,kp  )+Vvel2(i   ,j   ,kpp ))+Bxb2*(Vvel2(i   ,j   ,k   )+Vvel2(i   ,j   ,kppp)))
       vvZLB=DDxb2*(Axb2*(Vvel2(i   ,j   ,kmm )+Vvel2(i   ,j   ,km  ))+Bxb2*(Vvel2(i   ,j   ,kmmm)+Vvel2(i   ,j   ,k   )))
 
-!	  IF (ABS(Uvel2(i,j,k)-Uvel(i,j,k)).gt.1e-14) THEN
-!		write(*,*),'rank,i,j,k,U,U2',rank,i,j,k,Uvel2(i,j,k),Uvel(i,j,k)
-!	  ENDIF
-!	  IF (ABS(Vvel2(i,j,k)-Vvel(i,j,k)).gt.1e-14) THEN
-!		write(*,*),'rank,i,j,k,V,V2',rank,i,j,k,Vvel2(i,j,k),Vvel(i,j,k)
-!	  ENDIF
-!	  IF (ABS(Wvel2(i,j,k)-Wvel(i,j,k)).gt.1e-14) THEN
-!		write(*,*),'rank,i,j,k,W,W2',rank,i,j,k,Wvel2(i,j,k),Wvel(i,j,k)
-!	  ENDIF
-!	  IF (ABS(Uvel2(im,jm,km)-Uvel(im,jm,km)).gt.1e-14) THEN
-!		write(*,*),'rank,im,jm,km,U,U2',rank,im,jm,km,Uvel2(im,jm,km),Uvel(im,jm,km)
-!	  ENDIF
-!	  IF (ABS(Vvel2(im,jm,km)-Vvel(im,jm,km)).gt.1e-14) THEN
-!		write(*,*),'rank,im,jm,km,V,V2',rank,im,jm,km,Vvel2(im,jm,km),Vvel(im,jm,km)
-!	  ENDIF
-!	  IF (ABS(Wvel2(im,jm,km)-Wvel(im,jm,km)).gt.1e-14) THEN
-!		write(*,*),'rank,im,jm,km,W,W2',rank,im,jm,km,Wvel2(im,jm,km),Wvel(im,jm,km)
-!	  ENDIF
-!	  IF (ABS(Uvel2(ip,jp,kp)-Uvel(ip,jp,kp)).gt.1e-14) THEN
-!		write(*,*),'rank,ip,jp,kp,U,U2',rank,ip,jp,kp,Uvel2(ip,jp,kp),Uvel(ip,jp,kp)
-!	  ENDIF
-!	  IF (ABS(Vvel2(ip,jp,kp)-Vvel(ip,jp,kp)).gt.1e-14) THEN
-!		write(*,*),'rank,ip,jp,kp,V,V2',rank,ip,jp,kp,Vvel2(ip,jp,kp),Vvel(ip,jp,kp)
-!	  ENDIF
-!	  IF (ABS(Wvel2(ip,jp,kp)-Wvel(ip,jp,kp)).gt.1e-14) THEN
-!		write(*,*),'rank,ip,jp,kp,W,W2',rank,ip,jp,kp,Wvel2(ip,jp,kp),Wvel(ip,jp,kp)
-!	  ENDIF	
-!      uuRB=DDya*(Aya*(Uvel(i ,j ,k )+Uvel(i ,jp,k ))+Bya*(Uvel2(i ,jm ,k )+Uvel2(i ,jpp,k )))
-!      uuLB=DDya*(Aya*(Uvel(im,j ,k )+Uvel(im,jp,k ))+Bya*(Uvel2(im,jm ,k )+Uvel2(im,jpp,k )))
-!	  vvRB=DDya*(Aya*(Vvel(i ,j ,k )+Vvel(i ,jp,k ))+Bya*(Vvel2(i ,jm ,k )+Vvel2(i ,jpp,k )))
-!      vvLB=DDya*(Aya*(Vvel(i ,jm,k )+Vvel(i ,j ,k ))+Bya*(Vvel2(i ,jmm,k )+Vvel2(i ,jp ,k )))
-!      wwRB=DDya*(Aya*(Wvel(i ,j ,k )+Wvel(i ,jp,k ))+Bya*(Wvel2(i ,jm ,k )+Wvel2(i ,jpp,k )))
-!      wwLB=DDya*(Aya*(Wvel(i ,j ,km)+Wvel(i ,jp,km))+Bya*(Wvel2(i ,jm ,km)+Wvel2(i ,jpp,km)))
-!	  IF (ABS(uuRB-uuRA).gt.1e-14.or.ABS(uuLB-uuLA).gt.1e-14) THEN
-!		write(*,*),'rank,i,j,k,uU',rank,i,j,k,uuRA,uuRB,uuLB,uuLA 
-!	  ENDIF
-!	  IF (ABS(vvRB-vvRA).gt.1e-14.or.ABS(vvLB-vvLA).gt.1e-14) THEN
-!		write(*,*),'rank,i,j,k,uV',rank,i,j,k,vvRA,vvRB,vvLB,vvLA 
-!	  ENDIF
-!	  IF (ABS(wwRB-wwRA).gt.1e-14.or.ABS(wwLB-wwLA).gt.1e-14) THEN
-!		write(*,*),'rank,i,j,k,uW',rank,i,j,k,wwRA,wwRB,wwLB,wwLA 
-!	  ENDIF
-	  
 !      uuR=DDy*(Ay*(Uvel2(i,j,k)+Uvel2(i,jp,k))+By*(Uvel2(i,jm,k)+Uvel2(i,jpp,k))+Cy*(Uvel2(i,jmm,k)+Uvel2(i,jppp,k)))*rhoip*Ru(i) !*Ru(i)
 !      uuL=DDy*(Ay*(Uvel2(im,j,k)+Uvel2(im,jp,k))+By*(Uvel2(im,jm,k)+Uvel2(im,jpp,k))+Cy*(Uvel2(im,jmm,k)+Uvel2(im,jppp,k)))
 !     &	  *rhoim*Ru(im) !*Ru(im)
@@ -1923,7 +1189,7 @@ c get stuff from other CPU's
       end
 
       subroutine advecw_C4A6(putout,Uvel,Vvel,Wvel,RHO,Ru,Rp,dr,phivt,dz,
-     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy,phiv,wf)
+     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy,phiv,wf,wd)
       implicit none
 c
 c********************************************************************
@@ -1957,7 +1223,7 @@ c          other parameters  : all unchanged
 c
 c********************************************************************
       integer  i,j,k,im,ip,jm,jp,km,kp,i1,j1,k1,ib,ie,jb,je,kb,ke
-	  integer kpp,kppp,kmm,kmmm,jpp,jppp,jmm,jmmm,ipp,ippp,imm,immm,rank,px,periodicx,periodicy
+	  integer kpp,kppp,kmm,kmmm,jpp,jppp,jmm,jmmm,ipp,ippp,imm,immm,rank,px,periodicx,periodicy,wd
       real     putout(0:i1,0:j1,0:k1),Uvel(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
      +         dr(0:i1),phivt(0:je*px+1),dz,Ru(0:i1),Rp(0:i1),Ru2(-1:i1+1)
@@ -1970,7 +1236,7 @@ c********************************************************************
 	real uuRA,uuLA,vvRA,vvLA,wwRA,wwLA,uuRB,uuLB,vvRB,vvLB,wwRB,wwLB
 	real wwXRA,wwXLA,wwYRA,wwYLA,wwZRA,wwZLA,wwXRB,wwXLB,wwYRB,wwYLB,wwZRB,wwZLB
 	real rho2(-1:i1+1,-1:j1+1,-1:k1+1),phivt2(-1:je*px+2)
-	real wd(1:9),wf(0:i1,0:j1,0:k1),numdif2
+	real wwdd(1:3),wf(0:i1,0:j1,0:k1),numdif2
 
 	
 	
@@ -1983,7 +1249,7 @@ c********************************************************************
 	
 	Uvel2(0:i1,0:j1,0:k1)=Uvel
 
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(Uvel,ubf)
 	  call shiftb2(Uvel,ubb) 
 
@@ -2075,7 +1341,7 @@ c get stuff from other CPU's
 	
 	Vvel2(0:i1,0:j1,0:k1)=Vvel
 
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(Vvel,ubf)
 	  call shiftb2(Vvel,ubb) 
 
@@ -2168,7 +1434,7 @@ c get stuff from other CPU's
 
 		Wvel2(0:i1,0:j1,0:k1)=Wvel
 
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(Wvel,ubf)
 	  call shiftb2(Wvel,ubb) 
 	if (periodicy.eq.0.or.periodicy.eq.2) then
@@ -2257,7 +1523,7 @@ c get stuff from other CPU's
 
 	rho2(0:i1,0:j1,0:k1)=rho
 
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(rho,ubf)
 	  call shiftb2(rho,ubb) 
 
@@ -2303,6 +1569,7 @@ c get stuff from other CPU's
 	rho2(-1:i1+1,-1:j1+1,-1)=  rho2(-1:i1+1,-1:j1+1,0)
 	rho2(-1:i1+1,-1:j1+1,k1+1)=rho2(-1:i1+1,-1:j1+1,k1)
 	
+	  
 	dzi=1./dz 
       do k=kb,ke
       kp=k+1
@@ -2325,7 +1592,7 @@ c get stuff from other CPU's
 		  ippp=i+3
 		  imm=i-2
 		  immm=i-3
-	  
+			
           rhoip =0.25*(rho(i,j,k)+rho(i,j,kp)+rho(ip,j,k)+rho(ip,j,kp))
           rhoim =0.25*(rho(i,j,k)+rho(i,j,kp)+rho(im,j,k)+rho(im,j,kp))
           rhojp =0.25*(rho(i,j,k)+rho(i,j,kp)+rho(i,jp,k)+rho(i,jp,kp))
@@ -2361,8 +1628,8 @@ c get stuff from other CPU's
 !     &     .or.((periodicy.eq.1.and.periodicx.ne.1).and.(i.le.2.or.i.ge.ie-1.or.k.le.2.or.k.ge.ke-1))
 !     &     .or.((periodicy.ne.1.and.periodicx.ne.1).and.
 !     &           (i.le.2.or.i.ge.ie-1.or.k.le.2.or.k.ge.ke-1.or.(rank.eq.0.and.j.le.2).or.(rank.eq.px-1.and.j.ge.je-1)))) then  !switch to cds2
-!			if (.false.) then
-			if (.true.) then
+			if (.false.) then
+!			if (.true.) then
 			  Axa=1.
 			  Bxa=0.
 			  DDxa=1./(Axa+Bxa)
@@ -2378,20 +1645,20 @@ c get stuff from other CPU's
 			  facA=1.
 			  facB=0.
 		  else
-			  Axa=1. !9.
-			  Bxa=0. !-1.
+			  Axa=1. !Adomis=1 !Morinishi=9.
+			  Bxa=0. !Adomis=0 !Morinishi=-1.
 			  DDxa=1./(Axa+Bxa)
-			  Axb=0. !9.
-			  Bxb=-1. !1. !-1.
+			  Axb=0. !Adomis=0 !Morinishi=9.
+			  Bxb=1. !Adomis=1 !Morinishi=-1.
 			  DDxb=1./(Axb+Bxb)	
-			  Axa2=1. !9. !1. 
-			  Bxa2=0. !-1. !0. 
+			  Axa2=1. !Adomis=1 !Morinishi=1. 
+			  Bxa2=0. !Adomis=0 !Morinishi=0. 
 			  DDxa2=1./(Axa2+Bxa2)
-			  Axb2=0. 
-			  Bxb2=1. 
+			  Axb2=0. !Adomis=0 !Morinishi=0.
+			  Bxb2=1. !Adomis=1 !Morinishi=1.
 			  DDxb2=1./(Axb2+Bxb2)				  
-			  facA=9./8. !1.+MIN(1.,DBLE(k-1)/3.)*1./8. !9./8.
-			  facB=-1./8. !MIN(1.,DBLE(k-1)/3.)*-1./8.    !-1./8.				  
+			  facA=9./8. !Adomis=9./8. !Morinishi=9./8.
+			  facB=-1./8. 	!Adomis=-1./8. !Morinishi=-1./8.					  
 		  endif	
 
 	  ! advection velocities:
@@ -2422,48 +1689,12 @@ c get stuff from other CPU's
       wwZRB=DDxb2*(Axb2*(Wvel2(i   ,j   ,kp  )+Wvel2(i   ,j   ,kpp ))+Bxb2*(Wvel2(i   ,j   ,k   )+Wvel2(i   ,j   ,kppp)))
       wwZLB=DDxb2*(Axb2*(Wvel2(i   ,j   ,kmm )+Wvel2(i   ,j   ,km  ))+Bxb2*(Wvel2(i   ,j   ,kmmm)+Wvel2(i   ,j   ,k   )))
 
-!	  IF (ABS(Uvel2(i,j,k)-Uvel(i,j,k)).gt.1e-14) THEN
-!		write(*,*),'rank,i,j,k,U,U2',rank,i,j,k,Uvel2(i,j,k),Uvel(i,j,k)
-!	  ENDIF
-!	  IF (ABS(Vvel2(i,j,k)-Vvel(i,j,k)).gt.1e-14) THEN
-!		write(*,*),'rank,i,j,k,V,V2',rank,i,j,k,Vvel2(i,j,k),Vvel(i,j,k)
-!	  ENDIF
-!	  IF (ABS(Wvel2(i,j,k)-Wvel(i,j,k)).gt.1e-14) THEN
-!		write(*,*),'rank,i,j,k,W,W2',rank,i,j,k,Wvel2(i,j,k),Wvel(i,j,k)
-!	  ENDIF
-!	  IF (ABS(Uvel2(im,jm,km)-Uvel(im,jm,km)).gt.1e-14) THEN
-!		write(*,*),'rank,im,jm,km,U,U2',rank,im,jm,km,Uvel2(im,jm,km),Uvel(im,jm,km)
-!	  ENDIF
-!	  IF (ABS(Vvel2(im,jm,km)-Vvel(im,jm,km)).gt.1e-14) THEN
-!		write(*,*),'rank,im,jm,km,V,V2',rank,im,jm,km,Vvel2(im,jm,km),Vvel(im,jm,km)
-!	  ENDIF
-!	  IF (ABS(Wvel2(im,jm,km)-Wvel(im,jm,km)).gt.1e-14) THEN
-!		write(*,*),'rank,im,jm,km,W,W2',rank,im,jm,km,Wvel2(im,jm,km),Wvel(im,jm,km)
-!	  ENDIF
-!	  IF (ABS(Uvel2(ip,jp,kp)-Uvel(ip,jp,kp)).gt.1e-14) THEN
-!		write(*,*),'rank,ip,jp,kp,U,U2',rank,ip,jp,kp,Uvel2(ip,jp,kp),Uvel(ip,jp,kp)
-!	  ENDIF
-!	  IF (ABS(Vvel2(ip,jp,kp)-Vvel(ip,jp,kp)).gt.1e-14) THEN
-!		write(*,*),'rank,ip,jp,kp,V,V2',rank,ip,jp,kp,Vvel2(ip,jp,kp),Vvel(ip,jp,kp)
-!	  ENDIF
-!	  IF (ABS(Wvel2(ip,jp,kp)-Wvel(ip,jp,kp)).gt.1e-14) THEN
-!		write(*,*),'rank,ip,jp,kp,W,W2',rank,ip,jp,kp,Wvel2(ip,jp,kp),Wvel(ip,jp,kp)
-!	  ENDIF	
 !      uuRB=DDza*(Aza*(Uvel(i ,j ,k )+Uvel(i ,j ,kp))+Bza*(Uvel2(i ,j ,km )+Uvel2(i ,j ,kpp)))
 !      uuLB=DDza*(Aza*(Uvel(im,j ,k )+Uvel(im,j ,kp))+Bza*(Uvel2(im,j ,km )+Uvel2(im,j ,kpp)))
 !	  vvRB=DDza*(Aza*(Vvel(i ,j ,k )+Vvel(i ,j ,kp))+Bza*(Vvel2(i ,j ,km )+Vvel2(i ,j ,kpp)))
 !      vvLB=DDza*(Aza*(Vvel(i ,jm,k )+Vvel(i ,jm,kp))+Bza*(Vvel2(i ,jm,km )+Vvel2(i ,jm,kpp)))
 !      wwRB=DDza*(Aza*(Wvel(i ,j ,k )+Wvel(i ,j ,kp))+Bza*(Wvel2(i ,j ,km )+Wvel2(i ,j ,kpp)))
 !      wwLB=DDza*(Aza*(Wvel(i ,j ,km)+Wvel(i ,j ,k ))+Bza*(Wvel2(i ,j ,kmm)+Wvel2(i ,j ,kp )))
-!	  IF (ABS(uuRB-uuRA).gt.1e-14.or.ABS(uuLB-uuLA).gt.1e-14) THEN
-!		write(*,*),'rank,i,j,k,uU',rank,i,j,k,uuRA,uuRB,uuLB,uuLA 
-!	  ENDIF
-!	  IF (ABS(vvRB-vvRA).gt.1e-14.or.ABS(vvLB-vvLA).gt.1e-14) THEN
-!		write(*,*),'rank,i,j,k,uV',rank,i,j,k,vvRA,vvRB,vvLB,vvLA 
-!	  ENDIF
-!	  IF (ABS(wwRB-wwRA).gt.1e-14.or.ABS(wwLB-wwLA).gt.1e-14) THEN
-!		write(*,*),'rank,i,j,k,uW',rank,i,j,k,wwRA,wwRB,wwLB,wwLA 
-!	  ENDIF
 	  
 	  numdif2=numdif*(wf(i,j,k)+wf(i,j,k+1))*0.5
 	  
@@ -2562,7 +1793,7 @@ c********************************************************************
 	
 	Uvel2(0:i1,0:j1,0:k1)=Uvel
 
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(Uvel,ubf)
 	  call shiftb2(Uvel,ubb) 
 
@@ -2653,7 +1884,7 @@ c get stuff from other CPU's
 	
 	Vvel2(0:i1,0:j1,0:k1)=Vvel
 
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(Vvel,ubf)
 	  call shiftb2(Vvel,ubb) 
 
@@ -2745,7 +1976,7 @@ c get stuff from other CPU's
 
 		Wvel2(0:i1,0:j1,0:k1)=Wvel
 
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(Wvel,ubf)
 	  call shiftb2(Wvel,ubb) 
 	if (periodicy.eq.0.or.periodicy.eq.2) then
@@ -2834,7 +2065,7 @@ c get stuff from other CPU's
 
 	rho2(0:i1,0:j1,0:k1)=rho
 
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(rho,ubf)
 	  call shiftb2(rho,ubb) 
 
@@ -3021,7 +2252,7 @@ c********************************************************************
 	
 	Uvel2(0:i1,0:j1,0:k1)=Uvel
 
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(Uvel,ubf)
 	  call shiftb2(Uvel,ubb) 
 
@@ -3112,7 +2343,7 @@ c get stuff from other CPU's
 	
 	Vvel2(0:i1,0:j1,0:k1)=Vvel
 
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(Vvel,ubf)
 	  call shiftb2(Vvel,ubb) 
 
@@ -3204,7 +2435,7 @@ c get stuff from other CPU's
 
 		Wvel2(0:i1,0:j1,0:k1)=Wvel
 
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(Wvel,ubf)
 	  call shiftb2(Wvel,ubb) 
 	if (periodicy.eq.0.or.periodicy.eq.2) then
@@ -3293,7 +2524,7 @@ c get stuff from other CPU's
 
 	rho2(0:i1,0:j1,0:k1)=rho
 
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(rho,ubf)
 	  call shiftb2(rho,ubb) 
 
@@ -3475,7 +2706,7 @@ c********************************************************************
 	
 	Uvel2(0:i1,0:j1,0:k1)=Uvel
 
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(Uvel,ubf)
 	  call shiftb2(Uvel,ubb) 
 
@@ -3566,7 +2797,7 @@ c get stuff from other CPU's
 	
 	Vvel2(0:i1,0:j1,0:k1)=Vvel
 
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(Vvel,ubf)
 	  call shiftb2(Vvel,ubb) 
 
@@ -3658,7 +2889,7 @@ c get stuff from other CPU's
 
 		Wvel2(0:i1,0:j1,0:k1)=Wvel
 
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(Wvel,ubf)
 	  call shiftb2(Wvel,ubb) 
 	if (periodicy.eq.0.or.periodicy.eq.2) then
@@ -3747,7 +2978,7 @@ c get stuff from other CPU's
 
 	rho2(0:i1,0:j1,0:k1)=rho
 
-c get stuff from other CPU's
+!c get stuff from other CPU's
 	  call shiftf2(rho,ubf)
 	  call shiftb2(rho,ubb) 
 
