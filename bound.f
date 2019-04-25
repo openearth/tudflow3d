@@ -2716,7 +2716,7 @@ c*************************************************************
 !			inout=0
 !		  ENDIF
 		  if (inout.eq.1) then
-		   bp(n2)%volncells=bp(n2)%volncells+vol_V(i,j)
+		   bp(n2)%volncells=bp(n2)%volncells+vol_V(i,j)*fc_global(i,j,k)
 		   endif
 		  enddo
 		 enddo
@@ -2770,8 +2770,15 @@ c*************************************************************
 !!!		  ENDIF
 !!		  if (inout.eq.1) then
 		     DO n=1,nfrac
-				Chisbp(n,n2,bp(n2)%istep_bphis_output)=Chisbp(n,n2,bp(n2)%istep_bphis_output)+vol_V(i,j+rank*jmax)*cnew(n,i,j,k)				
+				Chisbp(n,n2,bp(n2)%istep_bphis_output)=Chisbp(n,n2,bp(n2)%istep_bphis_output)+
+     &				vol_V(i,j+rank*jmax)*cnew(n,i,j,k)*fc_global(i,j+jmax*px,k)				
 		     ENDDO
+				Uhisbp(n2,bp(n2)%istep_bphis_output)=Uhisbp(n2,bp(n2)%istep_bphis_output)+
+     &				vol_V(i,j+rank*jmax)*Unew(i,j,k)*fc_global(i,j+jmax*px,k)				 
+				Vhisbp(n2,bp(n2)%istep_bphis_output)=Vhisbp(n2,bp(n2)%istep_bphis_output)+
+     &				vol_V(i,j+rank*jmax)*Vnew(i,j,k)*fc_global(i,j+jmax*px,k)				 
+				Whisbp(n2,bp(n2)%istep_bphis_output)=Whisbp(n2,bp(n2)%istep_bphis_output)+
+     &				vol_V(i,j+rank*jmax)*Wnew(i,j,k)*fc_global(i,j+jmax*px,k)				 	 
 !!		   endif
 !!		  enddo
 		 enddo
@@ -2780,6 +2787,12 @@ c*************************************************************
 		  call mpi_allreduce(Chisbp(n,n2,bp(n2)%istep_bphis_output),globalsum,1,mpi_double_precision,mpi_sum,mpi_comm_world,ierr)
 		  Chisbp(n,n2,bp(n2)%istep_bphis_output)=globalsum/bp(n2)%volncells
 		ENDDO 
+		  call mpi_allreduce(Uhisbp(n2,bp(n2)%istep_bphis_output),globalsum,1,mpi_double_precision,mpi_sum,mpi_comm_world,ierr)
+		  Uhisbp(n2,bp(n2)%istep_bphis_output)=globalsum/bp(n2)%volncells		
+		  call mpi_allreduce(Vhisbp(n2,bp(n2)%istep_bphis_output),globalsum,1,mpi_double_precision,mpi_sum,mpi_comm_world,ierr)
+		  Vhisbp(n2,bp(n2)%istep_bphis_output)=globalsum/bp(n2)%volncells		
+		  call mpi_allreduce(Whisbp(n2,bp(n2)%istep_bphis_output),globalsum,1,mpi_double_precision,mpi_sum,mpi_comm_world,ierr)
+		  Whisbp(n2,bp(n2)%istep_bphis_output)=globalsum/bp(n2)%volncells				  
 		thisbp(n2,bp(n2)%istep_bphis_output)=tt 
 		zhisbp(n2,bp(n2)%istep_bphis_output)=(MAX(1,CEILING(bp(n2)%zbottom/dz))+MIN(kmax,FLOOR(bp(n2)%height/dz)))/2.*dz+0.5*dz 		
 		ENDIF ! bedplume loop

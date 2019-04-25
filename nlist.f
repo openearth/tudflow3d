@@ -130,6 +130,8 @@
 	  REAL, DIMENSION(:,:,:,:),ALLOCATABLE :: cU,cV,cW
 	  REAL, DIMENSION(:,:),ALLOCATABLE :: thisbp,zhisbp
 	  REAL, DIMENSION(:,:,:),ALLOCATABLE :: Chisbp
+	  REAL, DIMENSION(:,:),ALLOCATABLE :: Uhisbp,Vhisbp,Whisbp
+	  REAL*4, DIMENSION(:,:,:),ALLOCATABLE :: fc_global
 
  !     REAL, DIMENSION(:,:,:),ALLOCATABLE :: Uf,Vf,Wf
 
@@ -1223,6 +1225,9 @@
 	  ALLOCATE(thisbp(nbedplume,20000))
 	  ALLOCATE(zhisbp(nbedplume,20000))
 	  ALLOCATE(Chisbp(nfrac,nbedplume,20000))
+	  ALLOCATE(Uhisbp(nbedplume,20000))
+	  ALLOCATE(Vhisbp(nbedplume,20000))
+	  ALLOCATE(Whisbp(nbedplume,20000))
 	  DO n=1,nbedplume 
 		bp(n)%istep_bphis_output=0
 		bp(n)%t_bphis_output=bp(n)%t0
@@ -1230,6 +1235,9 @@
 	  thisbp=0.
 	  zhisbp=0.
 	  Chisbp=0.
+	  Uhisbp=0.
+	  Vhisbp=0.
+	  Whisbp=0.
 	ENDIF
 	
 	  
@@ -1508,6 +1516,7 @@
 	ALLOCATE(cU(nfrac,0:i1,0:j1,0:k1))
 	ALLOCATE(cV(nfrac,0:i1,0:j1,0:k1))
 	ALLOCATE(cW(nfrac,0:i1,0:j1,0:k1))
+	ALLOCATE(fc_global(1:imax,1:jmax*px,1:kmax))
 	
 	if (transporteq_fracs.eq.'massfrac') then
 		ALLOCATE(rhoU(0:i1,0:j1,0:k1))  

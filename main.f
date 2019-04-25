@@ -165,14 +165,13 @@
       time_nm=time_n-dt
 	  time_np=time_n+dt
       
-      
+	  call output_init_nc(time_np) ! determination fluid or obstacle cell in output_init_nc; therefore before update_nvol_bedplume
 	  call update_nvol_bedplume(time_n)
 	  call update_QSc_bedplume(time_n)
 	  call update_Qc_plume(time_n)
 
 !      call fillps 
 !      CALL SOLVEpois(p) !,Ru,Rp,DPHI,dz,rank,imax,jmax,kmax,px)
-	   call output_init_nc(time_np)
 
 	  if (rank.eq.0) then		
 		call cpu_time(cput1)
