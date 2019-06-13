@@ -290,6 +290,7 @@
 		write(*,*) '# namelist &constants                            #'			
 		write(*,*) '# pickup_formula is not defined                  #'
 		write(*,*) '# choose ''vanrijn1984'',or ''nielsen1992'',or ''okayasu2010'' #'	
+		write(*,*) '# or ''vanrijn2019'', or ''VR2019_Cbed'' #'	
 	CASE(096)
 		write(*,*) '# namelist &constants                            #'			
 		write(*,*) '# kn_d50_multiplier must be >0.                  #'		

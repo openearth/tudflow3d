@@ -238,7 +238,7 @@
 			inout=0
 		  ENDIF
 		  if (inout.eq.1) then
-			div2=div2-bp(n2)%Q/bp(n2)%volncells
+			div2=div2-bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells
 		   endif
 		ENDIF
 	ENDDO ! bedplume loop

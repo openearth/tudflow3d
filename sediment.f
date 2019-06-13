@@ -770,7 +770,21 @@
 					Shields_eff = (Fd+Fi)/MAX(W-Fl,1.e-12)
 					TT = (Shields_eff - Shields_cr)/Shields_cr	
 					TT = MAX(TT,0.) !TT must be positive
-					phip = calibfac_sand_pickup*0.00033*Dstar**0.3*TT**1.5   ! general pickup function					
+					phip = calibfac_sand_pickup*0.00033*Dstar**0.3*TT**1.5   ! general pickup function	
+				ELSEIF (pickup_formula.eq.'vanrijn2019') THEN
+					ustc2 = Shields_cr * ABS(gz)*delta*d50
+					TT = (ust*ust-ustc2)/(MAX(ustc2,1.e-12))
+					TT = MAX(TT,0.) !TT must be positive
+					phip = calibfac_sand_pickup*0.00033*Dstar**0.3*TT**1.5   ! general pickup function	
+					Shields_eff = ust**2/(delta*ABS(gz)*d50)
+					phip = phip/(MAX(Shields_eff,1.)) ! correction: reduced pickup for high speed erosion
+				ELSEIF (pickup_formula.eq.'VR2019_Cbed') THEN
+					ustc2 = Shields_cr * ABS(gz)*delta*d50
+					TT = (ust*ust-ustc2)/(MAX(ustc2,1.e-12))
+					TT = MAX(TT,0.) !TT must be positive
+					phip = calibfac_sand_pickup*0.00033*Dstar**0.3*TT**1.5   ! general pickup function	
+					Shields_eff = ust**2/(delta*ABS(gz)*d50)
+					phip = phip/(MAX(Shields_eff,1.))*(1.-(1.-cfixedbed)-SUM(ccfd(1:nfrac,i,j,kplus)))/(1.-(1.-cfixedbed)) ! correction: reduced pickup for high speed erosion and reduction for cbed according to VanRhee and Talmon 2010
 				ELSE
 					TT=0.
 					phip = 0.  ! general pickup function					
@@ -877,8 +891,12 @@
 					kbed(i,j)=kbed(i,j)-1
 					kbedt(i,j)=kbed(i,j)
 				!! 31-8-2018 switched top 2 lines ELSEIF on instead of bottom 2 lines because ctot_firstcel can become >>cbed in TSHD placement sim; however previous sims diffuser depostion were done with bottom 2 lines!!
-				ELSEIF ((cbotnewtot_pos+ctot_firstcel).ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.cbotnewtot_pos.gt.1.e-12.and.
+!!				ELSEIF ((cbotnewtot_pos+ctot_firstcel).ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.cbotnewtot_pos.gt.1.e-12.and.
+!!     &             (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed-1.e-12.or.kbed(i,j).eq.0).and.depo_cbed_option.eq.0) THEN
+!! test 8-may-2019 with this elseif instead of 2 lines above (=better!; no large zone with near-zero concentration first cell fluid):	 
+				ELSEIF ((cbotnewtot_pos).ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.
      &             (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed-1.e-12.or.kbed(i,j).eq.0).and.depo_cbed_option.eq.0) THEN
+	 
 !     &               .and.MINVAL(cbotnew(1:nfrac,i,j)).ge.0) THEN !if kbed=0 then sedimentation can happen even if Clivebed empty
 !				ELSEIF (cbotnewtot.ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.cbotnewtot.gt.1.e-12.and.
 !     &             (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed-1.e-12.or.kbed(i,j).eq.0)) THEN !if kbed=0 then sedimentation can happen even if Clivebed empty	 
@@ -921,7 +939,7 @@
 						DO k=kbed(i,j)+1,kmax 
 							cctot=cctot+MAX(ccfd(n,i,j,k),0.)
 						ENDDO						
-						IF (cctot<1e-12) THEN
+						IF (cctot<1e-12.or.morfac2.gt.1.0000001) THEN
 						 ccnew(n,i,j,kbed(i,j)+1)=ccnew(n,i,j,kbed(i,j)+1)+(morfac2-1.)/morfac2*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
 						 drdt(i,j,kbed(i,j)+1) = drdt(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 						 rnew(i,j,kbed(i,j)+1) = rnew(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density

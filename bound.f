@@ -307,22 +307,57 @@ c 	influence of waves on lateral boundaries:
          enddo
        endif
 
+	  if (botstress.eq.-2) then
+       do j=0,j1 ! boundaries in k-direction
+        do i=0,i1
+         Ubound(i,j,k1)   = -Ubound(i,j,kmax)
+         Vbound(i,j,k1)   = -Vbound(i,j,kmax)
+         !Wbound(i,j,kmax) = 0.
+         Wbound(i,j,k1)   = 0.
+         Ubound(i,j,0)    = -Ubound(i,j,1) 
+         Vbound(i,j,0)    = -Vbound(i,j,1)
+         Wbound(i,j,0)    = 0.
+         xx=Rp(i)*cos_u(j)-schuif_x
+	     yy=Rp(i)*sin_u(j)
+	Wbound(i,j,kmax)=(om_w+kx_w*U_TSHD*cos(phi)+ky_w*U_TSHD*sin(phi))*Hs/2.
+     &    *sin(kx_w*(xx-U_TSHD*cos(phi)*tt)+ky_w*(yy-U_TSHD*sin(phi)*tt)-om_w*tt)
+        enddo
+       enddo	
+	  elseif (botstress.eq.-1) then
        do j=0,j1 ! boundaries in k-direction
         do i=0,i1
          Ubound(i,j,k1)   = Ubound(i,j,kmax)
          Vbound(i,j,k1)   = Vbound(i,j,kmax)
-         Wbound(i,j,kmax) = 0.
+         !Wbound(i,j,kmax) = 0.
+         Wbound(i,j,k1) = 0.
+         Ubound(i,j,0)    = -Ubound(i,j,1) 
+         Vbound(i,j,0)    = -Vbound(i,j,1)
+         Wbound(i,j,0)    = 0.
+
+         xx=Rp(i)*cos_u(j)-schuif_x
+	     yy=Rp(i)*sin_u(j)
+	     Wbound(i,j,kmax)=(om_w+kx_w*U_TSHD*cos(phi)+ky_w*U_TSHD*sin(phi))*Hs/2.
+     &    *sin(kx_w*(xx-U_TSHD*cos(phi)*tt)+ky_w*(yy-U_TSHD*sin(phi)*tt)-om_w*tt)
+        enddo
+       enddo	   
+	  else
+       do j=0,j1 ! boundaries in k-direction
+        do i=0,i1
+         Ubound(i,j,k1)   = Ubound(i,j,kmax)
+         Vbound(i,j,k1)   = Vbound(i,j,kmax)
+         !Wbound(i,j,kmax) = 0.
          Wbound(i,j,k1)   = 0.
          Ubound(i,j,0)    = Ubound(i,j,1) 
          Vbound(i,j,0)    = Vbound(i,j,1)
          Wbound(i,j,0)    = 0.
 
          xx=Rp(i)*cos_u(j)-schuif_x
-	 yy=Rp(i)*sin_u(j)
+	     yy=Rp(i)*sin_u(j)
 	Wbound(i,j,kmax)=(om_w+kx_w*U_TSHD*cos(phi)+ky_w*U_TSHD*sin(phi))*Hs/2.
      &    *sin(kx_w*(xx-U_TSHD*cos(phi)*tt)+ky_w*(yy-U_TSHD*sin(phi)*tt)-om_w*tt)
         enddo
        enddo
+	  endif
 
       !! Set boundary conditions vertical jet in:
        	if (plumetseriesfile.eq.'') then
@@ -749,24 +784,58 @@ c 	influence of waves on lateral boundaries:
 	Vbound2=Vbound
 	Wbound2=Wbound
 	
-!	if (rank.eq.INT(px/2)) then ! px must be odd, middle piece contains jet in
-!	write(*,*),'rank (moet 1 zijn)',rank
+	  if (botstress.eq.-2) then
+       do j=0,j1 ! boundaries in k-direction
+        do i=0,i1
+         Ubound(i,j,k1)   = -Ubound(i,j,kmax)
+         Vbound(i,j,k1)   = -Vbound(i,j,kmax)
+         !Wbound(i,j,kmax) = 0.
+         Wbound(i,j,k1) = 0.
+         Ubound(i,j,0)    = -Ubound(i,j,1) 
+         Vbound(i,j,0)    = -Vbound(i,j,1)
+         Wbound(i,j,0)    = 0.
+
+         xx=Rp(i)*cos_u(j)-schuif_x
+	     yy=Rp(i)*sin_u(j)
+	     Wbound(i,j,kmax)=(om_w+kx_w*U_TSHD*cos(phi)+ky_w*U_TSHD*sin(phi))*Hs/2.
+     &    *sin(kx_w*(xx-U_TSHD*cos(phi)*tt)+ky_w*(yy-U_TSHD*sin(phi)*tt)-om_w*tt)
+        enddo
+       enddo	
+	  elseif (botstress.eq.-1) then
        do j=0,j1 ! boundaries in k-direction
         do i=0,i1
          Ubound(i,j,k1)   = Ubound(i,j,kmax)
          Vbound(i,j,k1)   = Vbound(i,j,kmax)
-         Wbound(i,j,kmax) = 0.
+         !Wbound(i,j,kmax) = 0.
+         Wbound(i,j,k1) = 0.
+         Ubound(i,j,0)    = -Ubound(i,j,1) 
+         Vbound(i,j,0)    = -Vbound(i,j,1)
+         Wbound(i,j,0)    = 0.
+
+         xx=Rp(i)*cos_u(j)-schuif_x
+	     yy=Rp(i)*sin_u(j)
+	     Wbound(i,j,kmax)=(om_w+kx_w*U_TSHD*cos(phi)+ky_w*U_TSHD*sin(phi))*Hs/2.
+     &    *sin(kx_w*(xx-U_TSHD*cos(phi)*tt)+ky_w*(yy-U_TSHD*sin(phi)*tt)-om_w*tt)
+        enddo
+       enddo	   
+	  else
+       do j=0,j1 ! boundaries in k-direction
+        do i=0,i1
+         Ubound(i,j,k1)   = Ubound(i,j,kmax)
+         Vbound(i,j,k1)   = Vbound(i,j,kmax)
+         !Wbound(i,j,kmax) = 0.
          Wbound(i,j,k1) = 0.
          Ubound(i,j,0)    = Ubound(i,j,1) 
          Vbound(i,j,0)    = Vbound(i,j,1)
          Wbound(i,j,0)    = 0.
 
          xx=Rp(i)*cos_u(j)-schuif_x
-	 yy=Rp(i)*sin_u(j)
-	Wbound(i,j,kmax)=(om_w+kx_w*U_TSHD*cos(phi)+ky_w*U_TSHD*sin(phi))*Hs/2.
+	     yy=Rp(i)*sin_u(j)
+	     Wbound(i,j,kmax)=(om_w+kx_w*U_TSHD*cos(phi)+ky_w*U_TSHD*sin(phi))*Hs/2.
      &    *sin(kx_w*(xx-U_TSHD*cos(phi)*tt)+ky_w*(yy-U_TSHD*sin(phi)*tt)-om_w*tt)
         enddo
        enddo
+	  endif
 
 !! there used to be bedplume loop here to assign bp()u,v,w directly, but now with determination of force in bedplume in bound_rhoU this is no longer needed
 	
@@ -1536,6 +1605,41 @@ c 	influence of waves on lateral boundaries:
 	endif
 
 
+
+	  if (botstress.eq.-2) then
+       do j=0,j1 ! boundaries in k-direction
+        do i=0,i1
+         Ubound(i,j,k1)   = -Ubound(i,j,kmax)
+         Vbound(i,j,k1)   = -Vbound(i,j,kmax)
+         !Wbound(i,j,kmax) = 0.
+         Wbound(i,j,k1)   = 0.
+         Ubound(i,j,0)    = -Ubound(i,j,1) 
+         Vbound(i,j,0)    = -Vbound(i,j,1)
+         Wbound(i,j,0)    = 0.
+         xx=Rp(i)*cos_u(j)-schuif_x
+	     yy=Rp(i)*sin_u(j)
+	     Wbound(i,j,kmax)=(om_w+kx_w*U_TSHD*cos(phi)+ky_w*U_TSHD*sin(phi))*Hs/2.
+     &    *sin(kx_w*(xx-U_TSHD*cos(phi)*tt)+ky_w*(yy-U_TSHD*sin(phi)*tt)-om_w*tt)
+        enddo
+       enddo	
+	  elseif (botstress.eq.-1) then
+       do j=0,j1 ! boundaries in k-direction
+        do i=0,i1
+         Ubound(i,j,k1)   = Ubound(i,j,kmax)
+         Vbound(i,j,k1)   = Vbound(i,j,kmax)
+         !Wbound(i,j,kmax) = 0.
+         Wbound(i,j,k1) = 0.
+         Ubound(i,j,0)    = -Ubound(i,j,1) 
+         Vbound(i,j,0)    = -Vbound(i,j,1)
+         Wbound(i,j,0)    = 0.
+
+         xx=Rp(i)*cos_u(j)-schuif_x
+	     yy=Rp(i)*sin_u(j)
+	     Wbound(i,j,kmax)=(om_w+kx_w*U_TSHD*cos(phi)+ky_w*U_TSHD*sin(phi))*Hs/2.
+     &    *sin(kx_w*(xx-U_TSHD*cos(phi)*tt)+ky_w*(yy-U_TSHD*sin(phi)*tt)-om_w*tt)
+        enddo
+       enddo
+	  else
        do j=0,j1 ! boundaries in k-direction
         do i=0,i1
          if (botstress.ge.1.and.(kjet.eq.0.or.LOA>0.)) then  !((botstress.eq.1.and.LOA>0.).or.(botstress.eq.1.and.periodicx.eq.1)) then ! with ship or periodic apply shear stress at seabed:
@@ -1570,20 +1674,20 @@ c 	influence of waves on lateral boundaries:
 	
          Ubound(i,j,k1)   = Ubound(i,j,kmax)
          Vbound(i,j,k1)   = Vbound(i,j,kmax)
-         Wbound(i,j,kmax) = 0.
+         !Wbound(i,j,kmax) = 0.
          Wbound(i,j,k1)   = 0.
          Ubound(i,j,0)    = Ubound(i,j,1) 
          Vbound(i,j,0)    = Vbound(i,j,1)
          Wbound(i,j,0)    = 0.
 
          xx=Rp(i)*cos_u(j)-schuif_x
-	 yy=Rp(i)*sin_u(j)
+	     yy=Rp(i)*sin_u(j)
 	! apply vertical boundary condition belonging to waves:
-	Wbound(i,j,kmax)=rho_b*(om_w+kx_w*U_TSHD*cos(phi)+ky_w*U_TSHD*sin(phi))*Hs/2.
+	     Wbound(i,j,kmax)=rho_b*(om_w+kx_w*U_TSHD*cos(phi)+ky_w*U_TSHD*sin(phi))*Hs/2.
      &    *sin(kx_w*(xx-U_TSHD*cos(phi)*tt)+ky_w*(yy-U_TSHD*sin(phi)*tt)-om_w*tt)
-
         enddo
        enddo
+	  endif
 
 !	DO n=1,nbedplume !make all forces zero before new forces are applied for bedplume
 !		IF (bp(n)%u.ne.-99999.and.bp(n)%velocity_force.ne.0.) THEN ! apply bedplume velocity boundary condition:
@@ -2119,8 +2223,8 @@ c*************************************************************
 	    if (bp(n2)%c(n)>0.) then
 		  Cbound(i,j,k)=bp(n2)%c(n)
 		else
-		  Cbound(i,j,k)=(Cbound(i,j,k)+bp(n2)%sedflux(n)*ddtt/bp(n2)%volncells/frac(n)%rho)
-     &  /(1.-MIN(0.,bp(n2)%Q*bp(n2)%changesedsuction)*ddtt/bp(n2)%volncells) !when Q negative, remove sediment from cell as well   IMPLICIT 
+		  Cbound(i,j,k)=(Cbound(i,j,k)+bp(n2)%sedflux(n)*ddtt*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/frac(n)%rho)
+     &  /(1.-MIN(0.,bp(n2)%Q*bp(n2)%changesedsuction*fc_global(i,j+jmax*rank,k))*ddtt/bp(n2)%volncells) !when Q negative, remove sediment from cell as well   IMPLICIT 
 	 ! IMPLICIT: c^n+1-c^n=-Qout_cel/Vol_cel*dt*c^n+1 --> c^n+1 = c^n/(1+Qout_cel/Vol_cel*dt)
 		endif
 		! rho is calculated in state called after fkdat
@@ -2751,36 +2855,32 @@ c*************************************************************
 		IF (bp(n2)%dt_history>0.AND.tt.ge.bp(n2)%t_bphis_output.AND.bp(n2)%t_bphis_output.le.te_output+1e-12
      &        .and.bp(n2)%istep_bphis_output.le.20000) THEN 
 		bp(n2)%istep_bphis_output=bp(n2)%istep_bphis_output+1
-		bp(n2)%t_bphis_output=bp(n2)%t_bphis_output+bp(n2)%dt_history
-		!write(*,*),rank,n2,bp(n2)%dt_history,tt,bp(n2)%t_bphis_output,te_output,bp(n2)%istep_bphis_output	 
+		bp(n2)%t_bphis_output=bp(n2)%t_bphis_output+bp(n2)%dt_history	 
 		  do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
-		   do tel=1,bp(n2)%tmax 
-			 i=bp(n2)%i(tel) 
-			 j=bp(n2)%j(tel) 			  
-!!		   do i=1,imax 
-!!			 do j=1,jmax        
-!!		  xx=Rp(i)*cos_u(j)-schuif_x 
-!!		  yy=Rp(i)*sin_u(j)          
-!!!		  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle: 
-!!			xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
-!!			yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
-!!			CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
-!!!		  ELSE 
-!!!			inout=0
-!!!		  ENDIF
-!!		  if (inout.eq.1) then
+		   do i=1,imax 
+			 do j=1,jmax        
+		  xx=Rp(i)*cos_u(j)-schuif_x 
+		  yy=Rp(i)*sin_u(j)          
+!		  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle: 
+			xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
+			yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
+			CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+!		  ELSE 
+!			inout=0
+!		  ENDIF
+		  if (inout.eq.1) then
 		     DO n=1,nfrac
 				Chisbp(n,n2,bp(n2)%istep_bphis_output)=Chisbp(n,n2,bp(n2)%istep_bphis_output)+
-     &				vol_V(i,j+rank*jmax)*cnew(n,i,j,k)*fc_global(i,j+jmax*px,k)				
+     &				vol_V(i,j+rank*jmax)*cnew(n,i,j,k)*fc_global(i,j+jmax*rank,k)		
 		     ENDDO
 				Uhisbp(n2,bp(n2)%istep_bphis_output)=Uhisbp(n2,bp(n2)%istep_bphis_output)+
-     &				vol_V(i,j+rank*jmax)*Unew(i,j,k)*fc_global(i,j+jmax*px,k)				 
+     &				vol_V(i,j+rank*jmax)*Unew(i,j,k)*fc_global(i,j+jmax*rank,k)				 
 				Vhisbp(n2,bp(n2)%istep_bphis_output)=Vhisbp(n2,bp(n2)%istep_bphis_output)+
-     &				vol_V(i,j+rank*jmax)*Vnew(i,j,k)*fc_global(i,j+jmax*px,k)				 
+     &				vol_V(i,j+rank*jmax)*Vnew(i,j,k)*fc_global(i,j+jmax*rank,k)				 
 				Whisbp(n2,bp(n2)%istep_bphis_output)=Whisbp(n2,bp(n2)%istep_bphis_output)+
-     &				vol_V(i,j+rank*jmax)*Wnew(i,j,k)*fc_global(i,j+jmax*px,k)				 	 
-!!		   endif
-!!		  enddo
+     &				vol_V(i,j+rank*jmax)*Wnew(i,j,k)*fc_global(i,j+jmax*rank,k)		
+		   endif
+		  enddo
 		 enddo
 		enddo
 		DO n=1,nfrac
@@ -2794,7 +2894,7 @@ c*************************************************************
 		  call mpi_allreduce(Whisbp(n2,bp(n2)%istep_bphis_output),globalsum,1,mpi_double_precision,mpi_sum,mpi_comm_world,ierr)
 		  Whisbp(n2,bp(n2)%istep_bphis_output)=globalsum/bp(n2)%volncells				  
 		thisbp(n2,bp(n2)%istep_bphis_output)=tt 
-		zhisbp(n2,bp(n2)%istep_bphis_output)=(MAX(1,CEILING(bp(n2)%zbottom/dz))+MIN(kmax,FLOOR(bp(n2)%height/dz)))/2.*dz+0.5*dz 		
+		zhisbp(n2,bp(n2)%istep_bphis_output)=(MAX(1,CEILING(bp(n2)%zbottom/dz))+MIN(kmax,FLOOR(bp(n2)%height/dz)))/2.*dz+0.5*dz 			
 		ENDIF ! bedplume loop
 
 	ENDDO

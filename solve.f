@@ -1012,7 +1012,7 @@ c********************************************************************
       enddo
 
       IF (CNdiffz.eq.1) THEN !CN semi implicit treatment diff-z:
-      call bound_rhoU(dUdt,dVdt,dWdt,dRdt,0,time_np,Ub1new,Vb1new,
+      call bound_rhoU(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,
      & Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
        do j=1,jmax
          do i=1,imax
@@ -1521,7 +1521,7 @@ c********************************************************************
 	if (nfrac>0) then
 	  call state(dcdt,drdt) ! determine drdt1 with pred1
 	endif
-      call bound_rhoU(dUdt,dVdt,dWdt,drdt,0,time_n+c2*dt,(1.-c2)*Ub1old+c2*Ub1new,(1.-c2)*Vb1old+c2*Vb1new,
+      call bound_rhoU(dUdt,dVdt,dWdt,drdt,MIN(0,slip_bot),time_n+c2*dt,(1.-c2)*Ub1old+c2*Ub1new,(1.-c2)*Vb1old+c2*Vb1new,
      & (1.-c2)*Wb1old+c2*Wb1new,(1.-c2)*Ub2old+c2*Ub2new,(1.-c2)*Vb2old+c2*Vb2new,(1.-c2)*Wb2old+c2*Wb2new,
      $ (1.-c2)*Ub3old+c2*Ub3new,(1.-c2)*Vb3old+c2*Vb3new,(1.-c2)*Wb3old+c2*Wb3new)
        do j=1,jmax
@@ -1654,7 +1654,7 @@ c********************************************************************
       enddo
 
 !      DO n=1,npresIBM+1	!default npresIBM=0, then only one pres-cor, with npresIBM>0 extra pres-cor for better impermeable IBM boundaries
-      call bound_rhoU(dUdt,dVdt,dWdt,drdt,0,time_n+c2*dt,(1.-c2)*Ub1old+c2*Ub1new,(1.-c2)*Vb1old+c2*Vb1new,
+      call bound_rhoU(dUdt,dVdt,dWdt,drdt,MIN(0,slip_bot),time_n+c2*dt,(1.-c2)*Ub1old+c2*Ub1new,(1.-c2)*Vb1old+c2*Vb1new,
      & (1.-c2)*Wb1old+c2*Wb1new,(1.-c2)*Ub2old+c2*Ub2new,(1.-c2)*Vb2old+c2*Vb2new,(1.-c2)*Wb2old+c2*Wb2new,
      & (1.-c2)*Ub3old+c2*Ub3new,(1.-c2)*Vb3old+c2*Vb3new,(1.-c2)*Wb3old+c2*Wb3new)
 
@@ -1732,7 +1732,7 @@ c********************************************************************
 !	  dUdt1=dudt
 !	  dVdt1=dvdt
 !	  dWdt1=dWdt
-      call bound_rhoU(dUdt,dVdt,dWdt,drdt,0,time_n+c2*dt,(1.-c2)*Ub1old+c2*Ub1new,(1.-c2)*Vb1old+c2*Vb1new,
+      call bound_rhoU(dUdt,dVdt,dWdt,drdt,MIN(0,slip_bot),time_n+c2*dt,(1.-c2)*Ub1old+c2*Ub1new,(1.-c2)*Vb1old+c2*Vb1new,
      & (1.-c2)*Wb1old+c2*Wb1new,(1.-c2)*Ub2old+c2*Ub2new,(1.-c2)*Vb2old+c2*Vb2new,(1.-c2)*Wb2old+c2*Wb2new,
      & (1.-c2)*Ub3old+c2*Ub3new,(1.-c2)*Vb3old+c2*Vb3new,(1.-c2)*Wb3old+c2*Wb3new)
 
@@ -1998,7 +1998,7 @@ c********************************************************************
 	if (nfrac>0) then
 	  call state(dcdt,drdt) ! determine drdt1 with pred1
 	endif
-      call bound_rhoU(dUdt,dVdt,dWdt,dRdt,0,time_n+c3*dt,(1.-c3)*Ub1old+c3*Ub1new,(1.-c3)*Vb1old+c3*Vb1new,
+      call bound_rhoU(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),time_n+c3*dt,(1.-c3)*Ub1old+c3*Ub1new,(1.-c3)*Vb1old+c3*Vb1new,
      & (1.-c3)*Wb1old+c3*Wb1new,(1.-c3)*Ub2old+c3*Ub2new,(1.-c3)*Vb2old+c3*Vb2new,(1.-c3)*Wb2old+c3*Wb2new,
      & (1.-c3)*Ub3old+c3*Ub3new,(1.-c3)*Vb3old+c3*Vb3new,(1.-c3)*Wb3old+c2*Wb3new)
        do j=1,jmax
@@ -2129,7 +2129,7 @@ c********************************************************************
       enddo  
 
 !      DO n=1,npresIBM+1	!default npresIBM=0, then only one pres-cor, with npresIBM>0 extra pres-cor for better impermeable IBM boundaries
-      call bound_rhoU(dUdt,dVdt,dWdt,dRdt,0,time_n+c3*dt,(1.-c3)*Ub1old+c3*Ub1new,(1.-c3)*Vb1old+c3*Vb1new,
+      call bound_rhoU(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),time_n+c3*dt,(1.-c3)*Ub1old+c3*Ub1new,(1.-c3)*Vb1old+c3*Vb1new,
      & (1.-c3)*Wb1old+c3*Wb1new,(1.-c3)*Ub2old+c3*Ub2new,(1.-c3)*Vb2old+c3*Vb2new,(1.-c3)*Wb2old+c3*Wb2new,
      & (1.-c3)*Ub3old+c3*Ub3new,(1.-c3)*Vb3old+c3*Vb3new,(1.-c3)*Wb3old+c2*Wb3new) 
 !      call bound_rhoU(dUdt2,dVdt2,dWdt2,dRdt2,slip_bot,time_n+c3*dt,(1.-c3)*Ub1old+c3*Ub1new,(1.-c3)*Vb1old+c3*Vb1new,
@@ -2203,7 +2203,7 @@ c********************************************************************
 !		dUdt1=dudt
 !		dVdt1=dvdt
 !		dWdt1=dwdt
-      call bound_rhoU(dUdt,dVdt,dWdt,drdt,0,time_n+c3*dt,(1.-c3)*Ub1old+c3*Ub1new,(1.-c3)*Vb1old+c3*Vb1new,
+      call bound_rhoU(dUdt,dVdt,dWdt,drdt,MIN(0,slip_bot),time_n+c3*dt,(1.-c3)*Ub1old+c3*Ub1new,(1.-c3)*Vb1old+c3*Vb1new,
      & (1.-c3)*Wb1old+c3*Wb1new,(1.-c3)*Ub2old+c3*Ub2new,(1.-c3)*Vb2old+c3*Vb2new,(1.-c3)*Wb2old+c3*Wb2new,
      & (1.-c3)*Ub3old+c3*Ub3new,(1.-c3)*Vb3old+c3*Vb3new,(1.-c3)*Wb3old+c2*Wb3new)
 
@@ -2474,7 +2474,7 @@ c********************************************************************
 	if (nfrac>0) then
 	  call state(dcdt,drdt) ! determine drdt1 with pred1
 	endif
-      call bound_rhoU(dUdt,dVdt,dWdt,dRdt,0,time_np,Ub1new,Vb1new,
+      call bound_rhoU(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,
      & Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
        do j=1,jmax
          do i=1,imax
@@ -2923,7 +2923,7 @@ c********************************************************************
       enddo
 
       IF (CNdiffz.eq.1) THEN !CN semi implicit treatment diff-z:
-      call bound_rhoU(dUdt,dVdt,dWdt,dRdt,0,time_np,Ub1new,Vb1new,
+      call bound_rhoU(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,
      & Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
        do j=1,jmax
          do i=1,imax
@@ -3143,7 +3143,7 @@ c
         enddo
       enddo 
 	 endif
-	  call bound(dUdt,dVdt,dWdt,drdt,0,time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
+	  call bound(dUdt,dVdt,dWdt,drdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
       do  k=1,kmax
         do j=1,jmax
           do i=1,imax
@@ -3359,9 +3359,9 @@ c
 !			!when Q negative, remove sediment from cell as well   IMPLICIT 		  
 !		enddo	
 		  if (continuity_solver.eq.33.or.continuity_solver.eq.34) THEN
-			p(i,j,k)=p(i,j,k)-bp(n2)%Q/bp(n2)%volncells/dt  				  			! div(u)=0 --> total volume flux in 
+			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/dt  				  			! div(u)=0 --> total volume flux in 
 		  else
-			p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q/bp(n2)%volncells/dt  				! div(u)=0 --> total volume flux in 
+			p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/dt  				! div(u)=0 --> total volume flux in 
 		  endif
 !!			p(i,j,k)=p(i,j,k)-(s_in+(1.-MIN(cin,1.))*drdt(i,j,k)*bp(n2)%Q)/bp(n2)%volncells/dt  ! total mass flux in 
 !			p(i,j,k)=p(i,j,k)-((1.-MIN(cin,1.))*drdt(i,j,k)*bp(n2)%Q)/bp(n2)%volncells/dt  ! total mass flux in 

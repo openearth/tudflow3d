@@ -220,7 +220,7 @@
 	TYPE(frac_init), DIMENSION(30) :: fract
 
 	ALLOCATE(bedplume(40)) !temporary array to read namelist with unknown size
-	ALLOCATE(obst(10000)) !temporary array to read namelist with unknown size
+	ALLOCATE(obst(100000)) !temporary array to read namelist with unknown size
 ! 	TYPE(gridtype), DIMENSION(1) :: grid
 
 	NAMELIST /simulation/px,imax,jmax,kmax,imax_grid,dr_grid,Rmin,schuif_x,dy,depth,hisfile,restart_dir
@@ -607,7 +607,7 @@
 	IF (nmax3<0) CALL writeerror(620)
 	IF (lm_min<0.) CALL writeerror(47)
 	IF (lm_min3<0) CALL writeerror(621)
-	IF (slip_bot<0) CALL writeerror(48)
+	IF (slip_bot<-2) CALL writeerror(48)
 	IF (kn<0.) CALL writeerror(49)
 	IF (interaction_bed<0) CALL writeerror(50)
 	IF (periodicx.ne.0.and.periodicx.ne.1.and.periodicx.ne.2) CALL writeerror(52)
@@ -1263,8 +1263,8 @@
 	IF (gy<-800.) CALL writeerror(92)
 	IF (gz<-80000000.) CALL writeerror(93)
 	IF (ekm_mol<0.) CALL writeerror(94)
-	IF (pickup_formula.ne.'vanrijn1984'.and.pickup_formula.ne.'nielsen1992'.and.pickup_formula.ne.'okayasu2010') 
-     &    CALL writeerror(95)
+	IF (pickup_formula.ne.'vanrijn1984'.and.pickup_formula.ne.'nielsen1992'.and.pickup_formula.ne.'okayasu2010'
+     & .and.pickup_formula.ne.'vanrijn2019'.and.pickup_formula.ne.'VR2019_Cbed')   CALL writeerror(95)
 	IF (kn_d50_multiplier<0.) CALL writeerror(96)
 	IF (MINVAL(avalanche_slope)<0.and.MINVAL(avalanche_slope).ne.-99.) CALL writeerror(97)
 	IF (calibfac_sand_pickup<0.) CALL writeerror(98)
@@ -1516,7 +1516,7 @@
 	ALLOCATE(cU(nfrac,0:i1,0:j1,0:k1))
 	ALLOCATE(cV(nfrac,0:i1,0:j1,0:k1))
 	ALLOCATE(cW(nfrac,0:i1,0:j1,0:k1))
-	ALLOCATE(fc_global(1:imax,1:jmax*px,1:kmax))
+	ALLOCATE(fc_global(0:i1,0:jmax*px+1,1:kmax))
 	
 	if (transporteq_fracs.eq.'massfrac') then
 		ALLOCATE(rhoU(0:i1,0:j1,0:k1))  

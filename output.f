@@ -39,7 +39,7 @@
 	character*3 varname
 	character*200 tline
 	logical(4) res
-	real*8 fc_local(1:imax,1:jmax,1:kmax),fc_local_vec(imax*jmax*kmax),fc_global_vec(imax*jmax*px*kmax)
+	!real*8 fc_local(1:imax,1:jmax,1:kmax),fc_local_vec(imax*jmax*kmax),fc_global_vec(imax*jmax*px*kmax)
 !	integer(4) ps
 
        ! We are writing 3D data, a nx x ny x nz grid.
@@ -98,41 +98,6 @@
 				enddo
 			enddo
 		enddo	
-
-		fc_local=1.-obstacle
-		do i=1,imax
-			do j=1,jmax
-				do k=1,kmax		
-					tel=k+(j-1)*kmax+(i-1)*kmax*jmax
-					fc_local_vec(tel)=fc_local(i,j,k)
-				enddo 
-			enddo
-		enddo
-					
-		call MPI_Allgather(fc_local_vec,imax*jmax*kmax,MPI_REAL8,fc_global_vec,imax*jmax*kmax,MPI_REAL8,MPI_COMM_WORLD,status,ierr)
-		do r=1,px
-			do i=1,imax
-				do j=1,jmax
-					do k=1,kmax	
-						tel=k+(j-1)*kmax+(i-1)*kmax*jmax+(r-1)*(imax*jmax*kmax) 
-						j2=j+(r-1)*jmax
-						fc_global(i,j2,k)=fc_global_vec(tel)
-					enddo 
-				enddo
-			enddo	
-		enddo
-!		if (rank.eq.2) then
-!		write(*,*),'rank,fc_local(:,1,1)',rank,fc_local(:,1,1) 
-!		write(*,*),'rank,fc_local(1,:,1)',rank,fc_local(1,:,1) 
-!		write(*,*),'rank,fc_local(1,1,:)',rank,fc_local(1,1,:) 
-!		write(*,*),'rank,fc_global(:,1,1)',rank,fc_global(:,1,1) 
-!		write(*,*),'rank,fc_global(1,:,1)',rank,fc_global(1,:,1) 
-!		write(*,*),'rank,fc_global(1,1,:)',rank,fc_global(1,1,:) 
-!		write(*,*),'rank,fc_global(:,jmax*px,kmax)',rank,fc_global(:,jmax*px,kmax) 
-!		write(*,*),'rank,fc_global(imax,:,kmax)',rank,fc_global(imax,:,kmax) 
-!		write(*,*),'rank,fc_global(imax,jmax*px,:)',rank,fc_global(imax,jmax*px,:) 		
-!		
-!		endif
 	
 	WRITE(strng,'(a,a)')'mkdir ',TRIM(inpfile)
 
@@ -400,7 +365,7 @@
      
        ! When we create netCDF files, variables and dimensions, we get back
        ! an ID for each one.
-       integer :: ncid, varid1,varid2,varid3, varid4, varid5, varid6, varid7, varid8, varid9, varid10
+       integer :: ncid, varid1,varid2,varid3, varid4, varid5, varid6, varid7, varid8, varid9, varid10,varid11
 	   integer :: dimids(NDIMS), dimids2(NDIMS2),dimids3(NDIMS3),dimids5(NDIMS5)
        integer :: x_dimid, y_dimid, z_dimid, nfrac_dimid, par_dimid
 	integer :: dimids4(NDIMS),varid20,varid21,varid22
@@ -420,10 +385,10 @@
 	   do j=1,jmax
 	     	do n=1,nfrac
 			mass_bed(n,i,j) = Cnewbot(n,i,j)*dz*frac(n)%rho ! Cnewbot(n,i,j)*dz*dr(i)*Rp(i)*dphi*frac(n)%rho
+			enddo		
 			IF (interaction_bed.ge.4) THEN
 			  zzbed(i,j) = REAL(MAX(kbed(i,j)-1,0))*dz+ SUM(Clivebed(1:nfrac,i,j,kbed(i,j)))/cfixedbed*dz 
-			ENDIF
-		enddo		
+			ENDIF			
 	   enddo
 	enddo
 
@@ -484,7 +449,10 @@
 			call check( nf90_put_att(ncid, varid21, 'long_name', 'Bed level height of dynamic morphological bed') )
 		   call check( nf90_def_var(ncid, "Cbed", NF90_REAL, dimids2, varid22) )
 		   call check( nf90_put_att(ncid, varid22, 'units', '-') )
-		   call check( nf90_put_att(ncid, varid22, 'long_name', 'Volume concentration for each fraction inside bed') )			
+		   call check( nf90_put_att(ncid, varid22, 'long_name', 'Volume concentration for each fraction inside bed') )		
+       call check( nf90_def_var(ncid, "kbed", NF90_SHORT, dimids5, varid11) )
+       call check( nf90_put_att(ncid, varid11, 'units', '-') )
+       call check( nf90_put_att(ncid, varid11, 'long_name', '2D index of highest bed cell') )		   
 		endif
 	endif
        call check( nf90_def_var(ncid, "rho", NF90_REAL, dimids, varid5) )
@@ -538,6 +506,7 @@
 		if (interaction_bed.ge.4) then
 		  call check( nf90_put_var(ncid, varid21, zzbed(1:imax,1:jmax) ))
 		  call check( nf90_put_var(ncid, varid22, Clivebed(1:nfrac,1:imax,1:jmax,1:kmax)) )
+		  call check( nf90_put_var(ncid, varid11, kbed(1:imax,1:jmax) ))
 		endif
 		  
 	endif
