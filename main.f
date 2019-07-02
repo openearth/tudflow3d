@@ -67,7 +67,7 @@
       call init_transpose	
       call mkgrid
       call determine_indices_jet_in
-      !call fkdat
+      !call fkdat 
       call init_sediment
       call init_propeller
       call determine_indices_ship_in

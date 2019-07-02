@@ -150,7 +150,7 @@
 
 	csed2=cW !csed
 	rr2=rhW  !rr
-	if (nobst>0.or.bedlevelfile.ne.''.or.interaction_bed.eq.4.or.interaction_bed.eq.6) then ! default C(k=0)=C(k=1); therefore only for cases when bed is not necessarily at k=0 this fix is needed:
+	if (nobst>0.or.bedlevelfile.ne.''.or.interaction_bed.ge.4) then ! default C(k=0)=C(k=1); therefore only for cases when bed is not necessarily at k=0 this fix is needed:
 	 DO i=0,i1
 	  DO j=0,j1
 		kplus = MIN(kbed(i,j)+1,k1)
@@ -299,7 +299,7 @@
 
 	csed2=cW !csed
 	rr2=rhW  !rr 
-	if (nobst>0.or.bedlevelfile.ne.''.or.interaction_bed.eq.4.or.interaction_bed.eq.6) then ! default C(k=0)=C(k=1); therefore only for cases when bed is not necessarily at k=0 this fix is needed:
+	if (nobst>0.or.bedlevelfile.ne.''.or.interaction_bed.ge.4) then ! default C(k=0)=C(k=1); therefore only for cases when bed is not necessarily at k=0 this fix is needed:
 	 DO i=0,i1
 	  DO j=0,j1
 		kplus = MIN(kbed(i,j)+1,k1)
@@ -1280,12 +1280,13 @@
 			ENDDO
 		  ENDIF  ! end have_avalanched 
 		 ENDDO !# avalanche steps
+		 !write(*,*),'rank,have_avalanched:',rank,have_avalanched_tmp
+		 IF (rank.eq.0.and.MOD(istep,10).eq.0) THEN
+			write(*,*),'istep,avalanche steps:',istep,nav
+		 ENDIF		 
 		ENDIF
 	ENDIF
-	!write(*,*),'rank,have_avalanched:',rank,have_avalanched_tmp
-	IF (rank.eq.0.and.MOD(istep,10).eq.0) THEN
-		write(*,*),'istep,avalanche steps:',istep,nav
-	ENDIF
+
 	
       END SUBROUTINE erosion_deposition
 

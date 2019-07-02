@@ -37,7 +37,8 @@ c******************************************************************
 	ELSE ! flat plate:
 	      dz   = depth     / (kmax-kjet)
 	ENDIF
-        kbed_bc=FLOOR(bc_obst_h/dz)
+        kbed_bc=0 ! !FLOOR(bc_obst_h/dz) ! kbed_bc no longer needed now kbed(i,j) is used
+		
 	ksurf_bc=kmax-FLOOR(surf_layer/dz) ! if surf_layer is zero than ksurf_bc=kmax	
 
 	maxh_obst=0.
@@ -324,7 +325,7 @@ c******************************************************************
 	  
 	  include 'mpif.h'
 
-	integer n,n2,ii,inout
+	integer n,n2,ii,inout,load_var,load_var2
 	real ampli,phi,uu,vv,xTSHD(4),yTSHD(4),z,xx,yy
 	real U2,V2,z0_U,ust_U_b,z0_V,ust_V_b,interpseries
 	  	integer :: ncid, rhVarId, status2, ndims, xtype,natts,status
@@ -669,8 +670,7 @@ c******************************************************************
 			endif
 			call check( nf90_close(ncid) )
 		ENDIF
-		
-		
+		load_var=0
 		DO n2=1,nfound
 			status2 = nf90_open(restart_file(n2), nf90_NoWrite, ncid) 
 			IF (status2/= nf90_noerr) THEN
@@ -687,12 +687,15 @@ c******************************************************************
 				IF(size1.ne.imax.or.size2*nfound.ne.jmax*px.or.size3.ne.kmax) CALL writeerror(702)
 				call check( nf90_get_var(ncid,rhVarid,dummy_var(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1:kmax),
      &                       start=(/1,1,1/),count=(/imax,jpx,kmax/)) )
+				load_var=1
 			else
 				write(*,*),'initconditionsfile =',restart_file(n2),' variable "U" not found and not used as initial condition'
-				dummy_var(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1:kmax)=0.
+				load_var=0
+				!dummy_var(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1:kmax)=0.
 			endif
 			call check( nf90_close(ncid) )
 		ENDDO
+		load_var2=0
 		DO n2=1,nfound
 			status2 = nf90_open(restart_file(n2), nf90_NoWrite, ncid) 
 			IF (status2/= nf90_noerr) THEN
@@ -708,20 +711,25 @@ c******************************************************************
 				IF(size1.ne.imax.or.size2*nfound.ne.jmax*px.or.size3.ne.kmax) CALL writeerror(702)
 				call check( nf90_get_var(ncid,rhVarid,dummy_var2(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1:kmax),
      &                       start=(/1,1,1/),count=(/imax,jpx,kmax/)) )
+				load_var2=1
 			else
 				write(*,*),'initconditionsfile =',restart_file(n2),' variable "V" not found and not used as initial condition'
-				dummy_var2(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1:kmax)=0.
+				load_var2=0
+				!dummy_var2(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1:kmax)=0.
 			endif
 			call check( nf90_close(ncid) )
 		ENDDO
-		do i=1,imax
+		IF (load_var.eq.1.and.load_var2.eq.1) THEN
+		 do i=1,imax
 		  do j=1,jmax
 		    do k=1,kmax 
 			  Unew(i,j,k)=dummy_var(i,j+rank*jmax,k)*cos_u(j)+dummy_var2(i,j+rank*jmax,k)*sin_u(j)
 			  Vnew(i,j,k)=dummy_var2(i,j+rank*jmax,k)*cos_v(j)-dummy_var(i,j+rank*jmax,k)*sin_v(j)
 			enddo 
 		  enddo
-		enddo
+		 enddo
+		ENDIF
+		load_var=0
 		DO n2=1,nfound
 			status2 = nf90_open(restart_file(n2), nf90_NoWrite, ncid) 
 			IF (status2/= nf90_noerr) THEN
@@ -737,19 +745,24 @@ c******************************************************************
 				IF(size1.ne.imax.or.size2*nfound.ne.jmax*px.or.size3.ne.kmax) CALL writeerror(702)
 				call check( nf90_get_var(ncid,rhVarid,dummy_var(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1:kmax),
      &                       start=(/1,1,1/),count=(/imax,jpx,kmax/)) )
+				load_var=1
 			else
 				write(*,*),'initconditionsfile =',restart_file(n2),' variable "W" not found and not used as initial condition'
-				dummy_var(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1:kmax)=0.
+				load_var=0
+				!dummy_var(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1:kmax)=0.
 			endif
 			call check( nf90_close(ncid) )
 		ENDDO
-		do i=1,imax
+		IF (load_var.eq.1) THEN
+		 do i=1,imax
 		  do j=1,jmax
 		    do k=1,kmax 
 			  Wnew(i,j,k)=dummy_var(i,j+rank*jmax,k)
 			enddo 
 		  enddo
-		enddo
+		 enddo
+		ENDIF
+		load_var=0
 		DO n=1,nfrac
 			DO n2=1,nfound
 				status2 = nf90_open(restart_file(n2), nf90_NoWrite, ncid) 
@@ -767,21 +780,26 @@ c******************************************************************
 					IF(size1.ne.nfrac.or.size2.ne.imax.or.size3*nfound.ne.jmax*px.or.size4.ne.kmax) CALL writeerror(702)
 					call check( nf90_get_var(ncid,rhVarid,dummy_var(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1:kmax),
      &                       start=(/n,1,1,1/),count=(/1,imax,jpx,kmax/)) )
+					load_var=1
 				else
 					write(*,*),'initconditionsfile =',restart_file(n2),' variable "C" not found and not used as initial condition'
-					dummy_var(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1:kmax)=0.
+					load_var=0
+					!dummy_var(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1:kmax)=0.
 				endif
 				call check( nf90_close(ncid) )
 			ENDDO
-			do i=1,imax
+			IF (load_var.eq.1) THEN
+			 do i=1,imax
 			  do j=1,jmax
 				do k=1,kmax 
 				  Cnew(n,i,j,k)=dummy_var(i,j+rank*jmax,k)
 				enddo 
 			  enddo
-			enddo
+			 enddo
+			ENDIF
 		ENDDO
 		load_Cbed=0
+		load_var=0
 		IF (interaction_bed.ge.4) THEN
 		 DO n=1,nfrac
 			DO n2=1,nfound
@@ -801,21 +819,26 @@ c******************************************************************
 					IF(size1.ne.nfrac.or.size2.ne.imax.or.size3*nfound.ne.jmax*px.or.size4.ne.kmax) CALL writeerror(702)
 					call check( nf90_get_var(ncid,rhVarid,dummy_var(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1:kmax),
      &                       start=(/n,1,1,1/),count=(/1,imax,jpx,kmax/)) )
+					load_var=1
 				else
 					write(*,*),'initconditionsfile =',restart_file(n2),' variable "Cbed" not found and not used as initial condition'
-					dummy_var(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1:kmax)=0.
+					load_var=0
+					!dummy_var(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1:kmax)=0.
 				endif
 				call check( nf90_close(ncid) )
 			ENDDO
-			do i=1,imax
+			IF (load_var.eq.1) THEN
+			 do i=1,imax
 			  do j=1,jmax
 				do k=1,kmax 
 				  Clivebed(n,i,j,k)=dummy_var(i,j+rank*jmax,k)
 				enddo 
 			  enddo
-			enddo
+			 enddo
+			ENDIF
 		 ENDDO
 		ENDIF
+		load_var=0
 		DO n=1,nfrac
 			DO n2=1,nfound
 				status2 = nf90_open(restart_file(n2), nf90_NoWrite, ncid) 
@@ -832,17 +855,21 @@ c******************************************************************
 					IF(size1.ne.nfrac.or.size2.ne.imax.or.size3*nfound.ne.jmax*px) CALL writeerror(702)
 					call check( nf90_get_var(ncid,rhVarid,dummy_var(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1),
      &                       start=(/n,1,1/),count=(/1,imax,jpx/)) )
+					load_var=1
 				else
 					write(*,*),'initconditionsfile =',restart_file(n2),' variable "mass_bed" not found and not used as initial condition'
-					dummy_var(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1)=0.
+					load_var=0
+					!dummy_var(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1)=0.
 				endif
 				call check( nf90_close(ncid) )
 			ENDDO
-			do i=1,imax
+			IF (load_var.eq.1) THEN
+			 do i=1,imax
 			  do j=1,jmax
 				  Cnewbot(n,i,j)=dummy_var(i,j+rank*jmax,1)/dz/frac(n)%rho 
 			  enddo
-			enddo
+			 enddo
+			ENDIF
 		ENDDO		
 		
 		Uold=Unew

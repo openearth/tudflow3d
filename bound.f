@@ -1171,7 +1171,7 @@ c	x,y,z coordinate system, not in r,theta,z like this code
 		call state_edges(cU,rhU)
 		call state_edges(cV,rhV)
 		call state_edges(cW,rhW)
-		if (nobst>0.or.bedlevelfile.ne.''.or.interaction_bed.eq.4.or.interaction_bed.eq.6) then ! default C(k=0)=C(k=1); therefore only for cases when bed is not necessarily at k=0 this fix is needed:
+		if (nobst>0.or.bedlevelfile.ne.''.or.interaction_bed.ge.4) then ! default C(k=0)=C(k=1); therefore only for cases when bed is not necessarily at k=0 this fix is needed:
 		 DO i=0,i1
 		  DO j=0,j1
 			kplus = MIN(kbed(i,j)+1,k1)
@@ -1193,7 +1193,7 @@ c	x,y,z coordinate system, not in r,theta,z like this code
 		rhV(0:i1,0:jmax,0:k1)=0.5*(rho(0:i1,0:jmax,0:k1)+rho(0:i1,1:jmax+1,0:k1))
 		rhW(0:i1,0:j1,0:kmax)=0.5*(rho(0:i1,0:j1,0:kmax)+rho(0:i1,0:j1,1:kmax+1))
       
-		if (nobst>0.or.bedlevelfile.ne.''.or.interaction_bed.eq.4.or.interaction_bed.eq.6) then ! default C(k=0)=C(k=1); therefore only for cases when bed is not necessarily at k=0 this fix is needed:
+		if (nobst>0.or.bedlevelfile.ne.''.or.interaction_bed.ge.4) then ! default C(k=0)=C(k=1); therefore only for cases when bed is not necessarily at k=0 this fix is needed:
 		 DO i=0,i1
 		  DO j=0,j1
 			kplus = MIN(kbed(i,j)+1,k1)

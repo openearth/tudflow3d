@@ -3079,6 +3079,7 @@ c*************************************************************
       real boxside_x
 	  real jetcorr,rrmin,rrmax,ttmin,ttmax,x,dxx,dyy,lmrSEM3old(1:nmax3),xSEM3old(1:nmax3),ySEM3old(1:nmax3),rr
 	  integer imaxSEM3,iminSEM3
+	  integer llmax2_dummy(0:j1,1:kmax),llmax1_dummy(0:i1,1:kmax),llmax3_dummy(0:i1,0:j1)
       
 
       CALL SYSTEM_CLOCK(COUNT=clock)
@@ -3114,13 +3115,14 @@ c*************************************************************
       if (rank.eq.0) then
    !! 	grens op j=0
       j=0
+	  llmax1_dummy=llmax1
  	do i=1,nmax1
  	  xSEM1(i)=xSEM1(i)+uSEM1(i)*dt
 	  xxmax=-ySEM1(i)/tan(phi2)-schuif_x+boxside_x ! xxmax is positive
  	  if (xSEM1(i)>xxmax)  then  ! put on start line inflow Vbox:
 		!! first remove from linked list:
 		  kminSEM=INT(FLOOR((zSEM1(i)-lmzSEM1(i))/dz))+kbed_bc
-		  kmaxSEM=INT(CEILING((zSEM1(i)+lmzSEM1(i))/dz))+kbed_bc
+		  kmaxSEM=INT(CEILING((zSEM1(i)+lmzSEM1(i))/dz))+kbed_bc+MAXVAL(kbed) !add maximum kbed of this processor is sufficient; only interactions for grid-cells on this specific processor are needed
 		  kminSEM=MAX(kminSEM,1)
 		  kminSEM=MIN(kminSEM,kmax)
 		  kmaxSEM=MAX(kmaxSEM,1)
@@ -3130,7 +3132,7 @@ c*************************************************************
 			  z=(k-kbed_bc-kbed(ii,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
 		      y=Rp(ii)*sin_v(0)	
 		      if(ABS(y-ySEM1(i))/lmySEM1(i).lt.1..and.ABS(z-zSEM1(i))/lmzSEM1(i).lt.1.) then
-			do tel=1,llmax1(ii,k)
+			do tel=1,llmax1_dummy(ii,k)
 			  if(llist1(ii,k,tel).eq.i) then
 			    llist1(ii,k,tel)=llist1(ii,k,llmax1(ii,k))
 			    llmax1(ii,k)=llmax1(ii,k)-1
@@ -3147,8 +3149,8 @@ c*************************************************************
 	 	  xSEM1(i)=-ySEM1(i)/tan(phi2)-schuif_x-boxside_x
 	 	  call random_number(eps)
 	 	  eps=anint(eps)
-	 	  do j=1,3
-	 	    epsSEM1(i,j)=eps(j)*2.-1. ! +1 or -1	
+	 	  do ii=1,3
+	 	    epsSEM1(ii,i)=eps(ii)*2.-1. ! +1 or -1	
 	 	  enddo
 !	      	  uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)  !correct sign with and without TSHD
 	      	  uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD  !correct sign with and without TSHD
@@ -3159,7 +3161,7 @@ c*************************************************************
 		  lmzSEM1(i)=max(lm_min,lmzSEM1(i))
 		!! make linked list for new SEM point:
 		  kminSEM=INT(FLOOR((zSEM1(i)-lmzSEM1(i))/dz))+kbed_bc
-		  kmaxSEM=INT(CEILING((zSEM1(i)+lmzSEM1(i))/dz))+kbed_bc
+		  kmaxSEM=INT(CEILING((zSEM1(i)+lmzSEM1(i))/dz))+kbed_bc+MAXVAL(kbed) !add maximum kbed of this processor is sufficient; only interactions for grid-cells on this specific processor are needed
 		  kminSEM=MAX(kminSEM,1)
 		  kminSEM=MIN(kminSEM,kmax)
 		  kmaxSEM=MAX(kmaxSEM,1)
@@ -3180,13 +3182,14 @@ c*************************************************************
        if (rank.eq.px-1) then
  !! 	grens op j=jmax
 		j=jmax
+		llmax1_dummy=llmax1
  	do i=1,nmax1
  	  xSEM1(i)=xSEM1(i)+uSEM1(i)*dt
 	  xxmax=ySEM1(i)/tan(phi2)-schuif_x+boxside_x ! xxmax is positive
  	  if (xSEM1(i)>xxmax)  then  ! put on start line inflow Vbox:
 		!! first remove from linked list:
 		  kminSEM=INT(FLOOR((zSEM1(i)-lmzSEM1(i))/dz))+kbed_bc
-		  kmaxSEM=INT(CEILING((zSEM1(i)+lmzSEM1(i))/dz))+kbed_bc
+		  kmaxSEM=INT(CEILING((zSEM1(i)+lmzSEM1(i))/dz))+kbed_bc+MAXVAL(kbed) !add maximum kbed of this processor is sufficient; only interactions for grid-cells on this specific processor are needed
 		  kminSEM=MAX(kminSEM,1)
 		  kminSEM=MIN(kminSEM,kmax)
 		  kmaxSEM=MAX(kmaxSEM,1)
@@ -3196,7 +3199,7 @@ c*************************************************************
 			  z=(k-kbed_bc-kbed(ii,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
 		      y=Rp(ii)*sin_v(jmax)	
 		      if(ABS(y-ySEM1(i))/lmySEM1(i).lt.1..and.ABS(z-zSEM1(i))/lmzSEM1(i).lt.1.) then
-			do tel=1,llmax1(ii,k)
+			do tel=1,llmax1_dummy(ii,k)
 			  if(llist1(ii,k,tel).eq.i) then
 			    llist1(ii,k,tel)=llist1(ii,k,llmax1(ii,k))
 			    llmax1(ii,k)=llmax1(ii,k)-1
@@ -3212,8 +3215,8 @@ c*************************************************************
 	 	  xSEM1(i)=ySEM1(i)/tan(phi2)-schuif_x-boxside_x
 	 	  call random_number(eps)
 	 	  eps=anint(eps)
-	 	  do j=1,3
-	 	    epsSEM1(i,j)=eps(j)*2.-1. ! +1 or -1	
+	 	  do ii=1,3
+	 	    epsSEM1(ii,i)=eps(ii)*2.-1. ! +1 or -1	
 	 	  enddo
 !	      	  uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)  !correct sign with and without TSHD
 	      	  uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD  !correct sign with and without TSHD
@@ -3224,7 +3227,7 @@ c*************************************************************
 		  lmzSEM1(i)=max(lm_min,lmzSEM1(i))
 		!! make linked list for new SEM point:
 		  kminSEM=INT(FLOOR((zSEM1(i)-lmzSEM1(i))/dz))+kbed_bc
-		  kmaxSEM=INT(CEILING((zSEM1(i)+lmzSEM1(i))/dz))+kbed_bc
+		  kmaxSEM=INT(CEILING((zSEM1(i)+lmzSEM1(i))/dz))+kbed_bc+MAXVAL(kbed) !add maximum kbed of this processor is sufficient; only interactions for grid-cells on this specific processor are needed
 		  kminSEM=MAX(kminSEM,1)
 		  kminSEM=MIN(kminSEM,kmax)
 		  kmaxSEM=MAX(kmaxSEM,1)
@@ -3275,7 +3278,7 @@ c*************************************************************
 	    call random_number(eps)
 	    eps=anint(eps)
 	    do j=1,3
-	      epsSEM2(i,j)=eps(j)*2.-1. ! +1 or -1	
+	      epsSEM2(j,i)=eps(j)*2.-1. ! +1 or -1	
 	    enddo	
 !	      uSEM2(i)=ust/kappa*log(zSEM2(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)  !correct sign with and without TSHD)
 	      uSEM2(i)=ust/kappa*log(zSEM2(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD !correct sign with and without TSHD)
@@ -3292,10 +3295,11 @@ c*************************************************************
 	call mpi_bcast(ind(1:iimax),iimax,MPI_INTEGER,1,MPI_COMM_WORLD,ierr)
 	! remove old location moved items from linked list on every node for SEM2:
 	i=0
+	llmax2_dummy=llmax2
 	do iii=1,iimax
 	  ii=ind(iii)
 	  kminSEM=INT(FLOOR((zSEM2old(ii)-lmzSEM2old(ii))/dz))+kbed_bc
-	  kmaxSEM=INT(CEILING((zSEM2old(ii)+lmzSEM2old(ii))/dz))+kbed_bc
+	  kmaxSEM=INT(CEILING((zSEM2old(ii)+lmzSEM2old(ii))/dz))+kbed_bc+MAXVAL(kbed) !add maximum kbed of this processor is sufficient; only interactions for grid-cells on this specific processor are needed
 	  kminSEM=MAX(kminSEM,1)
 	  kminSEM=MIN(kminSEM,kmax)
 	  kmaxSEM=MAX(kmaxSEM,1)
@@ -3318,13 +3322,13 @@ c*************************************************************
 ! 	    write(*,*)'rank,jminSEM,jmaxSEM,kminSEM,kmaxSEM',rank,jminSEM,jmaxSEM,kminSEM,kmaxSEM
 ! 	    write(*,*)'****************************************'
 !           endif
-
+    
 	  do k=kminSEM,kmaxSEM
 	    do j=0,j1 !j=jminSEM,jmaxSEM
 		  z=(k-kbed_bc-kbed(i,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
 	      y=Ru(0)*sin_u(j)	
 	      if(ABS(y-ySEM2old(ii))/lmySEM2old(ii).lt.1..and.ABS(z-zSEM2old(ii))/lmzSEM2old(ii).lt.1.) then
-		do tel=1,llmax2(j,k)
+		do tel=1,llmax2_dummy(j,k)
 		  if(llist2(j,k,tel).eq.ii) then
 		    llist2(j,k,tel)=llist2(j,k,llmax2(j,k))
 		    llmax2(j,k)=llmax2(j,k)-1
@@ -3349,7 +3353,7 @@ c*************************************************************
 	do iii=1,iimax
 	  ii=ind(iii)
 	  kminSEM=INT(FLOOR((zSEM2(ii)-lmzSEM2(ii))/dz))+kbed_bc
-	  kmaxSEM=INT(CEILING((zSEM2(ii)+lmzSEM2(ii))/dz))+kbed_bc
+	  kmaxSEM=INT(CEILING((zSEM2(ii)+lmzSEM2(ii))/dz))+kbed_bc+MAXVAL(kbed) !add maximum kbed of this processor is sufficient; only interactions for grid-cells on this specific processor are needed
 	  kminSEM=MAX(kminSEM,1)
 	  kminSEM=MIN(kminSEM,kmax)
 	  kmaxSEM=MAX(kmaxSEM,1)
@@ -3410,7 +3414,7 @@ c*************************************************************
 	    call random_number(eps)
 	    eps=anint(eps)
 	    do j=1,3
-	      epsSEM3(i,j)=eps(j)*2.-1. ! +1 or -1	
+	      epsSEM3(j,i)=eps(j)*2.-1. ! +1 or -1	
 	    enddo	
 	    wSEM3(i)=(jetcorr*rSEM3(i)**(1./W_j_powerlaw))*W_j  
 		xSEM3(i)=rSEM3(i)*cos(thetaSEM3(i))
@@ -3442,7 +3446,7 @@ c*************************************************************
 !	imaxSEM3=MIN(imaxSEM3,imax)
 !	iminSEM3=MAX(iminSEM3,0)
 	  
-	  
+	  llmax3_dummy=llmax3
       do t=1,tmax_inPpunt
  	   i=i_inPpunt(t)
  	   j=j_inPpunt(t)	  
@@ -3456,7 +3460,7 @@ c*************************************************************
 		  dyy=ySEM3old(ii)-y
 		  rr=sqrt(dxx*dxx+dyy*dyy)
 	      if(rr/lmrSEM3old(ii).lt.sqrt(2.)) then
-		do tel=1,llmax3(i,j)
+		do tel=1,llmax3_dummy(i,j)
 		  if(llist3(i,j,tel).eq.ii) then
 		    llist3(i,j,tel)=llist3(i,j,llmax3(i,j))
 		    llmax3(i,j)=llmax3(i,j)-1
