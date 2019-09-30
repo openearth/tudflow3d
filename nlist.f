@@ -57,7 +57,7 @@
       INTEGER periodicx,periodicy,wallup
       REAL U_b3,V_b3,surf_layer,reduction_sedimentation_shields
       INTEGER ksurf_bc,kmaxTSHD_ind,nair
-      INTEGER poissolver,nm1,istep_output_bpmove,avalanche_until_done
+      INTEGER poissolver,nm1,istep_output_bpmove,avalanche_until_done,IBMorder
       INTEGER iparm(64)
       CHARACTER*256 plumeQtseriesfile,plumectseriesfile,avfile      
       REAL Q_j,plumeQseries(1:10000),plumeQtseries(1:10000),plumectseries(1:10000),plumecseries(30,1:10000) !c(30) matches with size frac_init
@@ -228,7 +228,7 @@
 	NAMELIST /times/t_end,t0_output,dt_output,te_output,tstart_rms,dt_max,dt_ini,time_int,CFL,
      & t0_output_movie,dt_output_movie,te_output_movie,tstart_morf,te_rms
 	NAMELIST /num_scheme/convection,numdiff,wiggle_detector,diffusion,comp_filter_a,comp_filter_n,CNdiffz,npresIBM,advec_conc,
-     & continuity_solver,transporteq_fracs,split_rho_cont,driftfluxforce_calfac,depo_implicit,depo_cbed_option
+     & continuity_solver,transporteq_fracs,split_rho_cont,driftfluxforce_calfac,depo_implicit,depo_cbed_option,IBMorder
 	NAMELIST /ambient/U_b,V_b,W_b,bcfile,rho_b,SEM,nmax2,nmax1,nmax3,lm_min,lm_min3,slip_bot,kn,interaction_bed,
      & periodicx,periodicy,dpdx,dpdy,W_ox,Hs,Tp,nx_w,ny_w,obst,bc_obst_h,U_b3,V_b3,surf_layer,wallup,bedlevelfile,
      & U_bSEM,V_bSEM,U_w,V_w,c_bed,cfixedbed,U_init,V_init,initconditionsfile
@@ -298,6 +298,7 @@
 	driftfluxforce_calfac=1.
 	depo_implicit=0
 	depo_cbed_option=0
+	IBMorder=0
 	!! ambient:
 	U_b = -999.
 	V_b = -999.
@@ -667,7 +668,7 @@
 	  ENDIF
 	ENDDO
 	IF (bc_obst_h<0.or.bc_obst_h>depth) CALL writeerror(601)
-	IF (wallup.ne.0.and.wallup.ne.1) CALL writeerror(605)
+	IF (wallup.ne.0.and.wallup.ne.1.and.wallup.ne.2) CALL writeerror(605)
 	IF (cfixedbed<0.or.cfixedbed>1.) CALL writeerror(607)
 
 	DEALLOCATE(obst)

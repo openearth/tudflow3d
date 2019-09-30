@@ -413,9 +413,9 @@
 	REAL zb_all(0:i1,0:j1),maxbedslope(0:i1,0:j1),sl1,sl2,sl3,sl4,sl5,sl6,sl7,sl8
 	REAL d_cbotnew(nfrac,0:i1,0:j1),dbed,dl,dbed_allowed,dbed_adjust,dz_botlayer,c_adjust,c_adjustA,c_adjustB
 	REAL*8 cbf(nfrac,0:i1),cbb(nfrac,0:i1),zbf(0:i1),zbb(0:i1),reduced_sed
-	INTEGER itrgt,jtrgt,nav,n_av,kplus2
+	INTEGER itrgt,jtrgt,nav,n_av,kplus2,kpp
 	REAL ws_botsand2,rho_botsand2,mbottot_sand2,PSD_bot_sand_massfrac2(nfr_sand),have_avalanched,have_avalanched_tmp,cctot
-	REAL ccfdtot_firstcel,wsedbed
+	REAL ccfdtot_firstcel,wsedbed,distance_to_bed,zb_W
 	erosion=0.
 	deposition=0.
 
@@ -434,31 +434,31 @@
 		  DO j=1,jmax
 			!! First Ubot_TSHD and Vbot_TSHD is subtracted to determine tau 
 			!! only over ambient velocities not over U_TSHD
-			kplus = MIN(kbed(i,j)+1,k1)
-			uu=0.5*(ucfd(i,j,kplus)+ucfd(i-1,j,kplus))-Ubot_TSHD(j)
-			vv=0.5*(vcfd(i,j,kplus)+vcfd(i,j-1,kplus))-Vbot_TSHD(j)
+			IF (IBMorder.eq.2) THEN
+				IF (interaction_bed.ge.4) THEN
+				  zb_W=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(cbotcfd(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
+				ELSE 
+				  zb_W=zbed(i,j)
+				ENDIF
+				kpp=MIN(CEILING(zb_W/dz+0.5)+1,k1)		!kpp is between 1*dz-2*dz distance from bed (doing it one cell lower would mean 0-dz distance and zero distance is not possible)	
+				!kpp=MIN(CEILING(zb_W/dz+0.5),k1)		!kpp is between 0-dz distance from bed 	
+				distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W
+				!distance_to_bed=MAX(0.01*dz,distance_to_bed)
+			ELSE 
+				kpp = MIN(kbed(i,j)+1,k1)                !kpp is 0.5*dz from 0-order ibm bed
+				distance_to_bed=0.5*dz 
+			ENDIF
+			uu=0.5*(ucfd(i,j,kpp)+ucfd(i-1,j,kpp))-Ubot_TSHD(j)
+			vv=0.5*(vcfd(i,j,kpp)+vcfd(i,j-1,kpp))-Vbot_TSHD(j)
 			absU=sqrt((uu)**2+(vv)**2)
 			DO n=1,nfrac
 				ust=0.1*absU
 				do tel=1,10 ! 10 iter is more than enough
 					z0=frac(n)%kn_sed/30.+0.11*nu_mol/MAX(ust,1.e-9) 
-					! for tau shear on sediment don't use kn (which is result of bed ripples), use frac(n)%kn_sed 
-					! it is adviced to use kn_sed=dfloc
-					ust=absU/MAX(1./kappa*log(0.5*dz/z0),2.) !ust maximal 0.5*absU
+					! for tau shear on sediment don't use kn (which is result of bed ripples), use frac(n)%kn_sed; it is adviced to use kn_sed=dfloc
+					ust=absU/MAX(1./kappa*log(distance_to_bed/z0),2.) !ust maximal 0.5*absU
 				enddo
-!				yplus=MAX(0.5*dz*ust/nu_mol,1e-12)
-!						if (yplus<30.) then
-!						  do tel=1,10 ! 10 iter is more than enough
-!								yplus=MAX(0.5*dz*ust/nu_mol,1e-12)
-!								ust=absU/MAX((5.*log(yplus)-3.05),2.) !ust maximal 0.5*absU
-!						  enddo
-!						endif
-!						if (yplus<5.) then !viscous sublayer uplus=yplus
-!								ust=sqrt(absU*nu_mol/(0.5*dz))
-!						endif
-		!               if (yplus<11.225) then  !viscous sublayer uplus=yplus
-		!                       ust=sqrt(absU*nu_mol/(0.5*dz))
-		!               endif
+
 				kplus = MIN(kbed(i,j)+1,k1)
 				kplus2 = MIN(kbed(i,j)+2,k1)
 				tau=rcfd(i,j,kplus)*ust*ust  
@@ -499,9 +499,22 @@
 			ctot_firstcel=0.
 			!! First Ubot_TSHD and Vbot_TSHD is subtracted to determine tau 
 			!! only over ambient velocities not over U_TSHD
-			kplus = MIN(kbed(i,j)+1,k1)
-			uu=0.5*(ucfd(i,j,kplus)+ucfd(i-1,j,kplus))-Ubot_TSHD(j)
-			vv=0.5*(vcfd(i,j,kplus)+vcfd(i,j-1,kplus))-Vbot_TSHD(j)
+			IF (IBMorder.eq.2) THEN
+				IF (interaction_bed.ge.4) THEN
+				  zb_W=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(cbotcfd(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
+				ELSE 
+				  zb_W=zbed(i,j)
+				ENDIF
+				kpp=MIN(CEILING(zb_W/dz+0.5)+1,k1)		!kpp is between 1*dz-2*dz distance from bed (doing it one cell lower would mean 0-dz distance and zero distance is not possible)	
+				!kpp=MIN(CEILING(zb_W/dz+0.5),k1)		!kpp is between 0-dz distance from bed 	
+				distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W
+				!distance_to_bed=MAX(0.01*dz,distance_to_bed)
+			ELSE 
+				kpp = MIN(kbed(i,j)+1,k1)               !kpp is 0.5*dz from 0-order ibm bed
+				distance_to_bed=0.5*dz 
+			ENDIF			
+			uu=0.5*(ucfd(i,j,kpp)+ucfd(i-1,j,kpp))-Ubot_TSHD(j)
+			vv=0.5*(vcfd(i,j,kpp)+vcfd(i,j-1,kpp))-Vbot_TSHD(j)
 			absU=sqrt((uu)**2+(vv)**2)			
 			cbottot=0.
 			cbedtot=0.
@@ -546,20 +559,9 @@
 				ust=0.1*absU
 				do tel=1,10 ! 10 iter is more than enough
 					z0=kn_sed_avg/30.+0.11*nu_mol/MAX(ust,1.e-9) 
-					! for tau shear on sediment don't use kn (which is result of bed ripples), use frac(n)%kn_sed 
-					! it is adviced to use kn_sed=dfloc
-					ust=absU/MAX(1./kappa*log(0.5*dz/z0),2.) !ust maximal 0.5*absU
+					! for tau shear on sediment don't use kn (which is result of bed ripples), use frac(n)%kn_sed; it is adviced to use kn_sed=dfloc
+					ust=absU/MAX(1./kappa*log(distance_to_bed/z0),2.) !ust maximal 0.5*absU
 				enddo
-!				yplus=MAX(0.5*dz*ust/nu_mol,1e-12)
-!				if (yplus<30.) then
-!				  do tel=1,10 ! 10 iter is more than enough
-!						yplus=MAX(0.5*dz*ust/nu_mol,1e-12)
-!						ust=absU/MAX((5.*log(yplus)-3.05),2.) !ust maximal 0.5*absU
-!				  enddo
-!				endif
-!				if (yplus<5.) then !viscous sublayer uplus=yplus
-!						ust=sqrt(absU*nu_mol/(0.5*dz))
-!				endif
 				kplus = MIN(kbed(i,j)+1,k1)
 				kplus2 = MIN(kbed(i,j)+2,k1)
 				tau=rcfd(i,j,kplus)*ust*ust  
@@ -590,20 +592,9 @@
 					ust=0.1*absU !re-calculate tau with kn_sed for deposition as it is not dependent on avg dpart in mixture
 					do tel=1,10 ! 10 iter is more than enough
 						z0=frac(n)%kn_sed/30.+0.11*nu_mol/MAX(ust,1.e-9) 
-						! for tau shear on sediment don't use kn (which is result of bed ripples), use frac(n)%kn_sed 
-						! it is adviced to use kn_sed=dfloc
-						ust=absU/MAX(1./kappa*log(0.5*dz/z0),2.) !ust maximal 0.5*absU
+						! for tau shear on sediment don't use kn (which is result of bed ripples), use frac(n)%kn_sed; it is adviced to use kn_sed=dfloc
+						ust=absU/MAX(1./kappa*log(distance_to_bed/z0),2.) !ust maximal 0.5*absU
 					enddo
-!					yplus=MAX(0.5*dz*ust/nu_mol,1e-12)
-!					if (yplus<30.) then
-!					  do tel=1,10 ! 10 iter is more than enough
-!							yplus=MAX(0.5*dz*ust/nu_mol,1e-12)
-!							ust=absU/MAX((5.*log(yplus)-3.05),2.) !ust maximal 0.5*absU
-!					  enddo
-!					endif
-!					if (yplus<5.) then !viscous sublayer uplus=yplus
-!							ust=sqrt(absU*nu_mol/(0.5*dz))
-!					endif
 					tau=rcfd(i,j,kplus)*ust*ust  !for deposition apply tau belonging to own frac(n)%kn_sed
 					IF (depo_implicit.eq.1) THEN  !determine deposition as sink implicit
 					 ccnew(n,i,j,kplus)=(ccnew(n,i,j,kplus)+erosionf(n)/dz)/ ! vol conc. [-]
@@ -728,19 +719,8 @@
 				ust=0.1*absU
 				do tel=1,10 ! 10 iter is more than enough
 					z0=kn_sed_avg/30.+0.11*nu_mol/MAX(ust,1.e-9) 
-					ust=absU/MAX(1./kappa*log(0.5*dz/z0),2.) !ust maximal 0.5*absU
+					ust=absU/MAX(1./kappa*log(distance_to_bed/z0),2.) !ust maximal 0.5*absU
 				enddo
-!				yplus=MAX(0.5*dz*ust/nu_mol,1e-12)
-!				if (yplus<30.) then
-!				  do tel=1,10 ! 10 iter is more than enough
-!						yplus=MAX(0.5*dz*ust/nu_mol,1e-12)
-!						ust=absU/MAX((5.*log(yplus)-3.05),2.) !ust maximal 0.5*absU
-!				  enddo
-!				endif
-!				if (yplus<5.) then !viscous sublayer uplus=yplus
-!						ust=sqrt(absU*nu_mol/(0.5*dz))
-!						ust=MIN(ust,0.5*absU) !ust maximal 0.5*absU
-!				endif
 					
 				IF (pickup_formula.eq.'vanrijn1984') THEN
 					ustc2 = Shields_cr * ABS(gz)*delta*d50
@@ -934,28 +914,78 @@
      &						c_adjustA*MAX(cbotnew(n,i,j),0.)+c_adjustB*ccnew(n,i,j,kbed(i,j))  ! apply sedimentation ratio between fractions new sediment concentration of cells within bed
 						cbotnew(n,i,j)=cbotnew(n,i,j)-c_adjustA*MAX(cbotnew(n,i,j),0.)-c_adjustB*ccnew(n,i,j,kbed(i,j))
 !     &						+(morfac2-1.)*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
-
-						cctot=0.
-						DO k=kbed(i,j)+1,kmax 
+						IF (morfac2.gt.1.0000001) THEN
+						 cctot=0.
+						 DO k=kbed(i,j)+1,kmax 
 							cctot=cctot+MAX(ccfd(n,i,j,k),0.)
-						ENDDO						
-						IF (cctot<1e-12.or.morfac2.gt.1.0000001) THEN
-						 ccnew(n,i,j,kbed(i,j)+1)=ccnew(n,i,j,kbed(i,j)+1)+(morfac2-1.)/morfac2*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
-						 drdt(i,j,kbed(i,j)+1) = drdt(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-						 rnew(i,j,kbed(i,j)+1) = rnew(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-						 rold(i,j,kbed(i,j)+1) = rold(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density												
-						ELSE
-						 DO k=kbed(i,j)+1,kmax
-						  drdt(i,j,k)=rho_b
-						  rnew(i,j,k)=rho_b
-						  rold(i,j,k)=rho_b
-						 ENDDO
-						 DO k=kbed(i,j)+1,kmax !redistribute morfac2 buried sediment over water column above 
-						  ccnew(n,i,j,k)=ccnew(n,i,j,k)+(morfac2-1.)/morfac2*MAX(ccfd(n,i,j,k),0.)/cctot*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
-						  drdt(i,j,k) = drdt(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-						  rnew(i,j,k) = rnew(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-						  rold(i,j,k) = rold(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density	
-						 ENDDO 
+						 ENDDO						
+						 IF (cctot<1e-12) THEN
+						  ccnew(n,i,j,kbed(i,j)+1)=ccnew(n,i,j,kbed(i,j)+1)+(morfac2-1.)/morfac2*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+						  drdt(i,j,kbed(i,j)+1) = drdt(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						  rnew(i,j,kbed(i,j)+1) = rnew(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						  rold(i,j,kbed(i,j)+1) = rold(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density												
+						 ELSE
+						  DO k=kbed(i,j)+1,kmax
+						   drdt(i,j,k)=rho_b
+						   rnew(i,j,k)=rho_b
+						   rold(i,j,k)=rho_b
+						  ENDDO
+						  DO k=kbed(i,j)+1,kmax !redistribute morfac2 buried sediment over water column above 
+						   ccnew(n,i,j,k)=ccnew(n,i,j,k)+(morfac2-1.)/morfac2*MAX(ccfd(n,i,j,k),0.)/cctot*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+						   drdt(i,j,k) = drdt(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						   rnew(i,j,k) = rnew(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						   rold(i,j,k) = rold(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density	
+						  ENDDO 
+						 ENDIF
+						ENDIF
+						ccnew(n,i,j,kbed(i,j))=0. 
+						drdt(i,j,kbed(i,j)) = drdt(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density							
+					ENDDO	
+				ELSEIF ((ctot_firstcel).ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.
+     &             (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed-1.e-12.or.kbed(i,j).eq.0).and.depo_cbed_option.eq.0) THEN
+	 
+					kbed(i,j)=kbed(i,j)+1
+					kbedt(i,j)=kbed(i,j)
+					drdt(i,j,kbed(i,j))=rho_b
+					rnew(i,j,kbed(i,j))=rho_b
+					rold(i,j,kbed(i,j))=rho_b
+					drdt(i,j,kbed(i,j)+1)=rho_b
+					rnew(i,j,kbed(i,j)+1)=rho_b
+					rold(i,j,kbed(i,j)+1)=rho_b					
+					!kbed(i,j)=MIN(kbed(i,j)+1,kmax) !update bed level at start sedimentation 
+					c_adjustA = MAX(cfixedbed-ctot_firstcel,0.)/MAX(cbotnewtot_pos,1.e-12)    !first fluid cel not yet filled up --> c_adjustA>0 & c_adjustB=0--> fluid cel transformed into bed and sediment from cbotnew moved to bed
+					c_adjustB = MIN(cfixedbed-ctot_firstcel,0.)/MAX(ctot_firstcel,1.e-12) !first fluid cel already more than filled up --> c_adjustB<0&c_adjustA=0 --> fluid cel transformed into bed and excess sediment to cbotnew
+					DO n=1,nfrac 
+						Clivebed(n,i,j,kbed(i,j))=ccnew(n,i,j,kbed(i,j))+
+     &						c_adjustA*MAX(cbotnew(n,i,j),0.)+c_adjustB*ccnew(n,i,j,kbed(i,j))  ! apply sedimentation ratio between fractions new sediment concentration of cells within bed
+						cbotnew(n,i,j)=cbotnew(n,i,j)-c_adjustA*MAX(cbotnew(n,i,j),0.)-c_adjustB*ccnew(n,i,j,kbed(i,j))
+!     &						+(morfac2-1.)*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+
+						IF (morfac2.gt.1.0000001) THEN
+						 cctot=0.
+						 DO k=kbed(i,j)+1,kmax 
+							cctot=cctot+MAX(ccfd(n,i,j,k),0.)
+						 ENDDO						
+						 IF (cctot<1e-12) THEN
+						  ccnew(n,i,j,kbed(i,j)+1)=ccnew(n,i,j,kbed(i,j)+1)+(morfac2-1.)/morfac2*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+						  drdt(i,j,kbed(i,j)+1) = drdt(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						  rnew(i,j,kbed(i,j)+1) = rnew(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						  rold(i,j,kbed(i,j)+1) = rold(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density												
+						 ELSE
+						  DO k=kbed(i,j)+1,kmax
+						   drdt(i,j,k)=rho_b
+						   rnew(i,j,k)=rho_b
+						   rold(i,j,k)=rho_b
+						  ENDDO
+						  DO k=kbed(i,j)+1,kmax !redistribute morfac2 buried sediment over water column above 
+						   ccnew(n,i,j,k)=ccnew(n,i,j,k)+(morfac2-1.)/morfac2*MAX(ccfd(n,i,j,k),0.)/cctot*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+						   drdt(i,j,k) = drdt(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						   rnew(i,j,k) = rnew(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						   rold(i,j,k) = rold(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density	
+						  ENDDO 
+						 ENDIF
 						ENDIF
 						ccnew(n,i,j,kbed(i,j))=0. 
 						drdt(i,j,kbed(i,j)) = drdt(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density

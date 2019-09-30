@@ -3288,7 +3288,7 @@ C ...  Locals
 		      endif
 		  endif
 		 enddo
-	    enddo
+	    enddo 
 
 	!! fill Ubc2,Vbc2 (front boundary at i=0):
 	    i=0

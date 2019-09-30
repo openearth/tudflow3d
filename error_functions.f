@@ -550,8 +550,8 @@
 		write(*,*) '# namelist &ambient                              #'			
 		write(*,*) '# surf_layer should be >0 and < depth            #'
 	CASE(605)
-			write(*,*) '# namelist &ambient                              #'
-			write(*,*) '# wallup should be 0 or 1 (default 0)            #'
+		write(*,*) '# namelist &ambient                              #'
+		write(*,*) '# wallup should be 0,1 or 2 (default 0)          #'
 	CASE(606)
 		write(*,*) '# namelist &ambient                              #'			
 		write(*,*) '# input bedlevel file does not exist             #'	

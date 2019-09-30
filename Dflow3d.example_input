@@ -53,6 +53,7 @@ CNdiffz = 1			! 1 is implicit CN treatment of diffusion in z-dir 0 is explicit i
 driftfluxforce_calfac = 1. ! calibration factor for driftflux force (default 1.) 0. gives no force
 depo_implicit = 0			! 1=calculate deposition at the bed implicit; 0=explicit with old cfluid (default)
 depo_cbed_option = 0 		! 0=burry cfluid first cell during sedimentation grid cell (default), 1=redistribute cfluid first cell over vertical above bed during sedimentation grid cell and increase sedflux with (1-cfluid_firstcel) factor
+IBMorder = 2 				! 0 (default) = normal staircase manner bed immersed boundary, 2 = 2nd order immersed boundary of bed, obstacles and TSHD higher in water are still staircase manner
 /
 
 &ambient
@@ -89,7 +90,7 @@ obst(1)%depo = 0. 				! 0. = no deposition on top of obstacle, 1. = deposition p
 U_b3 = -0.47			! Ambient bc U velocity [m/s] in surf_layer with respect to TSHD motion: negative means TSHD sailing against current (Utotal=U_TSHD-U_b), without TSHD positive is inward velocity
 V_b3 = -0.29			! Ambient bc V velocity [m/s] in surf_layer with respect to TSHD motion: positive means current from starboard  
 surf_layer = 0.			! Layer depth [m] from free surface with U_b3,V_b3 ambient current (default 0)
-wallup=0			! 0 wall = below; wall = up (default 0)
+wallup=0			! 0 wall is down; 1 wall is up; 2 wall both up and down (default 0)
 bedlevelfile = ''		! Input netcdf file for bedlevel which are simulated by IBM obstacles (filled with zbed(1:imax,0:jmax*px+1) [m])Input netcdf file for bedlevel which are simulated by IBM obstacles (filled with zbed(1:imax,0:jmax*px+1) [m])
 c_bed= 0.1 				! Initial volume fractions inside bed [-] (length vector must be nfrac large and sum must be equal to cfixedbed)
 cfixedbed = 0.6			! Volume concentration threshold for fixed bed (default 0.6)
