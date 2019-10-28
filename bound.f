@@ -640,7 +640,7 @@ c 	influence of waves on lateral boundaries:
 				  DO k=kbed(i,j),kb
 					Ubound(i,j,k)=0.
 				  ENDDO
-				IF (slip_bot.ge.1) THEN	! tests showed it is best to apply tau shear stress at first cell above ibm bed and not prescribe U,V velocity straightaway including influence tau (latter gives too large near bed velocities)							  
+				IF (slip_bot.ge.1) THEN	! tests showed it is best to apply tau shear stress and not prescribe U,V velocity straightaway including influence tau (latter gives too large near bed velocities)							  
 					! tau is only applied in bound_rhoU				
 				ELSE ! without partial slip bc, simply prescribe 2nd order accurate velocity:		
 					kp=MIN(CEILING(zb_U/dz+0.5),kmax)			!location velocity which must be adjusted 2nd order IBM
@@ -1470,10 +1470,10 @@ c 	influence of waves on lateral boundaries:
 				  IF (distance_to_bed_kp>0.1*dz) THEN !apply tau on first cell (0.1-1)*dz distance from bed based on velocity of that cell
 					kpp=kp
 					distance_to_bed_kpp=(REAL(kpp)-0.5)*dz-zb_U
-!				  ELSE !apply tau on second cell (1-1.1)*dz distance from bed based on velocity of that cell, do nothing for cell below: (0-0.1)dz from bed 
-!					kp=kpp 
-				  ELSE !apply tau on first cell (0-0.1)*dz distance from bed based on ustar of second cell (kpp) (1-1.1)*dz distance from bed 
-					!kp=kpp 					
+				  ELSE !apply tau on second cell (1-1.1)*dz distance from bed based on velocity of that cell, do nothing for cell below: (0-0.1)dz from bed 
+					kp=kpp 
+!				  ELSE !apply tau on first cell (0-0.5)*dz distance from bed based on ustar of second cell (kpp) (1-1.5)*dz distance from bed 
+!					
 				  ENDIF
 				  absU=sqrt(Ubound(i,j,kpp)**2+(0.25*(Vbound(i,j,kpp)+Vbound(i,j-1,kpp)+Vbound(i+1,j,kpp)+Vbound(i+1,j-1,kpp)))**2)
 				  absU=absU/rhU(i,j,kpp)
@@ -1546,10 +1546,10 @@ c 	influence of waves on lateral boundaries:
 				  IF (distance_to_bed_kp>0.1*dz) THEN !apply tau on first cell (0.1-1)*dz distance from bed based on velocity of that cell
 					kpp=kp
 					distance_to_bed_kpp=(REAL(kpp)-0.5)*dz-zb_V
-!				  ELSE !apply tau on second cell (1-1.1)*dz distance from bed based on velocity of that cell, do nothing for cell below: (0-0.1)dz from bed 
-!					kp=kpp 
-				  ELSE !apply tau on first cell (0-0.1)*dz distance from bed based on ustar of second cell (kpp) (1-1.1)*dz distance from bed 
-					!kp=kpp 
+				  ELSE !apply tau on second cell (1-1.1)*dz distance from bed based on velocity of that cell, do nothing for cell below: (0-0.1)dz from bed 
+					kp=kpp 
+!				  ELSE !apply tau on first cell (0-0.1)*dz distance from bed based on ustar of second cell (kpp) (1-1.1)*dz distance from bed 
+!
 				  ENDIF					
 				  absU=sqrt(Vbound(i,j,kpp)**2+(0.25*(Ubound(i,j,kpp)+Ubound(i,j+1,kpp)+Ubound(i-1,j,kpp)+Ubound(i-1,j+1,kpp)))**2)
 				  absU=absU/rhV(i,j,kpp)

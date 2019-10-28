@@ -24,7 +24,7 @@
       SAVE
       
       INTEGER i,j,k,imax,jmax,kmax,i1,j1,k1,px,rank,kjet,nmax1,nmax2,nmax3,istep,CNdiffz,npresIBM,counter
-      INTEGER Lmix_type,slip_bot,SEM,azi_n,outflow_overflow_down,azi_n2,wiggle_detector,wd
+      INTEGER Lmix_type,slip_bot,SEM,azi_n,outflow_overflow_down,azi_n2,wiggle_detector,wd,applyVOF
       REAL ekm_mol,nu_mol,pi,kappa,gx,gy,gz,Cs,Sc,calibfac_sand_pickup,calibfac_Shields_cr,morfac,morfac2
       REAL dt,time_nm,time_n,time_np,t_end,t0_output,dt_output,te_output,dt_max,tstart_rms,CFL,dt_ini,tstart_morf,trestart
       REAL dt_output_movie,t0_output_movie,te_output_movie,te_rms
@@ -575,7 +575,7 @@
 	READ (UNIT=1,NML=num_scheme,IOSTAT=ios)
 	!! check input num_scheme
 	IF (convection.ne.'CDS2'.AND.convection.ne.'CDS6'.AND.convection.ne.'COM4'.AND.convection.ne.'CDS4'
-     &      .AND.convection.ne.'HYB6'.AND.convection.ne.'C4A6'.AND.convection.ne.'uTVD' ) CALL writeerror(401) 
+     &  .AND.convection.ne.'HYB6'.AND.convection.ne.'HYB4'.AND.convection.ne.'C4A6'.AND.convection.ne.'uTVD') CALL writeerror(401)
 	IF (numdiff<0.or.numdiff>1.) CALL writeerror(402)
 	IF (wiggle_detector.ne.0.and.wiggle_detector.ne.1) CALL writeerror(408) 
 	wd = wiggle_detector 
@@ -775,6 +775,7 @@
 		nfrac_air(i)=n
 		write(*,*),'air fraction found: ',n
 	  ENDIF
+	  applyVOF=0
 	  IF (frac(n)%type.eq.1) THEN
 		n1=n1+1
 		nfrac_silt(n1)=n
@@ -796,7 +797,10 @@
 	  ELSEIF (frac(n)%type.eq.3) THEN 
 		n3=n3+1
 		nfrac_air2(n3)=n
-	  ELSE
+	  ELSEIF (frac(n)%type.eq.-1) THEN
+		! do nothing
+		applyVOF=1
+	  ELSE 
 		write(*,*),'fraction nr:',n
 	    CALL writeerror(171)
 	  ENDIF

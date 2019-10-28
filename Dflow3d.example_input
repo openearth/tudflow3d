@@ -187,7 +187,7 @@ fract(1)%tau_d =  0.1		! Critical shear stress for deposition of mud [N/m2], not
 fract(1)%M = 1.e-4		! Erosion rate mud [kg/sm2] VanRijn proposes 1e-5 - 5e-4 kg/sm2, not used for sand
 fract(1)%kn_sed = 80.		! Nikkuradse roughness for shear stress acting on this sediment fraction (advised as dfloc for mud, for sand with interaction_bed=4 kn_sed is not used, but 2*d50 is used in line with Van Rijn 1984) [10^-6 m] (Elsewhere van Rijn proposes kn_sed=3*d90=6*d50=6*dpart for sand...) 
 fract(1)%zair_ref_belowsurf = 0.		! Optional reference level used to make air_fraction semi-compressible; fract(1)%rho is defined at zair_ref_belowsurf [m]
-fract(1)%type = 1			! 1 = silt/mud (default), 2=sand, 3=air
+fract(1)%type = 1			! 1 = silt/mud (default), 2=sand, 3=air, -1=VOF
 /
 
 &LESmodel

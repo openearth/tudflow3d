@@ -440,17 +440,33 @@
 				ELSE 
 				  zb_W=zbed(i,j)
 				ENDIF
-				kpp=MIN(CEILING(zb_W/dz+0.5)+1,k1)		!kpp is between 1*dz-2*dz distance from bed (doing it one cell lower would mean 0-dz distance and zero distance is not possible)	
-				!kpp=MIN(CEILING(zb_W/dz+0.5),k1)		!kpp is between 0-dz distance from bed 	
+				!kpp=MIN(CEILING(zb_W/dz+0.5)+1,k1)		!kpp is between 1*dz-2*dz distance from bed (doing it one cell lower would mean 0-dz distance and zero distance is not possible)	
+				kpp=MIN(CEILING(zb_W/dz+0.5),k1)		!kpp is between 0-dz distance from bed 	
 				distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W
-				!distance_to_bed=MAX(0.01*dz,distance_to_bed)
+				!as start use first cell (0.5-1)*dz distance from bed 
+				IF (distance_to_bed<0.5*dz) THEN !first cell too close to bed, therefore use second cell (1-1.5)*dz distance from bed 
+				  kpp=MIN(CEILING(zb_W/dz+0.5)+1,k1)		!kpp is in principle between 1*dz-2*dz distance from bed, but due to this if-statement only 1-1.5 from bed
+				  distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W
+				ENDIF 
+				uu=0.5*(ucfd(i,j,kpp)+ucfd(i-1,j,kpp))-Ubot_TSHD(j)
+				vv=0.5*(vcfd(i,j,kpp)+vcfd(i,j-1,kpp))-Vbot_TSHD(j)
+				absU=sqrt((uu)**2+(vv)**2)				
+				ust=0.1*absU
+				do tel=1,10 ! 10 iter is more than enough
+					z0=MAX(kn/30.+0.11*nu_mol/MAX(ust,1.e-9),1e-9) 
+					ust=absU/MAX(1./kappa*log(MAX(distance_to_bed/z0,1.001)),2.) !ust maximal 0.5*absU
+				enddo
+				distance_to_bed=0.5*dz
+				absU=MIN(absU,ust/kappa*log(0.5*dz/z0)) ! replace absU with velocity that is valid at 0.5*dz from bed (same distance as normal boundary)
+				
 			ELSE 
 				kpp = MIN(kbed(i,j)+1,k1)                !kpp is 0.5*dz from 0-order ibm bed
 				distance_to_bed=0.5*dz 
+				uu=0.5*(ucfd(i,j,kpp)+ucfd(i-1,j,kpp))-Ubot_TSHD(j)
+				vv=0.5*(vcfd(i,j,kpp)+vcfd(i,j-1,kpp))-Vbot_TSHD(j)
+				absU=sqrt((uu)**2+(vv)**2)				
 			ENDIF
-			uu=0.5*(ucfd(i,j,kpp)+ucfd(i-1,j,kpp))-Ubot_TSHD(j)
-			vv=0.5*(vcfd(i,j,kpp)+vcfd(i,j-1,kpp))-Vbot_TSHD(j)
-			absU=sqrt((uu)**2+(vv)**2)
+
 			DO n=1,nfrac
 				ust=0.1*absU
 				do tel=1,10 ! 10 iter is more than enough
@@ -505,17 +521,31 @@
 				ELSE 
 				  zb_W=zbed(i,j)
 				ENDIF
-				kpp=MIN(CEILING(zb_W/dz+0.5)+1,k1)		!kpp is between 1*dz-2*dz distance from bed (doing it one cell lower would mean 0-dz distance and zero distance is not possible)	
-				!kpp=MIN(CEILING(zb_W/dz+0.5),k1)		!kpp is between 0-dz distance from bed 	
+				!kpp=MIN(CEILING(zb_W/dz+0.5)+1,k1)		!kpp is between 1*dz-2*dz distance from bed (doing it one cell lower would mean 0-dz distance and zero distance is not possible)	
+				kpp=MIN(CEILING(zb_W/dz+0.5),k1)		!kpp is between 0-dz distance from bed 	
 				distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W
-				!distance_to_bed=MAX(0.01*dz,distance_to_bed)
+				!as start use first cell (0.5-1)*dz distance from bed 
+				IF (distance_to_bed<0.5*dz) THEN !first cell too close to bed, therefore use second cell (1-1.5)*dz distance from bed 
+				  kpp=MIN(CEILING(zb_W/dz+0.5)+1,k1)		!kpp is in principle between 1*dz-2*dz distance from bed, but due to this if-statement only 1-1.5 from bed
+				  distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W
+				ENDIF 
+				uu=0.5*(ucfd(i,j,kpp)+ucfd(i-1,j,kpp))-Ubot_TSHD(j)
+				vv=0.5*(vcfd(i,j,kpp)+vcfd(i,j-1,kpp))-Vbot_TSHD(j)
+				absU=sqrt((uu)**2+(vv)**2)				
+				ust=0.1*absU
+				do tel=1,10 ! 10 iter is more than enough
+					z0=MAX(kn/30.+0.11*nu_mol/MAX(ust,1.e-9),1e-9) 
+					ust=absU/MAX(1./kappa*log(MAX(distance_to_bed/z0,1.001)),2.) !ust maximal 0.5*absU
+				enddo
+				distance_to_bed=0.5*dz
+				absU=MIN(absU,ust/kappa*log(0.5*dz/z0))  ! replace absU with velocity that is valid at 0.5*dz from bed (same distance as normal boundary)
 			ELSE 
 				kpp = MIN(kbed(i,j)+1,k1)               !kpp is 0.5*dz from 0-order ibm bed
 				distance_to_bed=0.5*dz 
+				uu=0.5*(ucfd(i,j,kpp)+ucfd(i-1,j,kpp))-Ubot_TSHD(j)
+				vv=0.5*(vcfd(i,j,kpp)+vcfd(i,j-1,kpp))-Vbot_TSHD(j)
+				absU=sqrt((uu)**2+(vv)**2)					
 			ENDIF			
-			uu=0.5*(ucfd(i,j,kpp)+ucfd(i-1,j,kpp))-Ubot_TSHD(j)
-			vv=0.5*(vcfd(i,j,kpp)+vcfd(i,j-1,kpp))-Vbot_TSHD(j)
-			absU=sqrt((uu)**2+(vv)**2)			
 			cbottot=0.
 			cbedtot=0.
 			IF (nfr_silt>0) THEN			

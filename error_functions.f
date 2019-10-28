@@ -340,7 +340,7 @@
 		write(*,*) '# av_slope_z                                     #'				
 	CASE(171)
 		write(*,*) '# namelist &fractions_in_plume                   #'			
-		write(*,*) '# type must be 1 (default),2, or 3                   #'	
+		write(*,*) '# type must be 1 (default),2,3 or -1             #'	
 	CASE(172)
 		write(*,*) '# namelist &fractions_in_plume                   #'			
 		write(*,*) '# fractions must be ordered with increasing dpart#'	
@@ -496,10 +496,10 @@
 		write(*,*) '# namelist &num_scheme                           #'			
 		write(*,*) '# convection is not defined                      #'	
 		write(*,*) '# choose ''CDS2'',''CDS6'', or ''COM4'',or              #'	
-		write(*,*) '# or ''CDS4'', or ''HYB6'' , or ''C4A6''                 #'
+		write(*,*) '# or ''CDS4'', or ''HYB6'', or ''HYB4'' , or ''C4A6''                 #'
 		write(*,*) '# for 2nd order or 6th order central scheme      #'	
 		write(*,*) '# or 4th order compact or cds4a with 6th diss.   #'
-		write(*,*) '# or cds2 with 6th diss or cds4b with 6th diss.  #'
+		write(*,*) '# or cds2 with 6th diss or cds2 with 4th diss or cds4b with 6th diss.  #'
 	CASE(402)
 		write(*,*) '# namelist &num_scheme                           #'		
 		write(*,*) '# numdiff is not between 0 and 1                 #'	
