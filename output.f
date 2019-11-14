@@ -391,6 +391,10 @@
 			ENDIF			
 	   enddo
 	enddo
+	
+	  if (applyVOF.eq.1) then 
+		call state(cnew,rnew)
+	  endif
 
 	!WRITE(FILE_NAME,'(a,i9.9,a,i4.4,a)')'flow3D_',INT(istap),'_',INT(rank),'.nc'
 	!WRITE(*,'(a,i9.9,a,i4.4,a)')'flow3D_',INT(istap),'_',INT(rank),'.nc'
@@ -530,7 +534,11 @@
        ! Close the file. This frees up any internal netCDF resources
        ! associated with the file, and flushes any buffers.
        call check( nf90_close(ncid) )
-
+	   
+	   
+	   if (applyVOF.eq.1) then 
+		 rnew=1.
+	   endif
 
 	end
 

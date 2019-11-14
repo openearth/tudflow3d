@@ -23,11 +23,11 @@
       IMPLICIT NONE
       SAVE
       
-      INTEGER i,j,k,imax,jmax,kmax,i1,j1,k1,px,rank,kjet,nmax1,nmax2,nmax3,istep,CNdiffz,npresIBM,counter
+      INTEGER i,j,k,imax,jmax,kmax,i1,j1,k1,px,rank,kjet,nmax1,nmax2,nmax3,istep,CNdiffz,npresIBM,counter,npresVOF
       INTEGER Lmix_type,slip_bot,SEM,azi_n,outflow_overflow_down,azi_n2,wiggle_detector,wd,applyVOF
       REAL ekm_mol,nu_mol,pi,kappa,gx,gy,gz,Cs,Sc,calibfac_sand_pickup,calibfac_Shields_cr,morfac,morfac2
-      REAL dt,time_nm,time_n,time_np,t_end,t0_output,dt_output,te_output,dt_max,tstart_rms,CFL,dt_ini,tstart_morf,trestart
-      REAL dt_output_movie,t0_output_movie,te_output_movie,te_rms
+      REAL dt,time_nm,time_n,time_np,t_end,t0_output,dt_output,te_output,dt_max,tstart_rms,CFL,dt_ini,tstart_morf,trestart,dt_old
+      REAL dt_output_movie,t0_output_movie,te_output_movie,te_rms,time_nm2
       REAL U_b,V_b,W_b,rho_b,W_j,Awjet,Aujet,Avjet,Strouhal,radius_j,kn,W_ox,U_bSEM,V_bSEM,U_w,V_w,U_init,V_init
       REAL U_j2,Awjet2,Aujet2,Avjet2,Strouhal2,radius_j2,zjet2
       REAL xj(4),yj(4),radius_inner_j,W_j_powerlaw,plume_z_outflow_belowsurf
@@ -38,7 +38,7 @@
       INTEGER tmax_inPpuntTSHD,tmax_inUpuntTSHD,tmax_inVpuntTSHD,tmax_inWpuntTSHD
       INTEGER tmax_inUpunt_tauTSHD,tmax_inVpunt_tauTSHD,tmax_inVpunt_rudder
       INTEGER tmax_inWpunt2,tmax_inVpunt2,tmax_inPpunt2,tmax_inWpunt_suction
-      INTEGER nfrac,slipvel,interaction_bed,nobst,kbed_bc,nbedplume,continuity_solver,hindered_settling
+      INTEGER nfrac,slipvel,interaction_bed,nobst,kbed_bc,nbedplume,continuity_solver,hindered_settling,settling_along_gvector
       INTEGER nfr_silt,nfr_sand,nfr_air
       CHARACTER*256 hisfile,restart_dir,inpfile,plumetseriesfile,bcfile,plumetseriesfile2,bedlevelfile,initconditionsfile
       CHARACTER*3 time_int,advec_conc,cutter,split_rho_cont
@@ -139,7 +139,7 @@
 !       REAL, DIMENSION(:,:,:),ALLOCATABLE :: Uavg,Vavg,Wavg,Cavg,Ravg
 !       REAL, DIMENSION(:,:,:),ALLOCATABLE :: Urms,Vrms,Wrms,Crms,Rrms
 !       REAL, DIMENSION(:,:,:),ALLOCATABLE :: sigU2,sigV2,sigW2,sigC2,sigR2
-      REAL, DIMENSION(:,:,:),ALLOCATABLE :: p,pold,Csgrid
+      REAL, DIMENSION(:,:,:),ALLOCATABLE :: p,pold,dp,pold1,pold2,pold3,Csgrid
       
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: wx,wy,wz,wxold,wyold,wzold,Ppropx,Ppropy,Ppropz
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: wxolder,wyolder,wzolder
@@ -228,7 +228,7 @@
 	NAMELIST /times/t_end,t0_output,dt_output,te_output,tstart_rms,dt_max,dt_ini,time_int,CFL,
      & t0_output_movie,dt_output_movie,te_output_movie,tstart_morf,te_rms
 	NAMELIST /num_scheme/convection,numdiff,wiggle_detector,diffusion,comp_filter_a,comp_filter_n,CNdiffz,npresIBM,advec_conc,
-     & continuity_solver,transporteq_fracs,split_rho_cont,driftfluxforce_calfac,depo_implicit,depo_cbed_option,IBMorder
+     & continuity_solver,transporteq_fracs,split_rho_cont,driftfluxforce_calfac,depo_implicit,depo_cbed_option,IBMorder,npresVOF
 	NAMELIST /ambient/U_b,V_b,W_b,bcfile,rho_b,SEM,nmax2,nmax1,nmax3,lm_min,lm_min3,slip_bot,kn,interaction_bed,
      & periodicx,periodicy,dpdx,dpdy,W_ox,Hs,Tp,nx_w,ny_w,obst,bc_obst_h,U_b3,V_b3,surf_layer,wallup,bedlevelfile,
      & U_bSEM,V_bSEM,U_w,V_w,c_bed,cfixedbed,U_init,V_init,initconditionsfile
@@ -238,7 +238,8 @@
 	NAMELIST /LESmodel/sgs_model,Cs,Lmix_type,nr_HPfilter,damping_drho_dz,damping_a1,damping_b1,damping_a2,damping_b2,
      & extra_mix_visc
 	NAMELIST /constants/kappa,gx,gy,gz,ekm_mol,calibfac_sand_pickup,pickup_formula,kn_d50_multiplier,avalanche_slope,
-     &	av_slope_z,calibfac_Shields_cr,reduction_sedimentation_shields,morfac,morfac2,avalanche_until_done,avfile
+     &	av_slope_z,calibfac_Shields_cr,reduction_sedimentation_shields,morfac,morfac2,avalanche_until_done,avfile,
+     & settling_along_gvector
 	NAMELIST /fractions_in_plume/fract
 	NAMELIST /ship/U_TSHD,LOA,Lfront,Breadth,Draught,Lback,Hback,xfront,yfront,kn_TSHD,nprop,Dprop,xprop,yprop,zprop,
      &   Pprop,rudder,rot_prop,draghead,Dsp,xdh,perc_dh_suction,softnose,Hfront,cutter
@@ -291,6 +292,7 @@
 	comp_filter_n = 0
 	CNdiffz = 0
 	npresIBM = 0
+	npresVOF = 0
 	advec_conc='VLE' !optional advection scheme concentration, options: 'VLE' (default) 'VL2' 'ARO' 'SBE' SB2' 'NVD' :'VLE' VanLeer(via LW)(default) 'ARO' Arora(via LW) 'SBE' Superbee(via LW) 'VL2' VanLeer(via CDS2) or 'SB2' Superbee(via CDS2) TVD schemes or 'NVD' for NVD scheme 
 	continuity_solver = 1 !nerd option, default is 1 (drdt+drudx=0). Optional: 2 (neglect drdt), 3 (dudx almost 0 U-mix), 33 (dudx=0 U-mix), 34 (dudx=0 U-vol with proper U-mix)
 	transporteq_fracs = 'volufrac' !nerd option default volume fractions, but as option also 'massfrac' can be used internally (input/output still is volume frac!)
@@ -482,6 +484,7 @@
 	gx = -999.
 	gy = -999.
 	gz = -999.
+	settling_along_gvector = 0
 	ekm_mol = -999.
 	time_nm = 0.
 	time_n=0.
@@ -1596,11 +1599,18 @@
 ! 	ALLOCATE(sigR2(0:i1,0:j1,0:k1))
 	ALLOCATE(p(1:imax,1:jmax,1:kmax))
 	ALLOCATE(pold(1:imax,1:jmax,1:kmax))
+	ALLOCATE(pold1(1:imax,1:jmax,1:kmax))
+	ALLOCATE(pold2(1:imax,1:jmax,1:kmax))
+	ALLOCATE(pold3(1:imax,1:jmax,1:kmax))
+	ALLOCATE(dp(0:i1,0:j1,0:k1))
 	if (sgs_model.eq.'DSmag') then
 	  ALLOCATE(Csgrid(1:imax,1:jmax,1:kmax))
 	endif
 	p=0.
 	pold=0.
+	pold1=0.
+	pold2=0.
+	pold3=0.
 	IF (time_int.eq.'AB2'.or.time_int.eq.'AB3'.or.time_int.eq.'ABv') THEN
 		ALLOCATE(wx(0:i1,0:j1,0:k1))  
 		ALLOCATE(wy(0:i1,0:j1,0:k1))

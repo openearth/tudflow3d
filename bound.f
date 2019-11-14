@@ -2896,6 +2896,97 @@ c*************************************************************
 
 		end		
 		
+		
+
+      subroutine bound_p(Cbound)
+      
+      USE nlist
+
+      implicit none
+
+      real Cbound(0:i1,0:j1,0:k1)
+      real cbf(0:i1,0:k1)
+      real cbb(0:i1,0:k1)
+c
+c
+c*************************************************************
+c
+c     Subroutine bound sets the boundary conditions for Cbound
+c     except for the diffusion coefficients. These are set in submod.
+c     The common boundary conditions for the pressure are set in mkgrid.
+c
+c     Set boundary conditions for j=0 and j=j1. Because of the
+c     fact that the index j denotes the tangential direction,
+c     we have to set the values at j=0 equal to the values at
+c     j=jmax and the values at j=j1 equal to the values at j=1.
+c
+c*************************************************************
+c
+c*************************************************************
+
+	!c get stuff from other CPU's
+	  call shiftf(Cbound,cbf) 
+	  call shiftb(Cbound,cbb) 
+
+	  if (periodicy.eq.0.or.periodicy.eq.2) then
+		if (rank.eq.0) then ! boundaries in j-direction
+			do k=1,kmax
+			   do i=1,imax
+			   Cbound(i,0,k) = Cbound(i,1,k) !cbf(i,k)
+			   Cbound(i,j1,k) =cbb(i,k) 
+			   enddo
+			enddo
+		elseif (rank.eq.px-1) then
+			do k=1,kmax
+			   do i=1,imax
+			   Cbound(i,0,k) = cbf(i,k)
+			   Cbound(i,j1,k) = Cbound(i,jmax,k) !cbb(i,k) 
+			   enddo
+			enddo	
+		else
+			do k=1,kmax
+			   do i=1,imax
+			   Cbound(i,0,k) = cbf(i,k)
+			   Cbound(i,j1,k) =cbb(i,k) 
+			   enddo
+			enddo
+		endif
+	  elseif (periodicy.eq.1) then ! periodic in y:
+		do k=1,kmax
+		   do i=1,imax
+			   Cbound(i,0,k) = cbf(i,k)
+			   Cbound(i,j1,k) =cbb(i,k) 
+		   enddo
+		enddo
+	  endif
+
+	  if (periodicx.eq.0.or.periodicx.eq.2) then
+	      do k=1,kmax ! boundaries in i-direction
+		 do j=0,j1
+			   Cbound(0,j,k)    =    Cbound(1,j,k)
+			   Cbound(i1,j,k)   =    Cbound(imax,j,k)
+		 enddo   
+	      enddo
+	  else ! periodic x boundaries
+	      do k=1,kmax ! boundaries in i-direction
+		 do j=0,j1
+			   Cbound(0,j,k)    =    Cbound(imax,j,k)
+			   Cbound(i1,j,k)   =    Cbound(1,j,k)
+		 enddo   
+	      enddo
+	  endif
+	
+      do j=0,j1 ! boundaries in k-direction
+         do i=0,i1
+         Cbound(i,j,k1)   = Cbound(i,j,kmax)
+         Cbound(i,j,0)    = Cbound(i,j,1)
+         enddo
+       enddo
+		
+      end
+
+
+		
 	subroutine wall_fun(uu,vv,rr,dz,dt,kn,kappa,nu_mol)
 		
 	implicit none

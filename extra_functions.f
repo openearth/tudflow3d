@@ -38,7 +38,7 @@
 			Courant = CFL
 !		ENDIF
 		
-		
+		dt_old=dt
 		dtold=dt
       IF (istep.le.10) THEN
 	dt = dt_ini

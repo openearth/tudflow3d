@@ -251,6 +251,7 @@ c********************************************************************
             enddo
          enddo
       enddo
+	  pold2=pold !save pressure previous timestep [pold2 = timestep before pold]
 	pold=p+pold    !what is called p here was dp in reality, now p is 
       call pshiftb(pold,pplus) !,rank,imax,jmax,kmax,px)
 c********************************************************************
@@ -578,7 +579,7 @@ c********************************************************************
             enddo
          enddo
       enddo
-
+	pold2=pold !save pressure previous timestep [pold2 = timestep before pold]
 	pold=p+pold    !what is called p here was dp in reality, now p is 
       call pshiftb(pold,pplus) !,rank,imax,jmax,kmax,px)
 c********************************************************************
@@ -672,6 +673,7 @@ c
 	real dnewcbot(nfrac,0:i1,0:j1)	
 	real aaa(0:k1),bbb(0:k1),ccc(0:k1),ekm_min,ekm_plus,rhss(0:k1)
 	real utr(0:i1,0:j1,0:k1),vtr(0:i1,0:j1,0:k1),wtr(0:i1,0:j1,0:k1)	
+	real ws(0:i1,0:j1,0:k1),gvector 
 !		real dUdt1(0:i1,0:j1,0:k1),dVdt1(0:i1,0:j1,0:k1),dWdt1(0:i1,0:j1,0:k1)
 !	
 !	dUdt1=dudt
@@ -787,20 +789,29 @@ c********************************************************************
 			utr=Unew
 			vtr=Vnew	
 			wtr=Wsed(n,:,:,:)
-		endif	  
+		endif	
+		if (settling_along_gvector.eq.1) then
+			gvector=sqrt(gx**2+gy**2+gz**2)
+			ws = Wsed(n,:,:,:)-Wnew 
+			utr=utr+gx/gvector*ws 
+			vtr=vtr+gy/gvector*ws
+			wtr=wtr-ws+gz/gvector*ws
+		endif 
 	    call make_UtransC_zeroIBM(utr,vtr,wtr)
 		if (frac(n)%type.eq.-1) then ! VOF fraction
 	         call advecc_VOF(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)
+!	       call advecc_NVD_VOF(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
+!     +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)	 
 			 dcdt(n,:,:,:) =cnew(n,:,:,:) + dt*(dnewc(n,:,:,:)) !update in time with EE1 for TVD, no diffusion
-			 do i=1,imax
-			   do j=1,jmax
-			     do k=1,kmax
-					dcdt(n,i,j,k)=MAX(0.,dcdt(n,i,j,k))
-					dcdt(n,i,j,k)=MIN(1.,dcdt(n,i,j,k))
-				 enddo
-			   enddo
-			 enddo 
+!			 do i=1,imax
+!			   do j=1,jmax
+!			     do k=1,kmax
+!					dcdt(n,i,j,k)=MAX(0.,dcdt(n,i,j,k))
+!					dcdt(n,i,j,k)=MIN(1.,dcdt(n,i,j,k))
+!				 enddo
+!			   enddo
+!			 enddo 
 		else
 		  if (advec_conc.eq.'NVD') then
 	       call advecc_NVD(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
@@ -894,6 +905,9 @@ c********************************************************************
 
 	   if (applyVOF.eq.1) then ! VOF fraction, do not solve fully variable density NavierStokes but NS with constant density in advection and diffusion; only apply variable density in gravity term
 		 drdt=1.
+		 rhU=1.
+		 rhV=1.
+		 rhW=1. 
 	   endif
 	endif
 
@@ -1043,7 +1057,6 @@ c********************************************************************
          do j=1,jmax
             do i=1,imax
 	    dnew(i,j,k)=dnew(i,j,k)-gz*(0.5*(rnew(i,j,k)+rnew(i,j,k+1))-rho_b)/(0.5*(rnew(i,j,k)+rnew(i,j,k+1)))
-		!dnew(i,j,k)=dnew(i,j,k)-gz*(0.5*(rnew(i,j,k)+rnew(i,j,k+1))) !-rho_b)/(0.5*(rnew(i,j,k)+rnew(i,j,k+1)))
      1     +Ppropz(i,j,k)
             dWdt(i,j,k)= Wnew(i,j,k)*rhW(i,j,k)+ !0.5*(rnew(i,j,k)+rnew(i,j,k+1))+
      1     dt*(      facAB3_1*dnew(i,j,k)+
@@ -1150,9 +1163,20 @@ c********************************************************************
          enddo
        enddo
        ENDIF
+	    pold2=pold !save pressure previous timestep [pold2 = timestep before pold]  --> P^n-1
+		pold=p+pold    !what is called p here was dp in reality, now p is 			--> P^n 
+		IF (applyVOF.eq.1) THEN 
+		  !IF (continuity_solver.eq.35) THEN
+		    !CALL state(cnew,rnew)		  
+		    !pold=pold/rnew(1:imax,1:jmax,1:kmax)
+		  IF (continuity_solver.eq.35.or.continuity_solver.eq.36) THEN
+			pold1=pold2 !-->P^n-2
+			pold2=pold3 !-->P^n-1
+			pold3=pold !--> P^n
+			pold=0.			
+		  ENDIF 
+		ENDIF 
 	  
-		pold=p+pold    !what is called p here was dp in reality, now p is 
-	
       call pshiftb(pold,pplus) !,rank,imax,jmax,kmax,px)
 c********************************************************************
 c     CALCULATE pressure-gradient with old pressure:
@@ -1209,6 +1233,13 @@ c********************************************************************
         enddo
       enddo
 
+		!IF (applyVOF.eq.1) THEN 
+		! IF (continuity_solver.eq.35) THEN
+		!  pold=pold*rnew(1:imax,1:jmax,1:kmax)
+		!  rnew=1.
+		! ENDIF
+		!ENDIF 
+		
 
       return
       end
@@ -1273,6 +1304,7 @@ c
 	real aaa(0:k1),bbb(0:k1),ccc(0:k1),ekm_min,ekm_plus,rhss(0:k1)
 	real utr(0:i1,0:j1,0:k1),vtr(0:i1,0:j1,0:k1),wtr(0:i1,0:j1,0:k1)
 !	real dUdt1(0:i1,0:j1,0:k1),dVdt1(0:i1,0:j1,0:k1),dWdt1(0:i1,0:j1,0:k1)
+	real ws(0:i1,0:j1,0:k1),gvector 
 
 	real   k1c(nfrac,0:i1,0:j1,0:k1)
 	real   k1cbot(nfrac,0:i1,0:j1)
@@ -1350,7 +1382,7 @@ c
 !	cn1=1./5.
 !	cn2=3./10.
 !	cn3=1./2.
-
+	pold2=pold !save pressure previous timestep [pold2 = timestep before pold]
 	pold=p+pold    !what is called p here was dp in reality, now p is 
         call pshiftb(pold,pplus) !,rank,imax,jmax,kmax,px)
 c********************************************************************
@@ -1385,6 +1417,13 @@ c********************************************************************
 	      utr=Unew
 	      vtr=Vnew
 	      wtr=Wsed(n,:,:,:)
+			if (settling_along_gvector.eq.1) then
+				gvector=sqrt(gx**2+gy**2+gz**2)
+				ws = Wsed(n,:,:,:)-Wnew 
+				utr=utr+gx/gvector*ws 
+				vtr=vtr+gy/gvector*ws
+				wtr=wtr-ws+gz/gvector*ws
+			endif 		  
 	      call make_UtransC_zeroIBM(utr,vtr,wtr)
 		  if (advec_conc.eq.'NVD') then
 	      call advecc_NVD(k1c(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
@@ -1866,6 +1905,13 @@ c********************************************************************
 	      utr=dUdt
 	      vtr=dVdt
 	      wtr=Wsed(n,:,:,:)
+		if (settling_along_gvector.eq.1) then
+			gvector=sqrt(gx**2+gy**2+gz**2)
+			ws = Wsed(n,:,:,:)-Wnew 
+			utr=utr+gx/gvector*ws 
+			vtr=vtr+gy/gvector*ws
+			wtr=wtr-ws+gz/gvector*ws
+		endif 		  
 	      call make_UtransC_zeroIBM(utr,vtr,wtr)
 		  if (advec_conc.eq.'NVD') then		  
 	      call advecc_NVD(k2c(n,:,:,:),dcdt(n,:,:,:),utr,vtr,wtr,drdt,Ru,Rp,dr,phiv,phipt,dz,
@@ -2349,6 +2395,13 @@ c********************************************************************
 	      utr=dUdt
 	      vtr=dVdt
 	      wtr=Wsed(n,:,:,:)
+		if (settling_along_gvector.eq.1) then
+			gvector=sqrt(gx**2+gy**2+gz**2)
+			ws = Wsed(n,:,:,:)-Wnew 
+			utr=utr+gx/gvector*ws 
+			vtr=vtr+gy/gvector*ws
+			wtr=wtr-ws+gz/gvector*ws
+		endif 		  
 	      call make_UtransC_zeroIBM(utr,vtr,wtr)
 		  if (advec_conc.eq.'NVD') then		  
 	      call advecc_NVD(k3c(n,:,:,:),dcdt(n,:,:,:),utr,vtr,wtr,drdt,Ru,Rp,dr,phiv,phipt,dz,
@@ -2743,6 +2796,7 @@ c
 	real aaa(0:k1),bbb(0:k1),ccc(0:k1),ekm_min,ekm_plus,rhss(0:k1)
 	real utr(0:i1,0:j1,0:k1),vtr(0:i1,0:j1,0:k1),wtr(0:i1,0:j1,0:k1)	
 !		real dUdt1(0:i1,0:j1,0:k1),dVdt1(0:i1,0:j1,0:k1),dWdt1(0:i1,0:j1,0:k1)
+	real ws(0:i1,0:j1,0:k1),gvector 
 !	
 !	dUdt1=dudt
 !	dVdt1=dvdt
@@ -2800,7 +2854,29 @@ c********************************************************************
 	      utr=Unew
 	      vtr=Vnew
 	      wtr=Wsed(n,:,:,:)
+		if (settling_along_gvector.eq.1) then
+			gvector=sqrt(gx**2+gy**2+gz**2)
+			ws = Wsed(n,:,:,:)-Wnew 
+			utr=utr+gx/gvector*ws 
+			vtr=vtr+gy/gvector*ws
+			wtr=wtr-ws+gz/gvector*ws
+		endif 		  
 	      call make_UtransC_zeroIBM(utr,vtr,wtr)
+		if (frac(n)%type.eq.-1) then ! VOF fraction
+	         call advecc_VOF(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
+     +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)
+!	      call advecc_NVD_VOF(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
+!     +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)	 
+			 dcdt(n,:,:,:) =cnew(n,:,:,:) + dt*(dnewc(n,:,:,:)) !update in time with EE1 for TVD, no diffusion
+			 do i=1,imax
+			   do j=1,jmax
+			     do k=1,kmax
+					dcdt(n,i,j,k)=MAX(0.,dcdt(n,i,j,k))
+					dcdt(n,i,j,k)=MIN(1.,dcdt(n,i,j,k))
+				 enddo
+			   enddo
+			 enddo 
+		else		  
 		  if (advec_conc.eq.'NVD') then
 	      call advecc_NVD(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)	 
@@ -2827,6 +2903,7 @@ c********************************************************************
 		endif
 
 		dcdt(n,:,:,:) =cnew(n,:,:,:) + dt*(dnewc(n,:,:,:)) !update in time with EE1 for TVD
+	   endif 
 			  !if(interaction_bed.eq.4.or.interaction_bed.eq.5) then
 			  !  dcdtbot(n,:,:)=cnewbot(n,:,:)	
 			  !else
@@ -2883,7 +2960,14 @@ c********************************************************************
 		call bound_c(dcdt(n,:,:,:),frac(n)%c,n,dt) ! bc after erosion_deposition ABv
 	    enddo
 	  call state(dcdt,drdt) ! determine drdt with intermediate dcdt
+	   if (applyVOF.eq.1) then ! VOF fraction, do not solve fully variable density NavierStokes but NS with constant density in advection and diffusion; only apply variable density in gravity term
+		 drdt=1.
+		 rhU=1.
+		 rhV=1.
+		 rhW=1. 
+	   endif		  
 	endif
+
 
 	if (diffusion.eq.'COM4') then
 		call stress_terms(Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
@@ -3015,17 +3099,31 @@ c********************************************************************
 	endif
 	
 	
-
+	   if (applyVOF.eq.1) then ! VOF fraction apply real density only here for correct determination gravity
+		 CALL state(cnew,rnew)
+      do k=1,kmax
+         do j=1,jmax
+            do i=1,imax
+	    dnew(i,j,k)=dnew(i,j,k)-gz*(0.5*(rnew(i,j,k)+rnew(i,j,k+1))-rho_b)/(0.5*(rnew(i,j,k)+rnew(i,j,k+1)))
+     1     +Ppropz(i,j,k)
+            dWdt(i,j,k)=Wnew(i,j,k)*rhW(i,j,k)+ ! *0.5*(rnew(i,j,k)+rnew(i,j,k+1))+
+     1     dt*dnew(i,j,k)
+            enddo
+         enddo
+      enddo	
+	    rnew=1. ! make density 1 again
+	   else 
       do k=1,kmax
          do j=1,jmax
             do i=1,imax
 	    dnew(i,j,k)=dnew(i,j,k)-gz*(0.5*(rnew(i,j,k)+rnew(i,j,k+1))-rho_b)
      1     +Ppropz(i,j,k)
-            dWdt(i,j,k)=Wnew(i,j,k)*0.5*(rnew(i,j,k)+rnew(i,j,k+1))+
+            dWdt(i,j,k)=Wnew(i,j,k)*rhW(i,j,k)+
      1     dt*dnew(i,j,k)
             enddo
          enddo
       enddo
+	 endif 
 
       IF (CNdiffz.eq.1) THEN !CN semi implicit treatment diff-z:
       call bound_rhoU(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,
@@ -3098,8 +3196,20 @@ c********************************************************************
          enddo
        enddo
        ENDIF
-	  
-	pold=p+pold    !what is called p here was dp in reality, now p is 
+	    pold2=pold !save pressure previous timestep [pold2 = timestep before pold]  --> P^n-1
+		pold=p+pold    !what is called p here was dp in reality, now p is 			--> P^n 
+		IF (applyVOF.eq.1) THEN 
+		  !IF (continuity_solver.eq.35) THEN
+		  !  CALL state(cnew,rnew)		  
+		  !  pold=pold/rnew(1:imax,1:jmax,1:kmax)
+		  IF (continuity_solver.eq.35.or.continuity_solver.eq.36) THEN
+		    pold1=pold2 !-->P^n-2
+			pold2=pold3 !-->P^n-1
+			pold3=pold !--> P^n
+			pold=0.			
+		  ENDIF 
+		ENDIF 
+		
       call pshiftb(pold,pplus) !,rank,imax,jmax,kmax,px)
 c********************************************************************
 c     CALCULATE pressure-gradient with old pressure:
@@ -3156,7 +3266,13 @@ c********************************************************************
         enddo
       enddo
 
-
+		!IF (applyVOF.eq.1) THEN 
+		! IF (continuity_solver.eq.35) THEN
+		!  pold=pold*rnew(1:imax,1:jmax,1:kmax)
+		!  rnew=1.
+		! ENDIF
+		!ENDIF 
+		
       return
       end
 
@@ -3167,7 +3283,7 @@ c********************************************************************
 	real xx,yy,r_orifice2,twodtdt,Qsource,rrri,rrrj,rrrk,rrrim,rrrjm,rrrkm
 	real rrr2i,rrr2j,rrr2k,rrr2im,rrr2jm,rrr2km
 	integer t,n
-	real xTSHD(1:4),yTSHD(1:4),phi,ddrr,cin,s_in
+	real xTSHD(1:4),yTSHD(1:4),phi,ddrr,cin,s_in,dpdt(1:imax,1:jmax,1:kmax)
 	real sum_c_ws,ctot,ws(nfrac)
 	integer inout,n2
 c
@@ -3196,19 +3312,6 @@ c
         enddo
       enddo
 	ELSEIF (continuity_solver.eq.3) THEN ! Optional: 3 (dudx=0) with input d(ur^*/r^n+1)dx
-!	 if (split_rho_cont.eq.'VL2') then
-!		do n=1,nfrac
-!	      call c_edges_TVD_nocfl(cU(n,:,:,:),cV(n,:,:,:),cW(n,:,:,:),dcdt(n,:,:,:),dUdt,dVdt,dWdt,drdt,Ru,Rp,dr,phiv,phipt,dz,
-!     +            i1,j1,k1,1,imax,1,jmax,1,kmax,dt,rank,px,periodicx,periodicy)
-!		enddo
-!		call state_edges(cU,rhU)
-!		call state_edges(cV,rhV)
-!		call state_edges(cW,rhW)
-!	 else 
-!		rhU(0:imax,0:jmax,0:kmax)=0.5*(drdt(0:imax,0:jmax,0:kmax)+drdt(1:imax+1,0:jmax,0:kmax))
-!		rhV(0:imax,0:jmax,0:kmax)=0.5*(drdt(0:imax,0:jmax,0:kmax)+drdt(0:imax,1:jmax+1,0:kmax))
-!		rhW(0:imax,0:jmax,0:kmax)=0.5*(drdt(0:imax,0:jmax,0:kmax)+drdt(0:imax,0:jmax,1:kmax+1))
-!	 endif
 
 !! rhU,rhV,rhW are filled in bound_rhoU
 	 
@@ -3226,28 +3329,9 @@ c
         enddo
       enddo	
 	ELSEIF (continuity_solver.eq.33) THEN ! Optional: 33 (dudx=0) improved version of 3 which gives dudx=e-14
-	 if (split_rho_cont.eq.'VL2') then
-!		do n=1,nfrac
-!	      call c_edges_TVD_nocfl(cU(n,:,:,:),cV(n,:,:,:),cW(n,:,:,:),dcdt(n,:,:,:),dUdt,dVdt,dWdt,drdt,Ru,Rp,dr,phiv,phipt,dz,
-!     +            i1,j1,k1,1,imax,1,jmax,1,kmax,dt,rank,px,periodicx,periodicy)
-!		enddo
-!		call state_edges(cU,rhU)
-!		call state_edges(cV,rhV)
-!		call state_edges(cW,rhW)
-		dUdt(1:imax,1:jmax,1:kmax)=dUdt(1:imax,1:jmax,1:kmax)/rhU(1:imax,1:jmax,1:kmax)
-		dVdt(1:imax,1:jmax,1:kmax)=dVdt(1:imax,1:jmax,1:kmax)/rhV(1:imax,1:jmax,1:kmax)
-		dWdt(1:imax,1:jmax,1:kmax)=dWdt(1:imax,1:jmax,1:kmax)/rhW(1:imax,1:jmax,1:kmax)		
-	 else 
-      do k=1,kmax
-        do j=1,jmax
-          do i=1,imax
-           dUdt(i,j,k)=dUdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i+1,j,k)))
-           dVdt(i,j,k)=dVdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i,j+1,k)))
-           dWdt(i,j,k)=dWdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i,j,k+1)))
-          enddo
-        enddo
-      enddo 
-	 endif
+	  dUdt(1:imax,1:jmax,1:kmax)=dUdt(1:imax,1:jmax,1:kmax)/rhU(1:imax,1:jmax,1:kmax)
+	  dVdt(1:imax,1:jmax,1:kmax)=dVdt(1:imax,1:jmax,1:kmax)/rhV(1:imax,1:jmax,1:kmax)
+	  dWdt(1:imax,1:jmax,1:kmax)=dWdt(1:imax,1:jmax,1:kmax)/rhW(1:imax,1:jmax,1:kmax)		
 	  call bound_incljet(dUdt,dVdt,dWdt,drdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
       do  k=1,kmax
         do j=1,jmax
@@ -3262,31 +3346,9 @@ c
         enddo
       enddo	
 	ELSEIF (continuity_solver.eq.34) THEN ! Optional: 34 (dudx=0) improved version of 3 which gives dudx=e-14 and with correction to account for difference Um and Uv
-	 if (split_rho_cont.eq.'VL2') then
-!		do n=1,nfrac
-!	      call c_edges_TVD_nocfl(cU(n,:,:,:),cV(n,:,:,:),cW(n,:,:,:),dcdt(n,:,:,:),dUdt,dVdt,dWdt,drdt,Ru,Rp,dr,phiv,phipt,dz,
-!     +            i1,j1,k1,1,imax,1,jmax,1,kmax,dt,rank,px,periodicx,periodicy)
-!		enddo
-!		call state_edges(cU,rhU)
-!		call state_edges(cV,rhV)
-!		call state_edges(cW,rhW)
-		dUdt(1:imax,1:jmax,1:kmax)=dUdt(1:imax,1:jmax,1:kmax)/rhU(1:imax,1:jmax,1:kmax)
-		dVdt(1:imax,1:jmax,1:kmax)=dVdt(1:imax,1:jmax,1:kmax)/rhV(1:imax,1:jmax,1:kmax)
-		dWdt(1:imax,1:jmax,1:kmax)=dWdt(1:imax,1:jmax,1:kmax)/rhW(1:imax,1:jmax,1:kmax)		
-	 else 
-!      do k=1,kmax
-!        do j=1,jmax
-!          do i=1,imax
-!           dUdt(i,j,k)=dUdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i+1,j,k)))
-!           dVdt(i,j,k)=dVdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i,j+1,k)))
-!           dWdt(i,j,k)=dWdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i,j,k+1)))
-!          enddo
-!        enddo
-!      enddo 
-		dUdt(1:imax,1:jmax,1:kmax)=dUdt(1:imax,1:jmax,1:kmax)/rhU(1:imax,1:jmax,1:kmax)
-		dVdt(1:imax,1:jmax,1:kmax)=dVdt(1:imax,1:jmax,1:kmax)/rhV(1:imax,1:jmax,1:kmax)
-		dWdt(1:imax,1:jmax,1:kmax)=dWdt(1:imax,1:jmax,1:kmax)/rhW(1:imax,1:jmax,1:kmax)		  
-	 endif
+	 dUdt(1:imax,1:jmax,1:kmax)=dUdt(1:imax,1:jmax,1:kmax)/rhU(1:imax,1:jmax,1:kmax)
+	 dVdt(1:imax,1:jmax,1:kmax)=dVdt(1:imax,1:jmax,1:kmax)/rhV(1:imax,1:jmax,1:kmax)
+	 dWdt(1:imax,1:jmax,1:kmax)=dWdt(1:imax,1:jmax,1:kmax)/rhW(1:imax,1:jmax,1:kmax)		  
 	 IF (slipvel.eq.2) THEN
 	  do j=1,jmax
 	    do i=1,imax   
@@ -3359,6 +3421,174 @@ c
      2  (       dVdt(i,j,k) -         dVdt(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
      +              +
      3  (       dWdt(i,j,k) -         dWdt(i,j,k-1) ) / ( dz ) ) / dt 
+          enddo
+        enddo
+      enddo	
+	ELSEIF (continuity_solver.eq.35) THEN ! Optional: 35 (dudx=0) improved version of 33 (better treatment variable density in source Poisson) which gives dudx=e-14
+	  dUdt(1:imax,1:jmax,1:kmax)=dUdt(1:imax,1:jmax,1:kmax)/rhU(1:imax,1:jmax,1:kmax)
+	  dVdt(1:imax,1:jmax,1:kmax)=dVdt(1:imax,1:jmax,1:kmax)/rhV(1:imax,1:jmax,1:kmax)
+	  dWdt(1:imax,1:jmax,1:kmax)=dWdt(1:imax,1:jmax,1:kmax)/rhW(1:imax,1:jmax,1:kmax)		
+	  call bound_incljet(dUdt,dVdt,dWdt,drdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
+	  !dp(1:imax,1:jmax,1:kmax)=dt/dt_old*(pold3-pold2)+pold3
+	  !dp(1:imax,1:jmax,1:kmax)=(pold3-pold2)+pold3 		!dp contains predicted pressure
+	  !dpdt=(3.*pold3-4.*pold2+pold1)/((3.*time_n-4.*time_nm+time_nm2))
+	  !dpdt=(pold3-pold2)/(time_n-time_nm)
+	  !dp(1:imax,1:jmax,1:kmax)=dpdt*dt+pold3
+	  dp(1:imax,1:jmax,1:kmax)=pold3
+	  !dp=0.
+	  !pold=0.
+	  call bound_p(dp)
+	  !write(*,*),'rank,pold,p,dp',rank,pold(45,1,1),dp(45,1,1),p(45,1,1)
+	  if (applyVOF.eq.1) then 
+		call state_edges(cU,rhU)
+		call state_edges(cV,rhV)
+		call state_edges(cW,rhW)
+	  endif
+      do  k=1,kmax
+        do j=1,jmax
+          do i=1,imax
+      p(i,j,k)  =(
+     1  ( Ru(i)*dUdt(i,j,k) - Ru(i-1)*dUdt(i-1,j,k) ) / ( Rp(i)*dr(i) )
+     +              +
+     2  (       dVdt(i,j,k) -         dVdt(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
+     +              +
+     3  (       dWdt(i,j,k) -         dWdt(i,j,k-1) ) / ( dz ) ) / dt  + 
+     4  ((Ru(i  )*(1./rho_b-1./rhU(i  ,j,k))*(dp(i+1,j,k)-dp(i  ,j,k))/(Rp(i+1)-Rp(i  )) - 
+     4    Ru(i-1)*(1./rho_b-1./rhU(i-1,j,k))*(dp(i  ,j,k)-dp(i-1,j,k))/(Rp(i  )-Rp(i-1)) ) / ( Rp(i)*dr(i) )
+     +              +
+     5  ( (1./rho_b-1./rhV(i,j  ,k))*(dp(i,j+1,k)-dp(i,j  ,k))/ (Rp(i)*(phip(j+1)-phip(j  )))-         
+     5    (1./rho_b-1./rhV(i,j-1,k))*(dp(i,j  ,k)-dp(i,j-1,k))/ (Rp(i)*(phip(j  )-phip(j-1)))) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
+     +              +
+     6  ( (1./rho_b-1./rhW(i,j,k  ))*(dp(i,j,k+1)-dp(i,j,k  ))/ dz -
+     6    (1./rho_b-1./rhW(i,j,k-1))*(dp(i,j,k  )-dp(i,j,k-1))/ dz	) / dz ) 	 
+          enddo
+        enddo
+      enddo	
+	 do n=1,npresVOF
+	  ! 2nd iteration loop with updated P-predictor:
+	  IF (poissolver.eq.3) THEN
+	   CALL SOLVEpois_vg_pardiso(p)		  
+	  ELSE
+	   CALL SOLVEpois(p) !,Ru,Rp,DPHI,dz,rank,imax,jmax,kmax,px)
+	  ENDIF
+	  dp(1:imax,1:jmax,1:kmax)=p*rho_b !use first iteration loop to obtain more accurate p-predictor 
+	  call bound_p(dp)	   
+      do  k=1,kmax
+        do j=1,jmax
+          do i=1,imax
+      p(i,j,k)  =(
+     1  ( Ru(i)*dUdt(i,j,k) - Ru(i-1)*dUdt(i-1,j,k) ) / ( Rp(i)*dr(i) )
+     +              +
+     2  (       dVdt(i,j,k) -         dVdt(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
+     +              +
+     3  (       dWdt(i,j,k) -         dWdt(i,j,k-1) ) / ( dz ) ) / dt  + 
+     4  ((Ru(i  )*(1./rho_b-1./rhU(i  ,j,k))*(dp(i+1,j,k)-dp(i  ,j,k))/(Rp(i+1)-Rp(i  )) - 
+     4    Ru(i-1)*(1./rho_b-1./rhU(i-1,j,k))*(dp(i  ,j,k)-dp(i-1,j,k))/(Rp(i  )-Rp(i-1)) ) / ( Rp(i)*dr(i) )
+     +              +
+     5  ( (1./rho_b-1./rhV(i,j  ,k))*(dp(i,j+1,k)-dp(i,j  ,k))/ (Rp(i)*(phip(j+1)-phip(j  )))-         
+     5    (1./rho_b-1./rhV(i,j-1,k))*(dp(i,j  ,k)-dp(i,j-1,k))/ (Rp(i)*(phip(j  )-phip(j-1)))) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
+     +              +
+     6  ( (1./rho_b-1./rhW(i,j,k  ))*(dp(i,j,k+1)-dp(i,j,k  ))/ dz -
+     6    (1./rho_b-1./rhW(i,j,k-1))*(dp(i,j,k  )-dp(i,j,k-1))/ dz	) / dz ) 	 
+          enddo
+        enddo
+      enddo		   
+	 enddo
+	   
+	ELSEIF (continuity_solver.eq.36) THEN ! Optional: 36 (dudx=0) improved version of 34 (better treatment variable density in source Poisson) which gives dudx=e-14 and with correction to account for difference Um and Uv
+	 dUdt(1:imax,1:jmax,1:kmax)=dUdt(1:imax,1:jmax,1:kmax)/rhU(1:imax,1:jmax,1:kmax)
+	 dVdt(1:imax,1:jmax,1:kmax)=dVdt(1:imax,1:jmax,1:kmax)/rhV(1:imax,1:jmax,1:kmax)
+	 dWdt(1:imax,1:jmax,1:kmax)=dWdt(1:imax,1:jmax,1:kmax)/rhW(1:imax,1:jmax,1:kmax)	
+	  if (applyVOF.eq.1) then 
+		call state_edges(cU,rhU)
+		call state_edges(cV,rhV)
+		call state_edges(cW,rhW)
+		call state(dcdt,drdt)
+	  endif	 
+	 IF (slipvel.eq.2) THEN
+	  do j=1,jmax
+	    do i=1,imax   
+		  do k=kbed(i,j)+1,kmax !1,kmax ! all cells below kbed no correction needed as dwdt=dwdt 	  
+		    sum_c_ws=0.
+			do n=1,nfrac
+				ws(n)=-frac(n)%ws !ws defined positive downwards
+				sum_c_ws=sum_c_ws+ws(n)*(cW(n,i,j,k)*frac(n)%rho/rhW(i,j,k)-cW(n,i,j,k))
+			enddo
+			dWdt(i,j,k)=dWdt(i,j,k)-sum_c_ws  !go from mixture velocity (centre of mass velocity) to velocity of volume centre
+          enddo
+        enddo
+      enddo
+	 ELSE
+	  do j=1,jmax
+	    do i=1,imax   
+		  do k=kbed(i,j)+1,kmax !1,kmax ! all cells below kbed no correction needed as dwdt=dwdt  
+		    sum_c_ws=0.
+		    ctot=0.
+		    do n=1,nfrac
+				ctot=cW(n,i,j,k)*frac(n)%dfloc/frac(n)%dpart*0.5*(rhocorr_air_z(n,k)+rhocorr_air_z(n,k+1))+ctot
+			enddo
+			ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
+			do n=1,nfrac
+				ws(n)=-frac(n)%ws*(1.-ctot)**(frac(n)%n) !ws defined positive downwards
+				sum_c_ws=sum_c_ws+ws(n)*(cW(n,i,j,k)*frac(n)%rho/rhW(i,j,k)-cW(n,i,j,k))
+			enddo
+			dWdt(i,j,k)=dWdt(i,j,k)-sum_c_ws  !go from mixture velocity (centre of mass velocity) to velocity of volume centre
+          enddo
+        enddo
+      enddo
+	 ENDIF
+	  call bound_incljet(dUdt,dVdt,dWdt,drdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
+!	 IF (slipvel.eq.2) THEN  ! make Wmix at interface kbed zero --> Wvol=-sum_c_ws 
+!	  do j=0,j1
+!	    do i=0,i1 
+!		    k=kbed(i,j) 	  
+!		    sum_c_ws=0.
+!			do n=1,nfrac
+!				ws(n)=-frac(n)%ws !ws defined positive downwards
+!				sum_c_ws=sum_c_ws+ws(n)*(cW(n,i,j,k)*frac(n)%rho/rhW(i,j,k)-cW(n,i,j,k))
+!			enddo
+!			dWdt(i,j,k)=-sum_c_ws  !go from mixture velocity (centre of mass velocity) to velocity of volume centre
+!        enddo
+!      enddo
+!	 ELSE
+!	  do j=0,j1
+!	    do i=0,i1 
+!		    k=kbed(i,j)  
+!		    sum_c_ws=0.
+!		    ctot=0.
+!		    do n=1,nfrac
+!				ctot=cW(n,i,j,k)*frac(n)%dfloc/frac(n)%dpart*0.5*(rhocorr_air_z(n,k)+rhocorr_air_z(n,k+1))+ctot
+!			enddo
+!			ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
+!			do n=1,nfrac
+!				ws(n)=-frac(n)%ws*(1.-ctot)**(frac(n)%n) !ws defined positive downwards
+!				sum_c_ws=sum_c_ws+ws(n)*(cW(n,i,j,k)*frac(n)%rho/rhW(i,j,k)-cW(n,i,j,k))
+!			enddo
+!			dWdt(i,j,k)=-sum_c_ws  !go from mixture velocity (centre of mass velocity) to velocity of volume centre
+!        enddo
+!      enddo
+!	 ENDIF 
+	  dp(1:imax,1:jmax,1:kmax)=dt/dt_old*(pold3-pold2)+pold3 		!dp contains predicted pressure 
+	   
+	  !dp(1:imax,1:jmax,1:kmax)=0. !dt/dt_old*(pold-pold2)		!dp contains predicted delta_p increment pressure
+	  call bound_p(dp)
+      do  k=1,kmax
+        do j=1,jmax
+          do i=1,imax
+      p(i,j,k)  =(
+     1  ( Ru(i)*dUdt(i,j,k) - Ru(i-1)*dUdt(i-1,j,k) ) / ( Rp(i)*dr(i) )
+     +              +
+     2  (       dVdt(i,j,k) -         dVdt(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
+     +              +
+     3  (       dWdt(i,j,k) -         dWdt(i,j,k-1) ) / ( dz ) ) / dt +
+     4  ((Ru(i  )*(1./rho_b-1./rhU(i  ,j,k))*(dp(i+1,j,k)-dp(i  ,j,k))/(Rp(i+1)-Rp(i  )) - 
+     4    Ru(i-1)*(1./rho_b-1./rhU(i-1,j,k))*(dp(i  ,j,k)-dp(i-1,j,k))/(Rp(i  )-Rp(i-1)) ) / ( Rp(i)*dr(i) )
+     +              +
+     5  ( (1./rho_b-1./rhV(i,j  ,k))*(dp(i,j+1,k)-dp(i,j  ,k))/ (Rp(i)*(phip(j+1)-phip(j  )))-         
+     5    (1./rho_b-1./rhV(i,j-1,k))*(dp(i,j  ,k)-dp(i,j-1,k))/ (Rp(i)*(phip(j  )-phip(j-1)))) / (Rp(i)*(phiv(j)-phiv(j-1)))
+     +              +
+     6  ( (1./rho_b-1./rhW(i,j,k  ))*(dp(i,j,k+1)-dp(i,j,k  )) / dz - 
+     6    (1./rho_b-1./rhW(i,j,k-1))*(dp(i,j,k  )-dp(i,j,k-1)) / dz	) / dz ) 
           enddo
         enddo
       enddo		  
@@ -3709,40 +3939,15 @@ c
         enddo
 
 	IF (continuity_solver.eq.33) THEN 
-!	 if (split_rho_cont.eq.'VL2') then
-!!			do n=1,nfrac
-!!			  call c_edges_TVD_nocfl(cU(n,:,:,:),cV(n,:,:,:),cW(n,:,:,:),dcdt(n,:,:,:),dUdt,dVdt,dWdt,drdt,Ru,Rp,dr,phiv,phipt,dz,
-!!     +            i1,j1,k1,1,imax,1,jmax,1,kmax,dt,rank,px,periodicx,periodicy)
-!!			enddo
-!!			call state_edges(cU,rhU)
-!!			call state_edges(cV,rhV)
-!!			call state_edges(cW,rhW)	 
       do k=1,kmax
         do j=1,jmax
           do i=1,imax
            Unew(i,j,k)=dUdt(i,j,k)
            Vnew(i,j,k)=dVdt(i,j,k)
            Wnew(i,j,k)=dWdt(i,j,k)
-		   !dUdt(i,j,k)=dUdt(i,j,k)*rhU(i,j,k)
-		   !dVdt(i,j,k)=dVdt(i,j,k)*rhV(i,j,k)
-		   !dWdt(i,j,k)=dWdt(i,j,k)*rhW(i,j,k)
           enddo
         enddo
       enddo 	 
-!	 else
-!      do k=1,kmax
-!        do j=1,jmax
-!          do i=1,imax
-!           Unew(i,j,k)=dUdt(i,j,k)
-!           Vnew(i,j,k)=dVdt(i,j,k)
-!           Wnew(i,j,k)=dWdt(i,j,k)
-!		   dUdt(i,j,k)=dUdt(i,j,k)*(0.5*(drdt(i,j,k)+drdt(i+1,j,k)))
-!		   dVdt(i,j,k)=dVdt(i,j,k)*(0.5*(drdt(i,j,k)+drdt(i,j+1,k)))
-!		   dWdt(i,j,k)=dWdt(i,j,k)*(0.5*(drdt(i,j,k)+drdt(i,j,k+1)))		   
-!          enddo
-!        enddo
-!      enddo 
-!	 endif
 		p=p(1:imax,1:jmax,1:kmax)*drdt(1:imax,1:jmax,1:kmax) !scale P back with rho
 	ELSEIF (continuity_solver.eq.34) THEN 
 	 IF (slipvel.eq.2) THEN
@@ -3777,65 +3982,94 @@ c
         enddo
       enddo
 	 ENDIF	
-	 
-!	 if (split_rho_cont.eq.'VL2') then
-!!			do n=1,nfrac
-!!			  call c_edges_TVD_nocfl(cU(n,:,:,:),cV(n,:,:,:),cW(n,:,:,:),dcdt(n,:,:,:),dUdt,dVdt,dWdt,drdt,Ru,Rp,dr,phiv,phipt,dz,
-!!     +            i1,j1,k1,1,imax,1,jmax,1,kmax,dt,rank,px,periodicx,periodicy)
-!!			enddo
-!!			call state_edges(cU,rhU)
-!!			call state_edges(cV,rhV)
-!!			call state_edges(cW,rhW)	 
       do k=1,kmax
         do j=1,jmax
           do i=1,imax
            Unew(i,j,k)=dUdt(i,j,k)
            Vnew(i,j,k)=dVdt(i,j,k)
            Wnew(i,j,k)=dWdt(i,j,k)
-		   !dUdt(i,j,k)=dUdt(i,j,k)*rhU(i,j,k)
-		   !dVdt(i,j,k)=dVdt(i,j,k)*rhV(i,j,k)
-		   !dWdt(i,j,k)=dWdt(i,j,k)*rhW(i,j,k)
           enddo
         enddo
       enddo 	 
-!	 else
-!      do k=1,kmax
-!        do j=1,jmax
-!          do i=1,imax
-!           Unew(i,j,k)=dUdt(i,j,k)
-!           Vnew(i,j,k)=dVdt(i,j,k)
-!           Wnew(i,j,k)=dWdt(i,j,k)
-!		   dUdt(i,j,k)=dUdt(i,j,k)*(0.5*(drdt(i,j,k)+drdt(i+1,j,k)))
-!		   dVdt(i,j,k)=dVdt(i,j,k)*(0.5*(drdt(i,j,k)+drdt(i,j+1,k)))
-!		   dWdt(i,j,k)=dWdt(i,j,k)*(0.5*(drdt(i,j,k)+drdt(i,j,k+1)))		   
-!          enddo
-!        enddo
-!      enddo 
-!	 endif
-		p=p(1:imax,1:jmax,1:kmax)*drdt(1:imax,1:jmax,1:kmax) !scale P back with rho
-	ELSE
-		if (split_rho_cont.eq.'VL2') then
-!			do n=1,nfrac
-!			  call c_edges_TVD_nocfl(cU(n,:,:,:),cV(n,:,:,:),cW(n,:,:,:),dcdt(n,:,:,:),dUdt,dVdt,dWdt,drdt,Ru,Rp,dr,phiv,phipt,dz,
-!     +            i1,j1,k1,1,imax,1,jmax,1,kmax,dt,rank,px,periodicx,periodicy)
-!			enddo
-!			call state_edges(cU,rhU)
-!			call state_edges(cV,rhV)
-!			call state_edges(cW,rhW)
-			Unew(1:imax,1:jmax,1:kmax)=dUdt(1:imax,1:jmax,1:kmax)/rhU(1:imax,1:jmax,1:kmax)
-			Vnew(1:imax,1:jmax,1:kmax)=dVdt(1:imax,1:jmax,1:kmax)/rhV(1:imax,1:jmax,1:kmax)
-			Wnew(1:imax,1:jmax,1:kmax)=dWdt(1:imax,1:jmax,1:kmax)/rhW(1:imax,1:jmax,1:kmax)
-		 else
-		  do k=1,kmax
-			do j=1,jmax
-			  do i=1,imax
-			   Unew(i,j,k)=dUdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i+1,j,k)))
-			   Vnew(i,j,k)=dVdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i,j+1,k)))
-			   Wnew(i,j,k)=dWdt(i,j,k)/(0.5*(drdt(i,j,k)+drdt(i,j,k+1)))
-			  enddo
+		p=p(1:imax,1:jmax,1:kmax)*drdt(1:imax,1:jmax,1:kmax) !scale P back with rho	 
+	ELSEIF (continuity_solver.eq.35) THEN 
+      do k=1,kmax
+        do j=1,jmax
+          do i=1,imax
+		   dUdt(i,j,k)=dUdt(i,j,k)-dt*(1./rhU(i,j,k)-1./rho_b)*(dp(i+1,j,k)-dp(i,j,k))/(Rp(i+1)-Rp(i))
+		   dVdt(i,j,k)=dVdt(i,j,k)-dt*(1./rhV(i,j,k)-1./rho_b)*(dp(i,j+1,k)-dp(i,j,k))/(Rp(i)*(phip(j+1)-phip(j)) ) 
+		   dWdt(i,j,k)=dWdt(i,j,k)-dt*(1./rhW(i,j,k)-1./rho_b)*(dp(i,j,k+1)-dp(i,j,k))/ dz		   
+           Unew(i,j,k)=dUdt(i,j,k)
+           Vnew(i,j,k)=dVdt(i,j,k)
+           Wnew(i,j,k)=dWdt(i,j,k)
+          enddo
+        enddo
+      enddo 	 
+		p=p(1:imax,1:jmax,1:kmax)*rho_b  !drdt(1:imax,1:jmax,1:kmax) !scale P back with rho_b not with drdt because in source pressure Poisson eq. already extra source-term 1/rho_b-1/drdt is included 
+	  if (applyVOF.eq.1) then !make rhU,rhV,rhW 1 again 
+		rhU=1.
+		rhV=1.
+		rhW=1.
+		drdt=1.
+	  endif		
+	ELSEIF (continuity_solver.eq.36) THEN 
+	 IF (slipvel.eq.2) THEN
+	  do j=1,jmax
+	    do i=1,imax   
+		  do k=kbed(i,j),kmax !1,kmax ! all cells below kbed no correction needed as dwdt=dwdt
+		    sum_c_ws=0.
+			do n=1,nfrac
+				ws(n)=-frac(n)%ws !ws defined positive downwards
+				sum_c_ws=sum_c_ws+ws(n)*(cW(n,i,j,k)*frac(n)%rho/rhW(i,j,k)-cW(n,i,j,k))
 			enddo
-		  enddo 
-		 endif
+			dWdt(i,j,k)=dWdt(i,j,k)+sum_c_ws  !go from velocity of volume centre to mixture velocity (centre of mass velocity)
+          enddo
+        enddo
+      enddo	  
+	 ELSE
+	  do j=1,jmax
+	    do i=1,imax   
+		  do k=kbed(i,j),kmax !1,kmax ! all cells below kbed no correction needed as dwdt=dwdt 
+		    sum_c_ws=0.
+		    ctot=0.
+		    do n=1,nfrac
+				ctot=cW(n,i,j,k)*frac(n)%dfloc/frac(n)%dpart*0.5*(rhocorr_air_z(n,k)+rhocorr_air_z(n,k+1))+ctot
+			enddo
+			ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
+			do n=1,nfrac
+				ws(n)=-frac(n)%ws*(1.-ctot)**(frac(n)%n) !ws defined positive downwards
+				sum_c_ws=sum_c_ws+ws(n)*(cW(n,i,j,k)*frac(n)%rho/rhW(i,j,k)-cW(n,i,j,k))
+			enddo
+			dWdt(i,j,k)=dWdt(i,j,k)+sum_c_ws  !go from velocity of volume centre to mixture velocity (centre of mass velocity)
+          enddo
+        enddo
+      enddo
+	 ENDIF	
+	 
+      do k=1,kmax
+        do j=1,jmax
+          do i=1,imax
+		   dUdt(i,j,k)=dUdt(i,j,k)-dt*(1./rhU(i,j,k)-1./rho_b)*(dp(i+1,j,k)-dp(i,j,k))/(Rp(i+1)-Rp(i))
+		   dVdt(i,j,k)=dVdt(i,j,k)-dt*(1./rhV(i,j,k)-1./rho_b)*(dp(i,j+1,k)-dp(i,j,k))/(Rp(i)*(phip(j+1)-phip(j)) ) 
+		   dWdt(i,j,k)=dWdt(i,j,k)-dt*(1./rhW(i,j,k)-1./rho_b)*(dp(i,j,k+1)-dp(i,j,k))/ dz		  
+           Unew(i,j,k)=dUdt(i,j,k)
+           Vnew(i,j,k)=dVdt(i,j,k)
+           Wnew(i,j,k)=dWdt(i,j,k)
+          enddo
+        enddo
+      enddo 	
+		p=p(1:imax,1:jmax,1:kmax)*rho_b !drdt(1:imax,1:jmax,1:kmax)  !scale P back with rho	  
+	  if (applyVOF.eq.1) then !make rhU,rhV,rhW 1 again 
+		rhU=1.
+		rhV=1.
+		rhW=1.
+		drdt=1.
+	  endif		  
+
+	ELSE
+		Unew(1:imax,1:jmax,1:kmax)=dUdt(1:imax,1:jmax,1:kmax)/rhU(1:imax,1:jmax,1:kmax)
+		Vnew(1:imax,1:jmax,1:kmax)=dVdt(1:imax,1:jmax,1:kmax)/rhV(1:imax,1:jmax,1:kmax)
+		Wnew(1:imax,1:jmax,1:kmax)=dWdt(1:imax,1:jmax,1:kmax)/rhW(1:imax,1:jmax,1:kmax)
 	ENDIF
 	  
 	  

@@ -140,7 +140,15 @@
 	wyold=wy
 	wzold=wz
 	ENDIF
+	pold(:,:,kmax)=0.
+	do k=kmax-1,1,-1
+		pold(:,:,k)=pold(:,:,k+1)+(rnew(:,:,k)-rho_b)*ABS(gz)*dz
+	enddo
+	pold1=pold 
+	pold2=pold 
+	pold3=pold
 
+		
 	if (Cs>0.or.sgs_model.eq.'MixLe') then
           if (sgs_model.eq.'SSmag') then
             call LES_smagorinsky(Unew,Vnew,Wnew,rnew)
@@ -162,8 +170,10 @@
 	  if (restart_dir.eq.'') then
 	    time_n=0.
 	  endif
+	  time_nm2=time_n-2*dt 
       time_nm=time_n-dt
 	  time_np=time_n+dt
+	  dt_old=dt
       
 	  call output_init_nc(time_np) ! determination fluid or obstacle cell in output_init_nc; therefore before update_nvol_bedplume
 	  call update_nvol_bedplume(time_n)
@@ -341,6 +351,7 @@
 				CALL writeprogress(time_np,t_end,istep,dt,cput1,cput10a,cput10b,cput11a,cput11b,trestart)
 			endif
 		endif
+		time_nm2 = time_nm 
 		time_nm = time_n
 		time_n = time_np
 		time_np  = time_np  + dt
