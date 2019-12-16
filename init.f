@@ -142,9 +142,6 @@ c******************************************************************
 	ELSE
 	   poissolver=3 !3=PARDISO pressure-poisson solver
 	ENDIF
-	IF (periodicy.eq.1) THEN !periodicy with equidistant grid should need full FFT and not cos transformation; in PARDISO this is also correct
-		poissolver=3 !3=PARDISO pressure-poisson solver
-	ENDIF 
 	
 	write(*,*) 'poissolver=', poissolver
 	

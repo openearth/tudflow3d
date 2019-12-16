@@ -46,6 +46,8 @@ comp_filter_n = 0		! Compact filter is applied every comp_filter_n timesteps, de
 CNdiffz = 1			! 1 is implicit CN treatment of diffusion in z-dir 0 is explicit in z-dir (default 0)
 npresIBM = 0			! number of extra pres-correction steps to make IBM objects better impermeable (default 0)
 npresVOF = 0			! number of extra pres-correction steps to get predicted P^n+1 as input in variable-density-Poisson-solver more accurate (default 0)
+pres_in_predictor_step = 1 ! 1 (default) = apply P^n in predictor step and apply corrector step with dP; 0 = predictor step without pressure and apply corrector step with P^n+1
+Poutflow=0 				! 0 (default, most robust) Poutflow is zero for complete outflow crosssection at rmax; 1 (optional) Poutflow is zero at just one grid-location at rmax --> sometimes better but less robust
 continuity_solver =3    !nerd option, default is 1 (drdt+drudx=0). Optional: 2 (neglect drdt), 3 (dudx almost 0 U-mix), 33 (dudx=0 U-mix), 34 (dudx=0 U-vol with proper U-mix)
 !advec_conc='VLE'		! optional advection scheme concentration, options: 'VLE' (default) 'VL2' 'ARO' 'SBE' SB2' 'NVD' :'VLE' VanLeer(via LW)(default) 'ARO' Arora(via LW) 'SBE' Superbee(via LW) 'VL2' VanLeer(via CDS2) or 'SB2' Superbee(via CDS2) TVD schemes or 'NVD' for NVD scheme 
 !transporteq_fracs = 'volufrac' !nerd option default volume fractions, but as option also 'massfrac' can be used internally (input/output still is volume frac!)

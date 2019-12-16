@@ -804,14 +804,14 @@ c********************************************************************
 !	       call advecc_NVD_VOF(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
 !     +            i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy)	 
 			 dcdt(n,:,:,:) =cnew(n,:,:,:) + dt*(dnewc(n,:,:,:)) !update in time with EE1 for TVD, no diffusion
-!			 do i=1,imax
-!			   do j=1,jmax
-!			     do k=1,kmax
-!					dcdt(n,i,j,k)=MAX(0.,dcdt(n,i,j,k))
-!					dcdt(n,i,j,k)=MIN(1.,dcdt(n,i,j,k))
-!				 enddo
-!			   enddo
-!			 enddo 
+			 do i=1,imax
+			   do j=1,jmax
+			     do k=1,kmax
+					dcdt(n,i,j,k)=MAX(0.,dcdt(n,i,j,k))
+					dcdt(n,i,j,k)=MIN(1.,dcdt(n,i,j,k))
+				 enddo
+			   enddo
+			 enddo 
 		else
 		  if (advec_conc.eq.'NVD') then
 	       call advecc_NVD(dnewc(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
@@ -1165,17 +1165,22 @@ c********************************************************************
        ENDIF
 	    pold2=pold !save pressure previous timestep [pold2 = timestep before pold]  --> P^n-1
 		pold=p+pold    !what is called p here was dp in reality, now p is 			--> P^n 
-		IF (applyVOF.eq.1) THEN 
+		!IF (applyVOF.eq.1) THEN 
 		  !IF (continuity_solver.eq.35) THEN
-		    !CALL state(cnew,rnew)		  
-		    !pold=pold/rnew(1:imax,1:jmax,1:kmax)
+			!pold1=pold2 !-->P^n-2
+			!pold2=pold3 !-->P^n-1
+			!pold3=pold !--> P^n		  
+		  !  CALL state(cnew,rnew)		  
+		  !  pold=pold/rnew(1:imax,1:jmax,1:kmax)
 		  IF (continuity_solver.eq.35.or.continuity_solver.eq.36) THEN
 			pold1=pold2 !-->P^n-2
 			pold2=pold3 !-->P^n-1
 			pold3=pold !--> P^n
-			pold=0.			
 		  ENDIF 
-		ENDIF 
+		  IF (pres_in_predictor_step.eq.0) THEN 
+		    pold=0.
+		  ENDIF
+		!ENDIF 
 	  
       call pshiftb(pold,pplus) !,rank,imax,jmax,kmax,px)
 c********************************************************************
@@ -3198,7 +3203,7 @@ c********************************************************************
        ENDIF
 	    pold2=pold !save pressure previous timestep [pold2 = timestep before pold]  --> P^n-1
 		pold=p+pold    !what is called p here was dp in reality, now p is 			--> P^n 
-		IF (applyVOF.eq.1) THEN 
+		!IF (applyVOF.eq.1) THEN 
 		  !IF (continuity_solver.eq.35) THEN
 		  !  CALL state(cnew,rnew)		  
 		  !  pold=pold/rnew(1:imax,1:jmax,1:kmax)
@@ -3206,9 +3211,11 @@ c********************************************************************
 		    pold1=pold2 !-->P^n-2
 			pold2=pold3 !-->P^n-1
 			pold3=pold !--> P^n
-			pold=0.			
 		  ENDIF 
-		ENDIF 
+		  IF (pres_in_predictor_step.eq.0) THEN 
+		    pold=0.
+		  ENDIF		  
+		!ENDIF 
 		
       call pshiftb(pold,pplus) !,rank,imax,jmax,kmax,px)
 c********************************************************************
@@ -3429,14 +3436,24 @@ c
 	  dVdt(1:imax,1:jmax,1:kmax)=dVdt(1:imax,1:jmax,1:kmax)/rhV(1:imax,1:jmax,1:kmax)
 	  dWdt(1:imax,1:jmax,1:kmax)=dWdt(1:imax,1:jmax,1:kmax)/rhW(1:imax,1:jmax,1:kmax)		
 	  call bound_incljet(dUdt,dVdt,dWdt,drdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
-	  !dp(1:imax,1:jmax,1:kmax)=dt/dt_old*(pold3-pold2)+pold3
-	  !dp(1:imax,1:jmax,1:kmax)=(pold3-pold2)+pold3 		!dp contains predicted pressure
-	  !dpdt=(3.*pold3-4.*pold2+pold1)/((3.*time_n-4.*time_nm+time_nm2))
-	  !dpdt=(pold3-pold2)/(time_n-time_nm)
-	  !dp(1:imax,1:jmax,1:kmax)=dpdt*dt+pold3
-	  dp(1:imax,1:jmax,1:kmax)=pold3
 	  !dp=0.
-	  !pold=0.
+	  IF (pres_in_predictor_step.eq.0) THEN 
+		  IF (npresVOF.eq.0) THEN
+		   dp(1:imax,1:jmax,1:kmax)=dt/dt_old*(pold3-pold2)+pold3 		!dp contains predicted pressure 
+		  ELSE
+		   dp(1:imax,1:jmax,1:kmax)= dt/dt_old*(pold3-pold2)+pold3  !pold3 		!dp contains predicted pressure 
+		   !dp(1:imax,1:jmax,1:kmax)=(pold3-pold2)/MAX(rnew(1:imax,1:jmax,1:kmax)-rold(1:imax,1:jmax,1:kmax),1.e-12)*(drdt(1:imax,1:jmax,1:kmax)-rnew(1:imax,1:jmax,1:kmax))+dt/dt_old*(pold3-pold2)+pold3 
+		   !dp(1:imax,1:jmax,1:kmax)=(1.-rho_b/drdt(1:imax,1:jmax,1:kmax))/(1.-rho_b/MAX(rnew(1:imax,1:jmax,1:kmax),rho_b*1.01))*(pold3-pold2) + pold3 
+		   !(1.-rho_b/drdt(1:imax,1:jmax,1:kmax))/(1.-rho_b/MAX(rnew(1:imax,1:jmax,1:kmax),rho_b*1.01))
+		  ENDIF	
+	  ELSE 
+		  IF (npresVOF.eq.0) THEN
+		   dp(1:imax,1:jmax,1:kmax)=dt/dt_old*(pold3-pold2)		!dp contains predicted increment of pressure 
+		  ELSE
+		   dp(1:imax,1:jmax,1:kmax)=dt/dt_old*(pold3-pold2)		!dp contains predicted increment of pressure 
+		   !dp = 0.		  
+		  ENDIF		
+	  ENDIF	  
 	  call bound_p(dp)
 	  !write(*,*),'rank,pold,p,dp',rank,pold(45,1,1),dp(45,1,1),p(45,1,1)
 	  if (applyVOF.eq.1) then 
@@ -3464,6 +3481,47 @@ c
           enddo
         enddo
       enddo	
+	DO n2=1,nbedplume
+	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
+	! rotation ship for ambient side current
+	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
+	  phi=atan2(V_b,1.e-12)
+	else
+	  phi=atan2(V_b,(U_TSHD-U_b))
+	endif
+      do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
+       do i=1,imax  
+         do j=jmax,1,-1 
+	  xx=Rp(i)*cos_u(j)-schuif_x
+	  yy=Rp(i)*sin_u(j)
+!	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
+		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
+		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
+!!		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+		!! do not use bp(n2)%i,j indices as they are defined from 0,j1 instead of 1,jmax needed for pressure !!
+		if (bp(n2)%radius.gt.0.) then 
+		  inout=0
+		  IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n2)%radius)**2) THEN
+			inout=1
+		  ENDIF
+		else 
+		  CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+		endif 		
+!	  ELSE 
+!	 	inout=0
+!	  ENDIF
+	  if (inout.eq.1) then
+		!  if (continuity_solver.eq.33.or.continuity_solver.eq.34.or.continuity_solver.eq.35.or.continuity_solver.eq.36) THEN
+			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/dt  				  			! div(u)=0 --> total volume flux in 
+		!  else
+		!	p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/dt  				! div(u)=0 --> total volume flux in 
+		!  endif
+	   endif
+	  enddo
+	 enddo
+	enddo
+	ENDIF
+	ENDDO ! bedplume loop	  
 	 do n=1,npresVOF
 	  ! 2nd iteration loop with updated P-predictor:
 	  IF (poissolver.eq.3) THEN
@@ -3471,7 +3529,7 @@ c
 	  ELSE
 	   CALL SOLVEpois(p) !,Ru,Rp,DPHI,dz,rank,imax,jmax,kmax,px)
 	  ENDIF
-	  dp(1:imax,1:jmax,1:kmax)=p*rho_b !use first iteration loop to obtain more accurate p-predictor 
+	  dp(1:imax,1:jmax,1:kmax)=0.8*p*rho_b+0.2*dp(1:imax,1:jmax,1:kmax) !use first iteration loop to obtain more accurate p-predictor 
 	  call bound_p(dp)	   
       do  k=1,kmax
         do j=1,jmax
@@ -3492,9 +3550,50 @@ c
      6    (1./rho_b-1./rhW(i,j,k-1))*(dp(i,j,k  )-dp(i,j,k-1))/ dz	) / dz ) 	 
           enddo
         enddo
-      enddo		   
+      enddo
+	DO n2=1,nbedplume
+	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
+	! rotation ship for ambient side current
+	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
+	  phi=atan2(V_b,1.e-12)
+	else
+	  phi=atan2(V_b,(U_TSHD-U_b))
+	endif
+      do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
+       do i=1,imax  
+         do j=jmax,1,-1 
+	  xx=Rp(i)*cos_u(j)-schuif_x
+	  yy=Rp(i)*sin_u(j)
+!	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
+		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
+		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
+!!		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+		!! do not use bp(n2)%i,j indices as they are defined from 0,j1 instead of 1,jmax needed for pressure !!
+		if (bp(n2)%radius.gt.0.) then 
+		  inout=0
+		  IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n2)%radius)**2) THEN
+			inout=1
+		  ENDIF
+		else 
+		  CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+		endif 		
+!	  ELSE 
+!	 	inout=0
+!	  ENDIF
+	  if (inout.eq.1) then
+		!  if (continuity_solver.eq.33.or.continuity_solver.eq.34.or.continuity_solver.eq.35.or.continuity_solver.eq.36) THEN
+			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/dt  				  			! div(u)=0 --> total volume flux in 
+		!  else
+		!	p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/dt  				! div(u)=0 --> total volume flux in 
+		!  endif
+	   endif
+	  enddo
 	 enddo
-	   
+	enddo
+	ENDIF
+	ENDDO ! bedplume loop	  
+	 enddo
+	 	   
 	ELSEIF (continuity_solver.eq.36) THEN ! Optional: 36 (dudx=0) improved version of 34 (better treatment variable density in source Poisson) which gives dudx=e-14 and with correction to account for difference Um and Uv
 	 dUdt(1:imax,1:jmax,1:kmax)=dUdt(1:imax,1:jmax,1:kmax)/rhU(1:imax,1:jmax,1:kmax)
 	 dVdt(1:imax,1:jmax,1:kmax)=dVdt(1:imax,1:jmax,1:kmax)/rhV(1:imax,1:jmax,1:kmax)
@@ -3568,9 +3667,23 @@ c
 !        enddo
 !      enddo
 !	 ENDIF 
-	  dp(1:imax,1:jmax,1:kmax)=dt/dt_old*(pold3-pold2)+pold3 		!dp contains predicted pressure 
-	   
-	  !dp(1:imax,1:jmax,1:kmax)=0. !dt/dt_old*(pold-pold2)		!dp contains predicted delta_p increment pressure
+	  IF (pres_in_predictor_step.eq.0) THEN 
+		  IF (npresVOF.eq.0) THEN
+		   dp(1:imax,1:jmax,1:kmax)=dt/dt_old*(pold3-pold2)+pold3 		!dp contains predicted pressure 
+		  ELSE
+		   dp(1:imax,1:jmax,1:kmax)= dt/dt_old*(pold3-pold2)+pold3  !pold3 		!dp contains predicted pressure 
+		   !dp(1:imax,1:jmax,1:kmax)=(pold3-pold2)/MAX(rnew(1:imax,1:jmax,1:kmax)-rold(1:imax,1:jmax,1:kmax),1.e-12)*(drdt(1:imax,1:jmax,1:kmax)-rnew(1:imax,1:jmax,1:kmax))+dt/dt_old*(pold3-pold2)+pold3 
+		   !dp(1:imax,1:jmax,1:kmax)=(1.-rho_b/drdt(1:imax,1:jmax,1:kmax))/(1.-rho_b/MAX(rnew(1:imax,1:jmax,1:kmax),rho_b*1.01))*(pold3-pold2) + pold3 
+		   !(1.-rho_b/drdt(1:imax,1:jmax,1:kmax))/(1.-rho_b/MAX(rnew(1:imax,1:jmax,1:kmax),rho_b*1.01))
+		  ENDIF	
+	  ELSE 
+		  IF (npresVOF.eq.0) THEN
+		   dp(1:imax,1:jmax,1:kmax)=dt/dt_old*(pold3-pold2)		!dp contains predicted increment of pressure 
+		  ELSE
+		   dp(1:imax,1:jmax,1:kmax)=dt/dt_old*(pold3-pold2)		!dp contains predicted increment of pressure 
+		   !dp = 0.		  
+		  ENDIF		
+	  ENDIF
 	  call bound_p(dp)
       do  k=1,kmax
         do j=1,jmax
@@ -3591,7 +3704,121 @@ c
      6    (1./rho_b-1./rhW(i,j,k-1))*(dp(i,j,k  )-dp(i,j,k-1)) / dz	) / dz ) 
           enddo
         enddo
-      enddo		  
+      enddo	
+	DO n2=1,nbedplume
+	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
+	! rotation ship for ambient side current
+	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
+	  phi=atan2(V_b,1.e-12)
+	else
+	  phi=atan2(V_b,(U_TSHD-U_b))
+	endif
+      do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
+       do i=1,imax  
+         do j=jmax,1,-1 
+	  xx=Rp(i)*cos_u(j)-schuif_x
+	  yy=Rp(i)*sin_u(j)
+!	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
+		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
+		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
+!!		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+		!! do not use bp(n2)%i,j indices as they are defined from 0,j1 instead of 1,jmax needed for pressure !!
+		if (bp(n2)%radius.gt.0.) then 
+		  inout=0
+		  IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n2)%radius)**2) THEN
+			inout=1
+		  ENDIF
+		else 
+		  CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+		endif 		
+!	  ELSE 
+!	 	inout=0
+!	  ENDIF
+	  if (inout.eq.1) then
+		!  if (continuity_solver.eq.33.or.continuity_solver.eq.34.or.continuity_solver.eq.35.or.continuity_solver.eq.36) THEN
+			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/dt  				  			! div(u)=0 --> total volume flux in 
+		!  else
+		!	p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/dt  				! div(u)=0 --> total volume flux in 
+		!  endif
+	   endif
+	  enddo
+	 enddo
+	enddo
+	ENDIF
+	ENDDO ! bedplume loop
+	
+	 do n=1,npresVOF
+	  ! 2nd iteration loop with updated P-predictor:
+	  IF (poissolver.eq.3) THEN
+	   CALL SOLVEpois_vg_pardiso(p)		  
+	  ELSE
+	   CALL SOLVEpois(p) !,Ru,Rp,DPHI,dz,rank,imax,jmax,kmax,px)
+	  ENDIF
+	  dp(1:imax,1:jmax,1:kmax)=p*rho_b !use first iteration loop to obtain more accurate p-predictor 
+	  call bound_p(dp)	   
+      do  k=1,kmax
+        do j=1,jmax
+          do i=1,imax
+      p(i,j,k)  =(
+     1  ( Ru(i)*dUdt(i,j,k) - Ru(i-1)*dUdt(i-1,j,k) ) / ( Rp(i)*dr(i) )
+     +              +
+     2  (       dVdt(i,j,k) -         dVdt(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
+     +              +
+     3  (       dWdt(i,j,k) -         dWdt(i,j,k-1) ) / ( dz ) ) / dt  + 
+     4  ((Ru(i  )*(1./rho_b-1./rhU(i  ,j,k))*(dp(i+1,j,k)-dp(i  ,j,k))/(Rp(i+1)-Rp(i  )) - 
+     4    Ru(i-1)*(1./rho_b-1./rhU(i-1,j,k))*(dp(i  ,j,k)-dp(i-1,j,k))/(Rp(i  )-Rp(i-1)) ) / ( Rp(i)*dr(i) )
+     +              +
+     5  ( (1./rho_b-1./rhV(i,j  ,k))*(dp(i,j+1,k)-dp(i,j  ,k))/ (Rp(i)*(phip(j+1)-phip(j  )))-         
+     5    (1./rho_b-1./rhV(i,j-1,k))*(dp(i,j  ,k)-dp(i,j-1,k))/ (Rp(i)*(phip(j  )-phip(j-1)))) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
+     +              +
+     6  ( (1./rho_b-1./rhW(i,j,k  ))*(dp(i,j,k+1)-dp(i,j,k  ))/ dz -
+     6    (1./rho_b-1./rhW(i,j,k-1))*(dp(i,j,k  )-dp(i,j,k-1))/ dz	) / dz ) 	 
+          enddo
+        enddo
+      enddo	
+	DO n2=1,nbedplume
+	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
+	! rotation ship for ambient side current
+	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
+	  phi=atan2(V_b,1.e-12)
+	else
+	  phi=atan2(V_b,(U_TSHD-U_b))
+	endif
+      do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
+       do i=1,imax  
+         do j=jmax,1,-1 
+	  xx=Rp(i)*cos_u(j)-schuif_x
+	  yy=Rp(i)*sin_u(j)
+!	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
+		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
+		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
+!!		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+		!! do not use bp(n2)%i,j indices as they are defined from 0,j1 instead of 1,jmax needed for pressure !!
+		if (bp(n2)%radius.gt.0.) then 
+		  inout=0
+		  IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n2)%radius)**2) THEN
+			inout=1
+		  ENDIF
+		else 
+		  CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+		endif 		
+!	  ELSE 
+!	 	inout=0
+!	  ENDIF
+	  if (inout.eq.1) then
+		!  if (continuity_solver.eq.33.or.continuity_solver.eq.34.or.continuity_solver.eq.35.or.continuity_solver.eq.36) THEN
+			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/dt  				  			! div(u)=0 --> total volume flux in 
+		!  else
+		!	p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/dt  				! div(u)=0 --> total volume flux in 
+		!  endif
+	   endif
+	  enddo
+	 enddo
+	enddo
+	ENDIF
+	ENDDO ! bedplume loop
+	  
+	 enddo	  
 	ELSE !default is 1 (drdt+drudx=0)
 	twodtdt=MAX((3.*time_np-4.*time_n+time_nm)*dt,1.e-12)
 
@@ -3695,6 +3922,8 @@ c
 !		enddo	
 		  if (continuity_solver.eq.33.or.continuity_solver.eq.34) THEN
 			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/dt  				  			! div(u)=0 --> total volume flux in 
+		  elseif (continuity_solver.eq.35.or.continuity_solver.eq.36) THEN 
+			! bp%Q already added to p input in lines above 
 		  else
 			p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/dt  				! div(u)=0 --> total volume flux in 
 		  endif
@@ -3719,9 +3948,10 @@ c
 
 	real xx,yy,r_orifice2,twodtdt,Qsource,rrri,rrrj,rrrk,rrrim,rrrjm,rrrkm
 	real tt,ddtt,uu(0:i1,0:j1,0:k1),vv(0:i1,0:j1,0:k1),ww(0:i1,0:j1,0:k1),rr(0:i1,0:j1,0:k1)
-	integer t
+	integer t,n
 	real xTSHD(1:4),yTSHD(1:4),phi
 	integer inout,n2	
+	real sum_c_ws,ws(1:nfrac),ctot 
 c
 !       include 'param.txt'
 !       include 'common.txt'
@@ -3768,7 +3998,413 @@ c
           enddo
         enddo
       enddo
-
+	ELSEIF (continuity_solver.eq.33) THEN ! Optional: 33 (dudx=0) improved version of 3 which gives dudx=e-14
+	  uu(1:imax,1:jmax,1:kmax)=uu(1:imax,1:jmax,1:kmax)/rhU(1:imax,1:jmax,1:kmax)
+	  vv(1:imax,1:jmax,1:kmax)=vv(1:imax,1:jmax,1:kmax)/rhV(1:imax,1:jmax,1:kmax)
+	  ww(1:imax,1:jmax,1:kmax)=ww(1:imax,1:jmax,1:kmax)/rhW(1:imax,1:jmax,1:kmax)		
+	  call bound_incljet(uu,vv,ww,drdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)	
+      do  k=1,kmax
+        do j=1,jmax
+          do i=1,imax
+      p(i,j,k)  =(
+     1  ( Ru(i)*uu(i,j,k) - Ru(i-1)*uu(i-1,j,k) ) / ( Rp(i)*dr(i) )
+     +              +
+     2  (       vv(i,j,k) -         vv(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
+     +              +
+     3  (       ww(i,j,k) -         ww(i,j,k-1) ) / ( dz ) ) / ddtt 
+          enddo
+        enddo
+      enddo	
+	ELSEIF (continuity_solver.eq.34) THEN ! Optional: 34 (dudx=0) improved version of 3 which gives dudx=e-14 and with correction to account for difference Um and Uv
+	 uu(1:imax,1:jmax,1:kmax)=uu(1:imax,1:jmax,1:kmax)/rhU(1:imax,1:jmax,1:kmax)
+	 vv(1:imax,1:jmax,1:kmax)=vv(1:imax,1:jmax,1:kmax)/rhV(1:imax,1:jmax,1:kmax)
+	 ww(1:imax,1:jmax,1:kmax)=ww(1:imax,1:jmax,1:kmax)/rhW(1:imax,1:jmax,1:kmax)		  
+	 IF (slipvel.eq.2) THEN
+	  do j=1,jmax
+	    do i=1,imax   
+		  do k=kbed(i,j)+1,kmax !1,kmax ! all cells below kbed no correction needed as dwdt=dwdt 	  
+		    sum_c_ws=0.
+			do n=1,nfrac
+				ws(n)=-frac(n)%ws !ws defined positive downwards
+				sum_c_ws=sum_c_ws+ws(n)*(cW(n,i,j,k)*frac(n)%rho/rhW(i,j,k)-cW(n,i,j,k))
+			enddo
+			ww(i,j,k)=ww(i,j,k)-sum_c_ws  !go from mixture velocity (centre of mass velocity) to velocity of volume centre
+          enddo
+        enddo
+      enddo
+	 ELSE
+	  do j=1,jmax
+	    do i=1,imax   
+		  do k=kbed(i,j)+1,kmax !1,kmax ! all cells below kbed no correction needed as dwdt=dwdt  
+		    sum_c_ws=0.
+		    ctot=0.
+		    do n=1,nfrac
+				ctot=cW(n,i,j,k)*frac(n)%dfloc/frac(n)%dpart*0.5*(rhocorr_air_z(n,k)+rhocorr_air_z(n,k+1))+ctot
+			enddo
+			ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
+			do n=1,nfrac
+				ws(n)=-frac(n)%ws*(1.-ctot)**(frac(n)%n) !ws defined positive downwards
+				sum_c_ws=sum_c_ws+ws(n)*(cW(n,i,j,k)*frac(n)%rho/rhW(i,j,k)-cW(n,i,j,k))
+			enddo
+			ww(i,j,k)=ww(i,j,k)-sum_c_ws  !go from mixture velocity (centre of mass velocity) to velocity of volume centre
+          enddo
+        enddo
+      enddo
+	 ENDIF
+	  call bound_incljet(uu,vv,ww,drdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)	
+      do  k=1,kmax
+        do j=1,jmax
+          do i=1,imax
+      p(i,j,k)  =(
+     1  ( Ru(i)*uu(i,j,k) - Ru(i-1)*uu(i-1,j,k) ) / ( Rp(i)*dr(i) )
+     +              +
+     2  (       vv(i,j,k) -         vv(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
+     +              +
+     3  (       ww(i,j,k) -         ww(i,j,k-1) ) / ( dz ) ) / ddtt
+          enddo
+        enddo
+      enddo	
+	ELSEIF (continuity_solver.eq.35) THEN ! Optional: 35 (dudx=0) improved version of 33 (better treatment variable density in source Poisson) which gives dudx=e-14
+	  uu(1:imax,1:jmax,1:kmax)=uu(1:imax,1:jmax,1:kmax)/rhU(1:imax,1:jmax,1:kmax)
+	  vv(1:imax,1:jmax,1:kmax)=vv(1:imax,1:jmax,1:kmax)/rhV(1:imax,1:jmax,1:kmax)
+	  ww(1:imax,1:jmax,1:kmax)=ww(1:imax,1:jmax,1:kmax)/rhW(1:imax,1:jmax,1:kmax)		
+	  call bound_incljet(uu,vv,ww,drdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)	
+	  IF (pres_in_predictor_step.eq.0) THEN 
+		  IF (npresVOF.eq.0) THEN
+		   dp(1:imax,1:jmax,1:kmax)=ddtt/dt_old*(pold3-pold2)+pold3 		!dp contains predicted pressure 
+		  ELSE
+		   dp(1:imax,1:jmax,1:kmax)= ddtt/dt_old*(pold3-pold2)+pold3  !pold3 		!dp contains predicted pressure 
+		  ENDIF	
+	  ELSE 
+		  IF (npresVOF.eq.0) THEN
+		   dp(1:imax,1:jmax,1:kmax)=ddtt/dt_old*(pold3-pold2)		!dp contains predicted increment of pressure 
+		  ELSE
+		   dp(1:imax,1:jmax,1:kmax)=ddtt/dt_old*(pold3-pold2)		!dp contains predicted increment of pressure 
+		   !dp = 0.		  
+		  ENDIF		
+	  ENDIF	  
+	  call bound_p(dp)
+      do  k=1,kmax
+        do j=1,jmax
+          do i=1,imax
+      p(i,j,k)  =(
+     1  ( Ru(i)*uu(i,j,k) - Ru(i-1)*uu(i-1,j,k) ) / ( Rp(i)*dr(i) )
+     +              +
+     2  (       vv(i,j,k) -         vv(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
+     +              +
+     3  (       ww(i,j,k) -         ww(i,j,k-1) ) / ( dz ) ) / ddtt  + 
+     4  ((Ru(i  )*(1./rho_b-1./rhU(i  ,j,k))*(dp(i+1,j,k)-dp(i  ,j,k))/(Rp(i+1)-Rp(i  )) - 
+     4    Ru(i-1)*(1./rho_b-1./rhU(i-1,j,k))*(dp(i  ,j,k)-dp(i-1,j,k))/(Rp(i  )-Rp(i-1)) ) / ( Rp(i)*dr(i) )
+     +              +
+     5  ( (1./rho_b-1./rhV(i,j  ,k))*(dp(i,j+1,k)-dp(i,j  ,k))/ (Rp(i)*(phip(j+1)-phip(j  )))-         
+     5    (1./rho_b-1./rhV(i,j-1,k))*(dp(i,j  ,k)-dp(i,j-1,k))/ (Rp(i)*(phip(j  )-phip(j-1)))) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
+     +              +
+     6  ( (1./rho_b-1./rhW(i,j,k  ))*(dp(i,j,k+1)-dp(i,j,k  ))/ dz -
+     6    (1./rho_b-1./rhW(i,j,k-1))*(dp(i,j,k  )-dp(i,j,k-1))/ dz	) / dz ) 	 
+          enddo
+        enddo
+      enddo	
+!!	DO n2=1,nbedplume
+!!	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
+!!	! rotation ship for ambient side current
+!!	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
+!!	  phi=atan2(V_b,1.e-12)
+!!	else
+!!	  phi=atan2(V_b,(U_TSHD-U_b))
+!!	endif
+!!      do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
+!!       do i=1,imax  
+!!         do j=jmax,1,-1 
+!!	  xx=Rp(i)*cos_u(j)-schuif_x
+!!	  yy=Rp(i)*sin_u(j)
+!!!	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
+!!		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
+!!		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
+!!!!		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+!!		!! do not use bp(n2)%i,j indices as they are defined from 0,j1 instead of 1,jmax needed for pressure !!
+!!		if (bp(n2)%radius.gt.0.) then 
+!!		  inout=0
+!!		  IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n2)%radius)**2) THEN
+!!			inout=1
+!!		  ENDIF
+!!		else 
+!!		  CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+!!		endif 		
+!!!	  ELSE 
+!!!	 	inout=0
+!!!	  ENDIF
+!!	  if (inout.eq.1) then
+!!		!  if (continuity_solver.eq.33.or.continuity_solver.eq.34.or.continuity_solver.eq.35.or.continuity_solver.eq.36) THEN
+!!			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				  			! div(u)=0 --> total volume flux in 
+!!		!  else
+!!		!	p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				! div(u)=0 --> total volume flux in 
+!!		!  endif
+!!	   endif
+!!	  enddo
+!!	 enddo
+!!	enddo
+!!	ENDIF
+!!	ENDDO ! bedplume loop	  
+	 do n=1,npresVOF
+	  ! 2nd iteration loop with updated P-predictor:
+	  IF (poissolver.eq.3) THEN
+	   CALL SOLVEpois_vg_pardiso(p)		  
+	  ELSE
+	   CALL SOLVEpois(p) !,Ru,Rp,DPHI,dz,rank,imax,jmax,kmax,px)
+	  ENDIF
+	  dp(1:imax,1:jmax,1:kmax)=0.8*p*rho_b+0.2*dp(1:imax,1:jmax,1:kmax) !use first iteration loop to obtain more accurate p-predictor 
+	  call bound_p(dp)	   
+      do  k=1,kmax
+        do j=1,jmax
+          do i=1,imax
+      p(i,j,k)  =(
+     1  ( Ru(i)*uu(i,j,k) - Ru(i-1)*uu(i-1,j,k) ) / ( Rp(i)*dr(i) )
+     +              +
+     2  (       vv(i,j,k) -         vv(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
+     +              +
+     3  (       ww(i,j,k) -         ww(i,j,k-1) ) / ( dz ) ) / ddtt  + 
+     4  ((Ru(i  )*(1./rho_b-1./rhU(i  ,j,k))*(dp(i+1,j,k)-dp(i  ,j,k))/(Rp(i+1)-Rp(i  )) - 
+     4    Ru(i-1)*(1./rho_b-1./rhU(i-1,j,k))*(dp(i  ,j,k)-dp(i-1,j,k))/(Rp(i  )-Rp(i-1)) ) / ( Rp(i)*dr(i) )
+     +              +
+     5  ( (1./rho_b-1./rhV(i,j  ,k))*(dp(i,j+1,k)-dp(i,j  ,k))/ (Rp(i)*(phip(j+1)-phip(j  )))-         
+     5    (1./rho_b-1./rhV(i,j-1,k))*(dp(i,j  ,k)-dp(i,j-1,k))/ (Rp(i)*(phip(j  )-phip(j-1)))) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
+     +              +
+     6  ( (1./rho_b-1./rhW(i,j,k  ))*(dp(i,j,k+1)-dp(i,j,k  ))/ dz -
+     6    (1./rho_b-1./rhW(i,j,k-1))*(dp(i,j,k  )-dp(i,j,k-1))/ dz	) / dz ) 	 
+          enddo
+        enddo
+      enddo
+!!	DO n2=1,nbedplume
+!!	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
+!!	! rotation ship for ambient side current
+!!	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
+!!	  phi=atan2(V_b,1.e-12)
+!!	else
+!!	  phi=atan2(V_b,(U_TSHD-U_b))
+!!	endif
+!!      do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
+!!       do i=1,imax  
+!!         do j=jmax,1,-1 
+!!	  xx=Rp(i)*cos_u(j)-schuif_x
+!!	  yy=Rp(i)*sin_u(j)
+!!!	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
+!!		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
+!!		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
+!!!!		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+!!		!! do not use bp(n2)%i,j indices as they are defined from 0,j1 instead of 1,jmax needed for pressure !!
+!!		if (bp(n2)%radius.gt.0.) then 
+!!		  inout=0
+!!		  IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n2)%radius)**2) THEN
+!!			inout=1
+!!		  ENDIF
+!!		else 
+!!		  CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+!!		endif 		
+!!!	  ELSE 
+!!!	 	inout=0
+!!!	  ENDIF
+!!	  if (inout.eq.1) then
+!!		!  if (continuity_solver.eq.33.or.continuity_solver.eq.34.or.continuity_solver.eq.35.or.continuity_solver.eq.36) THEN
+!!			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				  			! div(u)=0 --> total volume flux in 
+!!		!  else
+!!		!	p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				! div(u)=0 --> total volume flux in 
+!!		!  endif
+!!	   endif
+!!	  enddo
+!!	 enddo
+!!	enddo
+!!	ENDIF
+!!	ENDDO ! bedplume loop	  
+	 enddo
+	 	   
+	ELSEIF (continuity_solver.eq.36) THEN ! Optional: 36 (dudx=0) improved version of 34 (better treatment variable density in source Poisson) which gives dudx=e-14 and with correction to account for difference Um and Uv
+	 uu(1:imax,1:jmax,1:kmax)=uu(1:imax,1:jmax,1:kmax)/rhU(1:imax,1:jmax,1:kmax)
+	 vv(1:imax,1:jmax,1:kmax)=vv(1:imax,1:jmax,1:kmax)/rhV(1:imax,1:jmax,1:kmax)
+	 ww(1:imax,1:jmax,1:kmax)=ww(1:imax,1:jmax,1:kmax)/rhW(1:imax,1:jmax,1:kmax)		  
+	 IF (slipvel.eq.2) THEN
+	  do j=1,jmax
+	    do i=1,imax   
+		  do k=kbed(i,j)+1,kmax !1,kmax ! all cells below kbed no correction needed as dwdt=dwdt 	  
+		    sum_c_ws=0.
+			do n=1,nfrac
+				ws(n)=-frac(n)%ws !ws defined positive downwards
+				sum_c_ws=sum_c_ws+ws(n)*(cW(n,i,j,k)*frac(n)%rho/rhW(i,j,k)-cW(n,i,j,k))
+			enddo
+			ww(i,j,k)=ww(i,j,k)-sum_c_ws  !go from mixture velocity (centre of mass velocity) to velocity of volume centre
+          enddo
+        enddo
+      enddo
+	 ELSE
+	  do j=1,jmax
+	    do i=1,imax   
+		  do k=kbed(i,j)+1,kmax !1,kmax ! all cells below kbed no correction needed as dwdt=dwdt  
+		    sum_c_ws=0.
+		    ctot=0.
+		    do n=1,nfrac
+				ctot=cW(n,i,j,k)*frac(n)%dfloc/frac(n)%dpart*0.5*(rhocorr_air_z(n,k)+rhocorr_air_z(n,k+1))+ctot
+			enddo
+			ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
+			do n=1,nfrac
+				ws(n)=-frac(n)%ws*(1.-ctot)**(frac(n)%n) !ws defined positive downwards
+				sum_c_ws=sum_c_ws+ws(n)*(cW(n,i,j,k)*frac(n)%rho/rhW(i,j,k)-cW(n,i,j,k))
+			enddo
+			ww(i,j,k)=ww(i,j,k)-sum_c_ws  !go from mixture velocity (centre of mass velocity) to velocity of volume centre
+          enddo
+        enddo
+      enddo
+	 ENDIF
+	  call bound_incljet(uu,vv,ww,drdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)	
+	  IF (pres_in_predictor_step.eq.0) THEN 
+		  IF (npresVOF.eq.0) THEN
+		   dp(1:imax,1:jmax,1:kmax)=ddtt/dt_old*(pold3-pold2)+pold3 		!dp contains predicted pressure 
+		  ELSE
+		   dp(1:imax,1:jmax,1:kmax)= ddtt/dt_old*(pold3-pold2)+pold3  !pold3 		!dp contains predicted pressure 
+		   !dp(1:imax,1:jmax,1:kmax)=(pold3-pold2)/MAX(rnew(1:imax,1:jmax,1:kmax)-rold(1:imax,1:jmax,1:kmax),1.e-12)*(drdt(1:imax,1:jmax,1:kmax)-rnew(1:imax,1:jmax,1:kmax))+ddtt/dt_old*(pold3-pold2)+pold3 
+		   !dp(1:imax,1:jmax,1:kmax)=(1.-rho_b/drdt(1:imax,1:jmax,1:kmax))/(1.-rho_b/MAX(rnew(1:imax,1:jmax,1:kmax),rho_b*1.01))*(pold3-pold2) + pold3 
+		   !(1.-rho_b/drdt(1:imax,1:jmax,1:kmax))/(1.-rho_b/MAX(rnew(1:imax,1:jmax,1:kmax),rho_b*1.01))
+		  ENDIF	
+	  ELSE 
+		  IF (npresVOF.eq.0) THEN
+		   dp(1:imax,1:jmax,1:kmax)=ddtt/dt_old*(pold3-pold2)		!dp contains predicted increment of pressure 
+		  ELSE
+		   dp(1:imax,1:jmax,1:kmax)=ddtt/dt_old*(pold3-pold2)		!dp contains predicted increment of pressure 
+		   !dp = 0.		  
+		  ENDIF		
+	  ENDIF
+	  call bound_p(dp)
+      do  k=1,kmax
+        do j=1,jmax
+          do i=1,imax
+      p(i,j,k)  =(
+     1  ( Ru(i)*uu(i,j,k) - Ru(i-1)*uu(i-1,j,k) ) / ( Rp(i)*dr(i) )
+     +              +
+     2  (       vv(i,j,k) -         vv(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
+     +              +
+     3  (       ww(i,j,k) -         ww(i,j,k-1) ) / ( dz ) ) / ddtt +
+     4  ((Ru(i  )*(1./rho_b-1./rhU(i  ,j,k))*(dp(i+1,j,k)-dp(i  ,j,k))/(Rp(i+1)-Rp(i  )) - 
+     4    Ru(i-1)*(1./rho_b-1./rhU(i-1,j,k))*(dp(i  ,j,k)-dp(i-1,j,k))/(Rp(i  )-Rp(i-1)) ) / ( Rp(i)*dr(i) )
+     +              +
+     5  ( (1./rho_b-1./rhV(i,j  ,k))*(dp(i,j+1,k)-dp(i,j  ,k))/ (Rp(i)*(phip(j+1)-phip(j  )))-         
+     5    (1./rho_b-1./rhV(i,j-1,k))*(dp(i,j  ,k)-dp(i,j-1,k))/ (Rp(i)*(phip(j  )-phip(j-1)))) / (Rp(i)*(phiv(j)-phiv(j-1)))
+     +              +
+     6  ( (1./rho_b-1./rhW(i,j,k  ))*(dp(i,j,k+1)-dp(i,j,k  )) / dz - 
+     6    (1./rho_b-1./rhW(i,j,k-1))*(dp(i,j,k  )-dp(i,j,k-1)) / dz	) / dz ) 
+          enddo
+        enddo
+      enddo	
+!!	DO n2=1,nbedplume
+!!	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
+!!	! rotation ship for ambient side current
+!!	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
+!!	  phi=atan2(V_b,1.e-12)
+!!	else
+!!	  phi=atan2(V_b,(U_TSHD-U_b))
+!!	endif
+!!      do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
+!!       do i=1,imax  
+!!         do j=jmax,1,-1 
+!!	  xx=Rp(i)*cos_u(j)-schuif_x
+!!	  yy=Rp(i)*sin_u(j)
+!!!	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
+!!		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
+!!		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
+!!!!		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+!!		!! do not use bp(n2)%i,j indices as they are defined from 0,j1 instead of 1,jmax needed for pressure !!
+!!		if (bp(n2)%radius.gt.0.) then 
+!!		  inout=0
+!!		  IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n2)%radius)**2) THEN
+!!			inout=1
+!!		  ENDIF
+!!		else 
+!!		  CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+!!		endif 		
+!!!	  ELSE 
+!!!	 	inout=0
+!!!	  ENDIF
+!!	  if (inout.eq.1) then
+!!		!  if (continuity_solver.eq.33.or.continuity_solver.eq.34.or.continuity_solver.eq.35.or.continuity_solver.eq.36) THEN
+!!			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				  			! div(u)=0 --> total volume flux in 
+!!		!  else
+!!		!	p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				! div(u)=0 --> total volume flux in 
+!!		!  endif
+!!	   endif
+!!	  enddo
+!!	 enddo
+!!	enddo
+!!	ENDIF
+!!	ENDDO ! bedplume loop
+	
+	 do n=1,npresVOF
+	  ! 2nd iteration loop with updated P-predictor:
+	  IF (poissolver.eq.3) THEN
+	   CALL SOLVEpois_vg_pardiso(p)		  
+	  ELSE
+	   CALL SOLVEpois(p) !,Ru,Rp,DPHI,dz,rank,imax,jmax,kmax,px)
+	  ENDIF
+	  dp(1:imax,1:jmax,1:kmax)=p*rho_b !use first iteration loop to obtain more accurate p-predictor 
+	  call bound_p(dp)	   
+      do  k=1,kmax
+        do j=1,jmax
+          do i=1,imax
+      p(i,j,k)  =(
+     1  ( Ru(i)*uu(i,j,k) - Ru(i-1)*uu(i-1,j,k) ) / ( Rp(i)*dr(i) )
+     +              +
+     2  (       vv(i,j,k) -         vv(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
+     +              +
+     3  (       ww(i,j,k) -         ww(i,j,k-1) ) / ( dz ) ) / ddtt  + 
+     4  ((Ru(i  )*(1./rho_b-1./rhU(i  ,j,k))*(dp(i+1,j,k)-dp(i  ,j,k))/(Rp(i+1)-Rp(i  )) - 
+     4    Ru(i-1)*(1./rho_b-1./rhU(i-1,j,k))*(dp(i  ,j,k)-dp(i-1,j,k))/(Rp(i  )-Rp(i-1)) ) / ( Rp(i)*dr(i) )
+     +              +
+     5  ( (1./rho_b-1./rhV(i,j  ,k))*(dp(i,j+1,k)-dp(i,j  ,k))/ (Rp(i)*(phip(j+1)-phip(j  )))-         
+     5    (1./rho_b-1./rhV(i,j-1,k))*(dp(i,j  ,k)-dp(i,j-1,k))/ (Rp(i)*(phip(j  )-phip(j-1)))) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
+     +              +
+     6  ( (1./rho_b-1./rhW(i,j,k  ))*(dp(i,j,k+1)-dp(i,j,k  ))/ dz -
+     6    (1./rho_b-1./rhW(i,j,k-1))*(dp(i,j,k  )-dp(i,j,k-1))/ dz	) / dz ) 	 
+          enddo
+        enddo
+      enddo	
+!!	DO n2=1,nbedplume
+!!	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
+!!	! rotation ship for ambient side current
+!!	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
+!!	  phi=atan2(V_b,1.e-12)
+!!	else
+!!	  phi=atan2(V_b,(U_TSHD-U_b))
+!!	endif
+!!      do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
+!!       do i=1,imax  
+!!         do j=jmax,1,-1 
+!!	  xx=Rp(i)*cos_u(j)-schuif_x
+!!	  yy=Rp(i)*sin_u(j)
+!!!	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
+!!		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
+!!		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
+!!!!		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+!!		!! do not use bp(n2)%i,j indices as they are defined from 0,j1 instead of 1,jmax needed for pressure !!
+!!		if (bp(n2)%radius.gt.0.) then 
+!!		  inout=0
+!!		  IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n2)%radius)**2) THEN
+!!			inout=1
+!!		  ENDIF
+!!		else 
+!!		  CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+!!		endif 		
+!!!	  ELSE 
+!!!	 	inout=0
+!!!	  ENDIF
+!!	  if (inout.eq.1) then
+!!		!  if (continuity_solver.eq.33.or.continuity_solver.eq.34.or.continuity_solver.eq.35.or.continuity_solver.eq.36) THEN
+!!			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				  			! div(u)=0 --> total volume flux in 
+!!		!  else
+!!		!	p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				! div(u)=0 --> total volume flux in 
+!!		!  endif
+!!	   endif
+!!	  enddo
+!!	 enddo
+!!	enddo
+!!	ENDIF
+!!	ENDDO ! bedplume loop	  
+	 enddo	  
 	ELSE !default is 1 (drdt+drudx=0)
 	twodtdt=MAX((3.*tt-4.*time_n+time_nm)*ddtt,1.e-12)
 	
@@ -3789,35 +4425,66 @@ c
       enddo
 	ENDIF
 	
-!
-!	DO n2=1,nbedplume
-!	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
-!	! rotation ship for ambient side current
-!	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-!	  phi=atan2(V_b,1.e-12)
-!	else
-!	  phi=atan2(V_b,(U_TSHD-U_b))
-!	endif
-!      do k=1,kmax
-!       do i=1,imax  
-!         do j=jmax,1,-1      
-!	  xx=Rp(i)*cos_u(j)-schuif_x
-!	  yy=Rp(i)*sin_u(j)
-!	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
-!		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
-!		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
-!		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
-!	  ELSE 
-!	 	inout=0
-!	  ENDIF
-!	  if (inout.eq.1) then
-!		  p(i,j,k)=p(i,j,k)-bp(n2)%Q*rr(i,j,k)/bp(n2)%volncells/ddtt !bp(n2)%Q positive means influx (and has to be negative in this loop)
-!	   endif
-!	  enddo
-!	 enddo
-!	enddo
-!	ENDIF
-!	ENDDO ! bedplume loop
+!!	DO n2=1,nbedplume
+!!	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
+!!	! rotation ship for ambient side current
+!!	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
+!!	  phi=atan2(V_b,1.e-12)
+!!	else
+!!	  phi=atan2(V_b,(U_TSHD-U_b))
+!!	endif
+!!      do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
+!!       do i=1,imax  
+!!         do j=jmax,1,-1 
+!!	  xx=Rp(i)*cos_u(j)-schuif_x
+!!	  yy=Rp(i)*sin_u(j)
+!!!	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
+!!		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
+!!		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
+!!!!		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+!!		!! do not use bp(n2)%i,j indices as they are defined from 0,j1 instead of 1,jmax needed for pressure !!
+!!		if (bp(n2)%radius.gt.0.) then 
+!!		  inout=0
+!!		  IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n2)%radius)**2) THEN
+!!			inout=1
+!!		  ENDIF
+!!		else 
+!!		  CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+!!		endif 		
+!!!	  ELSE 
+!!!	 	inout=0
+!!!	  ENDIF
+!!	  if (inout.eq.1) then
+!!!		cin=0.
+!!!		s_in=0.
+!!!		ddrr=0.		
+!!!		do n=1,nfrac
+!!!		  cin = cin + bp(n2)%sedflux(n)/(frac(n)%rho*bp(n2)%Q)
+!!!		  s_in = s_in + bp(n2)%sedflux(n) 
+!!!		  ddrr = ddrr + bp(n2)%sedflux(n)*dt/bp(n2)%volncells +
+!!!     &		  dcdt(n,i,j,k)*MIN(0.,bp(n2)%Q*bp(n2)%changesedsuction)*frac(n)%rho*dt/bp(n2)%volncells  
+!!!			! change of rho in cell due to sedflux or suction Q --> correct determination drhodt in continuity equation for this
+!!!			! IMPLICIT: c^n+1-c^n=-Qout_cel/Vol_cel*dt*c^n+1 --> c^n+1 = c^n/(1+Qout_cel/Vol_cel*dt)
+!!!			!when Q negative, remove sediment from cell as well   IMPLICIT 		  
+!!!		enddo	
+!!		  if (continuity_solver.eq.33.or.continuity_solver.eq.34) THEN
+!!			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				  			! div(u)=0 --> total volume flux in 
+!!		  elseif (continuity_solver.eq.35.or.continuity_solver.eq.36) THEN 
+!!			! bp%Q already added to p input in lines above 
+!!		  else
+!!			p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				! div(u)=0 --> total volume flux in 
+!!		  endif
+!!!!			p(i,j,k)=p(i,j,k)-(s_in+(1.-MIN(cin,1.))*drdt(i,j,k)*bp(n2)%Q)/bp(n2)%volncells/dt  ! total mass flux in 
+!!!			p(i,j,k)=p(i,j,k)-((1.-MIN(cin,1.))*drdt(i,j,k)*bp(n2)%Q)/bp(n2)%volncells/dt  ! total mass flux in 
+!!!!			p(i,j,k)=p(i,j,k)-rho_b*bp(n2)%Q/bp(n2)%volncells/dt
+!!!		  endif
+!!!		  !bp(n2)%Q positive means influx
+!!	   endif
+!!	  enddo
+!!	 enddo
+!!	enddo
+!!	ENDIF
+!!	ENDDO ! bedplume loop
  
       return
       end
@@ -4006,6 +4673,8 @@ c
         enddo
       enddo 	 
 		p=p(1:imax,1:jmax,1:kmax)*rho_b  !drdt(1:imax,1:jmax,1:kmax) !scale P back with rho_b not with drdt because in source pressure Poisson eq. already extra source-term 1/rho_b-1/drdt is included 
+		!p=(p(1:imax,1:jmax,1:kmax)+(1./drdt(1:imax,1:jmax,1:kmax)+1./rho_b)*dp(1:imax,1:jmax,1:kmax))*rho_b 
+		
 	  if (applyVOF.eq.1) then !make rhU,rhV,rhW 1 again 
 		rhU=1.
 		rhV=1.
@@ -4092,6 +4761,7 @@ c
       integer t,n
 	  real uu(0:i1,0:j1,0:k1),vv(0:i1,0:j1,0:k1),ww(0:i1,0:j1,0:k1)
 	  real ddtt
+	  real sum_c_ws,ws(1:nfrac),ctot 
 
 
       call pshiftb(p,pplus) !,rank,imax,jmax,kmax,px)
@@ -4162,6 +4832,67 @@ c
           enddo
         enddo
       enddo
+	  
+	IF (continuity_solver.eq.34.or.continuity_solver.eq.36) THEN 
+	 IF (slipvel.eq.2) THEN
+	  do j=1,jmax
+	    do i=1,imax   
+		  do k=kbed(i,j),kmax !1,kmax ! all cells below kbed no correction needed as dwdt=dwdt
+		    sum_c_ws=0.
+			do n=1,nfrac
+				ws(n)=-frac(n)%ws !ws defined positive downwards
+				sum_c_ws=sum_c_ws+ws(n)*(cW(n,i,j,k)*frac(n)%rho/rhW(i,j,k)-cW(n,i,j,k))
+			enddo
+			dWdt(i,j,k)=dWdt(i,j,k)+sum_c_ws  !go from velocity of volume centre to mixture velocity (centre of mass velocity)
+          enddo
+        enddo
+      enddo
+	 ELSE
+	  do j=1,jmax
+	    do i=1,imax   
+		  do k=kbed(i,j),kmax !1,kmax ! all cells below kbed no correction needed as dwdt=dwdt 
+		    sum_c_ws=0.
+		    ctot=0.
+		    do n=1,nfrac
+				ctot=cW(n,i,j,k)*frac(n)%dfloc/frac(n)%dpart*0.5*(rhocorr_air_z(n,k)+rhocorr_air_z(n,k+1))+ctot
+			enddo
+			ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
+			do n=1,nfrac
+				ws(n)=-frac(n)%ws*(1.-ctot)**(frac(n)%n) !ws defined positive downwards
+				sum_c_ws=sum_c_ws+ws(n)*(cW(n,i,j,k)*frac(n)%rho/rhW(i,j,k)-cW(n,i,j,k))
+			enddo
+			dWdt(i,j,k)=dWdt(i,j,k)+sum_c_ws  !go from velocity of volume centre to mixture velocity (centre of mass velocity)
+          enddo
+        enddo
+      enddo
+	 ENDIF
+	ENDIF 
+	 IF (continuity_solver.eq.35.or.continuity_solver.eq.36) THEN 
+      do k=1,kmax
+        do j=1,jmax
+          do i=1,imax
+		   dUdt(i,j,k)=dUdt(i,j,k)-dt*(1./rhU(i,j,k)-1./rho_b)*(dp(i+1,j,k)-dp(i,j,k))/(Rp(i+1)-Rp(i))
+		   dVdt(i,j,k)=dVdt(i,j,k)-dt*(1./rhV(i,j,k)-1./rho_b)*(dp(i,j+1,k)-dp(i,j,k))/(Rp(i)*(phip(j+1)-phip(j)) ) 
+		   dWdt(i,j,k)=dWdt(i,j,k)-dt*(1./rhW(i,j,k)-1./rho_b)*(dp(i,j,k+1)-dp(i,j,k))/ dz		
+		   dUdt(i,j,k)=dUdt(i,j,k)*rhU(i,j,k)
+		   dVdt(i,j,k)=dVdt(i,j,k)*rhV(i,j,k)
+		   dWdt(i,j,k)=dWdt(i,j,k)*rhW(i,j,k)
+          enddo
+        enddo
+      enddo	 
+	 ENDIF 
+	 IF (continuity_solver.eq.33.or.continuity_solver.eq.34) THEN 
+      do k=1,kmax
+        do j=1,jmax
+          do i=1,imax
+		   dUdt(i,j,k)=dUdt(i,j,k)*rhU(i,j,k)
+		   dVdt(i,j,k)=dVdt(i,j,k)*rhV(i,j,k)
+		   dWdt(i,j,k)=dWdt(i,j,k)*rhW(i,j,k)
+          enddo
+        enddo
+      enddo	 
+	 ENDIF 	 
+	 
       end
 
 
@@ -4509,6 +5240,7 @@ C.. All other variables
       integer   tel,tel2,tel3,tel4,ind
       real      dzi
       integer   knd,nnz
+	  real      bbrr(imax,jmax*px,kmax/px)
 	  
 	  
       pi = 4.*atan(1.)
@@ -4528,14 +5260,31 @@ C.. All other variables
 		aar(1:imax)=ar(1:imax)
 		ccr(1:imax)=cr(1:imax)
 		if (periodicx.eq.0.or.periodicx.eq.2) then
+		  if (Poutflow.eq.1) then !Poutflow zero at just 1 location
+		    br(imax)=br(imax)+cr(imax) !! p(imax+1)=p(imax); default: dpdn=0 at full bc; 
+		  else 
 			br(imax)=br(imax)-cr(imax) !! p(imax+1)=-p(imax); p=0 at full bc; 
+		  endif 
 			br(1)=br(1)+ar(1) !dpdn=0
 			cr(imax)=0. !no interaction
 			ar(1)=0. !no interaction	
 		else ! periodicx=1
 			cr(imax)=0. !no interaction
 			ar(1)=0. !no interaction				
-		endif		
+		endif	
+		do i=1,imax
+		  do j=1,jmax*px 
+		    do k=1,kmax/px 
+			  bbrr(i,j,k)=br(i)
+			enddo 
+		  enddo 
+		enddo 
+		if (Poutflow.eq.1) then !Poutflow zero at just 1 location
+		 if (rank.eq.0.and.(periodicx.eq.0.or.periodicx.eq.2)) then 
+		  bbrr(imax,1,1)=bbrr(imax,1,1)-2*ccr(imax) !get p=0 at only one outflow gridpoint (first b+c; now -2c to arrive at b-c)
+		 endif 
+		endif
+		
 	  
 !  tridiagonal system in phi-direction
       do j=1,jmax*px
@@ -4597,7 +5346,7 @@ C.. All other variables
             iro(tel)=tel3
          endif
          tel=tel+1
-         lhs(tel,k)=(br(i)+bphi(j)*1./(Rp(i)**2)+zrt(knd)) ! diagonal entry for x,y,z component (z is from fft)
+         lhs(tel,k)=(bbrr(i,j,k)+bphi(j)*1./(Rp(i)**2)+zrt(knd)) ! diagonal entry for x,y,z component (z is from fft)
          jco(tel)=ind
 		 tel4=tel4+1
 		 di(tel4)=tel
@@ -5200,7 +5949,7 @@ C.. Fill all arrays containing matrix data.
 	!!    Make pressure zero at one point in outflow:
 	!!    Only b(imax)-c(imax) in matrix is not sufficient to make pressure exactly zero in (imax,1,1)
 	!!    Some small drift is occuring without following lines:
-        rhs_ref=rhs(imax,1,1)
+        rhs_ref=rhs(imax,1,kmax)
 		rhs=rhs-rhs_ref
 
       return
@@ -5260,8 +6009,11 @@ c   generate tridiagonal systems
 
 	if (periodicx.eq.0.or.periodicx.eq.2) then
 	      b(1)=   -(Ru(1)/(Rp(2)-Rp(1)))/(Rp(1)*(Ru(1)-Ru(0)))
-	      b(imax)=b(imax)-c(imax)     !! p(imax+1)=-p(imax) --> bc p=0
-	!      b(imax)=b(imax)+c(imax)      !! p(imax+1)= p(imax) --> bc dpdn=0
+		  if (Poutflow.eq.1) then !Poutflow zero at just 1 location
+	        b(imax)=b(imax)+c(imax)      !! p(imax+1)= p(imax) --> bc dpdn=0
+		  else !default P=0 complete outflow 
+		    b(imax)=b(imax)-c(imax)     !! p(imax+1)=-p(imax) --> bc p=0
+		  endif 
       	      i=imax !! p(imax+1)= p(imax) --> bc dpdn=0
  !     	      b(i)=-(Ru(I-1)/(Rp(I)-Rp(I-1)))/   !! this is equivalent to b(imax)+c(imax) --> dpdn=0
 !     $        (Rp(I)*(Ru(I)-Ru(I-1)))
@@ -5278,17 +6030,21 @@ c   generate tridiagonal systems
 	  enddo
  	enddo
 
-	if (periodicx.eq.0.or.periodicx.eq.2) then
-! 	  if (rank==0) then
-!	    bbbb(imax,1,1)=b(imax)-2.*c(imax)     !! p(imax+1)=-p(imax) --> bc p=0 at 1 loc in mesh (first +c(imax) so now -2c(imax) to arrive at b-c)
-!	  endif
-	  c(imax)=0.
-	  a(1)=0.
-	else !! 3 lines below commented 8-6-2016 because not needed with periodicx boundaries
+	
+	 if (periodicx.eq.0.or.periodicx.eq.2) then
+	  if (Poutflow.eq.1) then !Poutflow zero at just 1 location 
+ 	   if (rank==0) then
+	     bbbb(imax,1,1)=b(imax)-2.*c(imax)     !! p(imax+1)=-p(imax) --> bc p=0 at 1 loc in mesh (first +c(imax) so now -2c(imax) to arrive at b-c)
+	   endif
+	  endif	   
+	   c(imax)=0.
+	   a(1)=0.
+	 else !! 3 lines below commented 8-6-2016 because not needed with periodicx boundaries
 ! 	  if (rank==0) then
 !	    bbbb(imax,1,1)=b(imax)-c(imax)     !! p(imax+1)=-p(imax) --> bc p=0 at 1 loc in mesh 
 !	  endif
-	endif
+	 endif
+	
 
       do i=1,imax
          dd(i) = 1/(Rp(i)**2)

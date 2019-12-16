@@ -29,7 +29,7 @@
        implicit none
 
  	INTEGER n,n2
-	REAL Re_p,atm_pres,rhoair_z,zz,ddzz,z_rks(1:kmax),interpseries
+	REAL Re_p,atm_pres,rhoair_z,zz,ddzz,z_rks(1:kmax),interpseries,gvector
 	integer :: ncid, rhVarId, status2, ndims, xtype,natts,status
 	integer, dimension(nf90_max_var_dims) :: dimids
 	integer size1,size2,size3,size4
@@ -62,12 +62,13 @@
 
 	rhocorr_air_z=1.
 	atm_pres=101325. !standard atmospheric pressure in Pa 
+	gvector=sqrt(gx**2+gy**2+gz**2)
 	DO n=1,nair !correction for comppressible air
 		DO k=0,k1
 			zz=k*dz-0.5*dz
 			ddzz=zz-(depth-frac(nfrac_air(n))%zair_ref_belowsurf) !positive upward and defined wrt zair_ref_belowsurf
-			rhoair_z = ((frac(nfrac_air(n))%zair_ref_belowsurf-ddzz)*rho_b*ABS(gz)+atm_pres) / 
-     &			       ((frac(nfrac_air(n))%zair_ref_belowsurf)*rho_b*ABS(gz)+atm_pres) * frac(nfrac_air(n))%rho
+			rhoair_z = ((frac(nfrac_air(n))%zair_ref_belowsurf-ddzz)*rho_b*gvector+atm_pres) / 
+     &			       ((frac(nfrac_air(n))%zair_ref_belowsurf)*rho_b*gvector+atm_pres) * frac(nfrac_air(n))%rho
 			rhocorr_air_z(nfrac_air(n),k) = frac(nfrac_air(n))%rho / rhoair_z
 		ENDDO
 	ENDDO
@@ -415,7 +416,7 @@
 	REAL*8 cbf(nfrac,0:i1),cbb(nfrac,0:i1),zbf(0:i1),zbb(0:i1),reduced_sed
 	INTEGER itrgt,jtrgt,nav,n_av,kplus2,kpp
 	REAL ws_botsand2,rho_botsand2,mbottot_sand2,PSD_bot_sand_massfrac2(nfr_sand),have_avalanched,have_avalanched_tmp,cctot
-	REAL ccfdtot_firstcel,wsedbed,distance_to_bed,zb_W
+	REAL ccfdtot_firstcel,wsedbed,distance_to_bed,zb_W,gvector
 	erosion=0.
 	deposition=0.
 
@@ -742,7 +743,8 @@
 				kplus2 = MIN(kbed(i,j)+2,k1)
 				delta = (rho_sand-rho_b)/rho_b !(rho_sand-rcfd(i,j,kplus))/rcfd(i,j,kplus) !switched to using rho_b instead of rcfd 13-2-2019
 				delta = MAX(delta,0.1) ! rho_sand must be > 2*rho_fluid
-				Dstar = d50 * ((delta*ABS(gz))/nu_mol**2)**(0.333333333333333)
+				gvector=sqrt(gx**2+gy**2+gz**2)
+				Dstar = d50 * ((delta*gvector)/nu_mol**2)**(0.333333333333333)
 				Shields_cr = 0.3/(1.+1.2*Dstar)+0.055*(1.-exp(-0.02*Dstar))  !Soulsby and Whitehouse 1997 curve through original Shields for threshold of motion sediment particles, Soulsy book Eq. SC(77)	
 				Shields_cr = Shields_cr*calibfac_Shields_cr
 				kn_sed_avg=kn_d50_multiplier*d50 !  kn=2*d50 is mentioned in VanRijn1984 paper, the pickup function which is applied here, however elsewhere vanRijn mentions larger kn_sed like 6*d50...)
@@ -753,7 +755,7 @@
 				enddo
 					
 				IF (pickup_formula.eq.'vanrijn1984') THEN
-					ustc2 = Shields_cr * ABS(gz)*delta*d50
+					ustc2 = Shields_cr * gvector*delta*d50
 					TT = (ust*ust-ustc2)/(MAX(ustc2,1.e-12))
 					TT = MAX(TT,0.) !TT must be positive
 					phip = calibfac_sand_pickup*0.00033*Dstar**0.3*TT**1.5   ! general pickup function					
@@ -762,7 +764,7 @@
 					Re_p=ABS(ws_sand)*d50/nu_mol
 					CD = MAX(0.4,24./Re_p*(1.+0.15*Re_p**0.687)) ! Okayasu et al 2010 Eq.4 combined with van Rhee p28 eq3.5 0.4 limit for Re>2000 	
 					!ust = kappa * absU / (log(15.05*dz/d50)) ! in Okayasu 2010 hydraulic rough flow is assumed with kn_sed=d50, in TUDflow3d relations valid for both smooth and rough flow are used and kn_sed is user defined 
-					Shields_eff = 0.75 * CD * ust**2/(delta*ABS(gz)*d50)
+					Shields_eff = 0.75 * CD * ust**2/(delta*gvector*d50)
 					TT = (Shields_eff - Shields_cr)/Shields_cr
 					TT = MAX(TT,0.) !TT must be positive
 					phip = calibfac_sand_pickup*0.00033*Dstar**0.3*TT**1.5   ! general pickup function					
@@ -775,32 +777,32 @@
 					dubdt = (absU-ubot(i,j))/ddt
 					ubot(i,j)=absU
 					Fi = 0.25*rcfd(i,j,kplus)*pi*d50**3*dubdt ! Ci=1.5 --> 1.5/6=0.25
-					W = 0.166667*abs(gz)*(rho_sand-rcfd(i,j,kplus))*pi*d50**3
+					W = 0.166667*gvector*(rho_sand-rcfd(i,j,kplus))*pi*d50**3
 					Fl = 0.025*rcfd(i,j,kplus)*pi*d50**2*ust**2 ! Cl=0.2 --> 0.2*0.5/4=0.025
 					Shields_eff = (Fd+Fi)/MAX(W-Fl,1.e-12)
 					TT = (Shields_eff - Shields_cr)/Shields_cr	
 					TT = MAX(TT,0.) !TT must be positive
 					phip = calibfac_sand_pickup*0.00033*Dstar**0.3*TT**1.5   ! general pickup function	
 				ELSEIF (pickup_formula.eq.'vanrijn2019') THEN
-					ustc2 = Shields_cr * ABS(gz)*delta*d50
+					ustc2 = Shields_cr * gvector*delta*d50
 					TT = (ust*ust-ustc2)/(MAX(ustc2,1.e-12))
 					TT = MAX(TT,0.) !TT must be positive
 					phip = calibfac_sand_pickup*0.00033*Dstar**0.3*TT**1.5   ! general pickup function	
-					Shields_eff = ust**2/(delta*ABS(gz)*d50)
+					Shields_eff = ust**2/(delta*gvector*d50)
 					phip = phip/(MAX(Shields_eff,1.)) ! correction: reduced pickup for high speed erosion
 				ELSEIF (pickup_formula.eq.'VR2019_Cbed') THEN
-					ustc2 = Shields_cr * ABS(gz)*delta*d50
+					ustc2 = Shields_cr * gvector*delta*d50
 					TT = (ust*ust-ustc2)/(MAX(ustc2,1.e-12))
 					TT = MAX(TT,0.) !TT must be positive
 					phip = calibfac_sand_pickup*0.00033*Dstar**0.3*TT**1.5   ! general pickup function	
-					Shields_eff = ust**2/(delta*ABS(gz)*d50)
+					Shields_eff = ust**2/(delta*gvector*d50)
 					phip = phip/(MAX(Shields_eff,1.))*(1.-(1.-cfixedbed)-SUM(ccfd(1:nfrac,i,j,kplus)))/(1.-(1.-cfixedbed)) ! correction: reduced pickup for high speed erosion and reduction for cbed according to VanRhee and Talmon 2010
 				ELSE
 					TT=0.
 					phip = 0.  ! general pickup function					
 				ENDIF
 				IF (reduction_sedimentation_shields>0) THEN ! PhD thesis vRhee p146 eq 7.74
-					reduced_sed = 1.-(ust*ust/(delta*ABS(gz)*d50))/reduction_sedimentation_shields
+					reduced_sed = 1.-(ust*ust/(delta*gvector*d50))/reduction_sedimentation_shields
 					reduced_sed = MAX(reduced_sed,0.)
 				ELSE
 					reduced_sed  = 1.
@@ -819,7 +821,7 @@
 				
 				DO n1=1,nfr_sand
 					n=nfrac_sand(n1)			
-					erosion_avg(n) = phip * (delta*ABS(gz)*d50)**0.5*ddt*bednotfixed(i,j,kbed(i,j))*morfac  !*rho_sand/rho_sand ! erosion flux in kg/m2/(kg/m3)= m3/m2=m
+					erosion_avg(n) = phip * (delta*gvector*d50)**0.5*ddt*bednotfixed(i,j,kbed(i,j))*morfac  !*rho_sand/rho_sand ! erosion flux in kg/m2/(kg/m3)= m3/m2=m
 					IF (interaction_bed.ge.6.and.kbed(i,j).eq.0) THEN !unlimited erosion in case kbed.eq.0
 						erosionf(n) = erosion_avg(n) * (c_bed(n)/cfixedbed) !erosion per fraction
 						erosionf(n) = erosionf(n) + ccnew(n,i,j,kplus)*MAX(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))*ddt !when wsed upward (e.g. fine fractions) then add negative deposition to erosion

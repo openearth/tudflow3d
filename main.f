@@ -29,7 +29,7 @@
       real     cput10a,cput10b,cput11a,cput11b
 	  !real     cput1b,cput2b,t_output,t_output_movie,crate
 	  !integer cput1,cput2,cr
-      real     bulk ,stress
+      real     bulk ,stress,pold_ref
       real A(3,3)
 	character(1024) :: svnversion
 	character(1024) :: svnurl
@@ -144,6 +144,11 @@
 	do k=kmax-1,1,-1
 		pold(:,:,k)=pold(:,:,k+1)+(rnew(:,:,k)-rho_b)*ABS(gz)*dz
 	enddo
+	if (rank.eq.0) then
+	  pold_ref=pold(imax,1,1)
+	endif
+	call mpi_bcast(pold_ref,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+	pold=pold-pold_ref	
 	pold1=pold 
 	pold2=pold 
 	pold3=pold
@@ -262,8 +267,15 @@
 			  ENDIF
 	  
 			call correc2(dudt,dvdt,dwdt,dt)
-			pold=p+pold    !what is called p here was dp in reality, now p is 
-			call bound_rhoU(dUdt,dVdt,dWdt,drdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
+			
+			 if (continuity_solver.eq.33.or.continuity_solver.eq.34) then 
+			   pold=p(1:imax,1:jmax,1:kmax)*drdt(1:imax,1:jmax,1:kmax)+pold !scale P back with rho	
+			 elseif  (continuity_solver.eq.35.or.continuity_solver.eq.36) then 
+			   pold=p(1:imax,1:jmax,1:kmax)*rho_b+pold !scale P back with rho	
+			 else 
+			   pold=p+pold    !what is called p here was dp in reality, now p is 
+			 endif
+			 call bound_rhoU(dUdt,dVdt,dWdt,drdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)			 
 		 ENDDO
 		!ENDIF
 

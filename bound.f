@@ -1364,7 +1364,16 @@ c	x,y,z coordinate system, not in r,theta,z like this code
 	   enddo
 	  enddo
 	endif
-
+		 DO i=0,i1
+		  DO j=0,j1
+		   DO k=1,kbed(i,j) !prevent source term at immersed boundary in PPE --> rhW not adapted because dpdn=0 has been enforced in bound_p already
+		    rhU(i,j,k)=rho_b 
+			rhU(MAX(0,i-1),j,k)=rho_b 
+		    rhV(i,j,k)=rho_b 
+			rhV(i,MAX(0,j-1),k)=rho_b 
+		  ENDDO
+		 ENDDO
+		ENDDO  
 	
 c 	influence of waves on lateral boundaries:
 	IF(Hs>0.) THEN
@@ -2983,6 +2992,12 @@ c*************************************************************
          enddo
        enddo
 		
+	 DO i=0,i1
+	  DO j=0,j1
+		Cbound(i,j,kbed(i,j))=Cbound(i,j,MIN(kbed(i,j)+1,k1)) ! make dpdn=0 at bed
+	  ENDDO
+	 ENDDO
+	 
       end
 
 

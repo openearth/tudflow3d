@@ -24,7 +24,7 @@
       SAVE
       
       INTEGER i,j,k,imax,jmax,kmax,i1,j1,k1,px,rank,kjet,nmax1,nmax2,nmax3,istep,CNdiffz,npresIBM,counter,npresVOF
-      INTEGER Lmix_type,slip_bot,SEM,azi_n,outflow_overflow_down,azi_n2,wiggle_detector,wd,applyVOF
+      INTEGER Lmix_type,slip_bot,SEM,azi_n,outflow_overflow_down,azi_n2,wiggle_detector,wd,applyVOF,Poutflow
       REAL ekm_mol,nu_mol,pi,kappa,gx,gy,gz,Cs,Sc,calibfac_sand_pickup,calibfac_Shields_cr,morfac,morfac2
       REAL dt,time_nm,time_n,time_np,t_end,t0_output,dt_output,te_output,dt_max,tstart_rms,CFL,dt_ini,tstart_morf,trestart,dt_old
       REAL dt_output_movie,t0_output_movie,te_output_movie,te_rms,time_nm2
@@ -65,7 +65,7 @@
 	  
       CHARACTER*4 convection,diffusion
       REAL numdiff,comp_filter_a
-      INTEGER comp_filter_n
+      INTEGER comp_filter_n,pres_in_predictor_step 
 
       INTEGER nprop,rudder,softnose
       REAL U_TSHD,LOA,Lfront,Breadth,Draught,Lback,Hback,xfront,yfront,Hfront
@@ -228,7 +228,8 @@
 	NAMELIST /times/t_end,t0_output,dt_output,te_output,tstart_rms,dt_max,dt_ini,time_int,CFL,
      & t0_output_movie,dt_output_movie,te_output_movie,tstart_morf,te_rms
 	NAMELIST /num_scheme/convection,numdiff,wiggle_detector,diffusion,comp_filter_a,comp_filter_n,CNdiffz,npresIBM,advec_conc,
-     & continuity_solver,transporteq_fracs,split_rho_cont,driftfluxforce_calfac,depo_implicit,depo_cbed_option,IBMorder,npresVOF
+     & continuity_solver,transporteq_fracs,split_rho_cont,driftfluxforce_calfac,depo_implicit,depo_cbed_option,IBMorder,npresVOF,
+     & pres_in_predictor_step,Poutflow
 	NAMELIST /ambient/U_b,V_b,W_b,bcfile,rho_b,SEM,nmax2,nmax1,nmax3,lm_min,lm_min3,slip_bot,kn,interaction_bed,
      & periodicx,periodicy,dpdx,dpdy,W_ox,Hs,Tp,nx_w,ny_w,obst,bc_obst_h,U_b3,V_b3,surf_layer,wallup,bedlevelfile,
      & U_bSEM,V_bSEM,U_w,V_w,c_bed,cfixedbed,U_init,V_init,initconditionsfile
@@ -293,6 +294,7 @@
 	CNdiffz = 0
 	npresIBM = 0
 	npresVOF = 0
+	pres_in_predictor_step = 1
 	advec_conc='VLE' !optional advection scheme concentration, options: 'VLE' (default) 'VL2' 'ARO' 'SBE' SB2' 'NVD' :'VLE' VanLeer(via LW)(default) 'ARO' Arora(via LW) 'SBE' Superbee(via LW) 'VL2' VanLeer(via CDS2) or 'SB2' Superbee(via CDS2) TVD schemes or 'NVD' for NVD scheme 
 	continuity_solver = 1 !nerd option, default is 1 (drdt+drudx=0). Optional: 2 (neglect drdt), 3 (dudx almost 0 U-mix), 33 (dudx=0 U-mix), 34 (dudx=0 U-vol with proper U-mix)
 	transporteq_fracs = 'volufrac' !nerd option default volume fractions, but as option also 'massfrac' can be used internally (input/output still is volume frac!)
@@ -301,6 +303,7 @@
 	depo_implicit=0
 	depo_cbed_option=0
 	IBMorder=0
+	Poutflow=0 ! 0 (default, most robust) Poutflow is zero for complete outflow crosssection at rmax; 1 (optional) Poutflow is zero at just one grid-location at rmax --> sometimes better but less robust
 	!! ambient:
 	U_b = -999.
 	V_b = -999.
