@@ -152,6 +152,8 @@
 	pold1=pold 
 	pold2=pold 
 	pold3=pold
+	phdt=pold
+	phnew=pold 
 
 		
 	if (Cs>0.or.sgs_model.eq.'MixLe') then
@@ -271,7 +273,7 @@
 			 if (continuity_solver.eq.33.or.continuity_solver.eq.34) then 
 			   pold=p(1:imax,1:jmax,1:kmax)*drdt(1:imax,1:jmax,1:kmax)+pold !scale P back with rho	
 			 elseif  (continuity_solver.eq.35.or.continuity_solver.eq.36) then 
-			   pold=p(1:imax,1:jmax,1:kmax)*rho_b+pold !scale P back with rho	
+			   pold=p(1:imax,1:jmax,1:kmax)*rho_b2+pold !scale P back with rho	
 			 else 
 			   pold=p+pold    !what is called p here was dp in reality, now p is 
 			 endif

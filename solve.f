@@ -938,7 +938,13 @@ c********************************************************************
      &,phiv,wf,wd)	  
 	elseif(convection.eq.'uTVD') then
       call advecu_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
-     & ,periodicx,periodicy,istep)		  
+     & ,periodicx,periodicy,istep)		
+	elseif(convection.eq.'C2Bl') then
+      call advecu_C2Blend(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,
+     & rank,px,dt,periodicx,periodicy,numdiff)
+	elseif(convection.eq.'C4Bl') then
+      call advecu_C4Blend(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,
+     & rank,px,dt,periodicx,periodicy,numdiff)	 
 	endif
 
 	if (diffusion.eq.'CDS2') then
@@ -989,7 +995,13 @@ c********************************************************************
      &,phiv,wf,wd)	  
 	elseif(convection.eq.'uTVD') then
       call advecv_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
-     & ,periodicx,periodicy,istep)	  
+     & ,periodicx,periodicy,istep)
+	elseif(convection.eq.'C2Bl') then
+      call advecv_C2Blend(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,
+     & rank,px,dt,periodicx,periodicy,numdiff)	
+	elseif(convection.eq.'C4Bl') then
+      call advecv_C4Blend(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,
+     & rank,px,dt,periodicx,periodicy,numdiff)	 
 	endif
 
 	if (diffusion.eq.'CDS2') then
@@ -1038,7 +1050,13 @@ c********************************************************************
      &,phiv,wf,wd)	  
 	elseif(convection.eq.'uTVD') then
       call advecw_TVD(dnew,Unew,Vnew,Wnew,Rnew,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,dt
-     & ,periodicx,periodicy,istep)	  
+     & ,periodicx,periodicy,istep)	
+	elseif(convection.eq.'C2Bl') then
+      call advecw_C2Blend(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,
+     & rank,px,dt,periodicx,periodicy,numdiff)
+	elseif(convection.eq.'C4Bl') then
+      call advecw_C4Blend(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phip,phiv,phipt,phivt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,
+     & rank,px,dt,periodicx,periodicy,numdiff)
 	endif
 
 	if (diffusion.eq.'CDS2') then
@@ -1163,7 +1181,6 @@ c********************************************************************
          enddo
        enddo
        ENDIF
-	    pold2=pold !save pressure previous timestep [pold2 = timestep before pold]  --> P^n-1
 		pold=p+pold    !what is called p here was dp in reality, now p is 			--> P^n 
 		!IF (applyVOF.eq.1) THEN 
 		  !IF (continuity_solver.eq.35) THEN
@@ -1387,8 +1404,23 @@ c
 !	cn1=1./5.
 !	cn2=3./10.
 !	cn3=1./2.
-	pold2=pold !save pressure previous timestep [pold2 = timestep before pold]
-	pold=p+pold    !what is called p here was dp in reality, now p is 
+	pold=p+pold    !what is called p here was dp in reality, now p is 			--> P^n 
+	!IF (applyVOF.eq.1) THEN 
+	  !IF (continuity_solver.eq.35) THEN
+		!pold1=pold2 !-->P^n-2
+		!pold2=pold3 !-->P^n-1
+		!pold3=pold !--> P^n		  
+	  !  CALL state(cnew,rnew)		  
+	  !  pold=pold/rnew(1:imax,1:jmax,1:kmax)
+	  IF (continuity_solver.eq.35.or.continuity_solver.eq.36) THEN
+		pold1=pold2 !-->P^n-2
+		pold2=pold3 !-->P^n-1
+		pold3=pold !--> P^n
+	  ENDIF 
+	  IF (pres_in_predictor_step.eq.0) THEN 
+		pold=0.
+	  ENDIF
+		  
         call pshiftb(pold,pplus) !,rank,imax,jmax,kmax,px)
 c********************************************************************
 c     CALCULATE k1 and predictor 1
@@ -3201,7 +3233,6 @@ c********************************************************************
          enddo
        enddo
        ENDIF
-	    pold2=pold !save pressure previous timestep [pold2 = timestep before pold]  --> P^n-1
 		pold=p+pold    !what is called p here was dp in reality, now p is 			--> P^n 
 		!IF (applyVOF.eq.1) THEN 
 		  !IF (continuity_solver.eq.35) THEN
@@ -3286,10 +3317,11 @@ c********************************************************************
       subroutine fillps
       USE nlist
       implicit none
+	  include 'mpif.h'
 
 	real xx,yy,r_orifice2,twodtdt,Qsource,rrri,rrrj,rrrk,rrrim,rrrjm,rrrkm
-	real rrr2i,rrr2j,rrr2k,rrr2im,rrr2jm,rrr2km
-	integer t,n
+	real rrr2i,rrr2j,rrr2k,rrr2im,rrr2jm,rrr2km,ph_ref
+	integer t,n,ierr
 	real xTSHD(1:4),yTSHD(1:4),phi,ddrr,cin,s_in,dpdt(1:imax,1:jmax,1:kmax)
 	real sum_c_ws,ctot,ws(nfrac)
 	integer inout,n2
@@ -3438,21 +3470,46 @@ c
 	  call bound_incljet(dUdt,dVdt,dWdt,drdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
 	  !dp=0.
 	  IF (pres_in_predictor_step.eq.0) THEN 
-		  IF (npresVOF.eq.0) THEN
-		   dp(1:imax,1:jmax,1:kmax)=dt/dt_old*(pold3-pold2)+pold3 		!dp contains predicted pressure 
-		  ELSE
-		   dp(1:imax,1:jmax,1:kmax)= dt/dt_old*(pold3-pold2)+pold3  !pold3 		!dp contains predicted pressure 
-		   !dp(1:imax,1:jmax,1:kmax)=(pold3-pold2)/MAX(rnew(1:imax,1:jmax,1:kmax)-rold(1:imax,1:jmax,1:kmax),1.e-12)*(drdt(1:imax,1:jmax,1:kmax)-rnew(1:imax,1:jmax,1:kmax))+dt/dt_old*(pold3-pold2)+pold3 
-		   !dp(1:imax,1:jmax,1:kmax)=(1.-rho_b/drdt(1:imax,1:jmax,1:kmax))/(1.-rho_b/MAX(rnew(1:imax,1:jmax,1:kmax),rho_b*1.01))*(pold3-pold2) + pold3 
-		   !(1.-rho_b/drdt(1:imax,1:jmax,1:kmax))/(1.-rho_b/MAX(rnew(1:imax,1:jmax,1:kmax),rho_b*1.01))
-		  ENDIF	
+		IF (oPRHO.eq.3) THEN 
+!			phdt(:,:,kmax)=0.
+!			do k=kmax-1,1,-1
+!				phdt(:,:,k)=phdt(:,:,k+1)+(drdt(:,:,k)-rho_b)*ABS(gz)*dz
+!			enddo
+!			if (rank.eq.0) then
+!			  ph_ref=phdt(imax,1,1)
+!			endif
+!			call mpi_bcast(ph_ref,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+!			phdt=phdt-ph_ref	
+!		    dp(1:imax,1:jmax,1:kmax)= pold3+phdt-phnew								!dp contains predicted pressure 
+!			phnew = phdt 
+			dp(1:imax,1:jmax,1:kmax) = (pold3+pold2)*0.5+dt*(pold3-pold1)/(time_n-time_nm2) ! seems to be a slight flip-flop in time which is tried to be prevented 
+		ELSEIF (oPRHO.eq.4) THEN 
+			dp(1:imax,1:jmax,1:kmax)= dt*(3.*pold3-4.*pold2+pold1)/(3.*time_n-4.*time_nm+time_nm2)+pold3
+		ELSEIF (oPRHO.eq.1) THEN 
+			dp(1:imax,1:jmax,1:kmax)= pold3  										!dp contains predicted pressure 
+		ELSE 
+			dp(1:imax,1:jmax,1:kmax)= dt/dt_old*(pold3-pold2)+pold3  !pold3 		!dp contains predicted pressure
+		ENDIF
 	  ELSE 
-		  IF (npresVOF.eq.0) THEN
-		   dp(1:imax,1:jmax,1:kmax)=dt/dt_old*(pold3-pold2)		!dp contains predicted increment of pressure 
-		  ELSE
-		   dp(1:imax,1:jmax,1:kmax)=dt/dt_old*(pold3-pold2)		!dp contains predicted increment of pressure 
-		   !dp = 0.		  
-		  ENDIF		
+		IF (oPRHO.eq.3) THEN 
+!			phdt(:,:,kmax)=0.
+!			do k=kmax-1,1,-1
+!				phdt(:,:,k)=phdt(:,:,k+1)+(drdt(:,:,k)-rho_b)*ABS(gz)*dz
+!			enddo
+!			if (rank.eq.0) then
+!			  ph_ref=phdt(imax,1,1)
+!			endif
+!			call mpi_bcast(ph_ref,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+!			phdt=phdt-ph_ref	
+!		    dp(1:imax,1:jmax,1:kmax)= phdt-phnew									!dp contains predicted increment of pressure  
+			dp(1:imax,1:jmax,1:kmax) = dt*(pold3-pold1)/(time_n-time_nm2) ! seems to be a slight flip-flop in time which is tried to be prevented 
+		ELSEIF (oPRHO.eq.4) THEN 
+			dp(1:imax,1:jmax,1:kmax)= dt*(3.*pold3-4.*pold2+pold1)/(3.*time_n-4.*time_nm+time_nm2)
+		ELSEIF (oPRHO.eq.1) THEN 
+			dp(1:imax,1:jmax,1:kmax)= 0.  											!dp contains predicted increment of pressure 
+		ELSE 
+			dp(1:imax,1:jmax,1:kmax)= dt/dt_old*(pold3-pold2) 						!dp contains predicted increment of pressure 
+		ENDIF	
 	  ENDIF	  
 	  call bound_p(dp)
 	  !write(*,*),'rank,pold,p,dp',rank,pold(45,1,1),dp(45,1,1),p(45,1,1)
@@ -3470,14 +3527,14 @@ c
      2  (       dVdt(i,j,k) -         dVdt(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
      +              +
      3  (       dWdt(i,j,k) -         dWdt(i,j,k-1) ) / ( dz ) ) / dt  + 
-     4  ((Ru(i  )*(1./rho_b-1./rhU(i  ,j,k))*(dp(i+1,j,k)-dp(i  ,j,k))/(Rp(i+1)-Rp(i  )) - 
-     4    Ru(i-1)*(1./rho_b-1./rhU(i-1,j,k))*(dp(i  ,j,k)-dp(i-1,j,k))/(Rp(i  )-Rp(i-1)) ) / ( Rp(i)*dr(i) )
+     4  ((Ru(i  )*(1./rho_b2-1./rhU(i  ,j,k))*(dp(i+1,j,k)-dp(i  ,j,k))/(Rp(i+1)-Rp(i  )) - 
+     4    Ru(i-1)*(1./rho_b2-1./rhU(i-1,j,k))*(dp(i  ,j,k)-dp(i-1,j,k))/(Rp(i  )-Rp(i-1)) ) / ( Rp(i)*dr(i) )
      +              +
-     5  ( (1./rho_b-1./rhV(i,j  ,k))*(dp(i,j+1,k)-dp(i,j  ,k))/ (Rp(i)*(phip(j+1)-phip(j  )))-         
-     5    (1./rho_b-1./rhV(i,j-1,k))*(dp(i,j  ,k)-dp(i,j-1,k))/ (Rp(i)*(phip(j  )-phip(j-1)))) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
+     5  ( (1./rho_b2-1./rhV(i,j  ,k))*(dp(i,j+1,k)-dp(i,j  ,k))/ (Rp(i)*(phip(j+1)-phip(j  )))-         
+     5    (1./rho_b2-1./rhV(i,j-1,k))*(dp(i,j  ,k)-dp(i,j-1,k))/ (Rp(i)*(phip(j  )-phip(j-1)))) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
      +              +
-     6  ( (1./rho_b-1./rhW(i,j,k  ))*(dp(i,j,k+1)-dp(i,j,k  ))/ dz -
-     6    (1./rho_b-1./rhW(i,j,k-1))*(dp(i,j,k  )-dp(i,j,k-1))/ dz	) / dz ) 	 
+     6  ( (1./rho_b2-1./rhW(i,j,k  ))*(dp(i,j,k+1)-dp(i,j,k  ))/ dz -
+     6    (1./rho_b2-1./rhW(i,j,k-1))*(dp(i,j,k  )-dp(i,j,k-1))/ dz	) / dz ) 	 
           enddo
         enddo
       enddo	
@@ -3522,15 +3579,15 @@ c
 	enddo
 	ENDIF
 	ENDDO ! bedplume loop	  
-	 do n=1,npresVOF
+	 do n=1,npresPRHO
 	  ! 2nd iteration loop with updated P-predictor:
 	  IF (poissolver.eq.3) THEN
 	   CALL SOLVEpois_vg_pardiso(p)		  
 	  ELSE
 	   CALL SOLVEpois(p) !,Ru,Rp,DPHI,dz,rank,imax,jmax,kmax,px)
 	  ENDIF
-	  dp(1:imax,1:jmax,1:kmax)=0.8*p*rho_b+0.2*dp(1:imax,1:jmax,1:kmax) !use first iteration loop to obtain more accurate p-predictor 
-	  call bound_p(dp)	   
+	  dp(1:imax,1:jmax,1:kmax)=p*rho_b2 !0.8*p*rho_b+0.2*dp(1:imax,1:jmax,1:kmax) !use first iteration loop to obtain more accurate p-predictor 
+	  call bound_p(dp)	  
       do  k=1,kmax
         do j=1,jmax
           do i=1,imax
@@ -3540,14 +3597,14 @@ c
      2  (       dVdt(i,j,k) -         dVdt(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
      +              +
      3  (       dWdt(i,j,k) -         dWdt(i,j,k-1) ) / ( dz ) ) / dt  + 
-     4  ((Ru(i  )*(1./rho_b-1./rhU(i  ,j,k))*(dp(i+1,j,k)-dp(i  ,j,k))/(Rp(i+1)-Rp(i  )) - 
-     4    Ru(i-1)*(1./rho_b-1./rhU(i-1,j,k))*(dp(i  ,j,k)-dp(i-1,j,k))/(Rp(i  )-Rp(i-1)) ) / ( Rp(i)*dr(i) )
+     4  ((Ru(i  )*(1./rho_b2-1./rhU(i  ,j,k))*(dp(i+1,j,k)-dp(i  ,j,k))/(Rp(i+1)-Rp(i  )) - 
+     4    Ru(i-1)*(1./rho_b2-1./rhU(i-1,j,k))*(dp(i  ,j,k)-dp(i-1,j,k))/(Rp(i  )-Rp(i-1)) ) / ( Rp(i)*dr(i) )
      +              +
-     5  ( (1./rho_b-1./rhV(i,j  ,k))*(dp(i,j+1,k)-dp(i,j  ,k))/ (Rp(i)*(phip(j+1)-phip(j  )))-         
-     5    (1./rho_b-1./rhV(i,j-1,k))*(dp(i,j  ,k)-dp(i,j-1,k))/ (Rp(i)*(phip(j  )-phip(j-1)))) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
+     5  ( (1./rho_b2-1./rhV(i,j  ,k))*(dp(i,j+1,k)-dp(i,j  ,k))/ (Rp(i)*(phip(j+1)-phip(j  )))-         
+     5    (1./rho_b2-1./rhV(i,j-1,k))*(dp(i,j  ,k)-dp(i,j-1,k))/ (Rp(i)*(phip(j  )-phip(j-1)))) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
      +              +
-     6  ( (1./rho_b-1./rhW(i,j,k  ))*(dp(i,j,k+1)-dp(i,j,k  ))/ dz -
-     6    (1./rho_b-1./rhW(i,j,k-1))*(dp(i,j,k  )-dp(i,j,k-1))/ dz	) / dz ) 	 
+     6  ( (1./rho_b2-1./rhW(i,j,k  ))*(dp(i,j,k+1)-dp(i,j,k  ))/ dz -
+     6    (1./rho_b2-1./rhW(i,j,k-1))*(dp(i,j,k  )-dp(i,j,k-1))/ dz	) / dz ) 	 
           enddo
         enddo
       enddo
@@ -3668,21 +3725,47 @@ c
 !      enddo
 !	 ENDIF 
 	  IF (pres_in_predictor_step.eq.0) THEN 
-		  IF (npresVOF.eq.0) THEN
-		   dp(1:imax,1:jmax,1:kmax)=dt/dt_old*(pold3-pold2)+pold3 		!dp contains predicted pressure 
-		  ELSE
-		   dp(1:imax,1:jmax,1:kmax)= dt/dt_old*(pold3-pold2)+pold3  !pold3 		!dp contains predicted pressure 
-		   !dp(1:imax,1:jmax,1:kmax)=(pold3-pold2)/MAX(rnew(1:imax,1:jmax,1:kmax)-rold(1:imax,1:jmax,1:kmax),1.e-12)*(drdt(1:imax,1:jmax,1:kmax)-rnew(1:imax,1:jmax,1:kmax))+dt/dt_old*(pold3-pold2)+pold3 
-		   !dp(1:imax,1:jmax,1:kmax)=(1.-rho_b/drdt(1:imax,1:jmax,1:kmax))/(1.-rho_b/MAX(rnew(1:imax,1:jmax,1:kmax),rho_b*1.01))*(pold3-pold2) + pold3 
-		   !(1.-rho_b/drdt(1:imax,1:jmax,1:kmax))/(1.-rho_b/MAX(rnew(1:imax,1:jmax,1:kmax),rho_b*1.01))
-		  ENDIF	
+		IF (oPRHO.eq.3) THEN 
+!			phdt(:,:,kmax)=0.
+!			do k=kmax-1,1,-1
+!				phdt(:,:,k)=phdt(:,:,k+1)+(drdt(:,:,k)-rho_b)*ABS(gz)*dz
+!			enddo
+!			if (rank.eq.0) then
+!			  ph_ref=phdt(imax,1,1)
+!			endif
+!			call mpi_bcast(ph_ref,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+!			phdt=phdt-ph_ref	
+!		    dp(1:imax,1:jmax,1:kmax)= pold3+phdt-phnew								!dp contains predicted pressure 
+!			phnew = phdt 
+			dp(1:imax,1:jmax,1:kmax) = (pold3+pold2)*0.5+dt*(pold3-pold1)/(time_n-time_nm2) ! seems to be a slight flip-flop in time which is tried to be prevented 
+		ELSEIF (oPRHO.eq.4) THEN 
+			dp(1:imax,1:jmax,1:kmax)= dt*(3.*pold3-4.*pold2+pold1)/(3.*time_n-4.*time_nm+time_nm2)+pold3
+		ELSEIF (oPRHO.eq.1) THEN 
+			dp(1:imax,1:jmax,1:kmax)= pold3  										!dp contains predicted pressure 
+		ELSE 
+			dp(1:imax,1:jmax,1:kmax)= dt/dt_old*(pold3-pold2)+pold3  !pold3 		!dp contains predicted pressure
+		ENDIF
 	  ELSE 
-		  IF (npresVOF.eq.0) THEN
-		   dp(1:imax,1:jmax,1:kmax)=dt/dt_old*(pold3-pold2)		!dp contains predicted increment of pressure 
-		  ELSE
-		   dp(1:imax,1:jmax,1:kmax)=dt/dt_old*(pold3-pold2)		!dp contains predicted increment of pressure 
-		   !dp = 0.		  
-		  ENDIF		
+		IF (oPRHO.eq.3) THEN 
+!			phdt(:,:,kmax)=0.
+!			do k=kmax-1,1,-1
+!				phdt(:,:,k)=phdt(:,:,k+1)+(drdt(:,:,k)-rho_b)*ABS(gz)*dz
+!			enddo
+!			if (rank.eq.0) then
+!			  ph_ref=phdt(imax,1,1)
+!			endif
+!			call mpi_bcast(ph_ref,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+!			phdt=phdt-ph_ref	
+!		    dp(1:imax,1:jmax,1:kmax)= phdt-phnew									!dp contains predicted increment of pressure  
+!			phnew = phdt 
+			dp(1:imax,1:jmax,1:kmax) = dt*(pold3-pold1)/(time_n-time_nm2) ! seems to be a slight flip-flop in time which is tried to be prevented 
+		ELSEIF (oPRHO.eq.4) THEN 
+			dp(1:imax,1:jmax,1:kmax)= dt*(3.*pold3-4.*pold2+pold1)/(3.*time_n-4.*time_nm+time_nm2)
+		ELSEIF (oPRHO.eq.1) THEN 
+			dp(1:imax,1:jmax,1:kmax)= 0.  											!dp contains predicted increment of pressure 
+		ELSE 
+			dp(1:imax,1:jmax,1:kmax)= dt/dt_old*(pold3-pold2) 						!dp contains predicted increment of pressure 
+		ENDIF		   
 	  ENDIF
 	  call bound_p(dp)
       do  k=1,kmax
@@ -3694,14 +3777,14 @@ c
      2  (       dVdt(i,j,k) -         dVdt(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
      +              +
      3  (       dWdt(i,j,k) -         dWdt(i,j,k-1) ) / ( dz ) ) / dt +
-     4  ((Ru(i  )*(1./rho_b-1./rhU(i  ,j,k))*(dp(i+1,j,k)-dp(i  ,j,k))/(Rp(i+1)-Rp(i  )) - 
-     4    Ru(i-1)*(1./rho_b-1./rhU(i-1,j,k))*(dp(i  ,j,k)-dp(i-1,j,k))/(Rp(i  )-Rp(i-1)) ) / ( Rp(i)*dr(i) )
+     4  ((Ru(i  )*(1./rho_b2-1./rhU(i  ,j,k))*(dp(i+1,j,k)-dp(i  ,j,k))/(Rp(i+1)-Rp(i  )) - 
+     4    Ru(i-1)*(1./rho_b2-1./rhU(i-1,j,k))*(dp(i  ,j,k)-dp(i-1,j,k))/(Rp(i  )-Rp(i-1)) ) / ( Rp(i)*dr(i) )
      +              +
-     5  ( (1./rho_b-1./rhV(i,j  ,k))*(dp(i,j+1,k)-dp(i,j  ,k))/ (Rp(i)*(phip(j+1)-phip(j  )))-         
-     5    (1./rho_b-1./rhV(i,j-1,k))*(dp(i,j  ,k)-dp(i,j-1,k))/ (Rp(i)*(phip(j  )-phip(j-1)))) / (Rp(i)*(phiv(j)-phiv(j-1)))
+     5  ( (1./rho_b2-1./rhV(i,j  ,k))*(dp(i,j+1,k)-dp(i,j  ,k))/ (Rp(i)*(phip(j+1)-phip(j  )))-         
+     5    (1./rho_b2-1./rhV(i,j-1,k))*(dp(i,j  ,k)-dp(i,j-1,k))/ (Rp(i)*(phip(j  )-phip(j-1)))) / (Rp(i)*(phiv(j)-phiv(j-1)))
      +              +
-     6  ( (1./rho_b-1./rhW(i,j,k  ))*(dp(i,j,k+1)-dp(i,j,k  )) / dz - 
-     6    (1./rho_b-1./rhW(i,j,k-1))*(dp(i,j,k  )-dp(i,j,k-1)) / dz	) / dz ) 
+     6  ( (1./rho_b2-1./rhW(i,j,k  ))*(dp(i,j,k+1)-dp(i,j,k  )) / dz - 
+     6    (1./rho_b2-1./rhW(i,j,k-1))*(dp(i,j,k  )-dp(i,j,k-1)) / dz	) / dz ) 
           enddo
         enddo
       enddo	
@@ -3747,14 +3830,14 @@ c
 	ENDIF
 	ENDDO ! bedplume loop
 	
-	 do n=1,npresVOF
+	 do n=1,npresPRHO
 	  ! 2nd iteration loop with updated P-predictor:
 	  IF (poissolver.eq.3) THEN
 	   CALL SOLVEpois_vg_pardiso(p)		  
 	  ELSE
 	   CALL SOLVEpois(p) !,Ru,Rp,DPHI,dz,rank,imax,jmax,kmax,px)
 	  ENDIF
-	  dp(1:imax,1:jmax,1:kmax)=p*rho_b !use first iteration loop to obtain more accurate p-predictor 
+	  dp(1:imax,1:jmax,1:kmax)=p*rho_b2 !use first iteration loop to obtain more accurate p-predictor 
 	  call bound_p(dp)	   
       do  k=1,kmax
         do j=1,jmax
@@ -3765,14 +3848,14 @@ c
      2  (       dVdt(i,j,k) -         dVdt(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
      +              +
      3  (       dWdt(i,j,k) -         dWdt(i,j,k-1) ) / ( dz ) ) / dt  + 
-     4  ((Ru(i  )*(1./rho_b-1./rhU(i  ,j,k))*(dp(i+1,j,k)-dp(i  ,j,k))/(Rp(i+1)-Rp(i  )) - 
-     4    Ru(i-1)*(1./rho_b-1./rhU(i-1,j,k))*(dp(i  ,j,k)-dp(i-1,j,k))/(Rp(i  )-Rp(i-1)) ) / ( Rp(i)*dr(i) )
+     4  ((Ru(i  )*(1./rho_b2-1./rhU(i  ,j,k))*(dp(i+1,j,k)-dp(i  ,j,k))/(Rp(i+1)-Rp(i  )) - 
+     4    Ru(i-1)*(1./rho_b2-1./rhU(i-1,j,k))*(dp(i  ,j,k)-dp(i-1,j,k))/(Rp(i  )-Rp(i-1)) ) / ( Rp(i)*dr(i) )
      +              +
-     5  ( (1./rho_b-1./rhV(i,j  ,k))*(dp(i,j+1,k)-dp(i,j  ,k))/ (Rp(i)*(phip(j+1)-phip(j  )))-         
-     5    (1./rho_b-1./rhV(i,j-1,k))*(dp(i,j  ,k)-dp(i,j-1,k))/ (Rp(i)*(phip(j  )-phip(j-1)))) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
+     5  ( (1./rho_b2-1./rhV(i,j  ,k))*(dp(i,j+1,k)-dp(i,j  ,k))/ (Rp(i)*(phip(j+1)-phip(j  )))-         
+     5    (1./rho_b2-1./rhV(i,j-1,k))*(dp(i,j  ,k)-dp(i,j-1,k))/ (Rp(i)*(phip(j  )-phip(j-1)))) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
      +              +
-     6  ( (1./rho_b-1./rhW(i,j,k  ))*(dp(i,j,k+1)-dp(i,j,k  ))/ dz -
-     6    (1./rho_b-1./rhW(i,j,k-1))*(dp(i,j,k  )-dp(i,j,k-1))/ dz	) / dz ) 	 
+     6  ( (1./rho_b2-1./rhW(i,j,k  ))*(dp(i,j,k+1)-dp(i,j,k  ))/ dz -
+     6    (1./rho_b2-1./rhW(i,j,k-1))*(dp(i,j,k  )-dp(i,j,k-1))/ dz	) / dz ) 	 
           enddo
         enddo
       enddo	
@@ -4070,18 +4153,9 @@ c
 	  ww(1:imax,1:jmax,1:kmax)=ww(1:imax,1:jmax,1:kmax)/rhW(1:imax,1:jmax,1:kmax)		
 	  call bound_incljet(uu,vv,ww,drdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)	
 	  IF (pres_in_predictor_step.eq.0) THEN 
-		  IF (npresVOF.eq.0) THEN
 		   dp(1:imax,1:jmax,1:kmax)=ddtt/dt_old*(pold3-pold2)+pold3 		!dp contains predicted pressure 
-		  ELSE
-		   dp(1:imax,1:jmax,1:kmax)= ddtt/dt_old*(pold3-pold2)+pold3  !pold3 		!dp contains predicted pressure 
-		  ENDIF	
 	  ELSE 
-		  IF (npresVOF.eq.0) THEN
 		   dp(1:imax,1:jmax,1:kmax)=ddtt/dt_old*(pold3-pold2)		!dp contains predicted increment of pressure 
-		  ELSE
-		   dp(1:imax,1:jmax,1:kmax)=ddtt/dt_old*(pold3-pold2)		!dp contains predicted increment of pressure 
-		   !dp = 0.		  
-		  ENDIF		
 	  ENDIF	  
 	  call bound_p(dp)
       do  k=1,kmax
@@ -4093,14 +4167,14 @@ c
      2  (       vv(i,j,k) -         vv(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
      +              +
      3  (       ww(i,j,k) -         ww(i,j,k-1) ) / ( dz ) ) / ddtt  + 
-     4  ((Ru(i  )*(1./rho_b-1./rhU(i  ,j,k))*(dp(i+1,j,k)-dp(i  ,j,k))/(Rp(i+1)-Rp(i  )) - 
-     4    Ru(i-1)*(1./rho_b-1./rhU(i-1,j,k))*(dp(i  ,j,k)-dp(i-1,j,k))/(Rp(i  )-Rp(i-1)) ) / ( Rp(i)*dr(i) )
+     4  ((Ru(i  )*(1./rho_b2-1./rhU(i  ,j,k))*(dp(i+1,j,k)-dp(i  ,j,k))/(Rp(i+1)-Rp(i  )) - 
+     4    Ru(i-1)*(1./rho_b2-1./rhU(i-1,j,k))*(dp(i  ,j,k)-dp(i-1,j,k))/(Rp(i  )-Rp(i-1)) ) / ( Rp(i)*dr(i) )
      +              +
-     5  ( (1./rho_b-1./rhV(i,j  ,k))*(dp(i,j+1,k)-dp(i,j  ,k))/ (Rp(i)*(phip(j+1)-phip(j  )))-         
-     5    (1./rho_b-1./rhV(i,j-1,k))*(dp(i,j  ,k)-dp(i,j-1,k))/ (Rp(i)*(phip(j  )-phip(j-1)))) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
+     5  ( (1./rho_b2-1./rhV(i,j  ,k))*(dp(i,j+1,k)-dp(i,j  ,k))/ (Rp(i)*(phip(j+1)-phip(j  )))-         
+     5    (1./rho_b2-1./rhV(i,j-1,k))*(dp(i,j  ,k)-dp(i,j-1,k))/ (Rp(i)*(phip(j  )-phip(j-1)))) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
      +              +
-     6  ( (1./rho_b-1./rhW(i,j,k  ))*(dp(i,j,k+1)-dp(i,j,k  ))/ dz -
-     6    (1./rho_b-1./rhW(i,j,k-1))*(dp(i,j,k  )-dp(i,j,k-1))/ dz	) / dz ) 	 
+     6  ( (1./rho_b2-1./rhW(i,j,k  ))*(dp(i,j,k+1)-dp(i,j,k  ))/ dz -
+     6    (1./rho_b2-1./rhW(i,j,k-1))*(dp(i,j,k  )-dp(i,j,k-1))/ dz	) / dz ) 	 
           enddo
         enddo
       enddo	
@@ -4145,14 +4219,14 @@ c
 !!	enddo
 !!	ENDIF
 !!	ENDDO ! bedplume loop	  
-	 do n=1,npresVOF
+	 do n=1,npresPRHO
 	  ! 2nd iteration loop with updated P-predictor:
 	  IF (poissolver.eq.3) THEN
 	   CALL SOLVEpois_vg_pardiso(p)		  
 	  ELSE
 	   CALL SOLVEpois(p) !,Ru,Rp,DPHI,dz,rank,imax,jmax,kmax,px)
 	  ENDIF
-	  dp(1:imax,1:jmax,1:kmax)=0.8*p*rho_b+0.2*dp(1:imax,1:jmax,1:kmax) !use first iteration loop to obtain more accurate p-predictor 
+	  dp(1:imax,1:jmax,1:kmax)=p*rho_b2 !0.8*p*rho_b+0.2*dp(1:imax,1:jmax,1:kmax) !use first iteration loop to obtain more accurate p-predictor 
 	  call bound_p(dp)	   
       do  k=1,kmax
         do j=1,jmax
@@ -4163,14 +4237,14 @@ c
      2  (       vv(i,j,k) -         vv(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
      +              +
      3  (       ww(i,j,k) -         ww(i,j,k-1) ) / ( dz ) ) / ddtt  + 
-     4  ((Ru(i  )*(1./rho_b-1./rhU(i  ,j,k))*(dp(i+1,j,k)-dp(i  ,j,k))/(Rp(i+1)-Rp(i  )) - 
-     4    Ru(i-1)*(1./rho_b-1./rhU(i-1,j,k))*(dp(i  ,j,k)-dp(i-1,j,k))/(Rp(i  )-Rp(i-1)) ) / ( Rp(i)*dr(i) )
+     4  ((Ru(i  )*(1./rho_b2-1./rhU(i  ,j,k))*(dp(i+1,j,k)-dp(i  ,j,k))/(Rp(i+1)-Rp(i  )) - 
+     4    Ru(i-1)*(1./rho_b2-1./rhU(i-1,j,k))*(dp(i  ,j,k)-dp(i-1,j,k))/(Rp(i  )-Rp(i-1)) ) / ( Rp(i)*dr(i) )
      +              +
-     5  ( (1./rho_b-1./rhV(i,j  ,k))*(dp(i,j+1,k)-dp(i,j  ,k))/ (Rp(i)*(phip(j+1)-phip(j  )))-         
-     5    (1./rho_b-1./rhV(i,j-1,k))*(dp(i,j  ,k)-dp(i,j-1,k))/ (Rp(i)*(phip(j  )-phip(j-1)))) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
+     5  ( (1./rho_b2-1./rhV(i,j  ,k))*(dp(i,j+1,k)-dp(i,j  ,k))/ (Rp(i)*(phip(j+1)-phip(j  )))-         
+     5    (1./rho_b2-1./rhV(i,j-1,k))*(dp(i,j  ,k)-dp(i,j-1,k))/ (Rp(i)*(phip(j  )-phip(j-1)))) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
      +              +
-     6  ( (1./rho_b-1./rhW(i,j,k  ))*(dp(i,j,k+1)-dp(i,j,k  ))/ dz -
-     6    (1./rho_b-1./rhW(i,j,k-1))*(dp(i,j,k  )-dp(i,j,k-1))/ dz	) / dz ) 	 
+     6  ( (1./rho_b2-1./rhW(i,j,k  ))*(dp(i,j,k+1)-dp(i,j,k  ))/ dz -
+     6    (1./rho_b2-1./rhW(i,j,k-1))*(dp(i,j,k  )-dp(i,j,k-1))/ dz	) / dz ) 	 
           enddo
         enddo
       enddo
@@ -4255,21 +4329,9 @@ c
 	 ENDIF
 	  call bound_incljet(uu,vv,ww,drdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)	
 	  IF (pres_in_predictor_step.eq.0) THEN 
-		  IF (npresVOF.eq.0) THEN
 		   dp(1:imax,1:jmax,1:kmax)=ddtt/dt_old*(pold3-pold2)+pold3 		!dp contains predicted pressure 
-		  ELSE
-		   dp(1:imax,1:jmax,1:kmax)= ddtt/dt_old*(pold3-pold2)+pold3  !pold3 		!dp contains predicted pressure 
-		   !dp(1:imax,1:jmax,1:kmax)=(pold3-pold2)/MAX(rnew(1:imax,1:jmax,1:kmax)-rold(1:imax,1:jmax,1:kmax),1.e-12)*(drdt(1:imax,1:jmax,1:kmax)-rnew(1:imax,1:jmax,1:kmax))+ddtt/dt_old*(pold3-pold2)+pold3 
-		   !dp(1:imax,1:jmax,1:kmax)=(1.-rho_b/drdt(1:imax,1:jmax,1:kmax))/(1.-rho_b/MAX(rnew(1:imax,1:jmax,1:kmax),rho_b*1.01))*(pold3-pold2) + pold3 
-		   !(1.-rho_b/drdt(1:imax,1:jmax,1:kmax))/(1.-rho_b/MAX(rnew(1:imax,1:jmax,1:kmax),rho_b*1.01))
-		  ENDIF	
 	  ELSE 
-		  IF (npresVOF.eq.0) THEN
 		   dp(1:imax,1:jmax,1:kmax)=ddtt/dt_old*(pold3-pold2)		!dp contains predicted increment of pressure 
-		  ELSE
-		   dp(1:imax,1:jmax,1:kmax)=ddtt/dt_old*(pold3-pold2)		!dp contains predicted increment of pressure 
-		   !dp = 0.		  
-		  ENDIF		
 	  ENDIF
 	  call bound_p(dp)
       do  k=1,kmax
@@ -4281,14 +4343,14 @@ c
      2  (       vv(i,j,k) -         vv(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
      +              +
      3  (       ww(i,j,k) -         ww(i,j,k-1) ) / ( dz ) ) / ddtt +
-     4  ((Ru(i  )*(1./rho_b-1./rhU(i  ,j,k))*(dp(i+1,j,k)-dp(i  ,j,k))/(Rp(i+1)-Rp(i  )) - 
-     4    Ru(i-1)*(1./rho_b-1./rhU(i-1,j,k))*(dp(i  ,j,k)-dp(i-1,j,k))/(Rp(i  )-Rp(i-1)) ) / ( Rp(i)*dr(i) )
+     4  ((Ru(i  )*(1./rho_b2-1./rhU(i  ,j,k))*(dp(i+1,j,k)-dp(i  ,j,k))/(Rp(i+1)-Rp(i  )) - 
+     4    Ru(i-1)*(1./rho_b2-1./rhU(i-1,j,k))*(dp(i  ,j,k)-dp(i-1,j,k))/(Rp(i  )-Rp(i-1)) ) / ( Rp(i)*dr(i) )
      +              +
-     5  ( (1./rho_b-1./rhV(i,j  ,k))*(dp(i,j+1,k)-dp(i,j  ,k))/ (Rp(i)*(phip(j+1)-phip(j  )))-         
-     5    (1./rho_b-1./rhV(i,j-1,k))*(dp(i,j  ,k)-dp(i,j-1,k))/ (Rp(i)*(phip(j  )-phip(j-1)))) / (Rp(i)*(phiv(j)-phiv(j-1)))
+     5  ( (1./rho_b2-1./rhV(i,j  ,k))*(dp(i,j+1,k)-dp(i,j  ,k))/ (Rp(i)*(phip(j+1)-phip(j  )))-         
+     5    (1./rho_b2-1./rhV(i,j-1,k))*(dp(i,j  ,k)-dp(i,j-1,k))/ (Rp(i)*(phip(j  )-phip(j-1)))) / (Rp(i)*(phiv(j)-phiv(j-1)))
      +              +
-     6  ( (1./rho_b-1./rhW(i,j,k  ))*(dp(i,j,k+1)-dp(i,j,k  )) / dz - 
-     6    (1./rho_b-1./rhW(i,j,k-1))*(dp(i,j,k  )-dp(i,j,k-1)) / dz	) / dz ) 
+     6  ( (1./rho_b2-1./rhW(i,j,k  ))*(dp(i,j,k+1)-dp(i,j,k  )) / dz - 
+     6    (1./rho_b2-1./rhW(i,j,k-1))*(dp(i,j,k  )-dp(i,j,k-1)) / dz	) / dz ) 
           enddo
         enddo
       enddo	
@@ -4334,14 +4396,14 @@ c
 !!	ENDIF
 !!	ENDDO ! bedplume loop
 	
-	 do n=1,npresVOF
+	 do n=1,npresPRHO
 	  ! 2nd iteration loop with updated P-predictor:
 	  IF (poissolver.eq.3) THEN
 	   CALL SOLVEpois_vg_pardiso(p)		  
 	  ELSE
 	   CALL SOLVEpois(p) !,Ru,Rp,DPHI,dz,rank,imax,jmax,kmax,px)
 	  ENDIF
-	  dp(1:imax,1:jmax,1:kmax)=p*rho_b !use first iteration loop to obtain more accurate p-predictor 
+	  dp(1:imax,1:jmax,1:kmax)=p*rho_b2 !use first iteration loop to obtain more accurate p-predictor 
 	  call bound_p(dp)	   
       do  k=1,kmax
         do j=1,jmax
@@ -4352,14 +4414,14 @@ c
      2  (       vv(i,j,k) -         vv(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
      +              +
      3  (       ww(i,j,k) -         ww(i,j,k-1) ) / ( dz ) ) / ddtt  + 
-     4  ((Ru(i  )*(1./rho_b-1./rhU(i  ,j,k))*(dp(i+1,j,k)-dp(i  ,j,k))/(Rp(i+1)-Rp(i  )) - 
-     4    Ru(i-1)*(1./rho_b-1./rhU(i-1,j,k))*(dp(i  ,j,k)-dp(i-1,j,k))/(Rp(i  )-Rp(i-1)) ) / ( Rp(i)*dr(i) )
+     4  ((Ru(i  )*(1./rho_b2-1./rhU(i  ,j,k))*(dp(i+1,j,k)-dp(i  ,j,k))/(Rp(i+1)-Rp(i  )) - 
+     4    Ru(i-1)*(1./rho_b2-1./rhU(i-1,j,k))*(dp(i  ,j,k)-dp(i-1,j,k))/(Rp(i  )-Rp(i-1)) ) / ( Rp(i)*dr(i) )
      +              +
-     5  ( (1./rho_b-1./rhV(i,j  ,k))*(dp(i,j+1,k)-dp(i,j  ,k))/ (Rp(i)*(phip(j+1)-phip(j  )))-         
-     5    (1./rho_b-1./rhV(i,j-1,k))*(dp(i,j  ,k)-dp(i,j-1,k))/ (Rp(i)*(phip(j  )-phip(j-1)))) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
+     5  ( (1./rho_b2-1./rhV(i,j  ,k))*(dp(i,j+1,k)-dp(i,j  ,k))/ (Rp(i)*(phip(j+1)-phip(j  )))-         
+     5    (1./rho_b2-1./rhV(i,j-1,k))*(dp(i,j  ,k)-dp(i,j-1,k))/ (Rp(i)*(phip(j  )-phip(j-1)))) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
      +              +
-     6  ( (1./rho_b-1./rhW(i,j,k  ))*(dp(i,j,k+1)-dp(i,j,k  ))/ dz -
-     6    (1./rho_b-1./rhW(i,j,k-1))*(dp(i,j,k  )-dp(i,j,k-1))/ dz	) / dz ) 	 
+     6  ( (1./rho_b2-1./rhW(i,j,k  ))*(dp(i,j,k+1)-dp(i,j,k  ))/ dz -
+     6    (1./rho_b2-1./rhW(i,j,k-1))*(dp(i,j,k  )-dp(i,j,k-1))/ dz	) / dz ) 	 
           enddo
         enddo
       enddo	
@@ -4663,16 +4725,16 @@ c
       do k=1,kmax
         do j=1,jmax
           do i=1,imax
-		   dUdt(i,j,k)=dUdt(i,j,k)-dt*(1./rhU(i,j,k)-1./rho_b)*(dp(i+1,j,k)-dp(i,j,k))/(Rp(i+1)-Rp(i))
-		   dVdt(i,j,k)=dVdt(i,j,k)-dt*(1./rhV(i,j,k)-1./rho_b)*(dp(i,j+1,k)-dp(i,j,k))/(Rp(i)*(phip(j+1)-phip(j)) ) 
-		   dWdt(i,j,k)=dWdt(i,j,k)-dt*(1./rhW(i,j,k)-1./rho_b)*(dp(i,j,k+1)-dp(i,j,k))/ dz		   
+		   dUdt(i,j,k)=dUdt(i,j,k)-dt*(1./rhU(i,j,k)-1./rho_b2)*(dp(i+1,j,k)-dp(i,j,k))/(Rp(i+1)-Rp(i))
+		   dVdt(i,j,k)=dVdt(i,j,k)-dt*(1./rhV(i,j,k)-1./rho_b2)*(dp(i,j+1,k)-dp(i,j,k))/(Rp(i)*(phip(j+1)-phip(j)) ) 
+		   dWdt(i,j,k)=dWdt(i,j,k)-dt*(1./rhW(i,j,k)-1./rho_b2)*(dp(i,j,k+1)-dp(i,j,k))/ dz		   
            Unew(i,j,k)=dUdt(i,j,k)
            Vnew(i,j,k)=dVdt(i,j,k)
            Wnew(i,j,k)=dWdt(i,j,k)
           enddo
         enddo
       enddo 	 
-		p=p(1:imax,1:jmax,1:kmax)*rho_b  !drdt(1:imax,1:jmax,1:kmax) !scale P back with rho_b not with drdt because in source pressure Poisson eq. already extra source-term 1/rho_b-1/drdt is included 
+		p=p(1:imax,1:jmax,1:kmax)*rho_b2  !drdt(1:imax,1:jmax,1:kmax) !scale P back with rho_b not with drdt because in source pressure Poisson eq. already extra source-term 1/rho_b-1/drdt is included 
 		!p=(p(1:imax,1:jmax,1:kmax)+(1./drdt(1:imax,1:jmax,1:kmax)+1./rho_b)*dp(1:imax,1:jmax,1:kmax))*rho_b 
 		
 	  if (applyVOF.eq.1) then !make rhU,rhV,rhW 1 again 
@@ -4718,16 +4780,16 @@ c
       do k=1,kmax
         do j=1,jmax
           do i=1,imax
-		   dUdt(i,j,k)=dUdt(i,j,k)-dt*(1./rhU(i,j,k)-1./rho_b)*(dp(i+1,j,k)-dp(i,j,k))/(Rp(i+1)-Rp(i))
-		   dVdt(i,j,k)=dVdt(i,j,k)-dt*(1./rhV(i,j,k)-1./rho_b)*(dp(i,j+1,k)-dp(i,j,k))/(Rp(i)*(phip(j+1)-phip(j)) ) 
-		   dWdt(i,j,k)=dWdt(i,j,k)-dt*(1./rhW(i,j,k)-1./rho_b)*(dp(i,j,k+1)-dp(i,j,k))/ dz		  
+		   dUdt(i,j,k)=dUdt(i,j,k)-dt*(1./rhU(i,j,k)-1./rho_b2)*(dp(i+1,j,k)-dp(i,j,k))/(Rp(i+1)-Rp(i))
+		   dVdt(i,j,k)=dVdt(i,j,k)-dt*(1./rhV(i,j,k)-1./rho_b2)*(dp(i,j+1,k)-dp(i,j,k))/(Rp(i)*(phip(j+1)-phip(j)) ) 
+		   dWdt(i,j,k)=dWdt(i,j,k)-dt*(1./rhW(i,j,k)-1./rho_b2)*(dp(i,j,k+1)-dp(i,j,k))/ dz		  
            Unew(i,j,k)=dUdt(i,j,k)
            Vnew(i,j,k)=dVdt(i,j,k)
            Wnew(i,j,k)=dWdt(i,j,k)
           enddo
         enddo
       enddo 	
-		p=p(1:imax,1:jmax,1:kmax)*rho_b !drdt(1:imax,1:jmax,1:kmax)  !scale P back with rho	  
+		p=p(1:imax,1:jmax,1:kmax)*rho_b2 !drdt(1:imax,1:jmax,1:kmax)  !scale P back with rho	  
 	  if (applyVOF.eq.1) then !make rhU,rhV,rhW 1 again 
 		rhU=1.
 		rhV=1.
@@ -4871,9 +4933,9 @@ c
       do k=1,kmax
         do j=1,jmax
           do i=1,imax
-		   dUdt(i,j,k)=dUdt(i,j,k)-dt*(1./rhU(i,j,k)-1./rho_b)*(dp(i+1,j,k)-dp(i,j,k))/(Rp(i+1)-Rp(i))
-		   dVdt(i,j,k)=dVdt(i,j,k)-dt*(1./rhV(i,j,k)-1./rho_b)*(dp(i,j+1,k)-dp(i,j,k))/(Rp(i)*(phip(j+1)-phip(j)) ) 
-		   dWdt(i,j,k)=dWdt(i,j,k)-dt*(1./rhW(i,j,k)-1./rho_b)*(dp(i,j,k+1)-dp(i,j,k))/ dz		
+		   dUdt(i,j,k)=dUdt(i,j,k)-dt*(1./rhU(i,j,k)-1./rho_b2)*(dp(i+1,j,k)-dp(i,j,k))/(Rp(i+1)-Rp(i))
+		   dVdt(i,j,k)=dVdt(i,j,k)-dt*(1./rhV(i,j,k)-1./rho_b2)*(dp(i,j+1,k)-dp(i,j,k))/(Rp(i)*(phip(j+1)-phip(j)) ) 
+		   dWdt(i,j,k)=dWdt(i,j,k)-dt*(1./rhW(i,j,k)-1./rho_b2)*(dp(i,j,k+1)-dp(i,j,k))/ dz		
 		   dUdt(i,j,k)=dUdt(i,j,k)*rhU(i,j,k)
 		   dVdt(i,j,k)=dVdt(i,j,k)*rhV(i,j,k)
 		   dWdt(i,j,k)=dWdt(i,j,k)*rhW(i,j,k)

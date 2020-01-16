@@ -23,13 +23,13 @@
       IMPLICIT NONE
       SAVE
       
-      INTEGER i,j,k,imax,jmax,kmax,i1,j1,k1,px,rank,kjet,nmax1,nmax2,nmax3,istep,CNdiffz,npresIBM,counter,npresVOF
+      INTEGER i,j,k,imax,jmax,kmax,i1,j1,k1,px,rank,kjet,nmax1,nmax2,nmax3,istep,CNdiffz,npresIBM,counter,npresPRHO,oPRHO
       INTEGER Lmix_type,slip_bot,SEM,azi_n,outflow_overflow_down,azi_n2,wiggle_detector,wd,applyVOF,Poutflow
       REAL ekm_mol,nu_mol,pi,kappa,gx,gy,gz,Cs,Sc,calibfac_sand_pickup,calibfac_Shields_cr,morfac,morfac2
       REAL dt,time_nm,time_n,time_np,t_end,t0_output,dt_output,te_output,dt_max,tstart_rms,CFL,dt_ini,tstart_morf,trestart,dt_old
       REAL dt_output_movie,t0_output_movie,te_output_movie,te_rms,time_nm2
       REAL U_b,V_b,W_b,rho_b,W_j,Awjet,Aujet,Avjet,Strouhal,radius_j,kn,W_ox,U_bSEM,V_bSEM,U_w,V_w,U_init,V_init
-      REAL U_j2,Awjet2,Aujet2,Avjet2,Strouhal2,radius_j2,zjet2
+      REAL U_j2,Awjet2,Aujet2,Avjet2,Strouhal2,radius_j2,zjet2,rho_b2
       REAL xj(4),yj(4),radius_inner_j,W_j_powerlaw,plume_z_outflow_belowsurf
       REAL dy,dz,schuif_x,depth,lm_min,lm_min3,Rmin,bc_obst_h
       REAL dr_grid(1:100),dy_grid(1:100),fac_y_grid(1:100),lim_y_grid(1:100),fac_r_grid(1:100),lim_r_grid(1:100)
@@ -139,7 +139,7 @@
 !       REAL, DIMENSION(:,:,:),ALLOCATABLE :: Uavg,Vavg,Wavg,Cavg,Ravg
 !       REAL, DIMENSION(:,:,:),ALLOCATABLE :: Urms,Vrms,Wrms,Crms,Rrms
 !       REAL, DIMENSION(:,:,:),ALLOCATABLE :: sigU2,sigV2,sigW2,sigC2,sigR2
-      REAL, DIMENSION(:,:,:),ALLOCATABLE :: p,pold,dp,pold1,pold2,pold3,Csgrid
+      REAL, DIMENSION(:,:,:),ALLOCATABLE :: p,pold,dp,pold1,pold2,pold3,Csgrid,phdt,phnew
       
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: wx,wy,wz,wxold,wyold,wzold,Ppropx,Ppropy,Ppropz
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: wxolder,wyolder,wzolder
@@ -228,11 +228,11 @@
 	NAMELIST /times/t_end,t0_output,dt_output,te_output,tstart_rms,dt_max,dt_ini,time_int,CFL,
      & t0_output_movie,dt_output_movie,te_output_movie,tstart_morf,te_rms
 	NAMELIST /num_scheme/convection,numdiff,wiggle_detector,diffusion,comp_filter_a,comp_filter_n,CNdiffz,npresIBM,advec_conc,
-     & continuity_solver,transporteq_fracs,split_rho_cont,driftfluxforce_calfac,depo_implicit,depo_cbed_option,IBMorder,npresVOF,
-     & pres_in_predictor_step,Poutflow
+     & continuity_solver,transporteq_fracs,split_rho_cont,driftfluxforce_calfac,depo_implicit,depo_cbed_option,IBMorder,npresPRHO,
+     & pres_in_predictor_step,Poutflow,oPRHO
 	NAMELIST /ambient/U_b,V_b,W_b,bcfile,rho_b,SEM,nmax2,nmax1,nmax3,lm_min,lm_min3,slip_bot,kn,interaction_bed,
      & periodicx,periodicy,dpdx,dpdy,W_ox,Hs,Tp,nx_w,ny_w,obst,bc_obst_h,U_b3,V_b3,surf_layer,wallup,bedlevelfile,
-     & U_bSEM,V_bSEM,U_w,V_w,c_bed,cfixedbed,U_init,V_init,initconditionsfile
+     & U_bSEM,V_bSEM,U_w,V_w,c_bed,cfixedbed,U_init,V_init,initconditionsfile,rho_b2
 	NAMELIST /plume/W_j,plumetseriesfile,Awjet,Aujet,Avjet,Strouhal,azi_n,kjet,radius_j,Sc,slipvel,outflow_overflow_down,
      & U_j2,plumetseriesfile2,Awjet2,Aujet2,Avjet2,Strouhal2,azi_n2,radius_j2,zjet2,bedplume,radius_inner_j,xj,yj,W_j_powerlaw,
      & plume_z_outflow_belowsurf,hindered_settling,Q_j,plumeQtseriesfile,plumectseriesfile
@@ -293,7 +293,8 @@
 	comp_filter_n = 0
 	CNdiffz = 0
 	npresIBM = 0
-	npresVOF = 0
+	npresPRHO = 0
+	oPRHO = 2
 	pres_in_predictor_step = 1
 	advec_conc='VLE' !optional advection scheme concentration, options: 'VLE' (default) 'VL2' 'ARO' 'SBE' SB2' 'NVD' :'VLE' VanLeer(via LW)(default) 'ARO' Arora(via LW) 'SBE' Superbee(via LW) 'VL2' VanLeer(via CDS2) or 'SB2' Superbee(via CDS2) TVD schemes or 'NVD' for NVD scheme 
 	continuity_solver = 1 !nerd option, default is 1 (drdt+drudx=0). Optional: 2 (neglect drdt), 3 (dudx almost 0 U-mix), 33 (dudx=0 U-mix), 34 (dudx=0 U-vol with proper U-mix)
@@ -302,7 +303,7 @@
 	driftfluxforce_calfac=1.
 	depo_implicit=0
 	depo_cbed_option=0
-	IBMorder=0
+	IBMorder=0 
 	Poutflow=0 ! 0 (default, most robust) Poutflow is zero for complete outflow crosssection at rmax; 1 (optional) Poutflow is zero at just one grid-location at rmax --> sometimes better but less robust
 	!! ambient:
 	U_b = -999.
@@ -312,6 +313,7 @@
 	V_init = -999.
 	bcfile = ''
 	rho_b = -999.  
+	rho_b2 = -999.  
 	SEM = -999
 	U_bSEM = -999.
 	V_bSEM = -999.
@@ -475,7 +477,7 @@
 	sgs_model = 'ARGHH'
 	Cs = -999.
 	Lmix_type = -999
-	nr_HPfilter = -999	
+	nr_HPfilter = 0
 	damping_drho_dz = 'none'
 	damping_a1 = -999.
 	damping_b1 = -999.
@@ -571,24 +573,29 @@
 	ENDIF
 	IF (time_int.ne.'EE1'.AND.time_int.ne.'RK3'.AND.time_int.ne.'AB2'.AND.time_int.ne.'AB3'.AND.time_int.ne.'ABv') 
      &     CALL writeerror(34) 	 
-	IF (time_int.eq.'EE1'.or.time_int.eq.'AB2'.or.time_int.eq.'AB3') THEN
+	IF (time_int.eq.'AB2'.or.time_int.eq.'AB3') THEN
 		write(*,*),' WARNING: Your time integration scheme: ',time_int
 		write(*,*),' is a testing option and not all functionalities of Dflow3d are working,'
-		write(*,*),' use ABv or RK3 for a fully supported time integration scheme.'
+		write(*,*),' use ABv for a fully supported time integration scheme.'
 	ENDIF
 	IF (CFL<0.) CALL writeerror(35)
 
 	READ (UNIT=1,NML=num_scheme,IOSTAT=ios)
 	!! check input num_scheme
 	IF (convection.ne.'CDS2'.AND.convection.ne.'CDS6'.AND.convection.ne.'COM4'.AND.convection.ne.'CDS4'
-     &  .AND.convection.ne.'HYB6'.AND.convection.ne.'HYB4'.AND.convection.ne.'C4A6'.AND.convection.ne.'uTVD') CALL writeerror(401)
+     &  .AND.convection.ne.'HYB6'.AND.convection.ne.'HYB4'.AND.convection.ne.'C4A6'.AND.convection.ne.'uTVD'
+     &  .AND.convection.ne.'C2Bl'.AND.convection.ne.'C4Bl') CALL writeerror(401)
 	IF (numdiff<0.or.numdiff>1.) CALL writeerror(402)
 	IF (wiggle_detector.ne.0.and.wiggle_detector.ne.1) CALL writeerror(408) 
 	wd = wiggle_detector 
 	IF (diffusion.ne.'CDS2'.AND.diffusion.ne.'COM4') CALL writeerror(403) 
 	IF (comp_filter_a<0.or.comp_filter_a>0.5) CALL writeerror(404)
 	IF (comp_filter_n<0) CALL writeerror(405)
-	numdiff=numdiff*2.  !needed to get correct value (in advec is a 'hidden' factor 2/4)
+	if (convection.eq.'C2Bl'.or.convection.eq.'C4Bl') then 
+	  numdiff = numdiff   !no hidden factor 
+	else
+	  numdiff=numdiff*2.  !needed to get correct value (in advec is a 'hidden' factor 2/4)
+	endif
 	IF (CNdiffz.ne.0.and.CNdiffz.ne.1) CALL writeerror(406)
 	IF (CNdiffz<0) CALL writeerror(407)
 
@@ -608,6 +615,7 @@
 	ENDIF
 	IF (W_b<0.) CALL writeerror(42)
 	IF (rho_b<0.) CALL writeerror(43)  
+	IF (rho_b2<0.) rho_b2=rho_b
 	IF (SEM<0) CALL writeerror(44)
 	IF (nmax2<0) CALL writeerror(45)
 	IF (nmax1<0) CALL writeerror(46)
@@ -1605,6 +1613,8 @@
 	ALLOCATE(pold1(1:imax,1:jmax,1:kmax))
 	ALLOCATE(pold2(1:imax,1:jmax,1:kmax))
 	ALLOCATE(pold3(1:imax,1:jmax,1:kmax))
+	ALLOCATE(phnew(1:imax,1:jmax,1:kmax))
+	ALLOCATE(phdt(1:imax,1:jmax,1:kmax))
 	ALLOCATE(dp(0:i1,0:j1,0:k1))
 	if (sgs_model.eq.'DSmag') then
 	  ALLOCATE(Csgrid(1:imax,1:jmax,1:kmax))
@@ -1614,6 +1624,8 @@
 	pold1=0.
 	pold2=0.
 	pold3=0.
+	phdt=0.
+	phnew=0.
 	IF (time_int.eq.'AB2'.or.time_int.eq.'AB3'.or.time_int.eq.'ABv') THEN
 		ALLOCATE(wx(0:i1,0:j1,0:k1))  
 		ALLOCATE(wy(0:i1,0:j1,0:k1))

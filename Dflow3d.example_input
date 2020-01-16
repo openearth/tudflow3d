@@ -28,8 +28,9 @@ te_output = 360.		! End time output [s] (default >t_end)
 tstart_rms = 240.		! Start time avg/rms calc [s]
 te_rms = 240.			! End time avg/rms calc [s] (optional, default t_end simulation)
 dt_max = 0.04		! Max timestep [s] 
-time_int = 'RK3'		! Time integration 'RK3'
-CFL = 1.6			! CFL limit [-]
+dt_ini = 0.01		! Max timestep [s] used the first 10 time steps for extra gentle startup
+time_int = 'ABv'		! Time integration options: 'ABv', 'EE1', 'RK3'
+CFL = 0.6			! CFL limit [-]
 t0_output_movie = 10.		! Start time for low-storage concentration output usable for movies [s]
 dt_output_movie = 10.		! Time interval for low-storage concentration output usable for movies [s]
 te_output_movie = 450.		! End time for low-storage concentration output usable for movies [s]
@@ -37,22 +38,20 @@ tstart_morf = 1. 	! Start time bedupdate [s] (default 0)
 /
 
 &num_scheme
-convection = 'HYB6'		! Numerical scheme for convection term, options: 'CDS2','CDS4','CDS6','HYB6','C4A6','uTVD','COM4'
-numdiff = 0.001953125		! Amount of extra diffusion in case of 'CDS6','CDS4','HYB6','C4A6' ('CDS6' -> 1/60=UPW5, 0=CDS6) 
+convection = 'HYB6'		! Numerical scheme for convection term, options: 'CDS2','CDS4','CDS6','HYB6','C4A6','uTVD','C2Bl','C4Bl','COM4'
+numdiff = 0.001953125		! Amount of extra 6th diffusion in case of 'CDS6','CDS4','HYB6','C4A6' ('CDS6' -> 1/60=UPW5, 0=CDS6); or blend slope for TVD-r<0 'C2Bl' and 'C4Bl' 
 wiggle_detector = 0			! Use wiggle detector to adjust amount of numdiff for each individual grid cell (default 0-->numdiff applied for all cells; optional 1)
-diffusion = 'CDS2'		! Numerical scheme for diffusion term, options: 'CDS2','COM4'
-comp_filter_a = 0.495		! Alpha in compact filter (0-0.5), default 0.5 (no filtering) [-]
-comp_filter_n = 0		! Compact filter is applied every comp_filter_n timesteps, default 0 (no filtering) [-]
-CNdiffz = 1			! 1 is implicit CN treatment of diffusion in z-dir 0 is explicit in z-dir (default 0)
+diffusion = 'CDS2'		! Numerical scheme for diffusion term.
+CNdiffz = 0			! 1 is implicit CN treatment of diffusion in z-dir 0 is explicit in z-dir (default 0)
+continuity_solver =36    !default is 1 (drdt+drudx=0). Optional:  35 (dudx=0 U-mix), 36 (dudx=0 U-vol); 36 is best option for mixture flow 
 npresIBM = 0			! number of extra pres-correction steps to make IBM objects better impermeable (default 0)
-npresVOF = 0			! number of extra pres-correction steps to get predicted P^n+1 as input in variable-density-Poisson-solver more accurate (default 0)
+npresPRHO = 0			! number of extra pres-correction steps to get predicted P^n+1 as input in variable-density-Poisson-solver more accurate (default 0)
+oPRHO = 2				! (default 2) 2 = linear extrapolation for predicted P*; 1 = predicted P* equal to P^n; 3 = linear extrapolation for predicted P* using 2dt before to reduce wiggles in time; 4 = high order extrapolation for dPdt to get predicted P*
 pres_in_predictor_step = 1 ! 1 (default) = apply P^n in predictor step and apply corrector step with dP; 0 = predictor step without pressure and apply corrector step with P^n+1
 Poutflow=0 				! 0 (default, most robust) Poutflow is zero for complete outflow crosssection at rmax; 1 (optional) Poutflow is zero at just one grid-location at rmax --> sometimes better but less robust
-continuity_solver =3    !nerd option, default is 1 (drdt+drudx=0). Optional: 2 (neglect drdt), 3 (dudx almost 0 U-mix), 33 (dudx=0 U-mix), 34 (dudx=0 U-vol with proper U-mix)
 !advec_conc='VLE'		! optional advection scheme concentration, options: 'VLE' (default) 'VL2' 'ARO' 'SBE' SB2' 'NVD' :'VLE' VanLeer(via LW)(default) 'ARO' Arora(via LW) 'SBE' Superbee(via LW) 'VL2' VanLeer(via CDS2) or 'SB2' Superbee(via CDS2) TVD schemes or 'NVD' for NVD scheme 
 !transporteq_fracs = 'volufrac' !nerd option default volume fractions, but as option also 'massfrac' can be used internally (input/output still is volume frac!)
 !split_rho_cont = 'SB2'  ! optional 'VL2' or 'SB2' TVD scheme (via CDS2 without 1-cfl term) to split off rho from rho*U, default 'CDS' scheme
-CNdiffz = 1			! 1 is implicit CN treatment of diffusion in z-dir 0 is explicit in z-dir (default 0)
 driftfluxforce_calfac = 1. ! calibration factor for driftflux force (default 1.) 0. gives no force
 depo_implicit = 0			! 1=calculate deposition at the bed implicit; 0=explicit with old cfluid (default)
 depo_cbed_option = 0 		! 0=burry cfluid first cell during sedimentation grid cell (default), 1=redistribute cfluid first cell over vertical above bed during sedimentation grid cell and increase sedflux with (1-cfluid_firstcel) factor
@@ -70,16 +69,16 @@ U_init = -1.			! Init U velocity [m/s] (if not defined then U_b is used)
 V_init = -1.			! Init V velocity [m/s] (if not defined then V_b is used)
 rho_b = 1025.			! Ambient density [kg/m3]
 SEM = 0				! 1 = SEM to generate turbulent fluctuations on top of inflow bc, 0 = laminar bc 
-nmax2 = 0			! Number of SEM eddies front inflow 
-nmax1 = 0			! Number of SEM eddies sides inflow
+nmax2 = 5000			! Number of SEM eddies front inflow 
+nmax1 = 5000			! Number of SEM eddies sides inflow
 lm_min = 0.02 			! Minimal Lm SEM eddies [m] (1/10*depth)
 nmax3= 0 			!Number of SEM eddies jet inflow
 lm_min3 = 0.03		! Minimal Lm SEM eddies jet pipe [m] (1/10*radius_j)
-slip_bot = 1			! 1 = no slip bottom, 0 = free slip bottom
+slip_bot = 1			! 1 = partial slip (law of the wall) bottom with log-U inflow profile , 0 = free slip bottom, 2 partial slip with constant U profile over vertical
 kn = 0.1			! Nikkuradse roughness flow [m]
 interaction_bed = 4		! 0 no erosion/sedimentation, 1 only deposition, 2 deposition & unlimited erosion, 3 deposition & erosion previously deposited material, 4 depo&ero including bed-update, 5 depo&ero excluding bed-update, 6 depo&ero including bed-update & unlimited erosion base layer, 7 depo&ero excluding bed-update & unlimited erosion base layer
-periodicx = 0			! 1 periodic in x dir 0 not periodic (default 0)
-periodicy = 0			! 1 periodic in y dir 0 not periodic 2 is free slip lateral boundaries (default 0)
+periodicx = 0			! 1 periodic in x dir; 0 not periodic (default 0); 2 closed box (in and outflow in x-dir is zero)
+periodicy = 0			! 1 periodic in y dir; 0 not periodic; 2 is free slip lateral boundaries (default 0)
 dpdx = 0.0			! Driving pressure gradient in x dir in case periodic [Pa/m] (default 0)
 dpdy = 0.0			! Driving pressure gradient in y dir in case periodic [Pa/m] (default 0)
 W_ox = 0.			! Vertical velocity at i=imax boundary in case periodicx=2 [m/s] (default 0)
@@ -138,26 +137,27 @@ radius_j2 = 1.			! radius horizontal plume [m]
 zjet2 = 0.5			! vertical position centre of horizontal plume [m]		
 bedplume(1)%x = -500. 50. 50. -500. ! x coordinate 4 corners bedplume [m]
 bedplume(1)%y = -500. -500. 500. 500. ! y coordinate 4 corners bedplume [m]
+bedplume(1)%radius = 					! (optional) radius [m] to define circle around bp()%x(1) and bp()%y(1) instead of square defined with bp()%x(1-4),bp()%y(1-4)
 bedplume(1)%height = 0.5            ! vertical height bedplume [m]
 bedplume(1)%h_tseriesfile = ''		! file containing timeseries of bedplume height [m] (optional overrules bedplume(.)%height, default '')
 bedplume(1)%zbottom= 0.2           	! vertical bottom start height bedplume [m] (optional, default 0)
 bedplume(1)%zb_tseriesfile = ''		! file containing timeseries of bedplume bottom [m] (optional overrules bedplume(.)%zbottom, default '')
+bedplume(1)%forever = 0        		! 1 is bedplume put in place every timestep, 0 is only initial bedplume (default 0)
+bedplume(1)%t0 = 0.        			! bedplume is started after t0 seconds (default 0. s) 
+bedplume(1)%t_end = 0.        		! bedplume ends after t_end seconds (default t_end of simulation) 
 bedplume(1)%u = 0.5            		! Initial U velocity inside bedplume [m/s] (if not defined then vertical profile based on U_b is used)
 bedplume(1)%v = 0.5            		! Initial V velocity inside bedplume [m/s] (if not defined then vertical profile based on V_b is used)
 bedplume(1)%w = 0.5            		! Initial W velocity inside bedplume [m/s] (if not defined then W_b is used)
 bedplume(1)%u_tseriesfile = ''		! file containing timeseries of u [m/s] (optional overrules bedplume(.)%u, default '')
 bedplume(1)%v_tseriesfile = ''		! file containing timeseries of v [m/s] (optional overrules bedplume(.)%v, default '')
 bedplume(1)%w_tseriesfile = ''		! file containing timeseries of w [m/s] (optional overrules bedplume(.)%w, default '')
-bedplume(1)%c = 0.1 0.1 0.1    		! Initial volume fractions inside bedplume [-] (length vector must be nfrac large)
-bedplume(1)%c_tseriesfile = ''		! file containing timeseries of volume fractions [-] (optional overrules bedplume(.)%c, default '')
-bedplume(1)%forever = 0        		! 1 is bedplume put in place every timestep, 0 is only initial bedplume (default 0)
-bedplume(1)%t0 = 0.        			! bedplume is started after t0 seconds (default 0. s) 
-bedplume(1)%t_end = 0.        		! bedplume ends after t_end seconds (default t_end of simulation) 
 bedplume(1)%Q = 2.5 				! Fluid flux [m3/s] (divided evenly over all cells within bedplume) 
 bedplume(1)%Q_tseriesfile = './inputfiles/Inflow_Q.asc'		! file containing timeseries of Q [m3/s] (optional overrules bedplume(.)%Q, default '')
+bedplume(1)%changesedsuction = 1.   ! 0. is no sediment is removed from suction domain in case bedplume%Q negative (default 1.=sediment is sucked out of domain) 
+bedplume(1)%c = 0.1 0.1 0.1    		! Initial volume fractions inside bedplume [-] (length vector must be nfrac large)
+bedplume(1)%c_tseriesfile = ''		! file containing timeseries of volume fractions [-] (optional overrules bedplume(.)%c, default '')
 bedplume(1)%sedflux = 6.625 59.625  ! Sediment flux [kg/s] (divided evenly over all cells within bedplume, length vector must be nfrac large)
 bedplume(1)%S_tseriesfile = './inputfiles/Inflow_S.asc'		! file containing timeseries of sediment flux [kg/s] (optional overrules bedplume(.)%sedflux, default '')
-bedplume(1)%changesedsuction = 1.   ! 0. is no sediment is removed from suction domain in case bedplume%Q negative (default 1.=sediment is sucked out of domain) 
 bedplume(1)%move_zbed_criterium = 5.5	! criterium [m] to move this bedplume with move_dx,dy,dz once bed within x,y contour grows above this criterium: default one criterium full sim; optional series with length move_dx_series
 bedplume(1)%move_dx_series = 			! series [m] to move bedplume in x direction every time bed grows above move_zbed_criterium within x,y contour bedplume
 bedplume(1)%move_dy_series = 			! series [m] to move bedplume in y direction every time bed grows above move_zbed_criterium within x,y contour bedplume
@@ -176,7 +176,6 @@ bedplume(1)%move_dz_zbottom_factor =		! (optional) [-] factor to apply move_dz_s
 bedplume(1)%move_u = 					! (optional) velocity [m/s] to move bedplume in x direction (default 0)
 bedplume(1)%move_v = 					! (optional) velocity [m/s] to move bedplume in y direction (default 0)
 bedplume(1)%move_w = 					! (optional) velocity [m/s] to move bedplume in z direction: it adjusts both bp()heigth and bp()zbottom (default 0)
-bedplume(1)%radius = 					! (optional) radius [m] to define circle around bp()%x(1) and bp()%y(1) instead of square defined with bp()%x(1-4),bp()%y(1-4)
 /
 
 &fractions_in_plume
@@ -190,14 +189,13 @@ fract(1)%tau_d =  0.1		! Critical shear stress for deposition of mud [N/m2], not
 fract(1)%M = 1.e-4		! Erosion rate mud [kg/sm2] VanRijn proposes 1e-5 - 5e-4 kg/sm2, not used for sand
 fract(1)%kn_sed = 80.		! Nikkuradse roughness for shear stress acting on this sediment fraction (advised as dfloc for mud, for sand with interaction_bed=4 kn_sed is not used, but 2*d50 is used in line with Van Rijn 1984) [10^-6 m] (Elsewhere van Rijn proposes kn_sed=3*d90=6*d50=6*dpart for sand...) 
 fract(1)%zair_ref_belowsurf = 0.		! Optional reference level used to make air_fraction semi-compressible; fract(1)%rho is defined at zair_ref_belowsurf [m]
-fract(1)%type = 1			! 1 = silt/mud (default), 2=sand, 3=air, -1=VOF
+fract(1)%type = 1			! 1 = silt/mud (default), 2=sand, 3=air, -1=VOF (VOF is nerd option)
 /
 
 &LESmodel
 sgs_model='SWALE'		! Smagorinsky, WALE or SIGMA sgs model: 'SSmag','SWALE','SIGMA','DSmag','MixLe'
 Cs=0.325			! Constant in sgs model [-]
 Lmix_type=1			! 1=(dx*dy*dz)^1/3 | 2=sqrt((dx^2+dy^2+dz^2)/3)
-nr_HPfilter=1			! Number of times a HPfilter is applied to velocity field in FSmag (>=1, recommended 3)
 !damping_drho_dz = 'MuAn'	! Turbulence damping at density interface in Munk-Anderson type of way:
 !damping_a1 = 100.		! Damping applied to eddy visc. fluid: Fdamp(Ri)=(1+damping_a1*Ri)^damping_b1
 !damping_b1 = -0.333333		! Damping applied to eddy visc. fluid: Fdamp(Ri)=(1+damping_a1*Ri)^damping_b1
@@ -245,7 +243,7 @@ xprop = 180.			! x-coordinate of propellers [m] (distance from front TSHD)
 yprop = 10.			! y-distance of propellers from centerline TSHD [m] (only used when nprop=2)
 zprop = 3.65			! z-coordinate of centerline propellers with respect to waterline [m] (must be between 0 and depth)
 Pprop = 6000000.			! Power of propeller [W]
-rudder = 1			! 1 = Rudder behind propeller, 0 = no rudder
+rudder = 0			! 1 = Rudder behind propeller, 0 = no rudder
 rot_prop = 10.			! Rotation direction of propellers [-] ! positive rpm_prop means right turning while watching from back (with two props both props counter-rotate with starboard prop is right-turning) 
 draghead = 'port'		! Draghead down at 'port','star' or 'both'; default 'none' [-]
 Dsp = 1.5			! Diameter suction pipe (outside diameter) [m]
