@@ -5551,7 +5551,7 @@ C.. Termination and release of memory
 !		Lynyrd de Wit, September 2015
 
       USE nlist
-      USE sparse_matrix
+      !USE sparse_matrix
 	  
       implicit none
 
@@ -5946,7 +5946,7 @@ C.. Termination and release of memory
 !		Lynyrd de Wit, October 2015
 
       USE nlist
-      USE sparse_matrix
+      !USE sparse_matrix
 	  
       implicit none
 
