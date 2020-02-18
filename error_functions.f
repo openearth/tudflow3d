@@ -312,6 +312,19 @@
 	CASE(102)
 		write(*,*) '# namelist &constants                            #'			
 		write(*,*) '# morfac must be >=1.                            #'			
+	CASE(103)
+		write(*,*) '# namelist &constants                            #'			
+		write(*,*) '# vwal must be >=0.                              #'			
+	CASE(104)
+		write(*,*) '# namelist &constants                            #'			
+		write(*,*) '# nl = porosity loose sand after dilantancy      #'			
+		write(*,*) '# nl must be >0 and must be >n0                  #'			
+		write(*,*) '# n0 = 1-cfixedbed = porosity undisturbed bed    #'		
+	CASE(105)
+		write(*,*) '# namelist &constants                            #'			
+		write(*,*) '# permeability_kl must be >=0.                   #'		
+		write(*,*) '# relation of Kozeny-Carmen could be used for kl #'		
+		write(*,*) '# kl = gD15^2/160nu*nl^3/(1-nl)^2                #'		
 	CASE(110)
 		write(*,*) '# i history > imax                               #'			
 		write(*,*) '#                                                #'

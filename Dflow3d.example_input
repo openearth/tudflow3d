@@ -224,6 +224,12 @@ reduction_sedimentation_shields = 0. ! Reduction of sedimentation at the bed by 
 morfac = 1. 		! Factor applied to erosion and sedimentation fluxes to speed up morfology simulation (default 1.)
 morfac2 = 1. 		! Factor applied to erosion and sedimentation fluxes in bed (not in fluid) to speed up morfology simulation (default 1.); only dz_bed is accelerated but concentrations in fluid remain unaltered 
 !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+pickup_correction='noneMastBergenvdBerg' 		! option 'MastBergenvdBerg2003' gives correction to pickup for negative pore pressure, dilantancy effects and very steep slopes (See paper MastBergenvdBerg2003), default no correction is applied
+vwal=0.001				! vwal is the wall velocity used in pickup_correction 'MastBergenvdBerg2003' 
+nl=0.44				! nl is the porosity of loose sand after dilantancy used in pickup_correction 'MastBergenvdBerg2003' and must be >(1-cfixedbed) 
+permeability_kl=0.000307	! permeability_kl is the permeability of loose sand used in pickup_correction 'MastBergenvdBerg2003', can be calculated by relation Kozeny-Carmen kl = gD15^2/160nu*nl^3/(1-nl)^2
+pickup_fluctuations=0		!1 means white noise random fluctuations are added to calculated pickup, default 0 no random fluctuations on calculated pickup  
+pickup_fluctuations_ampl=0.	!determines amplitude of turbulent fluctuations --> pickup = pickup+pickup_fluctuations_ampl*random(range[-1 to 1])*pickup 
 /
 
 &ship

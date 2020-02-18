@@ -417,6 +417,10 @@
 	INTEGER itrgt,jtrgt,nav,n_av,kplus2,kpp
 	REAL ws_botsand2,rho_botsand2,mbottot_sand2,PSD_bot_sand_massfrac2(nfr_sand),have_avalanched,have_avalanched_tmp,cctot
 	REAL ccfdtot_firstcel,wsedbed,distance_to_bed,zb_W,gvector
+	REAL pickup_random(1:imax,1:jmax),vs,ve 
+      integer clock,nnn
+      INTEGER, DIMENSION(:), ALLOCATABLE :: seed	
+	
 	erosion=0.
 	deposition=0.
 
@@ -507,6 +511,17 @@
 		  ENDDO
 		ENDDO
 	ELSEIF((interaction_bed.ge.4).and.time_n.ge.tstart_morf) THEN  ! including bedupdate; erosion based on avg sediment properties top layer
+		IF (pickup_fluctuations.eq.1) THEN
+			!1 add white noise to pickup
+		  CALL SYSTEM_CLOCK(COUNT=clock)
+		  CALL RANDOM_SEED(size = nnn)
+		  ALLOCATE(seed(nnn))
+		  CALL SYSTEM_CLOCK(COUNT=clock)
+		  seed = clock + 37 * (/ (i - 1, i = 1, nnn) /)
+		  CALL RANDOM_SEED(PUT = seed)			
+		  call random_number(pickup_random) ! uniform distribution 0,1
+ 		  pickup_random=1.+2.*(pickup_random-0.5)*pickup_fluctuations_ampl
+		ENDIF	
 		DO i=1,imax
 		  DO j=1,jmax 
 			erosionf=0.
@@ -801,6 +816,17 @@
 					TT=0.
 					phip = 0.  ! general pickup function					
 				ENDIF
+				IF (pickup_correction.eq.'MastBergenvdBerg2003') THEN 
+					vs = MAX(sqrt(gvector*delta*d50),1.e-12)
+					!vwal = (-cfixedbed*delta*sin(phi-alpha)/sin(alpha))/(delta_nsed/permeability_kt) !vwal is user input, here Eq.6 from MastBergenvdBerg2003 is mentioned to know how to calculate it (in Eq. 6 the minus sign was forgotten)
+					ve = 0.5*vwal+vs*sqrt((0.5*vwal/vs)**2+phip*delta/delta_nsed*(permeability_kl/vs))
+					phip = ve*cfixedbed/vs 
+				ENDIF
+				IF (pickup_fluctuations.eq.1) THEN
+					!1 add white noise to pickup
+					phip = phip*pickup_random(i,j)					
+				ENDIF
+					
 				IF (reduction_sedimentation_shields>0) THEN ! PhD thesis vRhee p146 eq 7.74
 					reduced_sed = 1.-(ust*ust/(delta*gvector*d50))/reduction_sedimentation_shields
 					reduced_sed = MAX(reduced_sed,0.)

@@ -46,6 +46,7 @@
       CHARACTER*4 damping_drho_dz,extra_mix_visc
 	  CHARACTER*11 pickup_formula
 	  CHARACTER*8 transporteq_fracs
+	  CHARACTER*20 pickup_correction
       REAL damping_a1,damping_b1,damping_a2,damping_b2,cfixedbed
       REAL plumetseries(1:10000) 
       REAL plumeUseries(1:10000)
@@ -62,6 +63,9 @@
       CHARACTER*256 plumeQtseriesfile,plumectseriesfile,avfile      
       REAL Q_j,plumeQseries(1:10000),plumeQtseries(1:10000),plumectseries(1:10000),plumecseries(30,1:10000) !c(30) matches with size frac_init
       REAL Aplume,driftfluxforce_calfac
+	  REAL vwal,delta_nsed,nl,permeability_kl,pickup_fluctuations_ampl
+	  INTEGER pickup_fluctuations
+	  
 	  
       CHARACTER*4 convection,diffusion
       REAL numdiff,comp_filter_a
@@ -240,7 +244,7 @@
      & extra_mix_visc
 	NAMELIST /constants/kappa,gx,gy,gz,ekm_mol,calibfac_sand_pickup,pickup_formula,kn_d50_multiplier,avalanche_slope,
      &	av_slope_z,calibfac_Shields_cr,reduction_sedimentation_shields,morfac,morfac2,avalanche_until_done,avfile,
-     & settling_along_gvector
+     & settling_along_gvector,vwal,nl,permeability_kl,pickup_fluctuations_ampl,pickup_fluctuations
 	NAMELIST /fractions_in_plume/fract
 	NAMELIST /ship/U_TSHD,LOA,Lfront,Breadth,Draught,Lback,Hback,xfront,yfront,kn_TSHD,nprop,Dprop,xprop,yprop,zprop,
      &   Pprop,rudder,rot_prop,draghead,Dsp,xdh,perc_dh_suction,softnose,Hfront,cutter
@@ -506,6 +510,12 @@
 	morfac = 1.
 	morfac2 = 1.
 	avalanche_until_done=0
+	pickup_correction='nonenonenonenonenone'
+	vwal=-999.
+	nl=-999.
+	permeability_kl=-999.
+	pickup_fluctuations_ampl=0.
+	pickup_fluctuations=0
 	!! ship
 	U_TSHD=-999.
 	LOA=-999.
@@ -1290,6 +1300,12 @@
 	IF (calibfac_Shields_cr<0.) CALL writeerror(99)
 	IF (morfac<0.) CALL writeerror(101)
 	IF (morfac2<1.) CALL writeerror(102)
+	IF (pickup_correction.eq.'MastBergenvdBerg2003') THEN 
+		IF (vwal<0) CALL writeerror(103)
+		IF (nl<0.or.nl<(1.-cfixedbed)) CALL writeerror(104)
+		delta_nsed=(nl-(1.-cfixedbed))/(cfixedbed) !delta_nsed=(nl-n0)/(1-n0)
+		IF (permeability_kl<0) CALL writeerror(105)
+	ENDIF
 
 	READ (UNIT=1,NML=ship,IOSTAT=ios)
 	!! check input constants

@@ -11,7 +11,7 @@ RM = rm -f
 VR1 = $(shell echo "      svnversion = '`svnversion`'" > version.inc)
 VR2 = $(shell echo "      svnurl = '`svn info | grep URL`'" >> version.inc )
 
-PROGRAM = Dflow3d_ship.exe
+PROGRAM = Dflow3d_vg.exe
 
 SRCS    = error_functions.f nlist.f extra_functions.f sediment.f advec.f advec_compact4knikker.f advec_cds6.f advec_hybrid4.f advec_hybrid6.f advec_c4a6.f diff_compact.f bound.f init.f main.f solve.f turbulence_models.f vfft.f output.f
 
@@ -78,6 +78,6 @@ solve.o: solve.f makefile
 	$(F77) $(FLAGS) -c solve.f
 
 clean:
-	$(RM) a.out core *.mod *.o $(PROGRAM) $(OBJS)
+	$(RM) *.mod *.o $(PROGRAM) $(OBJS)
 
 version: $(VR1) $(VR2) 
