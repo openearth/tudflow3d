@@ -197,7 +197,12 @@
 		!crate = REAL(cr)	
 	  endif
 	  CALL write_inputtxtfile	
-
+	  ! write machine file already at start
+		CALL GETLOG (username)
+		istat = GETPID()
+		istat2= HOSTNAM (hostname)	  
+		WRITE(*,'(a,a,a)') ' # Machine               : ',hostname,'                           ' 
+	  
       do while (time_n.le.t_end)
 	  if (rank.eq.0) then		
 		call cpu_time(cput10a)

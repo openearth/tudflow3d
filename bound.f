@@ -626,7 +626,7 @@ c 	influence of waves on lateral boundaries:
 				  DO k=kbed(i,j),kb
 					Wbound(i,j,k)=0.
 				  ENDDO						
-				Wbound(i,j,kp)=vel_ibm2 				
+				Wbound(i,j,kp)=vel_ibm2 			
 
 				IF (interaction_bed.ge.4) THEN
 !					  zb_U=0.5*(zb_W+REAL(MAX(kbed(i+1,j)-1,0))*dz+(SUM(cnewbot(1:nfrac,i+1,j))+
@@ -1454,8 +1454,7 @@ c 	influence of waves on lateral boundaries:
 				DO k=kbed(i,j),kb
 				  Wbound(i,j,k)=0.
 				ENDDO					
-				Wbound(i,j,kp)=vel_ibm2 				
-				
+				Wbound(i,j,kp)=vel_ibm2 
 				IF (interaction_bed.ge.4) THEN
 !				  zb_U=0.5*(zb_W+REAL(MAX(kbed(i+1,j)-1,0))*dz+(SUM(cnewbot(1:nfrac,i+1,j))+
 !     &				SUM(Clivebed(1:nfrac,i+1,j,kbed(i+1,j))))/cfixedbed*dz)

@@ -54,7 +54,6 @@ Poutflow=0 				! 0 (default, most robust) Poutflow is zero for complete outflow 
 !split_rho_cont = 'SB2'  ! optional 'VL2' or 'SB2' TVD scheme (via CDS2 without 1-cfl term) to split off rho from rho*U, default 'CDS' scheme
 driftfluxforce_calfac = 1. ! calibration factor for driftflux force (default 1.) 0. gives no force
 depo_implicit = 0			! 1=calculate deposition at the bed implicit; 0=explicit with old cfluid (default)
-depo_cbed_option = 0 		! 0=burry cfluid first cell during sedimentation grid cell (default), 1=redistribute cfluid first cell over vertical above bed during sedimentation grid cell and increase sedflux with (1-cfluid_firstcel) factor
 IBMorder = 2 				! 0 (default) = normal staircase manner bed immersed boundary, 2 = 2nd order immersed boundary of bed, obstacles and TSHD higher in water are still staircase manner
 /
 
@@ -214,7 +213,7 @@ settling_along_gvector = 0 ! 0 (default) = settling occurs in z-dir, 1 = settlin
 ekm_mol = 1.e-3			! Moleculair dyn. viscosity [kg/(sm)]
 calibfac_sand_pickup = 1. ! Calibration factor for sand pickup, default 1. [-].
 calibfac_Shields_cr = 1. ! Calibration factor to adjust Shields_cr curve for start motion sand pickup, default 1. [-].
-pickup_formula = 'nielsen1992' !options are 'vanrijn1984' (default),'vanrijn2019' (=VR1984 including simple high speed erosion correction),'VR2019_Cbed' (=VR1984 including simple high speed erosion correction and reduction pickup for C_near_bed),'nielsen1992','okayasu2010'
+pickup_formula = 'nielsen1992' !options are 'vanrijn1984' (default),'vanrijn2019' (=VR1984 including simple high speed erosion correction),'VR2019_Cbed' (=VR1984 including simple high speed erosion correction and reduction pickup for C_near_bed),'VR1984_Cbed' (=VR1984 including reduction pickup for C_near_bed),'nielsen1992','okayasu2010'
 kn_d50_multiplier = 2. 	! Defines Nikuradse bedroughness for sand pickup function (not for flow shear stress), default 2.; kn=2*d50 defined in paper Van Rijn 1984
 avalanche_slope = 2. ! Max bedslope 1:as; all slopes steeper avalanche towards 1:as (0=vertical slope, wet sand=30deg=1.7--15deg=3.7)
 av_slope_z =         ! To define variable avalanche_slope over depth --> make av_slope_z and avalanche_slope series over vertical; when av_slope_z not defined a uniform avalanche_slope is used
@@ -225,9 +224,9 @@ morfac = 1. 		! Factor applied to erosion and sedimentation fluxes to speed up m
 morfac2 = 1. 		! Factor applied to erosion and sedimentation fluxes in bed (not in fluid) to speed up morfology simulation (default 1.); only dz_bed is accelerated but concentrations in fluid remain unaltered 
 !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
 pickup_correction='noneMastBergenvdBerg' 		! option 'MastBergenvdBerg2003' gives correction to pickup for negative pore pressure, dilantancy effects and very steep slopes (See paper MastBergenvdBerg2003), default no correction is applied
-vwal=0.001				! vwal is the wall velocity used in pickup_correction 'MastBergenvdBerg2003' 
+vwal=0.001				! vwal [m/s] is the wall velocity used in pickup_correction 'MastBergenvdBerg2003' 
 nl=0.44				! nl is the porosity of loose sand after dilantancy used in pickup_correction 'MastBergenvdBerg2003' and must be >(1-cfixedbed) 
-permeability_kl=0.000307	! permeability_kl is the permeability of loose sand used in pickup_correction 'MastBergenvdBerg2003', can be calculated by relation Kozeny-Carmen kl = gD15^2/160nu*nl^3/(1-nl)^2
+permeability_kl=0.000307	! permeability_kl [m/s] is the permeability of loose sand used in pickup_correction 'MastBergenvdBerg2003', can be calculated by relation Kozeny-Carmen kl = gD15^2/160nu*nl^3/(1-nl)^2
 pickup_fluctuations=0		!1 means white noise random fluctuations are added to calculated pickup, default 0 no random fluctuations on calculated pickup  
 pickup_fluctuations_ampl=0.	!determines amplitude of turbulent fluctuations --> pickup = pickup+pickup_fluctuations_ampl*random(range[-1 to 1])*pickup 
 /

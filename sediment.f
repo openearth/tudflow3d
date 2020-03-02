@@ -811,7 +811,13 @@
 					TT = MAX(TT,0.) !TT must be positive
 					phip = calibfac_sand_pickup*0.00033*Dstar**0.3*TT**1.5   ! general pickup function	
 					Shields_eff = ust**2/(delta*gvector*d50)
-					phip = phip/(MAX(Shields_eff,1.))*(1.-(1.-cfixedbed)-SUM(ccfd(1:nfrac,i,j,kplus)))/(1.-(1.-cfixedbed)) ! correction: reduced pickup for high speed erosion and reduction for cbed according to VanRhee and Talmon 2010
+					phip = phip/(MAX(Shields_eff,1.))*(cfixedbed-SUM(ccfd(1:nfrac,i,j,kplus)))/(cfixedbed) ! correction: reduced pickup for high speed erosion and reduction for cbed according to VanRhee and Talmon 2010
+				ELSEIF (pickup_formula.eq.'VR1984_Cbed') THEN
+					ustc2 = Shields_cr * gvector*delta*d50
+					TT = (ust*ust-ustc2)/(MAX(ustc2,1.e-12))
+					TT = MAX(TT,0.) !TT must be positive
+					phip = calibfac_sand_pickup*0.00033*Dstar**0.3*TT**1.5   ! general pickup function	
+					phip = phip*(cfixedbed-SUM(ccfd(1:nfrac,i,j,kplus)))/(cfixedbed) ! correction: reduced pickup for for cbed according to VanRhee and Talmon 2010					
 				ELSE
 					TT=0.
 					phip = 0.  ! general pickup function					
@@ -820,7 +826,8 @@
 					vs = MAX(sqrt(gvector*delta*d50),1.e-12)
 					!vwal = (-cfixedbed*delta*sin(phi-alpha)/sin(alpha))/(delta_nsed/permeability_kt) !vwal is user input, here Eq.6 from MastBergenvdBerg2003 is mentioned to know how to calculate it (in Eq. 6 the minus sign was forgotten)
 					ve = 0.5*vwal+vs*sqrt((0.5*vwal/vs)**2+phip*delta/delta_nsed*(permeability_kl/vs))
-					phip = ve*cfixedbed/vs 
+					phip = ve*cfixedbed/vs  !phip = ve*(cfixedbed-SUM(ccfd(1:nfrac,i,j,kplus)))/vs  !phip = ve*cfixedbed/vs 
+					!phip = MAX(phip,0.)
 				ENDIF
 				IF (pickup_fluctuations.eq.1) THEN
 					!1 add white noise to pickup
@@ -891,13 +898,7 @@
 					ENDIF
 				ENDDO
 			ENDIF	
-!			IF (MINVAL(Clivebed(1:nfrac,i,j,kbed(i,j)))<0) THEN !.or.MINVAL(Clivebed(1:nfrac,i,j,kbed(i,j)-1)<0
-!!     & .or.MINVAL(Clivebed(1:nfrac,i,j,kbed(i,j)+1)<0) THEN
-!				write(*,*),'A',rank,i,j,kbed(i,j),cbotnewtot
-!				DO n=1,nfrac
-!					write(*,*),Clivebed(n,i,j,kbed(i,j)),cbotnew(n,i,j),ccnew(n,i,j,kbed(i,j)+1)
-!				ENDDO
-!			ENDIF			
+	
 !update bedlevel for combined erosion deposition silt plus sand fractions: 
 !combination silt and sand gives that in eroding cases sand will erode faster than silt from cbotnew and once all sand is eroded 
 !it can take a while before all silt has eroded and next bed-cell is reached with sand again 
@@ -905,122 +906,91 @@
 ! individual fraction in cbotnew can become <0 but cbotnewtot can still be >0 this may not enter Clivebed and is prevented below
 ! negative cbotnew still cannot enter Clivebed, but bedupdate (kbed+1) is allowed when total cbotnew(fracs>0) is enough even when individual fractions are negative in cbotnew
 			IF (interaction_bed.eq.4.or.interaction_bed.eq.6) THEN
-				IF (cbotnewtot.lt.0.and.(kbed(i,j)-1).ge.0.and.SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed) THEN 
+				IF (cbotnewtot.lt.-0.1*cfixedbed.and.(kbed(i,j)-1).ge.0.and.SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed-1.e-12) THEN 
 				!add half cell sediment on cbot account for further erosion without lowering 1 dz yet (because otherwise flipflop between ero-1dz and depo+1dz)
 					DO n=1,nfrac ! also cbotnew(n,i,j) is le 0:
 						cbotnew(n,i,j)=cbotnew(n,i,j)+0.5*Clivebed(n,i,j,kbed(i,j)) 
 						Clivebed(n,i,j,kbed(i,j))=0.5*Clivebed(n,i,j,kbed(i,j)) 
 					ENDDO	
-				ELSEIF (cbotnewtot.lt.0.and.(kbed(i,j)-1).ge.0) THEN !erosion of 1 layer dz:
+				ELSEIF (cbotnewtot.lt.-0.1*cfixedbed.and.(kbed(i,j)-1).ge.0) THEN !erosion of 1 layer dz:
 					kplus = MIN(kbed(i,j)+1,k1)
-					drdt(i,j,kbed(i,j))=rho_b
-					rnew(i,j,kbed(i,j))=rho_b
-					rold(i,j,kbed(i,j))=rho_b					
+!					drdt(i,j,kbed(i,j))=rho_b
+!					rnew(i,j,kbed(i,j))=rho_b
+!					rold(i,j,kbed(i,j))=rho_b					
 					DO n=1,nfrac ! also cbotnew(n,i,j) is le 0:
 						cbotnew(n,i,j)=cbotnew(n,i,j)+Clivebed(n,i,j,kbed(i,j)) !top layer is now previous top cel bed minus (erosion>top-layer)
 						ccnew(n,i,j,kbed(i,j))=(erosionf(n)+depositionf(n))/(dz) !assign all erosion+depo as new sediment concentration new bottom layer fluid
 						ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus)-(erosionf(n)+depositionf(n))/(dz) !remove erosion+depo from previous bottom layer fluid
 						Clivebed(n,i,j,kbed(i,j))=0. ! not bed anymore but fluid
-						drdt(i,j,kbed(i,j)) = drdt(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-						rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-						rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!						drdt(i,j,kbed(i,j)) = drdt(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!						rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!						rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 					ENDDO
 					!kbed(i,j)=MAX(kbed(i,j)-1,0)  !update bed level at end		
 					kbed(i,j)=kbed(i,j)-1
-					kbedt(i,j)=kbed(i,j)
-				!! 31-8-2018 switched top 2 lines ELSEIF on instead of bottom 2 lines because ctot_firstcel can become >>cbed in TSHD placement sim; however previous sims diffuser depostion were done with bottom 2 lines!!
-!!				ELSEIF ((cbotnewtot_pos+ctot_firstcel).ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.cbotnewtot_pos.gt.1.e-12.and.
-!!     &             (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed-1.e-12.or.kbed(i,j).eq.0).and.depo_cbed_option.eq.0) THEN
-!! test 8-may-2019 with this elseif instead of 2 lines above (=better!; no large zone with near-zero concentration first cell fluid):	 
-				ELSEIF ((cbotnewtot_pos).ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.
-     &             (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed-1.e-12.or.kbed(i,j).eq.0).and.depo_cbed_option.eq.0) THEN
-	 
-!     &               .and.MINVAL(cbotnew(1:nfrac,i,j)).ge.0) THEN !if kbed=0 then sedimentation can happen even if Clivebed empty
-!				ELSEIF (cbotnewtot.ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.cbotnewtot.gt.1.e-12.and.
-!     &             (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed-1.e-12.or.kbed(i,j).eq.0)) THEN !if kbed=0 then sedimentation can happen even if Clivebed empty	 
+					kbedt(i,j)=kbed(i,j)	 
+				ELSEIF ((cbotnewtot_pos).ge.0.5*cfixedbed.and.kbed(i,j)+1.le.kmax.and.
+     &             (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed-1.e-12.or.kbed(i,j).eq.0)) THEN
 					kbed(i,j)=kbed(i,j)+1
 					kbedt(i,j)=kbed(i,j)
-					drdt(i,j,kbed(i,j))=rho_b
-					rnew(i,j,kbed(i,j))=rho_b
-					rold(i,j,kbed(i,j))=rho_b
-					drdt(i,j,kbed(i,j)+1)=rho_b
-					rnew(i,j,kbed(i,j)+1)=rho_b
-					rold(i,j,kbed(i,j)+1)=rho_b					
-					!kbed(i,j)=MIN(kbed(i,j)+1,kmax) !update bed level at start sedimentation 
-					c_adjustA = MAX(cfixedbed-ctot_firstcel,0.)/MAX(cbotnewtot_pos,1.e-12)    !first fluid cel not yet filled up --> c_adjustA>0 & c_adjustB=0--> fluid cel transformed into bed and sediment from cbotnew moved to bed
-					c_adjustB = MIN(cfixedbed-ctot_firstcel,0.)/MAX(ctot_firstcel,1.e-12) !first fluid cel already more than filled up --> c_adjustB<0&c_adjustA=0 --> fluid cel transformed into bed and excess sediment to cbotnew
-!					DO n=1,nfrac 
-!						Clivebed(n,i,j,kbed(i,j))=ccnew(n,i,j,kbed(i,j))+
-!     &						c_adjustA*cbotnew(n,i,j)+c_adjustB*ccnew(n,i,j,kbed(i,j))  ! apply sedimentation ratio between fractions new sediment concentration of cells within bed
-!						cbotnew(n,i,j)=cbotnew(n,i,j)-c_adjustA*cbotnew(n,i,j)-c_adjustB*ccnew(n,i,j,kbed(i,j))
-!!     &						+(morfac2-1.)*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
-!						ccnew(n,i,j,kbed(i,j)+1)=ccnew(n,i,j,kbed(i,j)+1)+(morfac2-1.)/morfac2*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
-!						drdt(i,j,kbed(i,j)+1) = drdt(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-!						rnew(i,j,kbed(i,j)+1) = rnew(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-!						rold(i,j,kbed(i,j)+1) = rold(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density						
-!						ccnew(n,i,j,kbed(i,j))=0. 
+!					drdt(i,j,kbed(i,j))=rho_b
+!					rnew(i,j,kbed(i,j))=rho_b
+!					rold(i,j,kbed(i,j))=rho_b
+!					drdt(i,j,kbed(i,j)+1)=rho_b
+!					rnew(i,j,kbed(i,j)+1)=rho_b
+!					rold(i,j,kbed(i,j)+1)=rho_b					 
+					c_adjustA = 0.5*cfixedbed/cbotnewtot_pos
+					! fill Clivebed to 0.5 cfixedbed from cbotnew and place all ccnew from 1st fluid cell into cbotnew as buffer against flip-flop erosive state
+					
+					DO n=1,nfrac 
+						Clivebed(n,i,j,kbed(i,j))=c_adjustA*MAX(cbotnew(n,i,j),0.)  
+						cbotnew(n,i,j)=cbotnew(n,i,j)-c_adjustA*MAX(cbotnew(n,i,j),0.)+ccnew(n,i,j,kbed(i,j))
+						IF (morfac2.gt.1.0000001) THEN
+						 cctot=0.
+						 DO k=kbed(i,j)+1,kmax 
+							cctot=cctot+MAX(ccfd(n,i,j,k),0.)
+						 ENDDO						
+						 IF (cctot<1e-12) THEN
+						  ccnew(n,i,j,kbed(i,j)+1)=ccnew(n,i,j,kbed(i,j)+1)+(morfac2-1.)/morfac2*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+!						  drdt(i,j,kbed(i,j)+1) = drdt(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!						  rnew(i,j,kbed(i,j)+1) = rnew(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!						  rold(i,j,kbed(i,j)+1) = rold(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density												
+						 ELSE
+!						  DO k=kbed(i,j)+1,kmax
+!						   drdt(i,j,k)=rho_b
+!						   rnew(i,j,k)=rho_b
+!						   rold(i,j,k)=rho_b
+!						  ENDDO
+						  DO k=kbed(i,j)+1,kmax !redistribute morfac2 buried sediment over water column above 
+						   ccnew(n,i,j,k)=ccnew(n,i,j,k)+(morfac2-1.)/morfac2*MAX(ccfd(n,i,j,k),0.)/cctot*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+!						   drdt(i,j,k) = drdt(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!						   rnew(i,j,k) = rnew(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!						   rold(i,j,k) = rold(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density	
+						  ENDDO 
+						 ENDIF
+						ENDIF
+						ccnew(n,i,j,kbed(i,j))=0. 
 !						drdt(i,j,kbed(i,j)) = drdt(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 !						rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 !						rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density							
-!					ENDDO
-!					cctot=0.
-!					DO k=kbed(i,j)+1,kmax 
-!						cctot=cctot+SUM(ccfd(1:nfrac,i,j,k))
-!					ENDDO
-					DO n=1,nfrac 
-						Clivebed(n,i,j,kbed(i,j))=ccnew(n,i,j,kbed(i,j))+
-     &						c_adjustA*MAX(cbotnew(n,i,j),0.)+c_adjustB*ccnew(n,i,j,kbed(i,j))  ! apply sedimentation ratio between fractions new sediment concentration of cells within bed
-						cbotnew(n,i,j)=cbotnew(n,i,j)-c_adjustA*MAX(cbotnew(n,i,j),0.)-c_adjustB*ccnew(n,i,j,kbed(i,j))
-!     &						+(morfac2-1.)*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
-						IF (morfac2.gt.1.0000001) THEN
-						 cctot=0.
-						 DO k=kbed(i,j)+1,kmax 
-							cctot=cctot+MAX(ccfd(n,i,j,k),0.)
-						 ENDDO						
-						 IF (cctot<1e-12) THEN
-						  ccnew(n,i,j,kbed(i,j)+1)=ccnew(n,i,j,kbed(i,j)+1)+(morfac2-1.)/morfac2*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
-						  drdt(i,j,kbed(i,j)+1) = drdt(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-						  rnew(i,j,kbed(i,j)+1) = rnew(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-						  rold(i,j,kbed(i,j)+1) = rold(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density												
-						 ELSE
-						  DO k=kbed(i,j)+1,kmax
-						   drdt(i,j,k)=rho_b
-						   rnew(i,j,k)=rho_b
-						   rold(i,j,k)=rho_b
-						  ENDDO
-						  DO k=kbed(i,j)+1,kmax !redistribute morfac2 buried sediment over water column above 
-						   ccnew(n,i,j,k)=ccnew(n,i,j,k)+(morfac2-1.)/morfac2*MAX(ccfd(n,i,j,k),0.)/cctot*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
-						   drdt(i,j,k) = drdt(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-						   rnew(i,j,k) = rnew(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-						   rold(i,j,k) = rold(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density	
-						  ENDDO 
-						 ENDIF
-						ENDIF
-						ccnew(n,i,j,kbed(i,j))=0. 
-						drdt(i,j,kbed(i,j)) = drdt(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-						rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-						rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density							
 					ENDDO	
-				ELSEIF ((ctot_firstcel).ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.
-     &             (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed-1.e-12.or.kbed(i,j).eq.0).and.depo_cbed_option.eq.0) THEN
-	 
+				ELSEIF (ctot_firstcel.ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.
+     &             (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed-1.e-12.or.kbed(i,j).eq.0)) THEN
 					kbed(i,j)=kbed(i,j)+1
 					kbedt(i,j)=kbed(i,j)
-					drdt(i,j,kbed(i,j))=rho_b
-					rnew(i,j,kbed(i,j))=rho_b
-					rold(i,j,kbed(i,j))=rho_b
-					drdt(i,j,kbed(i,j)+1)=rho_b
-					rnew(i,j,kbed(i,j)+1)=rho_b
-					rold(i,j,kbed(i,j)+1)=rho_b					
-					!kbed(i,j)=MIN(kbed(i,j)+1,kmax) !update bed level at start sedimentation 
-					c_adjustA = MAX(cfixedbed-ctot_firstcel,0.)/MAX(cbotnewtot_pos,1.e-12)    !first fluid cel not yet filled up --> c_adjustA>0 & c_adjustB=0--> fluid cel transformed into bed and sediment from cbotnew moved to bed
-					c_adjustB = MIN(cfixedbed-ctot_firstcel,0.)/MAX(ctot_firstcel,1.e-12) !first fluid cel already more than filled up --> c_adjustB<0&c_adjustA=0 --> fluid cel transformed into bed and excess sediment to cbotnew
+!					drdt(i,j,kbed(i,j))=rho_b
+!					rnew(i,j,kbed(i,j))=rho_b
+!					rold(i,j,kbed(i,j))=rho_b
+!					drdt(i,j,kbed(i,j)+1)=rho_b
+!					rnew(i,j,kbed(i,j)+1)=rho_b
+!					rold(i,j,kbed(i,j)+1)=rho_b					 
+					c_adjustA = (0.5*cfixedbed-cbotnewtot_pos)/ctot_firstcel
+					! cbotnewtot_pos is smaller as 0.5*cfixedbed; otherwise captured in ELSEIF above 
+					! fill Clivebed to 0.5 cfixedbed, first from cbotnew and top off to 0.5*cfixedbed from ccnew, move remainder of ccnew into cbotnew as buffer against flip-flop erosive state
+					
 					DO n=1,nfrac 
-						Clivebed(n,i,j,kbed(i,j))=ccnew(n,i,j,kbed(i,j))+
-     &						c_adjustA*MAX(cbotnew(n,i,j),0.)+c_adjustB*ccnew(n,i,j,kbed(i,j))  ! apply sedimentation ratio between fractions new sediment concentration of cells within bed
-						cbotnew(n,i,j)=cbotnew(n,i,j)-c_adjustA*MAX(cbotnew(n,i,j),0.)-c_adjustB*ccnew(n,i,j,kbed(i,j))
-!     &						+(morfac2-1.)*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
-
+						Clivebed(n,i,j,kbed(i,j))=MAX(cbotnew(n,i,j),0.)+c_adjustA*ccnew(n,i,j,kbed(i,j)) 
+						cbotnew(n,i,j)=(1.-c_adjustA)*ccnew(n,i,j,kbed(i,j))
 						IF (morfac2.gt.1.0000001) THEN
 						 cctot=0.
 						 DO k=kbed(i,j)+1,kmax 
@@ -1028,91 +998,247 @@
 						 ENDDO						
 						 IF (cctot<1e-12) THEN
 						  ccnew(n,i,j,kbed(i,j)+1)=ccnew(n,i,j,kbed(i,j)+1)+(morfac2-1.)/morfac2*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
-						  drdt(i,j,kbed(i,j)+1) = drdt(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-						  rnew(i,j,kbed(i,j)+1) = rnew(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-						  rold(i,j,kbed(i,j)+1) = rold(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density												
+!						  drdt(i,j,kbed(i,j)+1) = drdt(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!						  rnew(i,j,kbed(i,j)+1) = rnew(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!						  rold(i,j,kbed(i,j)+1) = rold(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density												
 						 ELSE
-						  DO k=kbed(i,j)+1,kmax
-						   drdt(i,j,k)=rho_b
-						   rnew(i,j,k)=rho_b
-						   rold(i,j,k)=rho_b
-						  ENDDO
+!						  DO k=kbed(i,j)+1,kmax
+!						   drdt(i,j,k)=rho_b
+!						   rnew(i,j,k)=rho_b
+!						   rold(i,j,k)=rho_b
+!						  ENDDO
 						  DO k=kbed(i,j)+1,kmax !redistribute morfac2 buried sediment over water column above 
 						   ccnew(n,i,j,k)=ccnew(n,i,j,k)+(morfac2-1.)/morfac2*MAX(ccfd(n,i,j,k),0.)/cctot*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
-						   drdt(i,j,k) = drdt(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-						   rnew(i,j,k) = rnew(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-						   rold(i,j,k) = rold(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density	
+!						   drdt(i,j,k) = drdt(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!						   rnew(i,j,k) = rnew(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!						   rold(i,j,k) = rold(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density	
 						  ENDDO 
 						 ENDIF
 						ENDIF
 						ccnew(n,i,j,kbed(i,j))=0. 
-						drdt(i,j,kbed(i,j)) = drdt(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-						rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-						rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density							
-					ENDDO					
-				!! 27-2-109 test update bed without burying ctot_firstcel because that makes total sediment in fluid smaller abruptly
-				ELSEIF ((cbotnewtot_pos).ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.
-     &             (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed-1.e-12.or.kbed(i,j).eq.0).and.depo_cbed_option.eq.1) THEN
-
-					kbed(i,j)=kbed(i,j)+1
-					kbedt(i,j)=kbed(i,j)
-					drdt(i,j,kbed(i,j))=rho_b
-					rnew(i,j,kbed(i,j))=rho_b
-					rold(i,j,kbed(i,j))=rho_b
-					drdt(i,j,kbed(i,j)+1)=rho_b
-					rnew(i,j,kbed(i,j)+1)=rho_b
-					rold(i,j,kbed(i,j)+1)=rho_b					
-					!kbed(i,j)=MIN(kbed(i,j)+1,kmax) !update bed level at start sedimentation 
-					!!!c_adjustA = MAX(cfixedbed-ctot_firstcel,0.)/MAX(cbotnewtot_pos,1.e-12)    !first fluid cel not yet filled up --> c_adjustA>0 & c_adjustB=0--> fluid cel transformed into bed and sediment from cbotnew moved to bed
-					!!!c_adjustB = MIN(cfixedbed-ctot_firstcel,0.)/MAX(ctot_firstcel,1.e-12) !first fluid cel already more than filled up --> c_adjustB<0&c_adjustA=0 --> fluid cel transformed into bed and excess sediment to cbotnew
-
+!						drdt(i,j,kbed(i,j)) = drdt(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!						rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!						rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density							
+					ENDDO	
+				ELSEIF (cbotnewtot_pos.ge.0.5*cfixedbed.and.kbed(i,j)+1.le.kmax) THEN
+				! Clivebed not completely full; therefore no bedupdate kbed+1, but only redistribution from cbotnew tot Clivebed 
+					c_adjustA = (cfixedbed-SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cbotnewtot_pos
+					! top off Clivebed to cfixedbed from cbotnew and leave remainder into cbotnew 
 					DO n=1,nfrac 
-						Clivebed(n,i,j,kbed(i,j))=cfixedbed/cbotnewtot_pos*MAX(cbotnew(n,i,j),0.) 
-						cbotnew(n,i,j)=cbotnew(n,i,j)-cfixedbed/cbotnewtot_pos*MAX(cbotnew(n,i,j),0.) 
-						cctot=0.
-						DO k=kbed(i,j)+1,kmax 
-							cctot=cctot+MAX(ccfd(n,i,j,k),0.)
-						ENDDO						
-						IF (cctot<1e-12) THEN !no sediment-Rouse profile available, therefore place ccnew of cell converted into bed in first cell above:
-						 ccnew(n,i,j,kbed(i,j)+1)=ccnew(n,i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
-						 drdt(i,j,kbed(i,j)+1) = drdt(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-						 rnew(i,j,kbed(i,j)+1) = rnew(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-						 rold(i,j,kbed(i,j)+1) = rold(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density												
-						ELSE
-						 DO k=kbed(i,j)+1,kmax
-						  drdt(i,j,k)=rho_b
-						  rnew(i,j,k)=rho_b
-						  rold(i,j,k)=rho_b
-						 ENDDO
-						 DO k=kbed(i,j)+1,kmax !redistribute ccnew of cell converted into bed over full water column:
-						  ccnew(n,i,j,k)=ccnew(n,i,j,k)+MAX(ccfd(n,i,j,k),0.)/cctot*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
-						  drdt(i,j,k) = drdt(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-						  rnew(i,j,k) = rnew(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-						  rold(i,j,k) = rold(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density	
-						 ENDDO 
-						ENDIF
-						ccnew(n,i,j,kbed(i,j))=0. 
-						drdt(i,j,kbed(i,j)) = drdt(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-						rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-						rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density							
-					ENDDO										
-				ELSEIF (cbotnewtot_pos.gt.1.e-12.and.SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).lt.cfixedbed.and.kbed(i,j).gt.0) THEN
-!     &                 .and.MINVAL(cbotnew(1:nfrac,i,j)).ge.0) THEN !only allowed if kbed>0, because Clivebed(:,:,0)=0
-					! add sediment to Clivebed to bring it to cfixedbed again 
-					c_adjust=MIN((cfixedbed-SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cbotnewtot_pos,1.)				
-					DO n=1,nfrac ! also cbotnew(n,i,j) is le 0:
-						Clivebed(n,i,j,kbed(i,j))=Clivebed(n,i,j,kbed(i,j))+c_adjust*MAX(cbotnew(n,i,j),0.)
-						cbotnew(n,i,j)=cbotnew(n,i,j)-c_adjust*MAX(cbotnew(n,i,j),0.)
-					ENDDO				
+						Clivebed(n,i,j,kbed(i,j))=Clivebed(n,i,j,kbed(i,j))+c_adjustA*MAX(cbotnew(n,i,j),0.)  
+						cbotnew(n,i,j)=cbotnew(n,i,j)-c_adjustA*MAX(cbotnew(n,i,j),0.)						
+					ENDDO																			
 				ENDIF
 			ENDIF
-!			IF (MINVAL(Clivebed(1:nfrac,i,j,kbed(i,j)))<0) THEN !.or.MINVAL(Clivebed(1:nfrac,i,j,kbed(i,j)-1)<0
-!!     & .or.MINVAL(Clivebed(1:nfrac,i,j,kbed(i,j)+1)<0) THEN
-!				write(*,*),'B',rank,i,j,kbed(i,j),cbotnewtot,ctot_firstcel
-!				DO n=1,nfrac
-!					write(*,*),Clivebed(n,i,j,kbed(i,j)),cbotnew(n,i,j),ccnew(n,i,j,kbed(i,j)+1)
-!				ENDDO
-!			ENDIF
+			
+			
+!!!			IF (interaction_bed.eq.4.or.interaction_bed.eq.6) THEN
+!!!				IF (cbotnewtot.lt.0.and.(kbed(i,j)-1).ge.0.and.SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed) THEN 
+!!!				!add half cell sediment on cbot account for further erosion without lowering 1 dz yet (because otherwise flipflop between ero-1dz and depo+1dz)
+!!!					DO n=1,nfrac ! also cbotnew(n,i,j) is le 0:
+!!!						cbotnew(n,i,j)=cbotnew(n,i,j)+0.5*Clivebed(n,i,j,kbed(i,j)) 
+!!!						Clivebed(n,i,j,kbed(i,j))=0.5*Clivebed(n,i,j,kbed(i,j)) 
+!!!					ENDDO	
+!!!				ELSEIF (cbotnewtot.lt.0.and.(kbed(i,j)-1).ge.0) THEN !erosion of 1 layer dz:
+!!!					kplus = MIN(kbed(i,j)+1,k1)
+!!!					drdt(i,j,kbed(i,j))=rho_b
+!!!					rnew(i,j,kbed(i,j))=rho_b
+!!!					rold(i,j,kbed(i,j))=rho_b					
+!!!					DO n=1,nfrac ! also cbotnew(n,i,j) is le 0:
+!!!						cbotnew(n,i,j)=cbotnew(n,i,j)+Clivebed(n,i,j,kbed(i,j)) !top layer is now previous top cel bed minus (erosion>top-layer)
+!!!						ccnew(n,i,j,kbed(i,j))=(erosionf(n)+depositionf(n))/(dz) !assign all erosion+depo as new sediment concentration new bottom layer fluid
+!!!						ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus)-(erosionf(n)+depositionf(n))/(dz) !remove erosion+depo from previous bottom layer fluid
+!!!						Clivebed(n,i,j,kbed(i,j))=0. ! not bed anymore but fluid
+!!!						drdt(i,j,kbed(i,j)) = drdt(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!!!						rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!!!						rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!!!					ENDDO
+!!!					!kbed(i,j)=MAX(kbed(i,j)-1,0)  !update bed level at end		
+!!!					kbed(i,j)=kbed(i,j)-1
+!!!					kbedt(i,j)=kbed(i,j)
+!!!				!! 31-8-2018 switched top 2 lines ELSEIF on instead of bottom 2 lines because ctot_firstcel can become >>cbed in TSHD placement sim; however previous sims diffuser depostion were done with bottom 2 lines!!
+!!!!!				ELSEIF ((cbotnewtot_pos+ctot_firstcel).ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.cbotnewtot_pos.gt.1.e-12.and.
+!!!!!     &             (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed-1.e-12.or.kbed(i,j).eq.0).and.depo_cbed_option.eq.0) THEN
+!!!!! test 8-may-2019 with this elseif instead of 2 lines above (=better!; no large zone with near-zero concentration first cell fluid):	 
+!!!				ELSEIF ((cbotnewtot_pos).ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.
+!!!     &             (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed-1.e-12.or.kbed(i,j).eq.0).and.depo_cbed_option.eq.0) THEN
+!!!	 
+!!!!     &               .and.MINVAL(cbotnew(1:nfrac,i,j)).ge.0) THEN !if kbed=0 then sedimentation can happen even if Clivebed empty
+!!!!				ELSEIF (cbotnewtot.ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.cbotnewtot.gt.1.e-12.and.
+!!!!     &             (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed-1.e-12.or.kbed(i,j).eq.0)) THEN !if kbed=0 then sedimentation can happen even if Clivebed empty	 
+!!!					kbed(i,j)=kbed(i,j)+1
+!!!					kbedt(i,j)=kbed(i,j)
+!!!					drdt(i,j,kbed(i,j))=rho_b
+!!!					rnew(i,j,kbed(i,j))=rho_b
+!!!					rold(i,j,kbed(i,j))=rho_b
+!!!					drdt(i,j,kbed(i,j)+1)=rho_b
+!!!					rnew(i,j,kbed(i,j)+1)=rho_b
+!!!					rold(i,j,kbed(i,j)+1)=rho_b					
+!!!					!kbed(i,j)=MIN(kbed(i,j)+1,kmax) !update bed level at start sedimentation 
+!!!					c_adjustA = MAX(cfixedbed-ctot_firstcel,0.)/MAX(cbotnewtot_pos,1.e-12)    !first fluid cel not yet filled up --> c_adjustA>0 & c_adjustB=0--> fluid cel transformed into bed and sediment from cbotnew moved to bed
+!!!					c_adjustB = MIN(cfixedbed-ctot_firstcel,0.)/MAX(ctot_firstcel,1.e-12) !first fluid cel already more than filled up --> c_adjustB<0&c_adjustA=0 --> fluid cel transformed into bed and excess sediment to cbotnew
+!!!!					DO n=1,nfrac 
+!!!!						Clivebed(n,i,j,kbed(i,j))=ccnew(n,i,j,kbed(i,j))+
+!!!!     &						c_adjustA*cbotnew(n,i,j)+c_adjustB*ccnew(n,i,j,kbed(i,j))  ! apply sedimentation ratio between fractions new sediment concentration of cells within bed
+!!!!						cbotnew(n,i,j)=cbotnew(n,i,j)-c_adjustA*cbotnew(n,i,j)-c_adjustB*ccnew(n,i,j,kbed(i,j))
+!!!!!     &						+(morfac2-1.)*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+!!!!						ccnew(n,i,j,kbed(i,j)+1)=ccnew(n,i,j,kbed(i,j)+1)+(morfac2-1.)/morfac2*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+!!!!						drdt(i,j,kbed(i,j)+1) = drdt(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!!!!						rnew(i,j,kbed(i,j)+1) = rnew(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!!!!						rold(i,j,kbed(i,j)+1) = rold(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density						
+!!!!						ccnew(n,i,j,kbed(i,j))=0. 
+!!!!						drdt(i,j,kbed(i,j)) = drdt(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!!!!						rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!!!!						rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density							
+!!!!					ENDDO
+!!!!					cctot=0.
+!!!!					DO k=kbed(i,j)+1,kmax 
+!!!!						cctot=cctot+SUM(ccfd(1:nfrac,i,j,k))
+!!!!					ENDDO
+!!!					DO n=1,nfrac 
+!!!						Clivebed(n,i,j,kbed(i,j))=ccnew(n,i,j,kbed(i,j))+
+!!!     &						c_adjustA*MAX(cbotnew(n,i,j),0.)+c_adjustB*ccnew(n,i,j,kbed(i,j))  ! apply sedimentation ratio between fractions new sediment concentration of cells within bed
+!!!						cbotnew(n,i,j)=cbotnew(n,i,j)-c_adjustA*MAX(cbotnew(n,i,j),0.)-c_adjustB*ccnew(n,i,j,kbed(i,j))
+!!!!     &						+(morfac2-1.)*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+!!!						IF (morfac2.gt.1.0000001) THEN
+!!!						 cctot=0.
+!!!						 DO k=kbed(i,j)+1,kmax 
+!!!							cctot=cctot+MAX(ccfd(n,i,j,k),0.)
+!!!						 ENDDO						
+!!!						 IF (cctot<1e-12) THEN
+!!!						  ccnew(n,i,j,kbed(i,j)+1)=ccnew(n,i,j,kbed(i,j)+1)+(morfac2-1.)/morfac2*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+!!!						  drdt(i,j,kbed(i,j)+1) = drdt(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!!!						  rnew(i,j,kbed(i,j)+1) = rnew(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!!!						  rold(i,j,kbed(i,j)+1) = rold(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density												
+!!!						 ELSE
+!!!						  DO k=kbed(i,j)+1,kmax
+!!!						   drdt(i,j,k)=rho_b
+!!!						   rnew(i,j,k)=rho_b
+!!!						   rold(i,j,k)=rho_b
+!!!						  ENDDO
+!!!						  DO k=kbed(i,j)+1,kmax !redistribute morfac2 buried sediment over water column above 
+!!!						   ccnew(n,i,j,k)=ccnew(n,i,j,k)+(morfac2-1.)/morfac2*MAX(ccfd(n,i,j,k),0.)/cctot*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+!!!						   drdt(i,j,k) = drdt(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!!!						   rnew(i,j,k) = rnew(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!!!						   rold(i,j,k) = rold(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density	
+!!!						  ENDDO 
+!!!						 ENDIF
+!!!						ENDIF
+!!!						ccnew(n,i,j,kbed(i,j))=0. 
+!!!						drdt(i,j,kbed(i,j)) = drdt(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!!!						rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!!!						rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density							
+!!!					ENDDO	
+!!!				ELSEIF ((ctot_firstcel).ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.
+!!!     &             (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed-1.e-12.or.kbed(i,j).eq.0).and.depo_cbed_option.eq.0) THEN
+!!!	 
+!!!					kbed(i,j)=kbed(i,j)+1
+!!!					kbedt(i,j)=kbed(i,j)
+!!!					drdt(i,j,kbed(i,j))=rho_b
+!!!					rnew(i,j,kbed(i,j))=rho_b
+!!!					rold(i,j,kbed(i,j))=rho_b
+!!!					drdt(i,j,kbed(i,j)+1)=rho_b
+!!!					rnew(i,j,kbed(i,j)+1)=rho_b
+!!!					rold(i,j,kbed(i,j)+1)=rho_b					
+!!!					!kbed(i,j)=MIN(kbed(i,j)+1,kmax) !update bed level at start sedimentation 
+!!!					c_adjustA = MAX(cfixedbed-ctot_firstcel,0.)/MAX(cbotnewtot_pos,1.e-12)    !first fluid cel not yet filled up --> c_adjustA>0 & c_adjustB=0--> fluid cel transformed into bed and sediment from cbotnew moved to bed
+!!!					c_adjustB = MIN(cfixedbed-ctot_firstcel,0.)/MAX(ctot_firstcel,1.e-12) !first fluid cel already more than filled up --> c_adjustB<0&c_adjustA=0 --> fluid cel transformed into bed and excess sediment to cbotnew
+!!!					DO n=1,nfrac 
+!!!						Clivebed(n,i,j,kbed(i,j))=ccnew(n,i,j,kbed(i,j))+
+!!!     &						c_adjustA*MAX(cbotnew(n,i,j),0.)+c_adjustB*ccnew(n,i,j,kbed(i,j))  ! apply sedimentation ratio between fractions new sediment concentration of cells within bed
+!!!						cbotnew(n,i,j)=cbotnew(n,i,j)-c_adjustA*MAX(cbotnew(n,i,j),0.)-c_adjustB*ccnew(n,i,j,kbed(i,j))
+!!!!     &						+(morfac2-1.)*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+!!!
+!!!						IF (morfac2.gt.1.0000001) THEN
+!!!						 cctot=0.
+!!!						 DO k=kbed(i,j)+1,kmax 
+!!!							cctot=cctot+MAX(ccfd(n,i,j,k),0.)
+!!!						 ENDDO						
+!!!						 IF (cctot<1e-12) THEN
+!!!						  ccnew(n,i,j,kbed(i,j)+1)=ccnew(n,i,j,kbed(i,j)+1)+(morfac2-1.)/morfac2*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+!!!						  drdt(i,j,kbed(i,j)+1) = drdt(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!!!						  rnew(i,j,kbed(i,j)+1) = rnew(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!!!						  rold(i,j,kbed(i,j)+1) = rold(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density												
+!!!						 ELSE
+!!!						  DO k=kbed(i,j)+1,kmax
+!!!						   drdt(i,j,k)=rho_b
+!!!						   rnew(i,j,k)=rho_b
+!!!						   rold(i,j,k)=rho_b
+!!!						  ENDDO
+!!!						  DO k=kbed(i,j)+1,kmax !redistribute morfac2 buried sediment over water column above 
+!!!						   ccnew(n,i,j,k)=ccnew(n,i,j,k)+(morfac2-1.)/morfac2*MAX(ccfd(n,i,j,k),0.)/cctot*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+!!!						   drdt(i,j,k) = drdt(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!!!						   rnew(i,j,k) = rnew(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!!!						   rold(i,j,k) = rold(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density	
+!!!						  ENDDO 
+!!!						 ENDIF
+!!!						ENDIF
+!!!						ccnew(n,i,j,kbed(i,j))=0. 
+!!!						drdt(i,j,kbed(i,j)) = drdt(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!!!						rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!!!						rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density							
+!!!					ENDDO					
+!!!				!! 24-2-2020: added option to increase kbed already when 0.5*dz is filled instead of 1*dz (erosive and depositing state in this code are more similar then+advantage 2nd order ibm)
+!!!!				ELSEIF ((cbotnewtot_pos).ge.0.5*cfixedbed.and.kbed(i,j)+1.le.kmax.and.
+!!!!     &             (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed-1.e-12.or.kbed(i,j).eq.0).and.depo_cbed_option.eq.0) THEN
+!!!
+!!!	 
+!!!				!! 27-2-2019 test update bed without burying ctot_firstcel because that makes total sediment in fluid smaller abruptly
+!!!				ELSEIF ((cbotnewtot_pos).ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.
+!!!     &             (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed-1.e-12.or.kbed(i,j).eq.0).and.depo_cbed_option.eq.1) THEN
+!!!
+!!!					kbed(i,j)=kbed(i,j)+1
+!!!					kbedt(i,j)=kbed(i,j)
+!!!					drdt(i,j,kbed(i,j))=rho_b
+!!!					rnew(i,j,kbed(i,j))=rho_b
+!!!					rold(i,j,kbed(i,j))=rho_b
+!!!					drdt(i,j,kbed(i,j)+1)=rho_b
+!!!					rnew(i,j,kbed(i,j)+1)=rho_b
+!!!					rold(i,j,kbed(i,j)+1)=rho_b					
+!!!					!kbed(i,j)=MIN(kbed(i,j)+1,kmax) !update bed level at start sedimentation 
+!!!					!!!c_adjustA = MAX(cfixedbed-ctot_firstcel,0.)/MAX(cbotnewtot_pos,1.e-12)    !first fluid cel not yet filled up --> c_adjustA>0 & c_adjustB=0--> fluid cel transformed into bed and sediment from cbotnew moved to bed
+!!!					!!!c_adjustB = MIN(cfixedbed-ctot_firstcel,0.)/MAX(ctot_firstcel,1.e-12) !first fluid cel already more than filled up --> c_adjustB<0&c_adjustA=0 --> fluid cel transformed into bed and excess sediment to cbotnew
+!!!
+!!!					DO n=1,nfrac 
+!!!						Clivebed(n,i,j,kbed(i,j))=cfixedbed/cbotnewtot_pos*MAX(cbotnew(n,i,j),0.) 
+!!!						cbotnew(n,i,j)=cbotnew(n,i,j)-cfixedbed/cbotnewtot_pos*MAX(cbotnew(n,i,j),0.) 
+!!!						cctot=0.
+!!!						DO k=kbed(i,j)+1,kmax 
+!!!							cctot=cctot+MAX(ccfd(n,i,j,k),0.)
+!!!						ENDDO						
+!!!						IF (cctot<1e-12) THEN !no sediment-Rouse profile available, therefore place ccnew of cell converted into bed in first cell above:
+!!!						 ccnew(n,i,j,kbed(i,j)+1)=ccnew(n,i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+!!!						 drdt(i,j,kbed(i,j)+1) = drdt(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!!!						 rnew(i,j,kbed(i,j)+1) = rnew(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!!!						 rold(i,j,kbed(i,j)+1) = rold(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density												
+!!!						ELSE
+!!!						 DO k=kbed(i,j)+1,kmax
+!!!						  drdt(i,j,k)=rho_b
+!!!						  rnew(i,j,k)=rho_b
+!!!						  rold(i,j,k)=rho_b
+!!!						 ENDDO
+!!!						 DO k=kbed(i,j)+1,kmax !redistribute ccnew of cell converted into bed over full water column:
+!!!						  ccnew(n,i,j,k)=ccnew(n,i,j,k)+MAX(ccfd(n,i,j,k),0.)/cctot*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+!!!						  drdt(i,j,k) = drdt(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!!!						  rnew(i,j,k) = rnew(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!!!						  rold(i,j,k) = rold(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density	
+!!!						 ENDDO 
+!!!						ENDIF
+!!!						ccnew(n,i,j,kbed(i,j))=0. 
+!!!						drdt(i,j,kbed(i,j)) = drdt(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!!!						rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!!!						rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density							
+!!!					ENDDO										
+!!!				ELSEIF (cbotnewtot_pos.gt.1.e-12.and.SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).lt.cfixedbed.and.kbed(i,j).gt.0) THEN
+!!!!     &                 .and.MINVAL(cbotnew(1:nfrac,i,j)).ge.0) THEN !only allowed if kbed>0, because Clivebed(:,:,0)=0
+!!!					! add sediment to Clivebed to bring it to cfixedbed again 
+!!!					c_adjust=MIN((cfixedbed-SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cbotnewtot_pos,1.)				
+!!!					DO n=1,nfrac ! also cbotnew(n,i,j) is le 0:
+!!!						Clivebed(n,i,j,kbed(i,j))=Clivebed(n,i,j,kbed(i,j))+c_adjust*MAX(cbotnew(n,i,j),0.)
+!!!						cbotnew(n,i,j)=cbotnew(n,i,j)-c_adjust*MAX(cbotnew(n,i,j),0.)
+!!!					ENDDO				
+!!!				ENDIF
+!!!			ENDIF			
 		  ENDDO
 		ENDDO
 		

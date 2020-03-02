@@ -232,7 +232,7 @@
 	NAMELIST /times/t_end,t0_output,dt_output,te_output,tstart_rms,dt_max,dt_ini,time_int,CFL,
      & t0_output_movie,dt_output_movie,te_output_movie,tstart_morf,te_rms
 	NAMELIST /num_scheme/convection,numdiff,wiggle_detector,diffusion,comp_filter_a,comp_filter_n,CNdiffz,npresIBM,advec_conc,
-     & continuity_solver,transporteq_fracs,split_rho_cont,driftfluxforce_calfac,depo_implicit,depo_cbed_option,IBMorder,npresPRHO,
+     & continuity_solver,transporteq_fracs,split_rho_cont,driftfluxforce_calfac,depo_implicit,IBMorder,npresPRHO,
      & pres_in_predictor_step,Poutflow,oPRHO
 	NAMELIST /ambient/U_b,V_b,W_b,bcfile,rho_b,SEM,nmax2,nmax1,nmax3,lm_min,lm_min3,slip_bot,kn,interaction_bed,
      & periodicx,periodicy,dpdx,dpdy,W_ox,Hs,Tp,nx_w,ny_w,obst,bc_obst_h,U_b3,V_b3,surf_layer,wallup,bedlevelfile,
@@ -244,7 +244,7 @@
      & extra_mix_visc
 	NAMELIST /constants/kappa,gx,gy,gz,ekm_mol,calibfac_sand_pickup,pickup_formula,kn_d50_multiplier,avalanche_slope,
      &	av_slope_z,calibfac_Shields_cr,reduction_sedimentation_shields,morfac,morfac2,avalanche_until_done,avfile,
-     & settling_along_gvector,vwal,nl,permeability_kl,pickup_fluctuations_ampl,pickup_fluctuations
+     & settling_along_gvector,vwal,nl,permeability_kl,pickup_fluctuations_ampl,pickup_fluctuations,pickup_correction
 	NAMELIST /fractions_in_plume/fract
 	NAMELIST /ship/U_TSHD,LOA,Lfront,Breadth,Draught,Lback,Hback,xfront,yfront,kn_TSHD,nprop,Dprop,xprop,yprop,zprop,
      &   Pprop,rudder,rot_prop,draghead,Dsp,xdh,perc_dh_suction,softnose,Hfront,cutter
@@ -306,7 +306,7 @@
 	split_rho_cont='CDS'  ! optional 'VL2' or 'SB2' TVD scheme (via CDS2 without 1-cfl term) to split off rho from rho*U, default 'CDS' scheme
 	driftfluxforce_calfac=1.
 	depo_implicit=0
-	depo_cbed_option=0
+	depo_cbed_option=0 !2-3-2020 obsolete; user input not read anymore from num_scheme always option 0 is used in code 
 	IBMorder=0 
 	Poutflow=0 ! 0 (default, most robust) Poutflow is zero for complete outflow crosssection at rmax; 1 (optional) Poutflow is zero at just one grid-location at rmax --> sometimes better but less robust
 	!! ambient:
@@ -1293,7 +1293,8 @@
 	IF (gz<-80000000.) CALL writeerror(93)
 	IF (ekm_mol<0.) CALL writeerror(94)
 	IF (pickup_formula.ne.'vanrijn1984'.and.pickup_formula.ne.'nielsen1992'.and.pickup_formula.ne.'okayasu2010'
-     & .and.pickup_formula.ne.'vanrijn2019'.and.pickup_formula.ne.'VR2019_Cbed')   CALL writeerror(95)
+     & .and.pickup_formula.ne.'vanrijn2019'.and.pickup_formula.ne.'VR2019_Cbed'
+     & .and.pickup_formula.ne.'VR1984_Cbed')   CALL writeerror(95)
 	IF (kn_d50_multiplier<0.) CALL writeerror(96)
 	IF (MINVAL(avalanche_slope)<0.and.MINVAL(avalanche_slope).ne.-99.) CALL writeerror(97)
 	IF (calibfac_sand_pickup<0.) CALL writeerror(98)
