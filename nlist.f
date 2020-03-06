@@ -27,7 +27,7 @@
       INTEGER Lmix_type,slip_bot,SEM,azi_n,outflow_overflow_down,azi_n2,wiggle_detector,wd,applyVOF,Poutflow
       REAL ekm_mol,nu_mol,pi,kappa,gx,gy,gz,Cs,Sc,calibfac_sand_pickup,calibfac_Shields_cr,morfac,morfac2
       REAL dt,time_nm,time_n,time_np,t_end,t0_output,dt_output,te_output,dt_max,tstart_rms,CFL,dt_ini,tstart_morf,trestart,dt_old
-      REAL dt_output_movie,t0_output_movie,te_output_movie,te_rms,time_nm2
+      REAL dt_output_movie,t0_output_movie,te_output_movie,te_rms,time_nm2,b_update,tstart_morf2
       REAL U_b,V_b,W_b,rho_b,W_j,Awjet,Aujet,Avjet,Strouhal,radius_j,kn,W_ox,U_bSEM,V_bSEM,U_w,V_w,U_init,V_init
       REAL U_j2,Awjet2,Aujet2,Avjet2,Strouhal2,radius_j2,zjet2,rho_b2
       REAL xj(4),yj(4),radius_inner_j,W_j_powerlaw,plume_z_outflow_belowsurf
@@ -64,12 +64,12 @@
       REAL Q_j,plumeQseries(1:10000),plumeQtseries(1:10000),plumectseries(1:10000),plumecseries(30,1:10000) !c(30) matches with size frac_init
       REAL Aplume,driftfluxforce_calfac
 	  REAL vwal,delta_nsed,nl,permeability_kl,pickup_fluctuations_ampl
-	  INTEGER pickup_fluctuations
+	  INTEGER pickup_fluctuations,cbed_method
 	  
 	  
       CHARACTER*4 convection,diffusion
       REAL numdiff,comp_filter_a
-      INTEGER comp_filter_n,pres_in_predictor_step 
+      INTEGER comp_filter_n,pres_in_predictor_step,pres_in_predictor_step_internal
 
       INTEGER nprop,rudder,softnose
       REAL U_TSHD,LOA,Lfront,Breadth,Draught,Lback,Hback,xfront,yfront,Hfront
@@ -230,7 +230,7 @@
 	NAMELIST /simulation/px,imax,jmax,kmax,imax_grid,dr_grid,Rmin,schuif_x,dy,depth,hisfile,restart_dir
      & ,lim_r_grid,fac_r_grid,jmax_grid,lim_y_grid,fac_y_grid,sym_grid_y,dy_grid
 	NAMELIST /times/t_end,t0_output,dt_output,te_output,tstart_rms,dt_max,dt_ini,time_int,CFL,
-     & t0_output_movie,dt_output_movie,te_output_movie,tstart_morf,te_rms
+     & t0_output_movie,dt_output_movie,te_output_movie,tstart_morf,te_rms,tstart_morf2
 	NAMELIST /num_scheme/convection,numdiff,wiggle_detector,diffusion,comp_filter_a,comp_filter_n,CNdiffz,npresIBM,advec_conc,
      & continuity_solver,transporteq_fracs,split_rho_cont,driftfluxforce_calfac,depo_implicit,IBMorder,npresPRHO,
      & pres_in_predictor_step,Poutflow,oPRHO
@@ -244,7 +244,7 @@
      & extra_mix_visc
 	NAMELIST /constants/kappa,gx,gy,gz,ekm_mol,calibfac_sand_pickup,pickup_formula,kn_d50_multiplier,avalanche_slope,
      &	av_slope_z,calibfac_Shields_cr,reduction_sedimentation_shields,morfac,morfac2,avalanche_until_done,avfile,
-     & settling_along_gvector,vwal,nl,permeability_kl,pickup_fluctuations_ampl,pickup_fluctuations,pickup_correction
+     & settling_along_gvector,vwal,nl,permeability_kl,pickup_fluctuations_ampl,pickup_fluctuations,pickup_correction,cbed_method
 	NAMELIST /fractions_in_plume/fract
 	NAMELIST /ship/U_TSHD,LOA,Lfront,Breadth,Draught,Lback,Hback,xfront,yfront,kn_TSHD,nprop,Dprop,xprop,yprop,zprop,
      &   Pprop,rudder,rot_prop,draghead,Dsp,xdh,perc_dh_suction,softnose,Hfront,cutter
@@ -287,6 +287,7 @@
 	dt_output_movie = 9.e18
 	te_output_movie = 9.e18
 	tstart_morf=0.
+	tstart_morf2=0.
 	trestart=0.
 	!! num_scheme
 	convection = 'ARGH'
@@ -516,6 +517,7 @@
 	permeability_kl=-999.
 	pickup_fluctuations_ampl=0.
 	pickup_fluctuations=0
+	cbed_method = 1
 	!! ship
 	U_TSHD=-999.
 	LOA=-999.
@@ -589,7 +591,11 @@
 		write(*,*),' use ABv for a fully supported time integration scheme.'
 	ENDIF
 	IF (CFL<0.) CALL writeerror(35)
-
+	IF (tstart_morf2.gt.1e-6) THEN 
+		b_update=0. 
+	ELSE 
+		b_update=1.
+	ENDIF 
 	READ (UNIT=1,NML=num_scheme,IOSTAT=ios)
 	!! check input num_scheme
 	IF (convection.ne.'CDS2'.AND.convection.ne.'CDS6'.AND.convection.ne.'COM4'.AND.convection.ne.'CDS4'
@@ -608,6 +614,7 @@
 	endif
 	IF (CNdiffz.ne.0.and.CNdiffz.ne.1) CALL writeerror(406)
 	IF (CNdiffz<0) CALL writeerror(407)
+	pres_in_predictor_step_internal = pres_in_predictor_step
 
 	READ (UNIT=1,NML=ambient,IOSTAT=ios)
 	!! check input ambient
@@ -1582,6 +1589,9 @@
 	  ALLOCATE(Clivebed(nfrac,0:i1,0:j1,0:k1))
 	  Clivebed=0.
 	ENDIF
+			Coldbot=0.
+			Cnewbot=0.
+			dCdtbot=0.
 
 	
 	ALLOCATE(Ppropx(0:i1,0:j1,0:k1))

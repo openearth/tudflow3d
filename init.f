@@ -366,9 +366,6 @@ c******************************************************************
 		cnew =0.
 		cold =0.
 		dcdt=0.
-		Coldbot=0.
-		Cnewbot=0.
-		dCdtbot=0.
 		IF (time_int.eq.'AB2'.or.time_int.eq.'AB3'.or.time_int.eq.'ABv') THEN
 			cc=0.
 			ccold=0.
@@ -412,9 +409,6 @@ c******************************************************************
 			cnew(n,:,:,:) = frac(n)%c
 			cold(n,:,:,:) = frac(n)%c
 			dcdt(n,:,:,:) = frac(n)%c
-			Coldbot=0.
-			Cnewbot=0.
-			dCdtbot=0.
 			IF (time_int.eq.'AB2'.or.time_int.eq.'AB3'.or.time_int.eq.'ABv') THEN
 				cc(n,:,:,:) = frac(n)%c
 				ccold(n,:,:,:) = frac(n)%c
@@ -3181,8 +3175,14 @@ C ...  Locals
 							!dCdt(n,i,j,k)=c_bed(n)	
 						enddo
 					enddo
+					do n=1,nfrac
+					  ! place remainder which does not fit exactly in 1dz into cnewbot 
+					  Cnewbot(n,i,j)=(zbed(i,j)-DBLE(kbed(i,j))*dz)/dz*c_bed(n)*bednotfixed(i,j,kbed(i,j))
+					enddo 
 				enddo
-			enddo		  
+			enddo
+			Coldbot = Cnewbot 
+			dCdtbot = Cnewbot
 		ENDIF	
 
 		IF (U_TSHD>0.) THEN

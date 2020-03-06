@@ -34,7 +34,8 @@ CFL = 0.6			! CFL limit [-]
 t0_output_movie = 10.		! Start time for low-storage concentration output usable for movies [s]
 dt_output_movie = 10.		! Time interval for low-storage concentration output usable for movies [s]
 te_output_movie = 450.		! End time for low-storage concentration output usable for movies [s]
-tstart_morf = 1. 	! Start time bedupdate [s] (default 0)
+tstart_morf = 1. 	! Start time interaction with bed [s] (default 0), before tstart_morf no exchange of sediment between bed and fluid
+tstart_morf2 = 1.	! Start time bedupdate [s] (default 0), before tstart_morf2 there is exchange of sediment between bed and fluid, but no bedupdate (all changes to bed are annihilated) 
 /
 
 &num_scheme
@@ -47,7 +48,7 @@ continuity_solver =36    !default is 1 (drdt+drudx=0). Optional:  35 (dudx=0 U-m
 npresIBM = 0			! number of extra pres-correction steps to make IBM objects better impermeable (default 0)
 npresPRHO = 0			! number of extra pres-correction steps to get predicted P^n+1 as input in variable-density-Poisson-solver more accurate (default 0)
 oPRHO = 2				! (default 2) 2 = linear extrapolation for predicted P*; 1 = predicted P* equal to P^n; 3 = linear extrapolation for predicted P* using 2dt before to reduce wiggles in time; 4 = high order extrapolation for dPdt to get predicted P*
-pres_in_predictor_step = 1 ! 1 (default) = apply P^n in predictor step and apply corrector step with dP; 0 = predictor step without pressure and apply corrector step with P^n+1
+pres_in_predictor_step = 1 ! 1 (default) = apply P^n in predictor step and apply corrector step with dP; 0 = predictor step without pressure and apply corrector step with P^n+1; 2 = like 1, but every 100th timestep like 0
 Poutflow=0 				! 0 (default, most robust) Poutflow is zero for complete outflow crosssection at rmax; 1 (optional) Poutflow is zero at just one grid-location at rmax --> sometimes better but less robust
 !advec_conc='VLE'		! optional advection scheme concentration, options: 'VLE' (default) 'VL2' 'ARO' 'SBE' SB2' 'NVD' :'VLE' VanLeer(via LW)(default) 'ARO' Arora(via LW) 'SBE' Superbee(via LW) 'VL2' VanLeer(via CDS2) or 'SB2' Superbee(via CDS2) TVD schemes or 'NVD' for NVD scheme 
 !transporteq_fracs = 'volufrac' !nerd option default volume fractions, but as option also 'massfrac' can be used internally (input/output still is volume frac!)
@@ -229,6 +230,7 @@ nl=0.44				! nl is the porosity of loose sand after dilantancy used in pickup_co
 permeability_kl=0.000307	! permeability_kl [m/s] is the permeability of loose sand used in pickup_correction 'MastBergenvdBerg2003', can be calculated by relation Kozeny-Carmen kl = gD15^2/160nu*nl^3/(1-nl)^2
 pickup_fluctuations=0		!1 means white noise random fluctuations are added to calculated pickup, default 0 no random fluctuations on calculated pickup  
 pickup_fluctuations_ampl=0.	!determines amplitude of turbulent fluctuations --> pickup = pickup+pickup_fluctuations_ampl*random(range[-1 to 1])*pickup 
+cbed_method = 1				! 1 (default) = cbed is determined in lowest fluid cell above the bed; 2 = avg of all fluid cells above bed up to location of max horizontal velocity
 /
 
 &ship

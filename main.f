@@ -332,8 +332,17 @@
 		!extra call bound_rhoU only needed for determination rhU,cU with split_rho_cont.eq.'VL2' based on direction of rhoU^n+1 instead of rhoU^* 
 		!nov-2018 not used because 1) consistent with splitting rho of from rhoU^* 2) faster
 		!only drawback is that it is not fully consistent with update C as this is based on c_edge based on direction U^n+1
+		
+		if (time_np.ge.tstart_morf2) then 
+			b_update=1. ! b_update=0. at start sim when tstart_morf2>0 --> before tstart_morf2 there is exchange of sediment between bed and fluid, but no bedupdate (all changes to bed are annihilated) 
+		endif 
 		if (mod(istep,100).eq.0) then
 			call chkdiv
+			if (pres_in_predictor_step_internal.eq.2) then 
+				pres_in_predictor_step = 0 ! use no Pold in predictor step every 100 time steps to remove spurious strange pressure relicts in immersed boundary zero flow zones
+			endif 
+		else
+			pres_in_predictor_step = pres_in_predictor_step_internal
 		endif
 		call chkdt
 
