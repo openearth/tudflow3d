@@ -420,6 +420,7 @@
 	REAL pickup_random(1:imax,1:jmax),vs,ve,Uhor(1:imax,1:jmax,1:kmax),cbed 
       integer clock,nnn,k_maxU
       INTEGER, DIMENSION(:), ALLOCATABLE :: seed	
+	  INTEGER kbedp(0:i1,0:j1),ibeg,iend
 	
 	erosion=0.
 	deposition=0.
@@ -433,7 +434,13 @@
 !	ENDIF
 	!call slipvelocity_bed(ccfd,wcfd,wsed,rcfd,sumWkm,ddt,dz) 
 	call slipvelocity_bed(ccfd,0.*wcfd,wsed,rcfd,sumWkm,ddt,dz) 
-
+	
+	DO i=0,i1
+	  DO j=0,j1
+		kbedp(i,j)=MIN(kbed(i,j)+2,k1) 
+	  ENDDO 
+	ENDDO 
+		  
 	IF (interaction_bed.le.3.and.time_n.ge.tstart_morf) THEN ! erosion sedimentation without bed update and for each sediment fraction independently
 		DO i=1,imax
 		  DO j=1,jmax
@@ -445,31 +452,53 @@
 				ELSE 
 				  zb_W=zbed(i,j)
 				ENDIF
-				!kpp=MIN(CEILING(zb_W/dz+0.5)+1,k1)		!kpp is between 1*dz-2*dz distance from bed (doing it one cell lower would mean 0-dz distance and zero distance is not possible)	
-				kpp=MIN(CEILING(zb_W/dz+0.5),k1)		!kpp is between 0-dz distance from bed 	
+				kpp=MIN(CEILING(zb_W/dz+0.5)+1,k1)		!kpp is between 1*dz-2*dz distance from bed 	
+				!kpp=MIN(CEILING(zb_W/dz+0.5),k1)		!kpp is between 0-dz distance from bed 	
 				distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W
 				!as start use first cell (0.5-1)*dz distance from bed 
-				IF (distance_to_bed<0.5*dz) THEN !first cell too close to bed, therefore use second cell (1-1.5)*dz distance from bed 
-				  kpp=MIN(CEILING(zb_W/dz+0.5)+1,k1)		!kpp is in principle between 1*dz-2*dz distance from bed, but due to this if-statement only 1-1.5 from bed
-				  distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W
+!				IF (distance_to_bed<0.5*dz) THEN !first cell too close to bed, therefore use second cell (1-1.5)*dz distance from bed 
+!				  kpp=MIN(CEILING(zb_W/dz+0.5)+1,k1)		!kpp is in principle between 1*dz-2*dz distance from bed, but due to this if-statement only 1-1.5 from bed
+!				  distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W
+!				ENDIF 
+				IF (kbed(i,j)+2<kbedp(i+1,j).and.kbed(i,j)+2<kbedp(i-1,j)) THEN ! pit
+					uu=0.5*(ucfd(i,j,kpp)+ucfd(i-1,j,kpp))-Ubot_TSHD(j)
+				ELSE 
+					uu=0.5*(ucfd(i,j,MAX(kbedp(i,j),kbedp(i+1,j),kpp))+ucfd(i-1,j,MAX(kbedp(i,j),kbedp(i-1,j),kpp)))-Ubot_TSHD(j) !choice to not alter distance_to_bed at slopes
+				ENDIF
+				IF (kbed(i,j)+2<kbedp(i,j+1).and.kbed(i,j)+2<kbedp(i,j-1)) THEN ! pit
+					vv=0.5*(vcfd(i,j,kpp)+vcfd(i,j-1,kpp))-Vbot_TSHD(j)
+				ELSE 
+					vv=0.5*(vcfd(i,j,MAX(kbedp(i,j),kbedp(i,j+1),kpp))+vcfd(i,j-1,MAX(kbedp(i,j),kbedp(i,j-1),kpp)))-Vbot_TSHD(j) !choice to not alter distance_to_bed at slopes
 				ENDIF 
-				uu=0.5*(ucfd(i,j,kpp)+ucfd(i-1,j,kpp))-Ubot_TSHD(j)
-				vv=0.5*(vcfd(i,j,kpp)+vcfd(i,j-1,kpp))-Vbot_TSHD(j)
 				absU=sqrt((uu)**2+(vv)**2)				
 				ust=0.1*absU
 				do tel=1,10 ! 10 iter is more than enough
 					z0=MAX(kn/30.+0.11*nu_mol/MAX(ust,1.e-9),1e-9) 
 					ust=absU/MAX(1./kappa*log(MAX(distance_to_bed/z0,1.001)),2.) !ust maximal 0.5*absU
 				enddo
-				distance_to_bed=0.5*dz
-				absU=MIN(absU,ust/kappa*log(0.5*dz/z0)) ! replace absU with velocity that is valid at 0.5*dz from bed (same distance as normal boundary)
-				
+				distance_to_bed=z_tau_sed
+				absU=ust/kappa*log(distance_to_bed/z0) ! replace absU with velocity that is valid at z_tau_sed from bed (user input to make result less dependent of grid resolution)
 			ELSE 
-				kpp = MIN(kbed(i,j)+1,k1)                !kpp is 0.5*dz from 0-order ibm bed
-				distance_to_bed=0.5*dz 
-				uu=0.5*(ucfd(i,j,kpp)+ucfd(i-1,j,kpp))-Ubot_TSHD(j)
-				vv=0.5*(vcfd(i,j,kpp)+vcfd(i,j-1,kpp))-Vbot_TSHD(j)
-				absU=sqrt((uu)**2+(vv)**2)				
+				kpp = MIN(kbed(i,j)+2,k1)                !kpp is 1.5*dz from 0-order ibm bed
+				IF (kbed(i,j)+2<kbedp(i+1,j).and.kbed(i,j)+2<kbedp(i-1,j)) THEN ! pit
+					uu=0.5*(ucfd(i,j,kpp)+ucfd(i-1,j,kpp))-Ubot_TSHD(j)
+				ELSE 
+					uu=0.5*(ucfd(i,j,MAX(kbedp(i,j),kbedp(i+1,j),kpp))+ucfd(i-1,j,MAX(kbedp(i,j),kbedp(i-1,j),kpp)))-Ubot_TSHD(j) !choice to not alter distance_to_bed at slopes
+				ENDIF
+				IF (kbed(i,j)+2<kbedp(i,j+1).and.kbed(i,j)+2<kbedp(i,j-1)) THEN ! pit
+					vv=0.5*(vcfd(i,j,kpp)+vcfd(i,j-1,kpp))-Vbot_TSHD(j)
+				ELSE 
+					vv=0.5*(vcfd(i,j,MAX(kbedp(i,j),kbedp(i,j+1),kpp))+vcfd(i,j-1,MAX(kbedp(i,j),kbedp(i,j-1),kpp)))-Vbot_TSHD(j) !choice to not alter distance_to_bed at slopes
+				ENDIF 
+				absU=sqrt((uu)**2+(vv)**2)	
+				distance_to_bed=1.5*dz				
+				ust=0.1*absU
+				do tel=1,10 ! 10 iter is more than enough
+					z0=MAX(kn/30.+0.11*nu_mol/MAX(ust,1.e-9),1e-9) 
+					ust=absU/MAX(1./kappa*log(MAX(distance_to_bed/z0,1.001)),2.) !ust maximal 0.5*absU
+				enddo
+				distance_to_bed=z_tau_sed
+				absU=ust/kappa*log(distance_to_bed/z0) ! replace absU with velocity that is valid at z_tau_sed from bed (user input to make result less dependent of grid resolution)
 			ENDIF
 
 			DO n=1,nfrac
@@ -526,7 +555,18 @@
 			Uhor(1:imax,1:jmax,1:kmax)=sqrt((0.5*(ucfd(0:imax-1,1:jmax,1:kmax)+ucfd(1:imax,1:jmax,1:kmax)))**2 + 
      &    				(0.5*(vcfd(1:imax,0:jmax-1,1:kmax)+vcfd(1:imax,1:jmax,1:kmax)))**2)	
 		ENDIF 
-		DO i=1,imax
+		
+		IF (periodicx.eq.0.and.monopile<0) THEN
+		  ibeg=2
+		  iend=imax-1
+		ELSEIF (periodicx.eq.0.and.monopile>0) THEN
+		  ibeg=1
+		  iend=imax-1 
+		ELSE 
+		  ibeg=1
+		  iend=imax 
+		ENDIF 
+		DO i=ibeg,iend
 		  DO j=1,jmax 
 			erosionf=0.
 			depositionf=0.
@@ -541,31 +581,53 @@
 				ELSE 
 				  zb_W=zbed(i,j)
 				ENDIF
-				!kpp=MIN(CEILING(zb_W/dz+0.5)+1,k1)		!kpp is between 1*dz-2*dz distance from bed (doing it one cell lower would mean 0-dz distance and zero distance is not possible)	
-				kpp=MIN(CEILING(zb_W/dz+0.5),k1)		!kpp is between 0-dz distance from bed 	
+				kpp=MIN(CEILING(zb_W/dz+0.5)+1,k1)		!kpp is between 1*dz-2*dz distance from bed 	
+				!kpp=MIN(CEILING(zb_W/dz+0.5),k1)		!kpp is between 0-dz distance from bed 	
 				distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W
 				!as start use first cell (0.5-1)*dz distance from bed 
-				IF (distance_to_bed<0.5*dz) THEN !first cell too close to bed, therefore use second cell (1-1.5)*dz distance from bed 
-				  kpp=MIN(CEILING(zb_W/dz+0.5)+1,k1)		!kpp is in principle between 1*dz-2*dz distance from bed, but due to this if-statement only 1-1.5 from bed
-				  distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W
+!				IF (distance_to_bed<0.5*dz) THEN !first cell too close to bed, therefore use second cell (1-1.5)*dz distance from bed 
+!				  kpp=MIN(CEILING(zb_W/dz+0.5)+1,k1)		!kpp is in principle between 1*dz-2*dz distance from bed, but due to this if-statement only 1-1.5 from bed
+!				  distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W
+!				ENDIF 
+				IF (kbed(i,j)+2<kbedp(i+1,j).and.kbed(i,j)+2<kbedp(i-1,j)) THEN ! pit
+					uu=0.5*(ucfd(i,j,kpp)+ucfd(i-1,j,kpp))-Ubot_TSHD(j)
+				ELSE 
+					uu=0.5*(ucfd(i,j,MAX(kbedp(i,j),kbedp(i+1,j),kpp))+ucfd(i-1,j,MAX(kbedp(i,j),kbedp(i-1,j),kpp)))-Ubot_TSHD(j) !choice to not alter distance_to_bed at slopes
+				ENDIF
+				IF (kbed(i,j)+2<kbedp(i,j+1).and.kbed(i,j)+2<kbedp(i,j-1)) THEN ! pit
+					vv=0.5*(vcfd(i,j,kpp)+vcfd(i,j-1,kpp))-Vbot_TSHD(j)
+				ELSE 
+					vv=0.5*(vcfd(i,j,MAX(kbedp(i,j),kbedp(i,j+1),kpp))+vcfd(i,j-1,MAX(kbedp(i,j),kbedp(i,j-1),kpp)))-Vbot_TSHD(j) !choice to not alter distance_to_bed at slopes
 				ENDIF 
-				
-				uu=0.5*(ucfd(i,j,kpp)+ucfd(i-1,j,kpp))-Ubot_TSHD(j)
-				vv=0.5*(vcfd(i,j,kpp)+vcfd(i,j-1,kpp))-Vbot_TSHD(j)
 				absU=sqrt((uu)**2+(vv)**2)				
 				ust=0.1*absU
 				do tel=1,10 ! 10 iter is more than enough
 					z0=MAX(kn/30.+0.11*nu_mol/MAX(ust,1.e-9),1e-9) 
 					ust=absU/MAX(1./kappa*log(MAX(distance_to_bed/z0,1.001)),2.) !ust maximal 0.5*absU
 				enddo
-				distance_to_bed=0.5*dz
-				absU=MIN(absU,ust/kappa*log(0.5*dz/z0))  ! replace absU with velocity that is valid at 0.5*dz from bed (same distance as normal boundary)
+				distance_to_bed=z_tau_sed
+				absU=ust/kappa*log(distance_to_bed/z0) ! replace absU with velocity that is valid at z_tau_sed from bed (user input to make result less dependent of grid resolution)
 			ELSE 
-				kpp = MIN(kbed(i,j)+1,k1)               !kpp is 0.5*dz from 0-order ibm bed
-				distance_to_bed=0.5*dz 
-				uu=0.5*(ucfd(i,j,kpp)+ucfd(i-1,j,kpp))-Ubot_TSHD(j)
-				vv=0.5*(vcfd(i,j,kpp)+vcfd(i,j-1,kpp))-Vbot_TSHD(j)
-				absU=sqrt((uu)**2+(vv)**2)					
+				kpp = MIN(kbed(i,j)+2,k1)                !kpp is 1.5*dz from 0-order ibm bed
+				IF (kbed(i,j)+2<kbedp(i+1,j).and.kbed(i,j)+2<kbedp(i-1,j)) THEN ! pit
+					uu=0.5*(ucfd(i,j,kpp)+ucfd(i-1,j,kpp))-Ubot_TSHD(j)
+				ELSE 
+					uu=0.5*(ucfd(i,j,MAX(kbedp(i,j),kbedp(i+1,j),kpp))+ucfd(i-1,j,MAX(kbedp(i,j),kbedp(i-1,j),kpp)))-Ubot_TSHD(j) !choice to not alter distance_to_bed at slopes
+				ENDIF
+				IF (kbed(i,j)+2<kbedp(i,j+1).and.kbed(i,j)+2<kbedp(i,j-1)) THEN ! pit
+					vv=0.5*(vcfd(i,j,kpp)+vcfd(i,j-1,kpp))-Vbot_TSHD(j)
+				ELSE 
+					vv=0.5*(vcfd(i,j,MAX(kbedp(i,j),kbedp(i,j+1),kpp))+vcfd(i,j-1,MAX(kbedp(i,j),kbedp(i,j-1),kpp)))-Vbot_TSHD(j) !choice to not alter distance_to_bed at slopes
+				ENDIF 
+				absU=sqrt((uu)**2+(vv)**2)	
+				distance_to_bed=1.5*dz				
+				ust=0.1*absU
+				do tel=1,10 ! 10 iter is more than enough
+					z0=MAX(kn/30.+0.11*nu_mol/MAX(ust,1.e-9),1e-9) 
+					ust=absU/MAX(1./kappa*log(MAX(distance_to_bed/z0,1.001)),2.) !ust maximal 0.5*absU
+				enddo
+				distance_to_bed=z_tau_sed
+				absU=ust/kappa*log(distance_to_bed/z0) ! replace absU with velocity that is valid at z_tau_sed from bed (user input to make result less dependent of grid resolution)
 			ENDIF			
 			cbottot=0.
 			cbedtot=0.
@@ -847,7 +909,7 @@
 					vs = MAX(sqrt(gvector*delta*d50),1.e-12)
 					!vwal = (-cfixedbed*delta*sin(phi-alpha)/sin(alpha))/(delta_nsed/permeability_kt) !vwal is user input, here Eq.6 from MastBergenvdBerg2003 is mentioned to know how to calculate it (in Eq. 6 the minus sign was forgotten)
 					ve = 0.5*vwal+vs*sqrt((0.5*vwal/vs)**2+phip*delta/delta_nsed*(permeability_kl/vs))
-					phip = ve*(cfixedbed-cbed)/vs  !phip = ve*cfixedbed/vs 
+					phip = ve*cfixedbed/vs 
 				ENDIF
 				IF (pickup_fluctuations.eq.1) THEN
 					!1 add white noise to pickup
@@ -897,7 +959,6 @@
 					ELSE
 						erosionf(n) = 0.
 					ENDIF
-					
 					IF (depo_implicit.eq.1) THEN  !determine deposition as sink implicit
 					ccnew(n,i,j,kplus)=(ccnew(n,i,j,kplus)+erosionf(n)/dz)/ ! vol conc. [-]
      &      		(1.-(MIN(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))-wsedbed)*ddt/dz*bednotfixed_depo(i,j,kbed(i,j))*morfac)					
@@ -926,25 +987,27 @@
 ! individual fraction in cbotnew can become <0 but cbotnewtot can still be >0 this may not enter Clivebed and is prevented below
 ! negative cbotnew still cannot enter Clivebed, but bedupdate (kbed+1) is allowed when total cbotnew(fracs>0) is enough even when individual fractions are negative in cbotnew
 			IF ((interaction_bed.eq.4.or.interaction_bed.eq.6).and.time_n.ge.tstart_morf2) THEN
-				IF (cbotnewtot.lt.-0.1*cfixedbed.and.(kbed(i,j)-1).ge.0.and.SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed-1.e-9) THEN 
+				IF (cbotnewtot.lt.0.and.(kbed(i,j)-1).ge.0.and.SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed-1.e-9) THEN 
 				!add half cell sediment on cbot account for further erosion without lowering 1 dz yet (because otherwise flipflop between ero-1dz and depo+1dz)
+				! this is at 0.9*dz			
 					DO n=1,nfrac ! also cbotnew(n,i,j) is le 0:
 						cbotnew(n,i,j)=cbotnew(n,i,j)+0.5*Clivebed(n,i,j,kbed(i,j)) 
 						Clivebed(n,i,j,kbed(i,j))=0.5*Clivebed(n,i,j,kbed(i,j)) 
 					ENDDO	
-				ELSEIF (cbotnewtot.lt.-0.1*cfixedbed.and.(kbed(i,j)-1).ge.0) THEN !erosion of 1 layer dz:
+				ELSEIF (cbotnewtot.lt.0.and.(kbed(i,j)-1).ge.0) THEN !erosion of 1 layer dz:
+				! this is at 0.4*dz
 					kplus = MIN(kbed(i,j)+1,k1)
-!					drdt(i,j,kbed(i,j))=rho_b
-!					rnew(i,j,kbed(i,j))=rho_b
-!					rold(i,j,kbed(i,j))=rho_b					
+					drdt(i,j,kbed(i,j))=rho_b
+					rnew(i,j,kbed(i,j))=rho_b
+					rold(i,j,kbed(i,j))=rho_b					
 					DO n=1,nfrac ! also cbotnew(n,i,j) is le 0:
 						cbotnew(n,i,j)=cbotnew(n,i,j)+Clivebed(n,i,j,kbed(i,j)) !top layer is now previous top cel bed minus (erosion>top-layer)
 						ccnew(n,i,j,kbed(i,j))=(erosionf(n)+depositionf(n))/(dz) !assign all erosion+depo as new sediment concentration new bottom layer fluid
 						ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus)-(erosionf(n)+depositionf(n))/(dz) !remove erosion+depo from previous bottom layer fluid
 						Clivebed(n,i,j,kbed(i,j))=0. ! not bed anymore but fluid
-!						drdt(i,j,kbed(i,j)) = drdt(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-!						rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-!						rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						drdt(i,j,kbed(i,j)) = drdt(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 					ENDDO
 					!kbed(i,j)=MAX(kbed(i,j)-1,0)  !update bed level at end		
 					kbed(i,j)=kbed(i,j)-1
@@ -953,12 +1016,12 @@
      &             (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed-1.e-9.or.kbed(i,j).eq.0)) THEN
 					kbed(i,j)=kbed(i,j)+1
 					kbedt(i,j)=kbed(i,j)
-!					drdt(i,j,kbed(i,j))=rho_b
-!					rnew(i,j,kbed(i,j))=rho_b
-!					rold(i,j,kbed(i,j))=rho_b
-!					drdt(i,j,kbed(i,j)+1)=rho_b
-!					rnew(i,j,kbed(i,j)+1)=rho_b
-!					rold(i,j,kbed(i,j)+1)=rho_b					 
+					drdt(i,j,kbed(i,j))=rho_b
+					rnew(i,j,kbed(i,j))=rho_b
+					rold(i,j,kbed(i,j))=rho_b
+					drdt(i,j,kbed(i,j)+1)=rho_b
+					rnew(i,j,kbed(i,j)+1)=rho_b
+					rold(i,j,kbed(i,j)+1)=rho_b					 
 					c_adjustA = 0.5*cfixedbed/cbotnewtot_pos
 					! fill Clivebed to 0.5 cfixedbed from cbotnew and place all ccnew from 1st fluid cell into cbotnew as buffer against flip-flop erosive state
 					
@@ -972,38 +1035,38 @@
 						 ENDDO						
 						 IF (cctot<1e-9) THEN
 						  ccnew(n,i,j,kbed(i,j)+1)=ccnew(n,i,j,kbed(i,j)+1)+(morfac2-1.)/morfac2*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
-!						  drdt(i,j,kbed(i,j)+1) = drdt(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-!						  rnew(i,j,kbed(i,j)+1) = rnew(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-!						  rold(i,j,kbed(i,j)+1) = rold(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density												
+						  drdt(i,j,kbed(i,j)+1) = drdt(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						  rnew(i,j,kbed(i,j)+1) = rnew(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						  rold(i,j,kbed(i,j)+1) = rold(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density												
 						 ELSE
-!						  DO k=kbed(i,j)+1,kmax
-!						   drdt(i,j,k)=rho_b
-!						   rnew(i,j,k)=rho_b
-!						   rold(i,j,k)=rho_b
-!						  ENDDO
+						  DO k=kbed(i,j)+1,kmax
+						   drdt(i,j,k)=rho_b
+						   rnew(i,j,k)=rho_b
+						   rold(i,j,k)=rho_b
+						  ENDDO
 						  DO k=kbed(i,j)+1,kmax !redistribute morfac2 buried sediment over water column above 
 						   ccnew(n,i,j,k)=ccnew(n,i,j,k)+(morfac2-1.)/morfac2*MAX(ccfd(n,i,j,k),0.)/cctot*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
-!						   drdt(i,j,k) = drdt(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-!						   rnew(i,j,k) = rnew(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-!						   rold(i,j,k) = rold(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density	
+						   drdt(i,j,k) = drdt(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						   rnew(i,j,k) = rnew(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						   rold(i,j,k) = rold(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density	
 						  ENDDO 
 						 ENDIF
 						ENDIF
 						ccnew(n,i,j,kbed(i,j))=0. 
-!						drdt(i,j,kbed(i,j)) = drdt(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-!						rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-!						rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density							
+						drdt(i,j,kbed(i,j)) = drdt(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density							
 					ENDDO	
 				ELSEIF (ctot_firstcel.ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.
      &             (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed-1.e-9.or.kbed(i,j).eq.0)) THEN
 					kbed(i,j)=kbed(i,j)+1
 					kbedt(i,j)=kbed(i,j)
-!					drdt(i,j,kbed(i,j))=rho_b
-!					rnew(i,j,kbed(i,j))=rho_b
-!					rold(i,j,kbed(i,j))=rho_b
-!					drdt(i,j,kbed(i,j)+1)=rho_b
-!					rnew(i,j,kbed(i,j)+1)=rho_b
-!					rold(i,j,kbed(i,j)+1)=rho_b					 
+					drdt(i,j,kbed(i,j))=rho_b
+					rnew(i,j,kbed(i,j))=rho_b
+					rold(i,j,kbed(i,j))=rho_b
+					drdt(i,j,kbed(i,j)+1)=rho_b
+					rnew(i,j,kbed(i,j)+1)=rho_b
+					rold(i,j,kbed(i,j)+1)=rho_b					 
 					c_adjustA = (0.5*cfixedbed-cbotnewtot_pos)/ctot_firstcel
 					! cbotnewtot_pos is smaller as 0.5*cfixedbed; otherwise captured in ELSEIF above 
 					! fill Clivebed to 0.5 cfixedbed, first from cbotnew and top off to 0.5*cfixedbed from ccnew, move remainder of ccnew into cbotnew as buffer against flip-flop erosive state
@@ -1018,30 +1081,31 @@
 						 ENDDO						
 						 IF (cctot<1e-9) THEN
 						  ccnew(n,i,j,kbed(i,j)+1)=ccnew(n,i,j,kbed(i,j)+1)+(morfac2-1.)/morfac2*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
-!						  drdt(i,j,kbed(i,j)+1) = drdt(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-!						  rnew(i,j,kbed(i,j)+1) = rnew(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-!						  rold(i,j,kbed(i,j)+1) = rold(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density												
+						  drdt(i,j,kbed(i,j)+1) = drdt(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						  rnew(i,j,kbed(i,j)+1) = rnew(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						  rold(i,j,kbed(i,j)+1) = rold(i,j,kbed(i,j)+1)+ccnew(n,i,j,kbed(i,j)+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density												
 						 ELSE
-!						  DO k=kbed(i,j)+1,kmax
-!						   drdt(i,j,k)=rho_b
-!						   rnew(i,j,k)=rho_b
-!						   rold(i,j,k)=rho_b
-!						  ENDDO
+						  DO k=kbed(i,j)+1,kmax
+						   drdt(i,j,k)=rho_b
+						   rnew(i,j,k)=rho_b
+						   rold(i,j,k)=rho_b
+						  ENDDO
 						  DO k=kbed(i,j)+1,kmax !redistribute morfac2 buried sediment over water column above 
 						   ccnew(n,i,j,k)=ccnew(n,i,j,k)+(morfac2-1.)/morfac2*MAX(ccfd(n,i,j,k),0.)/cctot*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
-!						   drdt(i,j,k) = drdt(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-!						   rnew(i,j,k) = rnew(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-!						   rold(i,j,k) = rold(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density	
+						   drdt(i,j,k) = drdt(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						   rnew(i,j,k) = rnew(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						   rold(i,j,k) = rold(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density	
 						  ENDDO 
 						 ENDIF
 						ENDIF
 						ccnew(n,i,j,kbed(i,j))=0. 
-!						drdt(i,j,kbed(i,j)) = drdt(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-!						rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-!						rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density							
+						drdt(i,j,kbed(i,j)) = drdt(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density							
 					ENDDO	
-				ELSEIF (cbotnewtot_pos.ge.0.5*cfixedbed.and.kbed(i,j)+1.le.kmax) THEN
+				ELSEIF (cbotnewtot_pos.ge.0.6*cfixedbed.and.kbed(i,j)+1.le.kmax) THEN
 				! Clivebed not completely full; therefore no bedupdate kbed+1, but only redistribution from cbotnew tot Clivebed 
+				! delay this elseif to keep a remainder in cbotnew as buffer against flip-flop erosion behavior				
 					c_adjustA = (cfixedbed-SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cbotnewtot_pos
 					! top off Clivebed to cfixedbed from cbotnew and leave remainder into cbotnew 
 					DO n=1,nfrac 
@@ -1049,6 +1113,7 @@
 						cbotnew(n,i,j)=cbotnew(n,i,j)-c_adjustA*MAX(cbotnew(n,i,j),0.)						
 					ENDDO																			
 				ENDIF
+
 			ENDIF
 			
 			
@@ -1261,7 +1326,6 @@
 !!!			ENDIF			
 		  ENDDO
 		ENDDO
-		
 	ENDIF		
 	
 	IF ((interaction_bed.eq.4.or.interaction_bed.eq.6).and.time_n.ge.tstart_morf.and.time_n.ge.tstart_morf2) THEN
@@ -1519,6 +1583,18 @@
 			write(*,*),'istep,avalanche steps:',istep,nav
 		 ENDIF		 
 		ENDIF
+			! update ibm2 kbed22 which is subtly different from kbed:
+		if (IBMorder.eq.2) then
+			DO i=1,imax
+				DO j=1,jmax			
+					zb_W=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(cbotnew(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
+					kbed22(i,j)=FLOOR(zb_W/dz)
+				ENDDO 
+			ENDDO 
+			call bound_cbot_integer(kbed22)			
+		else 
+			kbed22=kbed
+		endif 		
 	ENDIF
 
 	

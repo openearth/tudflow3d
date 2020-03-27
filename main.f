@@ -75,6 +75,7 @@
 	  call init_location_bedplume
 	  call fkdat
 	  
+	  
 
       dt    = MIN(dt_ini,dt_max) 
       ekm   =0. 

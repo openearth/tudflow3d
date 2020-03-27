@@ -585,7 +585,10 @@
 		write(*,*) '# c_bed must be >0 and <1                        #'			
 	CASE(609)
 		write(*,*) '# namelist &ambient                              #'			
-		write(*,*) '# sum of c_bed must be >=cfixedbed and <=1       #'			
+		write(*,*) '# sum of c_bed must be >=cfixedbed and <=1       #'	
+	CASE(610)
+		write(*,*) '# namelist &ambient                              #'			
+		write(*,*) '# kn_mp monopile roughness must be defined       #'			
 	CASE(611)
 		write(*,*) '# namelist &ambient                              #'			
 		write(*,*) '# input U_w must be defined if Hs>0              #'			

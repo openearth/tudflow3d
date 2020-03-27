@@ -74,11 +74,14 @@ nmax1 = 5000			! Number of SEM eddies sides inflow
 lm_min = 0.02 			! Minimal Lm SEM eddies [m] (1/10*depth)
 nmax3= 0 			!Number of SEM eddies jet inflow
 lm_min3 = 0.03		! Minimal Lm SEM eddies jet pipe [m] (1/10*radius_j)
-slip_bot = 1			! 1 = partial slip (law of the wall) bottom with log-U inflow profile , 0 = free slip bottom, 2 partial slip with constant U profile over vertical
+slip_bot = 1			! 1 = partial slip (law of the wall) bottom with log-U inflow profile , 0 = free slip bottom, 2 partial slip with constant U profile over vertical, -1 is no slip bottom, -2 is no slip bottom and top
 kn = 0.1			! Nikkuradse roughness flow [m]
 interaction_bed = 4		! 0 no erosion/sedimentation, 1 only deposition, 2 deposition & unlimited erosion, 3 deposition & erosion previously deposited material, 4 depo&ero including bed-update, 5 depo&ero excluding bed-update, 6 depo&ero including bed-update & unlimited erosion base layer, 7 depo&ero excluding bed-update & unlimited erosion base layer
 periodicx = 0			! 1 periodic in x dir; 0 not periodic (default 0); 2 closed box (in and outflow in x-dir is zero)
 periodicy = 0			! 1 periodic in y dir; 0 not periodic; 2 is free slip lateral boundaries (default 0)
+monopile = -1			! -1 (default) no monopile; >0 is monopile : closed bc at i=0 and combined in/outflow at i=imax; 1=partial slip monopile wall; 2=free slip monopile wall
+kn_mp = 0.01 			! must be defined icw monopile=1 and gives Nikkuradse monopile wall roughness is implemented 
+kn_sidewalls = 0.01		! when defined >0 icw periodicy=2 then side wall Nikkuradse roughness is implemented (default <0 no sidewall tau)
 dpdx = 0.0			! Driving pressure gradient in x dir in case periodic [Pa/m] (default 0)
 dpdy = 0.0			! Driving pressure gradient in y dir in case periodic [Pa/m] (default 0)
 W_ox = 0.			! Vertical velocity at i=imax boundary in case periodicx=2 [m/s] (default 0)
@@ -231,6 +234,7 @@ permeability_kl=0.000307	! permeability_kl [m/s] is the permeability of loose sa
 pickup_fluctuations=0		!1 means white noise random fluctuations are added to calculated pickup, default 0 no random fluctuations on calculated pickup  
 pickup_fluctuations_ampl=0.	!determines amplitude of turbulent fluctuations --> pickup = pickup+pickup_fluctuations_ampl*random(range[-1 to 1])*pickup 
 cbed_method = 1				! 1 (default) = cbed is determined in lowest fluid cell above the bed; 2 = avg of all fluid cells above bed up to location of max horizontal velocity
+z_tau_sed = 0.1				! distance [m] from bed where Uflow is taken to calculate tau_sed (relevant when kn_sed differs from kn_flow), default 0.5*dz, but when comparing results with different dz define it as user input otherwise grid-dependent results as the calculation of tau_sed depends on distance from bed 
 /
 
 &ship

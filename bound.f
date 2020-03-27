@@ -40,7 +40,7 @@ c
       real cbf(0:i1,0:k1)
       real cbb(0:i1,0:k1)
 	real ust_U_b,ust_V_b,Chezy,fluc,f,tt,z0_U,z0_V,phi
-	integer botstress,n
+	integer botstress,n,jbeg,jend
       real Ub1(0:i1,0:k1),Vb1(0:i1,0:k1),Wb1(0:i1,0:k1),Ub2(0:j1,0:k1),Vb2(0:j1+1,0:k1),Wb2(0:j1,0:k1)
       real,intent(in) :: Ub1in(0:i1,0:k1),Vb1in(0:i1,0:k1),Wb1in(0:i1,0:k1),Ub2in(0:j1,0:k1),Vb2in(0:j1+1,0:k1),Wb2in(0:j1,0:k1)
 	  real,intent(in) :: Ub3in(0:i1,0:j1),Vb3in(0:i1,0:j1),Wb3in(0:i1,0:j1)
@@ -73,6 +73,7 @@ c	x,y,z coordinate system, not in r,theta,z like this code
 	endif
 
 c 	influence of waves on lateral boundaries:
+	! 10-3-2020 noted that perhaps exact location wave inflow bc is not consistent with staggered layout near boundary, have to research later [Ub1in,Vb1in,Wb1in are defined at Uloc; Ub2in,Vb2in,Wb2in are defined at Vloc; but Ub1,Vb1,Wb1,Ub2,Vb2,Wb2 defined at u,v,w loc respectively and they are added without correcting
 	IF(Hs>0.) THEN
 	 DO k=0,k1
 	  DO i=0,i1
@@ -101,7 +102,11 @@ c 	influence of waves on lateral boundaries:
 	    Wb1(i,k)=Wb1in(i,k)+val2*sin(kx_w*(x-U_TSHD*cos(phi)*tt)+ky_w*(y-U_TSHD*sin(phi)*tt)-om_w*tt)
 	  ENDDO
 	  DO j=0,j1
-	    i=0
+	    IF (periodicx.eq.3.or.periodicx.eq.4) THEN
+			i=i1
+		ELSE 
+			i=0
+		ENDIF 
 	    z=(k-0.5)*dz-zbed(i,j)
 	    z=MIN(z,depth-zbed(i,j))
 	    z=MAX(z,0.)
@@ -261,7 +266,7 @@ c 	influence of waves on lateral boundaries:
 !	Vbc1=0.
 	Wbc1=W_b
 
-	if (periodicx.eq.0) then
+	if (periodicx.eq.0.and.monopile.eq.-1) then
           do k=1,kmax ! boundaries in i-direction
            do j=0,j1
 		    Wbc2=0.
@@ -282,6 +287,89 @@ c 	influence of waves on lateral boundaries:
 		   Wbound(i1,j,k)   =    Wbound(imax,j,k)
            enddo   
         enddo
+       elseif (periodicx.eq.0.and.monopile>0) then ! closed boundary at i=0 (flow past circular cylinder); mixed inflow/outflow bc at imax; monopile=1=partial slip with tau-wall monopile2=free slip
+         do k=1,kmax 
+           do j=0,j1
+		   Ubound(0,j,k)    =    0.
+		   Vbound(0,j,k)    =    Vbound(1,j,k)
+		   Wbound(0,j,k)    =    Wbound(1,j,k)
+           enddo   
+         enddo	
+		 if (rank.le.CEILING(REAL(px)/4.)-1) then ! first 1/4 of domain is outflow bc 
+			jend = CEILING(REAL(jmax*px)*0.25) !end of first 1/4 global j-index
+			jend = MIN(jend-rank*jmax,j1) !end of first 1/4 local j-index 
+			 do j=0,jend
+			   do k=1,kmax 
+			     Ubound(imax,j,k) =    MAX(Ubound(imax-1,j,k),0.)
+			     Ubound(i1,j,k)   =    MAX(Ubound(imax,j,k),0.)
+			     Vbound(i1,j,k)    =    Vbound(imax,j,k)
+			     Wbound(i1,j,k)    =    Wbound(imax,j,k)
+			   enddo   
+			 enddo			
+			 do j=jend+1,j1  !remainder belongs to second 1/4 of domain is inflow 
+			   do k=1,kmax 
+					Wbc2=0.
+					if (bcfile.ne.'') then
+						Ubc2(j,k)=Ubcoarse2(j,k) 
+						Vbc2(j,k)=Vbcoarse2(j,k)
+						Wbc2=Wbcoarse2(j,k)
+					endif
+					Ubc=Ub2(j,k)+Ubc2(j,k)
+					Vbc=0.5*(Vb2(j,k)+Vb2(j+1,k))+Vbc2(j,k)
+					Wbc=0.5*(Wb2(j,k)+Wb2(j,k+1))+Wbc2	
+				    Ubound(imax,j,k)    =    Ubc*cos_u(j)+Vbc*sin_u(j)
+				    Ubound(i1,j,k)    =    Ubc*cos_u(j)+Vbc*sin_u(j)
+				    Vbound(i1,j,k)    =    (-Ubc*sin_v(j)+Vbc*cos_v(j)) !2.*(-Ubc*sin_v(j)+Vbc*cos_v(j))-Vbound(1,j,k)
+				    Wbound(i1,j,k)    =    Wbc !2.*Wbc - Wbound(1,j,k) !Wbound(0,j,k)    =  Wbc !- Wbound(1,j,k)
+			   enddo   
+			 enddo
+		 elseif (rank.ge.px-CEILING(REAL(px)/4.)-1) then ! last 1/4 of domain is outflow bc 
+			jbeg = jmax*px - CEILING(REAL(jmax*px)*0.25) ! begin of last 1/4 global j-index
+			jbeg = MAX(jbeg-rank*jmax,0) !begin of last 1/4 local j-index
+			 do j=jbeg,j1 ! outflow 
+			   do k=1,kmax 
+			     Ubound(imax,j,k) =    MAX(Ubound(imax-1,j,k),0.)
+			     Ubound(i1,j,k)   =    MAX(Ubound(imax,j,k),0.)
+			     Vbound(i1,j,k)    =    Vbound(imax,j,k)
+			     Wbound(i1,j,k)    =    Wbound(imax,j,k)
+			   enddo   
+			 enddo	
+			 do j=0,MIN(j1,jbeg-1)  !remainder belongs to second 1/4 of domain is inflow 
+			   do k=1,kmax 
+					Wbc2=0.
+					if (bcfile.ne.'') then
+						Ubc2(j,k)=Ubcoarse2(j,k) 
+						Vbc2(j,k)=Vbcoarse2(j,k)
+						Wbc2=Wbcoarse2(j,k)
+					endif
+					Ubc=Ub2(j,k)+Ubc2(j,k)
+					Vbc=0.5*(Vb2(j,k)+Vb2(j+1,k))+Vbc2(j,k)
+					Wbc=0.5*(Wb2(j,k)+Wb2(j,k+1))+Wbc2	
+				    Ubound(imax,j,k)    =    Ubc*cos_u(j)+Vbc*sin_u(j)
+				    Ubound(i1,j,k)    =    Ubc*cos_u(j)+Vbc*sin_u(j)
+				    Vbound(i1,j,k)    =    (-Ubc*sin_v(j)+Vbc*cos_v(j)) !2.*(-Ubc*sin_v(j)+Vbc*cos_v(j))-Vbound(1,j,k)
+				    Wbound(i1,j,k)    =    Wbc !2.*Wbc - Wbound(1,j,k) !Wbound(0,j,k)    =  Wbc !- Wbound(1,j,k)
+			   enddo   
+			 enddo			 
+		 else !middle 2/4 is inflow bc 
+			 do j=0,j1  !remainder belongs to second 1/4 of domain is inflow 
+			   do k=1,kmax 
+					Wbc2=0.
+					if (bcfile.ne.'') then
+						Ubc2(j,k)=Ubcoarse2(j,k) 
+						Vbc2(j,k)=Vbcoarse2(j,k)
+						Wbc2=Wbcoarse2(j,k)
+					endif
+					Ubc=Ub2(j,k)+Ubc2(j,k)
+					Vbc=0.5*(Vb2(j,k)+Vb2(j+1,k))+Vbc2(j,k)
+					Wbc=0.5*(Wb2(j,k)+Wb2(j,k+1))+Wbc2	
+				    Ubound(imax,j,k)    =    Ubc*cos_u(j)+Vbc*sin_u(j)
+				    Ubound(i1,j,k)    =    Ubc*cos_u(j)+Vbc*sin_u(j)
+				    Vbound(i1,j,k)    =    (-Ubc*sin_v(j)+Vbc*cos_v(j)) !2.*(-Ubc*sin_v(j)+Vbc*cos_v(j))-Vbound(1,j,k)
+				    Wbound(i1,j,k)    =    Wbc !2.*Wbc - Wbound(1,j,k) !Wbound(0,j,k)    =  Wbc !- Wbound(1,j,k)
+			   enddo   
+			 enddo	
+		 endif 		
        elseif (periodicx.eq.2) then ! no outflow in x direction:
          do k=1,kmax 
            do j=0,j1
@@ -521,7 +609,7 @@ c
 	real rr,interpseries
 	real uu1,uu2,vv1,vv2
       real zzz,Ujet2,z2,val2,jetcorr
-	  integer kp,kpp,kb,tel
+	  integer kp,kpp,kb,tel,jbeg,jend 
 	  real zb_W,zb_U,zb_V,vel_ibm2,distance_to_bed_kp,distance_to_bed_kpp,yplus,absU,z0,ust
 
       real  Ubound2(0:i1,0:j1,0:k1),Vbound2(0:i1,0:j1,0:k1),Wbound2(0:i1,0:j1,0:k1) 
@@ -577,7 +665,11 @@ c 	influence of waves on lateral boundaries:
 	    Wb1(i,k)=Wb1in(i,k)+val2*sin(kx_w*(x-U_TSHD*cos(phi)*tt)+ky_w*(y-U_TSHD*sin(phi)*tt)-om_w*tt)
 	  ENDDO
 	  DO j=0,j1
-	    i=0
+	    IF (periodicx.eq.3.or.periodicx.eq.4) THEN
+			i=i1
+		ELSE 
+			i=0
+		ENDIF
 	    z=(k-0.5)*dz-zbed(i,j)
 	    z=MIN(z,depth-zbed(i,j))
 	    z=MAX(z,0.)
@@ -623,7 +715,7 @@ c 	influence of waves on lateral boundaries:
 				distance_to_bed_kp=REAL(kp)*dz-zb_W
 				distance_to_bed_kpp=REAL(kpp)*dz-zb_W
 				vel_ibm2=distance_to_bed_kp/distance_to_bed_kpp*Wbound(i,j,kpp) !linear interpolation with zero velocity at bed		
-				  DO k=kbed(i,j),kb
+				  DO k=1,kb
 					Wbound(i,j,k)=0.
 				  ENDDO						
 				Wbound(i,j,kp)=vel_ibm2 			
@@ -637,7 +729,7 @@ c 	influence of waves on lateral boundaries:
 				  zb_U=0.5*(zbed(i,j)+zbed(i+1,j))
 				ENDIF
 				kb=FLOOR(zb_U/dz+0.5)						!location vel=0 for 2nd order IBM because below 2nd-order zbed
-				  DO k=kbed(i,j),kb
+				  DO k=1,kb
 					Ubound(i,j,k)=0.
 				  ENDDO
 				IF (slip_bot.ge.1) THEN	! tests showed it is best to apply tau shear stress and not prescribe U,V velocity straightaway including influence tau (latter gives too large near bed velocities)							  
@@ -659,7 +751,7 @@ c 	influence of waves on lateral boundaries:
 					  zb_V=0.5*(zbed(i,j)+zbed(i,j+1))
 					ENDIF	
 					kb=FLOOR(zb_V/dz+0.5)						!location vel=0 for 2nd order IBM because below 2nd-order zbed
-				  DO k=kbed(i,j),kb
+				  DO k=1,kb
 					Vbound(i,j,k)=0.
 				  ENDDO
 				IF (slip_bot.ge.1) THEN				
@@ -803,7 +895,7 @@ c 	influence of waves on lateral boundaries:
 	endif
 
 	Wbc1=W_b
-	if (periodicx.eq.0) then
+	if (periodicx.eq.0.and.monopile.eq.-1) then
 	      do k=1,kmax ! boundaries in i-direction
          	do j=0,j1
 			Wbc2=0.
@@ -824,6 +916,89 @@ c 	influence of waves on lateral boundaries:
 		   Wbound(i1,j,k)   =    Wbound(imax,j,k)
          	enddo   
       	    enddo
+       elseif (periodicx.eq.0.and.monopile>0) then ! closed boundary at i=0 (flow past circular cylinder); mixed inflow/outflow bc at imax; 3 = partial slip with tau-wall/4=free slip
+         do k=1,kmax 
+           do j=0,j1
+		   Ubound(0,j,k)    =    0.
+		   Vbound(0,j,k)    =    Vbound(1,j,k)
+		   Wbound(0,j,k)    =    Wbound(1,j,k)
+           enddo   
+         enddo	
+		 if (rank.le.CEILING(REAL(px)/4.)-1) then ! first 1/4 of domain is outflow bc 
+			jend = CEILING(REAL(jmax*px)*0.25) !end of first 1/4 global j-index
+			jend = MIN(jend-rank*jmax,j1) !end of first 1/4 local j-index 
+			 do j=0,jend
+			   do k=1,kmax 
+			     Ubound(imax,j,k) =    MAX(Ubound(imax-1,j,k),0.)
+			     Ubound(i1,j,k)   =    MAX(Ubound(imax,j,k),0.)
+			     Vbound(i1,j,k)    =    Vbound(imax,j,k)
+			     Wbound(i1,j,k)    =    Wbound(imax,j,k)
+			   enddo   
+			 enddo			
+			 do j=jend+1,j1  !remainder belongs to second 1/4 of domain is inflow 
+			   do k=1,kmax 
+					Wbc2=0.
+					if (bcfile.ne.'') then
+						Ubc2(j,k)=Ubcoarse2(j,k) 
+						Vbc2(j,k)=Vbcoarse2(j,k)
+						Wbc2=Wbcoarse2(j,k)
+					endif
+					Ubc=Ub2(j,k)+Ubc2(j,k)
+					Vbc=0.5*(Vb2(j,k)+Vb2(j+1,k))+Vbc2(j,k)
+					Wbc=0.5*(Wb2(j,k)+Wb2(j,k+1))+Wbc2	
+				    Ubound(imax,j,k)    =    Ubc*cos_u(j)+Vbc*sin_u(j)
+				    Ubound(i1,j,k)    =    Ubc*cos_u(j)+Vbc*sin_u(j)
+				    Vbound(i1,j,k)    =    (-Ubc*sin_v(j)+Vbc*cos_v(j)) !2.*(-Ubc*sin_v(j)+Vbc*cos_v(j))-Vbound(1,j,k)
+				    Wbound(i1,j,k)    =    Wbc !2.*Wbc - Wbound(1,j,k) !Wbound(0,j,k)    =  Wbc !- Wbound(1,j,k)
+			   enddo   
+			 enddo
+		 elseif (rank.ge.px-CEILING(REAL(px)/4.)-1) then ! last 1/4 of domain is outflow bc 
+			jbeg = jmax*px - CEILING(REAL(jmax*px)*0.25) ! begin of last 1/4 global j-index
+			jbeg = MAX(jbeg-rank*jmax,0) !begin of last 1/4 local j-index
+			 do j=jbeg,j1 ! outflow 
+			   do k=1,kmax 
+			     Ubound(imax,j,k) =    MAX(Ubound(imax-1,j,k),0.)
+			     Ubound(i1,j,k)   =    MAX(Ubound(imax,j,k),0.)
+			     Vbound(i1,j,k)    =    Vbound(imax,j,k)
+			     Wbound(i1,j,k)    =    Wbound(imax,j,k)
+			   enddo   
+			 enddo	
+			 do j=0,MIN(j1,jbeg-1)  !remainder belongs to second 1/4 of domain is inflow 
+			   do k=1,kmax 
+					Wbc2=0.
+					if (bcfile.ne.'') then
+						Ubc2(j,k)=Ubcoarse2(j,k) 
+						Vbc2(j,k)=Vbcoarse2(j,k)
+						Wbc2=Wbcoarse2(j,k)
+					endif
+					Ubc=Ub2(j,k)+Ubc2(j,k)
+					Vbc=0.5*(Vb2(j,k)+Vb2(j+1,k))+Vbc2(j,k)
+					Wbc=0.5*(Wb2(j,k)+Wb2(j,k+1))+Wbc2	
+				    Ubound(imax,j,k)    =    Ubc*cos_u(j)+Vbc*sin_u(j)
+				    Ubound(i1,j,k)    =    Ubc*cos_u(j)+Vbc*sin_u(j)
+				    Vbound(i1,j,k)    =    (-Ubc*sin_v(j)+Vbc*cos_v(j)) !2.*(-Ubc*sin_v(j)+Vbc*cos_v(j))-Vbound(1,j,k)
+				    Wbound(i1,j,k)    =    Wbc !2.*Wbc - Wbound(1,j,k) !Wbound(0,j,k)    =  Wbc !- Wbound(1,j,k)
+			   enddo   
+			 enddo			 
+		 else !middle 2/4 is inflow bc 
+			 do j=0,j1  !remainder belongs to second 1/4 of domain is inflow 
+			   do k=1,kmax 
+					Wbc2=0.
+					if (bcfile.ne.'') then
+						Ubc2(j,k)=Ubcoarse2(j,k) 
+						Vbc2(j,k)=Vbcoarse2(j,k)
+						Wbc2=Wbcoarse2(j,k)
+					endif
+					Ubc=Ub2(j,k)+Ubc2(j,k)
+					Vbc=0.5*(Vb2(j,k)+Vb2(j+1,k))+Vbc2(j,k)
+					Wbc=0.5*(Wb2(j,k)+Wb2(j,k+1))+Wbc2	
+				    Ubound(imax,j,k)    =    Ubc*cos_u(j)+Vbc*sin_u(j)
+				    Ubound(i1,j,k)    =    Ubc*cos_u(j)+Vbc*sin_u(j)
+				    Vbound(i1,j,k)    =    (-Ubc*sin_v(j)+Vbc*cos_v(j)) !2.*(-Ubc*sin_v(j)+Vbc*cos_v(j))-Vbound(1,j,k)
+				    Wbound(i1,j,k)    =    Wbc !2.*Wbc - Wbound(1,j,k) !Wbound(0,j,k)    =  Wbc !- Wbound(1,j,k)
+			   enddo   
+			 enddo	
+		 endif 		
        elseif (periodicx.eq.2) then ! no outflow in x direction:
          do k=1,kmax 
            do j=0,j1
@@ -954,7 +1129,7 @@ c 	influence of waves on lateral boundaries:
 	  enddo
 	  do i=0,i1 ! prescribe UTSHD in obstacle:
 	    do j=0,j1
-	      do k=1,kbed(i,j)
+	      do k=1,kbed(i,j) !kbed22(i,j)
 	        Ubound(i,j,k)=Ubot_TSHD(j)
 	        Vbound(i,j,k)=Vbot_TSHD(j)
 	      enddo
@@ -1126,8 +1301,10 @@ c 	influence of waves on lateral boundaries:
 					jm=MAX(j-1,0)
 					Ubound(im,j,k)=Ubot_TSHD(j) !0.
 					Vbound(i,jm,k)=Vbot_TSHD(jm) !0.
-					Wbound(i,j,k)=0.
 				ENDDO
+				DO k=1,kbed22(i,j) 
+					Wbound(i,j,k)=0.
+				ENDDO 
 			ENDDO
 		ENDDO
 	ENDIF
@@ -1180,10 +1357,10 @@ c
      +      Wbound(0:i1,0:j1,0:k1)
       real ubb(0:i1,0:k1),val,theta,Ubc,Vbc,Wbc,xx,yy,Ujet,Vjet,Wjet,theta_U,theta_V
       real vbb(0:i1,0:k1)
-      real wbb(0:i1,0:k1)
+      real wbb(0:i1,0:k1),rbb(0:i1,0:k1)
       real ubf(0:i1,0:k1)
       real vbf(0:i1,0:k1)
-      real wbf(0:i1,0:k1)
+      real wbf(0:i1,0:k1),rbf(0:i1,0:k1)
       real cbf(0:i1,0:k1)
       real cbb(0:i1,0:k1)
 	real ust_U_b,ust_V_b,Chezy,fluc,f,tt,z0_U,z0_V,phi,z,x,y
@@ -1198,12 +1375,12 @@ c
 	  real duu,du,Uav,Tadapt,fbx2,fby2,fbz2,fbx,fby
 
 !      real  Ubound2(0:i1,0:j1,0:k1),Vbound2(0:i1,0:j1,0:k1),Wbound2(0:i1,0:j1,0:k1)
-      real  Ubound2(-1:i1+1,-1:j1+1,0:k1),Vbound2(-1:i1+1,-1:j1+1,0:k1),Wbound2(0:i1,0:j1,0:k1),rho2(-1:i1+1,-1:j1+1,0:k1),rr1,rr2
+      real  Ubound2(-1:i1+1,-1:j1+1,0:k1),Vbound2(-1:i1+1,-1:j1+1,0:k1),Wbound2(-1:i1+1,-1:j1+1,0:k1),rho2(-1:i1+1,-1:j1+1,0:k1),rr1,rr2
 	real Propx_dummy(0:i1,0:px*jmax+1,1:kmax)
 	real Propy_dummy(0:i1,0:px*jmax+1,1:kmax)
 	real Propz_dummy(0:i1,0:px*jmax+1,1:kmax)	  
-	  integer kp,kpp,kb
-	  real zb_W,zb_U,zb_V,vel_ibm2,distance_to_bed_kp,distance_to_bed_kpp,yplus,absU,z0,ust
+	  integer kp,kpp,kb,jbeg,jend
+	  real zb_W,zb_U,zb_V,vel_ibm2,distance_to_bed_kp,distance_to_bed_kpp,yplus,absU,z0,ust,rr2,ww1,ww2
 	  
 c
 c
@@ -1366,7 +1543,7 @@ c	x,y,z coordinate system, not in r,theta,z like this code
 	endif
 		 DO i=0,i1
 		  DO j=0,j1
-		   DO k=1,kbed(i,j) !prevent source term at immersed boundary in PPE --> rhW not adapted because dpdn=0 has been enforced in bound_p already
+		   DO k=1,kbed(i,j) !kbed22(i,j) !prevent source term at immersed boundary in PPE --> rhW not adapted because dpdn=0 has been enforced in bound_p already
 		    rhU(i,j,k)=rho_b 
 			rhU(MAX(0,i-1),j,k)=rho_b 
 		    rhV(i,j,k)=rho_b 
@@ -1404,7 +1581,11 @@ c 	influence of waves on lateral boundaries:
 	    Wb1(i,k)=Wb1in(i,k)+val2*sin(kx_w*(x-U_TSHD*cos(phi)*tt)+ky_w*(y-U_TSHD*sin(phi)*tt)-om_w*tt)
 	  ENDDO
 	  DO j=0,j1
-	    i=0
+	    IF (periodicx.eq.3.or.periodicx.eq.4) THEN
+			i=i1
+		ELSE 
+			i=0
+		ENDIF
 	    z=(k-0.5)*dz-zbed(i,j)
 	    z=MIN(z,depth-zbed(i,j))
 	    z=MAX(z,0.)
@@ -1451,7 +1632,7 @@ c 	influence of waves on lateral boundaries:
 				distance_to_bed_kp=REAL(kp)*dz-zb_W
 				distance_to_bed_kpp=REAL(kpp)*dz-zb_W
 				vel_ibm2=distance_to_bed_kp/distance_to_bed_kpp*Wbound(i,j,kpp) !linear interpolation with zero velocity at bed		
-				DO k=kbed(i,j),kb
+				DO k=1,kb
 				  Wbound(i,j,k)=0.
 				ENDDO					
 				Wbound(i,j,kp)=vel_ibm2 
@@ -1510,15 +1691,18 @@ c 	influence of waves on lateral boundaries:
 						!vel_ibm2=Ubound(i,j,kpp)/MAX(absU,1e-9)/rhU(i,j,kpp)* ust*ust*distance_to_bed_kp/nu_mol
 					endif
 				  endif
-				  DO k=kbed(i,j),kb
+				  DO k=1,kb
 					Ubound(i,j,k)=0.
 				  ENDDO
 				  !Ubound(i,j,kp)=vel_ibm2*rhU(i,j,kp)	
 				  absU=sqrt(Ubound(i,j,kp)**2+(0.25*(Vbound(i,j,kp)+Vbound(i,j-1,kp)+Vbound(i+1,j,kp)+Vbound(i+1,j-1,kp)))**2)
 				  absU=absU/rhU(i,j,kp)				
 				  Ubound(i,j,kp) = Ubound(i,j,kp) / (1. + ust*ust*dt/dz/MAX(absU,1.e-9))  ! implicit = more stable	
+				  !if (kp.le.kbed(i,j)) then
+				  ! write(*,*),rank,i,j,kp,kbed(i,j)
+				  !endif 
 				ELSE ! without partial slip bc, simply prescribe 2nd order accurate velocity:
-				  DO k=kbed(i,j),kb
+				  DO k=1,kb
 					Ubound(i,j,k)=0.
 				  ENDDO
 				  Ubound(i,j,kp)=distance_to_bed_kp/distance_to_bed_kpp*Ubound(i,j,kpp) !linear interpolation with zero velocity at bed			
@@ -1586,7 +1770,7 @@ c 	influence of waves on lateral boundaries:
 						!vel_ibm2=Vbound(i,j,kpp)/MAX(absU,1e-9)/rhV(i,j,kpp)* ust*ust*distance_to_bed_kp/nu_mol
 					endif
 				  endif
-				  DO k=kbed(i,j),kb
+				  DO k=1,kb
 					Vbound(i,j,k)=0.
 				  ENDDO
 				  !Vbound(i,j,kp)=vel_ibm2*rhV(i,j,kp)
@@ -1594,7 +1778,7 @@ c 	influence of waves on lateral boundaries:
 				  absU=absU/rhV(i,j,kp)				  
 				  Vbound(i,j,kp) = Vbound(i,j,kp) / (1. + ust*ust*dt/dz/MAX(absU,1.e-9))  ! implicit = more stable	
 				ELSE ! without partial slip bc, simply prescribe 2nd order accurate velocity:
-				  DO k=kbed(i,j),kb
+				  DO k=1,kb
 					Vbound(i,j,k)=0.
 				  ENDDO
 				  Vbound(i,j,kp)=distance_to_bed_kp/distance_to_bed_kpp*Vbound(i,j,kpp) !linear interpolation with zero velocity at bed
@@ -1694,6 +1878,20 @@ c 	influence of waves on lateral boundaries:
 	    j=0
 	    do k=1,kmax
 		do i=1,imax
+			if (botstress.ge.1.and.kn_sidewalls>0.) then  !bed shear stress at lateral walls
+				j=1
+				rr1=0.5*(rho(i,j,k)+rho(i,j,k+1)) !at W-gridpoint
+				rr2=0.5*(rho(i,j,k)+rho(i+1,j,k)) !at U-gridpoint
+				ww1=Wbound(i,j,k)
+				uu1=0.25*(Ubound(i,j,k)+Ubound(i-1,j,k)+Ubound(i,j,k+1)+Ubound(i-1,j,k+1))	!at W-gridpoint
+				ww2=0.25*(Wbound(i,j,k)+Wbound(i,j,k-1)+Wbound(i+1,j,k)+Wbound(i+1,j,k-1)) !at U-gridpoint
+				uu2=Ubound(i,j,k)
+				call wall_fun_rho(ww1,uu1,rr1,Rp(i)*dphi2(j),dt,kn_sidewalls,kappa,nu_mol)
+				call wall_fun_rho(uu2,ww2,rr2,Rp(i)*dphi2(j),dt,kn_sidewalls,kappa,nu_mol)
+				Wbound(i,j,k)=ww1
+				Ubound(i,j,k)=uu2
+				j=0
+			endif 		
  		   Ubound(i,0,k) = Ubound(i,1,k) 
 		   Vbound(i,0,k) = 0. 
 		   Wbound(i,0,k) = Wbound(i,1,k)
@@ -1707,6 +1905,19 @@ c 	influence of waves on lateral boundaries:
 		j=jmax
 		do k=1,kmax
 		   do i=1,imax
+			if (botstress.ge.1.and.kn_sidewalls>0.) then  !bed shear stress at lateral walls
+				j=jmax
+				rr1=0.5*(rho(i,j,k)+rho(i,j,k+1)) !at W-gridpoint
+				rr2=0.5*(rho(i,j,k)+rho(i+1,j,k)) !at U-gridpoint
+				ww1=Wbound(i,j,k)
+				uu1=0.25*(Ubound(i,j,k)+Ubound(i-1,j,k)+Ubound(i,j,k+1)+Ubound(i-1,j,k+1))	!at W-gridpoint
+				ww2=0.25*(Wbound(i,j,k)+Wbound(i,j,k-1)+Wbound(i+1,j,k)+Wbound(i+1,j,k-1)) !at U-gridpoint
+				uu2=Ubound(i,j,k)
+				call wall_fun_rho(ww1,uu1,rr1,Rp(i)*dphi2(j),dt,kn_sidewalls,kappa,nu_mol)
+				call wall_fun_rho(uu2,ww2,rr2,Rp(i)*dphi2(j),dt,kn_sidewalls,kappa,nu_mol)
+				Wbound(i,j,k)=ww1
+				Ubound(i,j,k)=uu2
+			endif 		   
 		   Ubound(i,0,k) = Ubf(i,k)
 		   Vbound(i,0,k) = Vbf(i,k)
 		   Wbound(i,0,k) = Wbf(i,k)
@@ -1730,8 +1941,102 @@ c 	influence of waves on lateral boundaries:
 	  endif
 	endif
 
+
+       !! Get UVW in pipe before wall stresses are taken into account, later these UVW2 are put back in pipe
+	Ubound2(0:i1,0:j1,0:k1)=Ubound
+	Vbound2(0:i1,0:j1,0:k1)=Vbound
+	Wbound2(0:i1,0:j1,0:k1)=Wbound
+	rho2(0:i1,0:j1,0:k1)=rho
+	! fill Ubound2,Vbound2 with one extra row positive and negative in i,j direction for shear stress 
+	if (periodicx.eq.0.or.periodicx.eq.2) then
+		Ubound2(-1,0:j1,0:k1)=Ubound(0,0:j1,0:k1)
+		Ubound2(i1+1,0:j1,0:k1)=Ubound(imax,0:j1,0:k1)
+		Vbound2(-1,0:j1,0:k1)=Vbound(0,0:j1,0:k1)
+		Vbound2(i1+1,0:j1,0:k1)=Vbound(imax,0:j1,0:k1)
+		Wbound2(-1,0:j1,0:k1)=Wbound(0,0:j1,0:k1)
+		Wbound2(i1+1,0:j1,0:k1)=Wbound(imax,0:j1,0:k1)		
+		rho2(-1,0:j1,0:k1)=rho(0,0:j1,0:k1)		
+		rho2(i1+1,0:j1,0:k1)=rho(imax,0:j1,0:k1)
+	else 
+		Ubound2(-1,0:j1,0:k1)=Ubound(imax-1,0:j1,0:k1)
+		Ubound2(i1+1,0:j1,0:k1)=Ubound(2,0:j1,0:k1)
+		Vbound2(-1,0:j1,0:k1)=Vbound(imax-1,0:j1,0:k1)
+		Vbound2(i1+1,0:j1,0:k1)=Vbound(2,0:j1,0:k1)
+		Wbound2(-1,0:j1,0:k1)=Wbound(imax-1,0:j1,0:k1)
+		Wbound2(i1+1,0:j1,0:k1)=Wbound(2,0:j1,0:k1)		
+		rho2(-1,0:j1,0:k1)=rho(imax-1,0:j1,0:k1)
+		rho2(i1+1,0:j1,0:k1)=rho(2,0:j1,0:k1)		
+	endif
+
+!c get stuff from other CPU's
+	  call shiftf2(Ubound,ubf)
+	  call shiftb2(Ubound,ubb) 
+	  call shiftf2(Vbound,vbf)
+	  call shiftb2(Vbound,vbb)
+	  call shiftf2(Wbound,wbf)
+	  call shiftb2(Wbound,wbb) 	  
+	  call shiftf2(rho,rbf)
+	  call shiftb2(rho,rbb)	  
+	if (periodicy.eq.0.or.periodicy.eq.2) then
+	  if (rank.eq.0) then
+		do k=0,k1
+		   do i=0,i1
+		   Ubound2(i,-1,k) = Ubound(i,0,k)
+		   Ubound2(i,j1+1,k) =Ubb(i,k)
+		   Vbound2(i,-1,k) = Vbound(i,0,k)
+		   Vbound2(i,j1+1,k) =Vbb(i,k)
+		   Wbound2(i,-1,k) = Wbound(i,0,k)
+		   Wbound2(i,j1+1,k) =Wbb(i,k)		   
+		   rho2(i,-1,k) = rho(i,0,k)
+		   rho2(i,j1+1,k) =rbb(i,k)		   
+		   enddo
+		enddo
+	  elseif (rank.eq.px-1) then
+		do k=0,k1
+		   do i=0,i1
+		   Ubound2(i,-1,k) = Ubf(i,k)
+		   Ubound2(i,j1+1,k) =Ubound(i,j1,k)
+		   Vbound2(i,-1,k) = Vbf(i,k)
+		   Vbound2(i,j1+1,k) =Vbound(i,j1,k)
+		   Wbound2(i,-1,k) = Wbf(i,k)
+		   Wbound2(i,j1+1,k) =Wbound(i,j1,k)		   
+		   rho2(i,-1,k) = rbf(i,k)
+		   rho2(i,j1+1,k) =rho(i,j1,k)		   
+		   enddo
+		enddo
+	  else 
+		do k=0,k1
+		   do i=0,i1
+		   Ubound2(i,-1,k) = Ubf(i,k)
+		   Ubound2(i,j1+1,k) =Ubb(i,k)
+		   Vbound2(i,-1,k) = Vbf(i,k)
+		   Vbound2(i,j1+1,k) =Vbb(i,k)
+		   Wbound2(i,-1,k) = Wbf(i,k)
+		   Wbound2(i,j1+1,k) =Wbb(i,k)		   
+		   rho2(i,-1,k) = rbf(i,k)
+		   rho2(i,j1+1,k) =rbb(i,k)		   
+		   enddo
+		enddo
+	  endif
+	else 
+		do k=0,k1
+		   do i=0,i1
+		   Ubound2(i,-1,k) = Ubf(i,k)
+		   Ubound2(i,j1+1,k) =Ubb(i,k)
+		   Vbound2(i,-1,k) = Vbf(i,k)
+		   Vbound2(i,j1+1,k) =Vbb(i,k)
+		   Wbound2(i,-1,k) = Wbf(i,k)
+		   Wbound2(i,j1+1,k) =Wbb(i,k)		   
+		   rho2(i,-1,k) = rbf(i,k)
+		   rho2(i,j1+1,k) =rbb(i,k)		   
+		   enddo
+		enddo
+	endif
+
+
+
 	Wbc1=W_b
-	if (periodicx.eq.0) then	
+	if (periodicx.eq.0.and.monopile.eq.-1) then	
       	   do k=1,kmax ! boundaries in i-direction
 	   	do j=0,j1
 			Wbc2=0.
@@ -1752,6 +2057,103 @@ c 	influence of waves on lateral boundaries:
 		   Wbound(i1,j,k)   =    Wbound(imax,j,k)
          	enddo   
       	    enddo
+       elseif (periodicx.eq.0.and.monopile>0) then ! closed boundary at i=0 (flow past circular cylinder); mixed inflow/outflow bc at imax; 3 = partial slip with tau-wall/4=free slip
+         do k=1,kmax 
+           do j=0,j1
+
+			if (botstress.ge.1.and.monopile.eq.1) then  !bed shear stress at monopile wall
+				rr1=0.5*(rho2(1,j,k)+rho2(1,j,k+1)) !at W-gridpoint
+				rr2=0.5*(rho2(1,j,k)+rho2(1,j+1,k)) !at V-gridpoint
+				ww1=Wbound(1,j,k)
+				vv1=0.25*(Vbound2(1,j,k)+Vbound2(1,j-1,k)+Vbound2(1,j,k+1)+Vbound2(1,j-1,k+1))	!at W-gridpoint
+				ww2=0.25*(Wbound2(1,j,k)+Wbound2(1,j,k-1)+Wbound2(1,j+1,k)+Wbound2(1,j+1,k-1)) !at V-gridpoint
+				vv2=Vbound(1,j,k)
+				call wall_fun_rho(ww1,vv1,rr1,dr(1)*Rp(1)/Ru(0),dt,kn_mp,kappa,nu_mol)
+				call wall_fun_rho(vv2,ww2,rr2,dr(1)*Rp(1)/Ru(0),dt,kn_mp,kappa,nu_mol)
+				Wbound(1,j,k)=ww1
+				Vbound(1,j,k)=vv2
+			endif 
+		   
+		   Ubound(0,j,k)    =    0.
+		   Vbound(0,j,k)    =    Vbound(1,j,k)
+		   Wbound(0,j,k)    =    Wbound(1,j,k)
+           enddo   
+         enddo	
+		 if (rank.le.CEILING(REAL(px)/4.)-1) then ! first 1/4 of domain is outflow bc 
+			jend = CEILING(REAL(jmax*px)*0.25) !end of first 1/4 global j-index
+			jend = MIN(jend-rank*jmax,j1) !end of first 1/4 local j-index 
+			 do j=0,jend
+			   do k=1,kmax 
+			     Ubound(imax,j,k) =    MAX(Ubound(imax-1,j,k),0.)
+			     Ubound(i1,j,k)   =    MAX(Ubound(imax,j,k),0.)
+			     Vbound(i1,j,k)    =    Vbound(imax,j,k)
+			     Wbound(i1,j,k)    =    Wbound(imax,j,k)
+			   enddo   
+			 enddo			
+			 do j=jend+1,j1  !remainder belongs to second 1/4 of domain is inflow 
+			   do k=1,kmax 
+					Wbc2=0.
+					if (bcfile.ne.'') then
+						Ubc2(j,k)=Ubcoarse2(j,k) 
+						Vbc2(j,k)=Vbcoarse2(j,k)
+						Wbc2=Wbcoarse2(j,k)
+					endif
+					Ubc=rhU(imax,j,k)*(Ub2(j,k)+Ubc2(j,k))
+					Vbc=rhU(imax,j,k)*(0.5*(Vb2(j,k)+Vb2(j+1,k))+Vbc2(j,k))
+					Wbc=rhU(imax,j,k)*(0.5*(Wb2(j,k)+Wb2(j,k+1))+Wbc2)	
+				    Ubound(imax,j,k)    =    Ubc*cos_u(j)+Vbc*sin_u(j)
+				    Ubound(i1,j,k)    =    Ubc*cos_u(j)+Vbc*sin_u(j)
+				    Vbound(i1,j,k)    =    (-Ubc*sin_v(j)+Vbc*cos_v(j)) !2.*(-Ubc*sin_v(j)+Vbc*cos_v(j))-Vbound(1,j,k)
+				    Wbound(i1,j,k)    =    Wbc !2.*Wbc - Wbound(1,j,k) !Wbound(0,j,k)    =  Wbc !- Wbound(1,j,k)
+			   enddo   
+			 enddo
+		 elseif (rank.ge.px-CEILING(REAL(px)/4.)-1) then ! last 1/4 of domain is outflow bc 
+			jbeg = jmax*px - CEILING(REAL(jmax*px)*0.25) ! begin of last 1/4 global j-index
+			jbeg = MAX(jbeg-rank*jmax,0) !begin of last 1/4 local j-index
+			 do j=jbeg,j1 ! outflow 
+			   do k=1,kmax 
+			     Ubound(imax,j,k) =    MAX(Ubound(imax-1,j,k),0.)
+			     Ubound(i1,j,k)   =    MAX(Ubound(imax,j,k),0.)
+			     Vbound(i1,j,k)    =    Vbound(imax,j,k)
+			     Wbound(i1,j,k)    =    Wbound(imax,j,k)
+			   enddo   
+			 enddo	
+			 do j=0,MIN(j1,jbeg-1)  !remainder belongs to second 1/4 of domain is inflow 
+			   do k=1,kmax 
+					Wbc2=0.
+					if (bcfile.ne.'') then
+						Ubc2(j,k)=Ubcoarse2(j,k) 
+						Vbc2(j,k)=Vbcoarse2(j,k)
+						Wbc2=Wbcoarse2(j,k)
+					endif
+					Ubc=rhU(imax,j,k)*(Ub2(j,k)+Ubc2(j,k))
+					Vbc=rhU(imax,j,k)*(0.5*(Vb2(j,k)+Vb2(j+1,k))+Vbc2(j,k))
+					Wbc=rhU(imax,j,k)*(0.5*(Wb2(j,k)+Wb2(j,k+1))+Wbc2)	
+				    Ubound(imax,j,k)    =    Ubc*cos_u(j)+Vbc*sin_u(j)
+				    Ubound(i1,j,k)    =    Ubc*cos_u(j)+Vbc*sin_u(j)
+				    Vbound(i1,j,k)    =    (-Ubc*sin_v(j)+Vbc*cos_v(j)) !2.*(-Ubc*sin_v(j)+Vbc*cos_v(j))-Vbound(1,j,k)
+				    Wbound(i1,j,k)    =    Wbc !2.*Wbc - Wbound(1,j,k) !Wbound(0,j,k)    =  Wbc !- Wbound(1,j,k)
+			   enddo   
+			 enddo			 
+		 else !middle 2/4 is inflow bc 
+			 do j=0,j1  !remainder belongs to second 1/4 of domain is inflow 
+			   do k=1,kmax 
+					Wbc2=0.
+					if (bcfile.ne.'') then
+						Ubc2(j,k)=Ubcoarse2(j,k) 
+						Vbc2(j,k)=Vbcoarse2(j,k)
+						Wbc2=Wbcoarse2(j,k)
+					endif
+					Ubc=rhU(imax,j,k)*(Ub2(j,k)+Ubc2(j,k))
+					Vbc=rhU(imax,j,k)*(0.5*(Vb2(j,k)+Vb2(j+1,k))+Vbc2(j,k))
+					Wbc=rhU(imax,j,k)*(0.5*(Wb2(j,k)+Wb2(j,k+1))+Wbc2)	
+				    Ubound(imax,j,k)    =    Ubc*cos_u(j)+Vbc*sin_u(j)
+				    Ubound(i1,j,k)    =    Ubc*cos_u(j)+Vbc*sin_u(j)
+				    Vbound(i1,j,k)    =    (-Ubc*sin_v(j)+Vbc*cos_v(j)) !2.*(-Ubc*sin_v(j)+Vbc*cos_v(j))-Vbound(1,j,k)
+				    Wbound(i1,j,k)    =    Wbc !2.*Wbc - Wbound(1,j,k) !Wbound(0,j,k)    =  Wbc !- Wbound(1,j,k)
+			   enddo   
+			 enddo	
+		 endif 			
        elseif (periodicx.eq.2) then ! no outflow in x direction:
          do k=1,kmax 
            do j=0,j1
@@ -1776,85 +2178,6 @@ c 	influence of waves on lateral boundaries:
            enddo   
          enddo
        endif
-
-       !! Get UVW in pipe before wall stresses are taken into account, later these UVW2 are put back in pipe
-	Ubound2(0:i1,0:j1,0:k1)=Ubound
-	Vbound2(0:i1,0:j1,0:k1)=Vbound
-	Wbound2(0:i1,0:j1,0:k1)=Wbound
-	rho2(0:i1,0:j1,0:k1)=rho
-	! fill Ubound2,Vbound2 with one extra row positive and negative in i,j direction for shear stress 
-	if (periodicx.eq.0.or.periodicx.eq.2) then
-		Ubound2(-1,0:j1,0:k1)=Ubound(0,0:j1,0:k1)
-		Ubound2(i1+1,0:j1,0:k1)=Ubound(imax,0:j1,0:k1)
-		Vbound2(-1,0:j1,0:k1)=Vbound(0,0:j1,0:k1)
-		Vbound2(i1+1,0:j1,0:k1)=Vbound(imax,0:j1,0:k1)
-		rho2(-1,0:j1,0:k1)=rho(0,0:j1,0:k1)		
-		rho2(i1+1,0:j1,0:k1)=rho(imax,0:j1,0:k1)
-	else 
-		Ubound2(-1,0:j1,0:k1)=Ubound(imax-1,0:j1,0:k1)
-		Ubound2(i1+1,0:j1,0:k1)=Ubound(2,0:j1,0:k1)
-		Vbound2(-1,0:j1,0:k1)=Vbound(imax-1,0:j1,0:k1)
-		Vbound2(i1+1,0:j1,0:k1)=Vbound(2,0:j1,0:k1)
-		rho2(-1,0:j1,0:k1)=rho(imax-1,0:j1,0:k1)
-		rho2(i1+1,0:j1,0:k1)=rho(2,0:j1,0:k1)		
-	endif
-
-!c get stuff from other CPU's
-	  call shiftf2(Ubound,ubf)
-	  call shiftb2(Ubound,ubb) 
-	  call shiftf2(Vbound,vbf)
-	  call shiftb2(Vbound,vbb)
-	  call shiftf2(rho,wbf)
-	  call shiftb2(rho,wbb)	  
-	if (periodicy.eq.0.or.periodicy.eq.2) then
-	  if (rank.eq.0) then
-		do k=0,k1
-		   do i=0,i1
-		   Ubound2(i,-1,k) = Ubound(i,0,k)
-		   Ubound2(i,j1+1,k) =Ubb(i,k)
-		   Vbound2(i,-1,k) = Vbound(i,0,k)
-		   Vbound2(i,j1+1,k) =Vbb(i,k)
-		   rho2(i,-1,k) = rho(i,0,k)
-		   rho2(i,j1+1,k) =wbb(i,k)		   
-		   enddo
-		enddo
-	  elseif (rank.eq.px-1) then
-		do k=0,k1
-		   do i=0,i1
-		   Ubound2(i,-1,k) = Ubf(i,k)
-		   Ubound2(i,j1+1,k) =Ubound(i,j1,k)
-		   Vbound2(i,-1,k) = Vbf(i,k)
-		   Vbound2(i,j1+1,k) =Vbound(i,j1,k)
-		   rho2(i,-1,k) = wbf(i,k)
-		   rho2(i,j1+1,k) =rho(i,j1,k)		   
-		   enddo
-		enddo
-	  else 
-		do k=0,k1
-		   do i=0,i1
-		   Ubound2(i,-1,k) = Ubf(i,k)
-		   Ubound2(i,j1+1,k) =Ubb(i,k)
-		   Vbound2(i,-1,k) = Vbf(i,k)
-		   Vbound2(i,j1+1,k) =Vbb(i,k)
-		   rho2(i,-1,k) = wbf(i,k)
-		   rho2(i,j1+1,k) =wbb(i,k)		   
-		   enddo
-		enddo
-	  endif
-	else 
-		do k=0,k1
-		   do i=0,i1
-		   Ubound2(i,-1,k) = Ubf(i,k)
-		   Ubound2(i,j1+1,k) =Ubb(i,k)
-		   Vbound2(i,-1,k) = Vbf(i,k)
-		   Vbound2(i,j1+1,k) =Vbb(i,k)
-		   rho2(i,-1,k) = wbf(i,k)
-		   rho2(i,j1+1,k) =wbb(i,k)		   
-		   enddo
-		enddo
-	endif
-
-
 
 	  if (botstress.eq.-2) then
        do j=0,j1 ! boundaries in k-direction
@@ -2085,7 +2408,7 @@ c 	influence of waves on lateral boundaries:
 	  enddo
 	  do i=0,i1 ! prescribe UTSHD in obstacle:
 	    do j=0,j1
-	      do k=1,kbed(i,j)
+	      do k=1,kbed(i,j) !kbed22(i,j)
 	        Ubound(i,j,k)=Ubot_TSHD(j)*rhU(i,j,k) !*rho(i,j,k)
 	        Vbound(i,j,k)=Vbot_TSHD(j)*rhV(i,j,k) !*rho(i,j,k)
 	      enddo
@@ -2289,15 +2612,17 @@ c 	influence of waves on lateral boundaries:
 	IF (interaction_bed.ge.4.or.bedlevelfile.ne.''.or.nobst>0) THEN ! dynamic bed update, IBM bed re-defined every timestep: !order-0 IBM: make vel zero for all cells within bed
 		DO i=0,i1
 			DO j=0,j1
-				DO k=1,kbed(i,j)
+				DO k=1,kbed(i,j) !kbed22(i,j)
 					Ubound(i,j,k)=Ubot_TSHD(j)*rhU(i,j,k) !*rho(i,j,k) !0.
 					Vbound(i,j,k)=Vbot_TSHD(j)*rhV(i,j,k) !*rho(i,j,k) !0.
 					im=MAX(i-1,0)
 					jm=MAX(j-1,0)
 					Ubound(im,j,k)=Ubot_TSHD(j)*rhU(im,j,k) !*rho(im,j,k) !0.
 					Vbound(i,jm,k)=Vbot_TSHD(jm)*rhV(i,jm,k) !*rho(i,jm,k) !0.					
-					Wbound(i,j,k)=0.
 				ENDDO
+				DO k=1,kbed22(i,j) 
+					Wbound(i,j,k)=0.
+				ENDDO 
 			ENDDO
 		ENDDO
 	ENDIF	
@@ -2409,7 +2734,7 @@ c 	influence of waves on lateral boundaries:
 	IF (interaction_bed.ge.4.or.bedlevelfile.ne.''.or.nobst>0) THEN ! dynamic bed update, IBM bed re-defined every timestep:
 		DO i=0,i1
 			DO j=0,j1
-				DO k=1,kbed(i,j)
+				DO k=1,kbed(i,j) ! not use kbed22 to make 100% sure no sediment is leaking into cell below ibm2 edge which is not counted as fluid in sediment update; this sediment would otherwise vanish
 					Ubound(i,j,k)=0. !Ubot_TSHD(j) ! 0.
 					Vbound(i,j,k)=0. !Vbot_TSHD(j) ! 0.
 					im=MAX(i-1,0)
@@ -2502,7 +2827,7 @@ c
 !       include 'common.txt'
 
 c
-      integer jtmp,t,kcheck,n,n2,inout,tel
+      integer jtmp,t,kcheck,n,n2,inout,tel,jbeg,jend
 c
       real Cbound(0:i1,0:j1,0:k1),cjet,Cbound2(0:i1,0:j1,0:k1)
       real ubb(0:i1,0:k1),val,theta,rbc,xx,yy,r_orifice2,rjet,theta_U,theta_V
@@ -2652,13 +2977,52 @@ c*************************************************************
 		endif
 	endif
 
-	if (periodicx.eq.0) then
+	if (periodicx.eq.0.and.monopile.eq.-1) then
 	      do k=1,kmax ! boundaries in i-direction
 		 do j=0,j1
 			   Cbound(0,j,k)    =    Cbcoarse2(n,j,k) !Cbound(1,j,k)
 			   Cbound(i1,j,k)   =    Cbound(imax,j,k)
 		 enddo   
 	      enddo
+       elseif (periodicx.eq.0.and.monopile>0) then ! closed boundary at i=0 (flow past circular cylinder); mixed inflow/outflow bc at imax; 3 = partial slip with tau-wall/4=free slip
+         do k=1,kmax 
+           do j=0,j1
+		   Cbound(0,j,k)    =    Cbound(1,j,k) !dcdn=0. to have no loss of sediment at wall monopile 
+           enddo   
+         enddo	
+		 if (rank.le.CEILING(REAL(px)/4.)-1) then ! first 1/4 of domain is outflow bc 
+			jend = CEILING(REAL(jmax*px)*0.25) !end of first 1/4 global j-index
+			jend = MIN(jend-rank*jmax,j1) !end of first 1/4 local j-index 
+			 do j=0,jend
+			   do k=1,kmax 
+			     Cbound(i1,j,k)   =    Cbound(imax,j,k)
+			   enddo   
+			 enddo			
+			 do j=jend+1,j1  !remainder belongs to second 1/4 of domain is inflow 
+			   do k=1,kmax 
+				    Cbound(i1,j,k)    =    Cbcoarse2(n,j,k)
+			   enddo   
+			 enddo
+		 elseif (rank.ge.px-CEILING(REAL(px)/4.)-1) then ! last 1/4 of domain is outflow bc 
+			jbeg = jmax*px - CEILING(REAL(jmax*px)*0.25) ! begin of last 1/4 global j-index
+			jbeg = MAX(jbeg-rank*jmax,0) !begin of last 1/4 local j-index
+			 do j=jbeg,j1 ! outflow 
+			   do k=1,kmax 
+			     Cbound(i1,j,k)    =    Cbound(imax,j,k)
+			   enddo   
+			 enddo	
+			 do j=0,MIN(j1,jbeg-1)  !remainder belongs to second 1/4 of domain is inflow 
+			   do k=1,kmax 
+				    Cbound(i1,j,k)    =    Cbcoarse2(n,j,k)
+			   enddo   
+			 enddo			 
+		 else !middle 2/4 is inflow bc 
+			 do j=0,j1  !remainder belongs to second 1/4 of domain is inflow 
+			   do k=1,kmax 
+				    Cbound(i1,j,k)    =    Cbcoarse2(n,j,k)
+			   enddo   
+			 enddo	
+		 endif 			  
        elseif (periodicx.eq.2) then ! no outflow in x direction:
 	      do k=1,kmax ! boundaries in i-direction
 		 do j=0,j1
@@ -2991,11 +3355,11 @@ c*************************************************************
          enddo
        enddo
 		
-	 DO i=0,i1
-	  DO j=0,j1
-		Cbound(i,j,kbed(i,j))=Cbound(i,j,MIN(kbed(i,j)+1,k1)) ! make dpdn=0 at bed
-	  ENDDO
-	 ENDDO
+!	 DO i=0,i1
+!	  DO j=0,j1
+!		Cbound(i,j,kbed(i,j))=Cbound(i,j,MIN(kbed(i,j)+1,k1)) ! make dpdn=0 at bed
+!	  ENDDO
+!	 ENDDO
 	 
       end
 

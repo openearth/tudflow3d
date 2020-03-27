@@ -25,7 +25,7 @@
 !       include 'common.txt'
       real  delta(imax),Yplus,X,Rmax,dx,xx,yy,theta_V,theta_U,phi,maxh_obst
       integer ngridsteps,begin,n,ii
-	  real dphi_shft,schuifphi,phiv2t(0:jmax*px+1)
+	  real dphi_shft,schuifphi,phiv2t(0:jmax*px+1),factor
       real cbf(0:i1)
       real cbb(0:i1)	  
 c******************************************************************
@@ -37,6 +37,10 @@ c******************************************************************
 	ELSE ! flat plate:
 	      dz   = depth     / (kmax-kjet)
 	ENDIF
+	
+	IF (z_tau_sed<0.) THEN 
+	  z_tau_sed = 0.5*dz
+	ENDIF 
         kbed_bc=0 ! !FLOOR(bc_obst_h/dz) ! kbed_bc no longer needed now kbed(i,j) is used
 		
 	ksurf_bc=kmax-FLOOR(surf_layer/dz) ! if surf_layer is zero than ksurf_bc=kmax	
@@ -181,6 +185,11 @@ c******************************************************************
 		phivt=phiv2t
 	ENDIF
 
+	IF (monopile>0) THEN 
+		factor = 2.*pi/(phivt(jmax*px)-phivt(0))
+		phivt = phivt*factor
+	ENDIF 
+	
 	DO j = 1 , jmax*px
 		phipt((j)) = ( phivt(j) + phivt(j-1) ) / 2.0
 		dphi2t((j)) = ( phivt(j) - phivt(j-1) )
@@ -191,8 +200,11 @@ c******************************************************************
 	dphi2t(0)  = dphi2t(1)
 	phipt(0)  = phivt(0) - dphi2t(0) / 2.0
 
-
-	schuifphi=(phipt(jmax*px+1)+phipt(0))/2.
+	IF (monopile>0) THEN 
+		schuifphi=(phipt(jmax*px+1)+phipt(0))/2.+pi
+	ELSE 
+		schuifphi=(phipt(jmax*px+1)+phipt(0))/2.
+	ENDIF 
 	phivt=phivt-schuifphi
 	phipt=phipt-schuifphi
 	phiv(0:j1)=phivt(0+rank*jmax:j1+rank*jmax)
@@ -392,11 +404,11 @@ c******************************************************************
 !		ENDIF
 
 	else !periodic in x direction:
-		if (LOA>0.) then ! apply U_b as bc also for periodic sims, so to keep random fluctuations alive
-			Unew=-U_init 
-		else
+		!if (LOA>0.) then ! apply U_b as bc also for periodic sims, so to keep random fluctuations alive
+		!	Unew=-U_init !new steering dpdx dynamically uses U_b without +/- switch for LOA>0. 
+		!else
 			Unew=U_init
-		endif
+		!endif
 		Vnew=V_init
 		Wnew=W_b !Wnew*sqrt(dpdx*(depth-bc_obst_h)/rho_b)*4. !scale with 20u_tau
 		Uold=Unew
@@ -1850,7 +1862,7 @@ C ...  Locals
 	INTEGER*2 i_inVpunt_tauTSHD_dummy((i1+1)*(j1+1)*px)
 	INTEGER*2 k_inPpuntTSHD_dummy((i1+1)*(j1+1)*px*kmaxTSHD_ind),k_inVpuntTSHD_dummy((i1+1)*(j1+1)*px*kmaxTSHD_ind)
 	INTEGER*2 k_inVpunt_tauTSHD_dummy((i1+1)*(j1+1)*px),kbed3(0:i1,0:j1)
-	REAL adj_ment,zbed3(0:i1,0:j1),zbed4(0:i1+1,0:j1+1),cbb(0:i1),zbedcell,zbotcell
+	REAL adj_ment,zbed3(0:i1,0:j1),zbed4(0:i1+1,0:j1+1),cbb(0:i1),zbedcell,zbotcell,zb_W
 
 	tmax_inUpuntTSHD=0
 	tmax_inVpuntTSHD=0
@@ -2838,10 +2850,11 @@ C ...  Locals
 	!! search for zbed and kbed on each proc (j=0,j1): (used for deposition and bc in solver [adjusted for ob(n)%zbottom])
 	      do j=0,j1 
 	       do i=0,i1 !imax  !including i1 strangely gives crash (13/4/15) !1,imax !0,i1
-				kbed3(i,j)=FLOOR(zbed3(i,j)/dz)
+				kbed3(i,j)=FLOOR(zbed3(i,j)/dz+0.5) !added+0.5 10-3-2020 because now top kbed level is within +0.5 and -0.5dz from real bed (cnewbot can be positive and negative) 
 				kbed3(i,j)=MAX(0,kbed3(i,j))
 				kbed3(i,j)=MIN(kmax,kbed3(i,j))
 				zbed(i,j)=MAX(zbed(i,j),zbed3(i,j)) !zero without obstacle, otherwise max of all obstacles at i,j  
+				
 		enddo
 	       enddo
 		
@@ -3164,6 +3177,7 @@ C ...  Locals
 	       enddo
 	      enddo
 
+
 		IF (interaction_bed.eq.4.or.interaction_bed.eq.6) THEN   
 			do j=0,j1 
 				do i=0,i1 !imax !including i1 strangely gives crash (13/4/15) !1,imax !0,i1
@@ -3176,7 +3190,7 @@ C ...  Locals
 						enddo
 					enddo
 					do n=1,nfrac
-					  ! place remainder which does not fit exactly in 1dz into cnewbot 
+					  ! place remainder which does not fit exactly in 1dz into cnewbot; this can be positive or negative as cnewbot varies between +/-0.5*cfixedbed 
 					  Cnewbot(n,i,j)=(zbed(i,j)-DBLE(kbed(i,j))*dz)/dz*c_bed(n)*bednotfixed(i,j,kbed(i,j))
 					enddo 
 				enddo
@@ -3188,7 +3202,22 @@ C ...  Locals
 		IF (U_TSHD>0.) THEN
 			kbedin(0:j1)=kbed(1,0:j1)
 		ENDIF
-	
+		
+		  IF (IBMorder.ne.2) THEN 
+		    kbed22=kbed 
+		  ELSE 
+		  	do j=1,jmax 
+				do i=1,imax 
+					IF (interaction_bed.ge.4) THEN 
+					  zb_W=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(dcdtbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
+					ELSE 
+					  zb_W=zbed(i,j)
+					ENDIF
+					kbed22(i,j)=FLOOR(zb_W/dz) 
+				ENDDO
+			ENDDO 
+			call bound_cbot_integer(kbed22) 
+		  ENDIF 
       end
 
 	subroutine bedroughness_init
@@ -3291,7 +3320,11 @@ C ...  Locals
 	    enddo 
 
 	!! fill Ubc2,Vbc2 (front boundary at i=0):
-	    i=0
+		if (monopile>0) then !inflow Ubc2,Vbc2 defined at imax instead at i=0
+		  i=imax 
+		else 
+	      i=0
+		endif 
 	    do k=1,kmax
 		 do j=0,j1
 		  if (zbed(i,j).lt.depth) then

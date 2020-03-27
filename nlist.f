@@ -53,17 +53,17 @@
       REAL plumetseries2(1:10000) 
       REAL plumeUseries2(1:10000),c_bed(100)
       INTEGER plumeseriesloc,plumeseriesloc2,plumeQseriesloc,plumecseriesloc
-      INTEGER nr_HPfilter,depo_implicit,depo_cbed_option
+      INTEGER nr_HPfilter,depo_implicit,depo_cbed_option,monopile
       REAL timeAB_real(1:4),dpdx,dpdy,kn_d50_multiplier,avalanche_slope(100),av_slope_z(100),dpdx1,dpdy1,Uavold,Vavold
       INTEGER periodicx,periodicy,wallup
-      REAL U_b3,V_b3,surf_layer,reduction_sedimentation_shields
+      REAL U_b3,V_b3,surf_layer,reduction_sedimentation_shields,kn_mp,kn_sidewalls
       INTEGER ksurf_bc,kmaxTSHD_ind,nair
       INTEGER poissolver,nm1,istep_output_bpmove,avalanche_until_done,IBMorder
       INTEGER iparm(64)
       CHARACTER*256 plumeQtseriesfile,plumectseriesfile,avfile      
       REAL Q_j,plumeQseries(1:10000),plumeQtseries(1:10000),plumectseries(1:10000),plumecseries(30,1:10000) !c(30) matches with size frac_init
       REAL Aplume,driftfluxforce_calfac
-	  REAL vwal,delta_nsed,nl,permeability_kl,pickup_fluctuations_ampl
+	  REAL vwal,delta_nsed,nl,permeability_kl,pickup_fluctuations_ampl,z_tau_sed
 	  INTEGER pickup_fluctuations,cbed_method
 	  
 	  
@@ -101,7 +101,7 @@
 
       INTEGER*2, DIMENSION(:,:,:),ALLOCATABLE :: llist1,llist2,llist3
       INTEGER*2, DIMENSION(:,:),ALLOCATABLE :: llmax1,llmax2,llmax3 !,kbed,kbedt,kbed2
-      INTEGER*8, DIMENSION(:,:),ALLOCATABLE :: kbed,kbedt,kbed2
+      INTEGER*8, DIMENSION(:,:),ALLOCATABLE :: kbed,kbedt,kbed2,kbed22
       INTEGER, DIMENSION(:,:),ALLOCATABLE :: Xkk,Tii
       INTEGER, DIMENSION(:),ALLOCATABLE :: Xii,Tkk,nfrac_air,nfrac_silt,nfrac_sand,nfrac_air2
 	  INTEGER*8, DIMENSION(:),ALLOCATABLE :: kbedin
@@ -236,7 +236,7 @@
      & pres_in_predictor_step,Poutflow,oPRHO
 	NAMELIST /ambient/U_b,V_b,W_b,bcfile,rho_b,SEM,nmax2,nmax1,nmax3,lm_min,lm_min3,slip_bot,kn,interaction_bed,
      & periodicx,periodicy,dpdx,dpdy,W_ox,Hs,Tp,nx_w,ny_w,obst,bc_obst_h,U_b3,V_b3,surf_layer,wallup,bedlevelfile,
-     & U_bSEM,V_bSEM,U_w,V_w,c_bed,cfixedbed,U_init,V_init,initconditionsfile,rho_b2
+     & U_bSEM,V_bSEM,U_w,V_w,c_bed,cfixedbed,U_init,V_init,initconditionsfile,rho_b2,monopile,kn_mp,kn_sidewalls
 	NAMELIST /plume/W_j,plumetseriesfile,Awjet,Aujet,Avjet,Strouhal,azi_n,kjet,radius_j,Sc,slipvel,outflow_overflow_down,
      & U_j2,plumetseriesfile2,Awjet2,Aujet2,Avjet2,Strouhal2,azi_n2,radius_j2,zjet2,bedplume,radius_inner_j,xj,yj,W_j_powerlaw,
      & plume_z_outflow_belowsurf,hindered_settling,Q_j,plumeQtseriesfile,plumectseriesfile
@@ -244,7 +244,8 @@
      & extra_mix_visc
 	NAMELIST /constants/kappa,gx,gy,gz,ekm_mol,calibfac_sand_pickup,pickup_formula,kn_d50_multiplier,avalanche_slope,
      &	av_slope_z,calibfac_Shields_cr,reduction_sedimentation_shields,morfac,morfac2,avalanche_until_done,avfile,
-     & settling_along_gvector,vwal,nl,permeability_kl,pickup_fluctuations_ampl,pickup_fluctuations,pickup_correction,cbed_method
+     & settling_along_gvector,vwal,nl,permeability_kl,pickup_fluctuations_ampl,pickup_fluctuations,pickup_correction,cbed_method,
+     & z_tau_sed
 	NAMELIST /fractions_in_plume/fract
 	NAMELIST /ship/U_TSHD,LOA,Lfront,Breadth,Draught,Lback,Hback,xfront,yfront,kn_TSHD,nprop,Dprop,xprop,yprop,zprop,
      &   Pprop,rudder,rot_prop,draghead,Dsp,xdh,perc_dh_suction,softnose,Hfront,cutter
@@ -332,6 +333,9 @@
 	interaction_bed=-999
 	periodicx=0
 	periodicy=0
+	monopile=-1
+	kn_mp = -999.
+	kn_sidewalls = -999.
 	dpdx=0.
 	dpdy=0.
 	dpdx1=0.
@@ -518,6 +522,7 @@
 	pickup_fluctuations_ampl=0.
 	pickup_fluctuations=0
 	cbed_method = 1
+	z_tau_sed = -999.
 	!! ship
 	U_TSHD=-999.
 	LOA=-999.
@@ -652,7 +657,6 @@
 	ENDIF
 	IF (Hs>0.and.U_w<-998.) CALL writeerror(611)
 	IF (Hs>0.and.V_w<-998.) CALL writeerror(612)
-	
 	IF (surf_layer>0.and.U_b3<-999.) CALL writeerror(602)
 	IF (surf_layer>0.and.V_b3<-999.) CALL writeerror(603)
 	IF (surf_layer<0.or.surf_layer>depth) CALL writeerror(604)
@@ -670,6 +674,7 @@
 	ENDIF
 	IF (U_init<-998.) U_init=U_b ! only if defined then different U_init is used else equal to U_b
 	IF (V_init<-998.) V_init=V_b
+	IF (kn_mp<0.and.monopile.eq.1) CALL writeerror(610)
 	
 	nobst=0
 	DO WHILE (obst(nobst+1)%height.NE.-99999.)
@@ -1486,6 +1491,7 @@
 	ALLOCATE(kbedin(0:j1))
 	ALLOCATE(kbed2(0:i1,0:px*jmax+1))
 	ALLOCATE(kbedt(0:i1,0:j1))
+	ALLOCATE(kbed22(0:i1,0:j1))
 	ALLOCATE(zbed(0:i1,0:j1))
 	ALLOCATE(rhocorr_air_z(1:nfrac,0:k1))
 	ALLOCATE(av_slope(1:imax,1:jmax,0:k1))
