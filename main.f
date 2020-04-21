@@ -142,14 +142,16 @@
 	wzold=wz
 	ENDIF
 	pold(:,:,kmax)=0.
-	do k=kmax-1,1,-1
-		pold(:,:,k)=pold(:,:,k+1)+(rnew(:,:,k)-rho_b)*ABS(gz)*dz
-	enddo
-	if (rank.eq.0) then
-	  pold_ref=pold(imax,1,1)
-	endif
-	call mpi_bcast(pold_ref,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-	pold=pold-pold_ref	
+	IF (applyVOF.eq.1) THEN 
+		do k=kmax-1,1,-1
+			pold(:,:,k)=pold(:,:,k+1)+(rnew(:,:,k)-rho_b)*ABS(gz)*dz
+		enddo
+		if (rank.eq.0) then
+		  pold_ref=pold(imax,1,1)
+		endif
+		call mpi_bcast(pold_ref,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+		pold=pold-pold_ref	
+	endif 
 	pold1=pold 
 	pold2=pold 
 	pold3=pold

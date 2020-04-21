@@ -56,6 +56,7 @@ Poutflow=0 				! 0 (default, most robust) Poutflow is zero for complete outflow 
 driftfluxforce_calfac = 1. ! calibration factor for driftflux force (default 1.) 0. gives no force
 depo_implicit = 0			! 1=calculate deposition at the bed implicit; 0=explicit with old cfluid (default)
 IBMorder = 2 				! 0 (default) = normal staircase manner bed immersed boundary, 2 = 2nd order immersed boundary of bed, obstacles and TSHD higher in water are still staircase manner
+applyVOF = 0 	!Beta option, default 0 take variable rho fully in account in momentum eq.; 1 = only take variable density in account in gravity term, not in rest of momentum eq.
 /
 
 &ambient
@@ -196,7 +197,7 @@ fract(1)%type = 1			! 1 = silt/mud (default), 2=sand, 3=air, -1=VOF (VOF is nerd
 /
 
 &LESmodel
-sgs_model='SWALE'		! Smagorinsky, WALE or SIGMA sgs model: 'SSmag','SWALE','SIGMA','DSmag','MixLe'
+sgs_model='SWALE'		! Smagorinsky, WALE or SIGMA sgs model: 'SSmag','SWALE','Sigma','DSmag','MixLe'
 Cs=0.325			! Constant in sgs model [-]
 Lmix_type=1			! 1=(dx*dy*dz)^1/3 | 2=sqrt((dx^2+dy^2+dz^2)/3)
 !damping_drho_dz = 'MuAn'	! Turbulence damping at density interface in Munk-Anderson type of way:
@@ -205,6 +206,7 @@ Lmix_type=1			! 1=(dx*dy*dz)^1/3 | 2=sqrt((dx^2+dy^2+dz^2)/3)
 !damping_a2 = 21.		! Damping applied to diffusion sediment fractions: Fdamp(Ri)=(1+damping_a2*Ri)^damping_b2
 !damping_b2 = -0.8		! Damping applied to diffusion sediment fractions: Fdamp(Ri)=(1+damping_a2*Ri)^damping_b2
 extra_mix_visc='none'   ! Extra mixture viscosity = fac*ekm_mol: 'none' (default) or 'Krie' Krieger & Dougherty 1959 relation 
+nu_minimum_wall = 0 	! default(0) no minimum eddy viscosity first cells from wall, 1 = minimum is Prandtl mixing length including Van Driest damping nu_t = nu_mol*kappa*zplus(1-exp(-zplus/19))**2 applied at lowest grid cell; 2 = applied at lowest 2 grid cells; 3 = apply minimum eddy viscosity at lowest 2 grid cells to provide ust^2=nu_t*dUdz; 11,12,13 similar to 1,2,3 but prescribed exactly and not as minimum 
 /
 
 
@@ -231,10 +233,17 @@ pickup_correction='noneMastBergenvdBerg' 		! option 'MastBergenvdBerg2003' gives
 vwal=0.001				! vwal [m/s] is the wall velocity used in pickup_correction 'MastBergenvdBerg2003' 
 nl=0.44				! nl is the porosity of loose sand after dilantancy used in pickup_correction 'MastBergenvdBerg2003' and must be >(1-cfixedbed) 
 permeability_kl=0.000307	! permeability_kl [m/s] is the permeability of loose sand used in pickup_correction 'MastBergenvdBerg2003', can be calculated by relation Kozeny-Carmen kl = gD15^2/160nu*nl^3/(1-nl)^2
+wbed_correction = 0 		! 1 = apply upward W velocity at bed for eroding bed W=V_ero_bed; only applicable i.c.w. pickup_correction 'MastBergenvdBerg2003', default 0 --> W=0. at bed 
 pickup_fluctuations=0		!1 means white noise random fluctuations are added to calculated pickup, default 0 no random fluctuations on calculated pickup  
 pickup_fluctuations_ampl=0.	!determines amplitude of turbulent fluctuations --> pickup = pickup+pickup_fluctuations_ampl*random(range[-1 to 1])*pickup 
 cbed_method = 1				! 1 (default) = cbed is determined in lowest fluid cell above the bed; 2 = avg of all fluid cells above bed up to location of max horizontal velocity
 z_tau_sed = 0.1				! distance [m] from bed where Uflow is taken to calculate tau_sed (relevant when kn_sed differs from kn_flow), default 0.5*dz, but when comparing results with different dz define it as user input otherwise grid-dependent results as the calculation of tau_sed depends on distance from bed 
+k_layer_pickup = 5		! number of grid cells over which pickup is spread out (default k_layer_pickup=1; everything in lowest cell)
+pickup_bedslope_geo = 1	!Default 0 no geometric correction for bedslopes on pickup (assuming nearly flat beds); 1 = geometric correction for bedslopes on near bed velocity and cell surface used to determine pickup and deposition
+bedload_formula = 'nonenon0000' !options are 'vanrijn2003'; 'vanrijn2007'; 'MeyPeMu1948' (default no bedload calculated)
+kn_d50_multiplier_bl = 2. 	! Defines Nikuradse bedroughness for sand bedload function (not for flow shear stress), default 2.; kn=d90~2*d50
+calibfac_sand_bedload = 1. ! Calibration factor for sand bedload, default 1. [-].
+bl_relax = 0.01 			! Relaxation factor for bedload applied to near bed velocity to calculate bedload (default 0.01), needed for stable bedload results
 /
 
 &ship

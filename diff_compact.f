@@ -718,6 +718,8 @@ c*****************************************************************
 
 	IF (CNdiffz.eq.1) THEN !CN diff in z-dir is half old, half new timestep (this is half old timestep)
 	  CNz=0.5
+	ELSEIF (CNdiffz.eq.2) THEN !CN diff in z-dir is 100% new timestep (Euler backward)
+	  CNz=0. 
 	ELSE
 	  CNz=1.
 	ENDIF
@@ -854,6 +856,8 @@ c*****************************************************************
 
 	IF (CNdiffz.eq.1) THEN !CN diff in z-dir is half old, half new timestep (this is half old timestep)
 	  CNz=0.5
+	ELSEIF (CNdiffz.eq.2) THEN !CN diff in z-dir is 100% new timestep (Euler backward)
+	  CNz=0. 
 	ELSE
 	  CNz=1.
 	ENDIF
@@ -984,6 +988,8 @@ c*****************************************************************
 
 	IF (CNdiffz.eq.1) THEN !CN diff in z-dir is half old, half new timestep (this is half old timestep)
 	  CNz=0.5
+	ELSEIF (CNdiffz.eq.2) THEN !CN diff in z-dir is 100% new timestep (Euler backward)
+	  CNz=0. 
 	ELSE
 	  CNz=1.
 	ENDIF
@@ -1098,6 +1104,8 @@ c*****************************************************************
 
 	IF (CNdiffz.eq.1) THEN !CN diff in z-dir is half old, half new timestep (this is half old timestep)
 	  CNz=0.5
+	ELSEIF (CNdiffz.eq.2) THEN !CN diff in z-dir is 100% new timestep (Euler backward)
+	  CNz=0. 
 	ELSE
 	  CNz=1.
 	ENDIF

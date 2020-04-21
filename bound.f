@@ -404,7 +404,7 @@ c 	influence of waves on lateral boundaries:
          Wbound(i,j,k1)   = 0.
          Ubound(i,j,0)    = -Ubound(i,j,1) 
          Vbound(i,j,0)    = -Vbound(i,j,1)
-         Wbound(i,j,0)    = 0.
+         Wbound(i,j,0)    = Wbed(i,j) !0.
          xx=Rp(i)*cos_u(j)-schuif_x
 	     yy=Rp(i)*sin_u(j)
 	Wbound(i,j,kmax)=(om_w+kx_w*U_TSHD*cos(phi)+ky_w*U_TSHD*sin(phi))*Hs/2.
@@ -420,7 +420,7 @@ c 	influence of waves on lateral boundaries:
          Wbound(i,j,k1) = 0.
          Ubound(i,j,0)    = -Ubound(i,j,1) 
          Vbound(i,j,0)    = -Vbound(i,j,1)
-         Wbound(i,j,0)    = 0.
+         Wbound(i,j,0)    = Wbed(i,j) !0.
 
          xx=Rp(i)*cos_u(j)-schuif_x
 	     yy=Rp(i)*sin_u(j)
@@ -437,7 +437,7 @@ c 	influence of waves on lateral boundaries:
          Wbound(i,j,k1)   = 0.
          Ubound(i,j,0)    = Ubound(i,j,1) 
          Vbound(i,j,0)    = Vbound(i,j,1)
-         Wbound(i,j,0)    = 0.
+         Wbound(i,j,0)    = Wbed(i,j) !0.
 
          xx=Rp(i)*cos_u(j)-schuif_x
 	     yy=Rp(i)*sin_u(j)
@@ -1038,7 +1038,7 @@ c 	influence of waves on lateral boundaries:
          Wbound(i,j,k1) = 0.
          Ubound(i,j,0)    = -Ubound(i,j,1) 
          Vbound(i,j,0)    = -Vbound(i,j,1)
-         Wbound(i,j,0)    = 0.
+         Wbound(i,j,0)    = Wbed(i,j) !0.
 
          xx=Rp(i)*cos_u(j)-schuif_x
 	     yy=Rp(i)*sin_u(j)
@@ -1055,7 +1055,7 @@ c 	influence of waves on lateral boundaries:
          Wbound(i,j,k1) = 0.
          Ubound(i,j,0)    = -Ubound(i,j,1) 
          Vbound(i,j,0)    = -Vbound(i,j,1)
-         Wbound(i,j,0)    = 0.
+         Wbound(i,j,0)    = Wbed(i,j) !0.
 
          xx=Rp(i)*cos_u(j)-schuif_x
 	     yy=Rp(i)*sin_u(j)
@@ -1072,7 +1072,7 @@ c 	influence of waves on lateral boundaries:
          Wbound(i,j,k1) = 0.
          Ubound(i,j,0)    = Ubound(i,j,1) 
          Vbound(i,j,0)    = Vbound(i,j,1)
-         Wbound(i,j,0)    = 0.
+         Wbound(i,j,0)    = Wbed(i,j) !0.
 
          xx=Rp(i)*cos_u(j)-schuif_x
 	     yy=Rp(i)*sin_u(j)
@@ -1403,6 +1403,7 @@ c	x,y,z coordinate system, not in r,theta,z like this code
 	  phi=atan2(V_b,(U_TSHD-U_b))
 	endif
 
+	
 	 if (split_rho_cont.eq.'VL2'.or.split_rho_cont.eq.'SB2') then
 	    if (split_rho_cont.eq.'VL2') THEN
 		 do n=1,nfrac
@@ -1457,18 +1458,21 @@ c	x,y,z coordinate system, not in r,theta,z like this code
 		  ENDDO
 		 ENDDO
 		endif
-			
+	 IF (applyVOF.eq.1) THEN !with apply_VOF=1 density on edges should not be real density but constant 
+		rhU=rho_b
+		rhV=rho_b
+		rhW=rho_b
 	 endif
 	 
 	 
-	if (periodicx.eq.1) then
+	 if (periodicx.eq.1) then
 		rhU(i1,0:j1,0:k1)=  rhU(1,0:j1,0:k1)
 		rhV(i1,0:j1,0:k1)=  rhV(1,0:j1,0:k1)
 		rhW(i1,0:j1,0:k1)=  rhW(1,0:j1,0:k1)
 		rhU(0,0:j1,0:k1)=  rhU(imax,0:j1,0:k1)
 		rhV(0,0:j1,0:k1)=  rhV(imax,0:j1,0:k1)
 		rhW(0,0:j1,0:k1)=  rhW(imax,0:j1,0:k1)		
-	else
+	 else
 		rhU(i1,0:j1,0:k1)=  rho(i1,0:j1,0:k1) 
 		rhU(imax,0:j1,0:k1)=  	 0.5*(rho(imax,0:j1,0:k1)+rho(imax+1,0:j1,0:k1))
 		rhV(i1,0:jmax,0:k1)=  0.5*(rho(i1,0:jmax,0:k1)+rho(i1,1:j1,0:k1))
@@ -1476,24 +1480,24 @@ c	x,y,z coordinate system, not in r,theta,z like this code
 		rhU(0,0:j1,0:k1)=  	 0.5*(rho(0,0:j1,0:k1)+rho(1,0:j1,0:k1))
 		rhV(0,0:jmax,0:k1)=  0.5*(rho(0,0:jmax,0:k1)+rho(0,1:j1,0:k1))
 		rhW(0,0:j1,0:kmax)=  0.5*(rho(0,0:j1,0:kmax)+rho(0,0:j1,1:k1))		
-	endif
-	rhU(0:imax,0:j1,k1)=  0.5*(rho(0:imax,0:j1,k1)+rho(1:i1,0:j1,k1))
-	rhV(0:i1,0:jmax,k1)=  0.5*(rho(0:i1,0:jmax,k1)+rho(0:i1,1:j1,k1))
-	rhW(0:i1,0:j1,k1)=    rho(0:i1,0:j1,k1)
-	rhW(0:i1,0:j1,kmax)=    0.5*(rho(0:i1,0:j1,kmax)+rho(0:i1,0:j1,kmax+1))
-	rhU(0:imax,0:j1,0)=  0.5*(rho(0:imax,0:j1,0)+rho(1:i1,0:j1,0))
-	rhV(0:i1,0:jmax,0)=  0.5*(rho(0:i1,0:jmax,0)+rho(0:i1,1:j1,0))
-	rhW(0:i1,0:j1,0)=    0.5*(rho(0:i1,0:j1,0)+rho(0:i1,0:j1,1))
+	 endif
+	 rhU(0:imax,0:j1,k1)=  0.5*(rho(0:imax,0:j1,k1)+rho(1:i1,0:j1,k1))
+	 rhV(0:i1,0:jmax,k1)=  0.5*(rho(0:i1,0:jmax,k1)+rho(0:i1,1:j1,k1))
+	 rhW(0:i1,0:j1,k1)=    rho(0:i1,0:j1,k1)
+	 rhW(0:i1,0:j1,kmax)=    0.5*(rho(0:i1,0:j1,kmax)+rho(0:i1,0:j1,kmax+1))
+	 rhU(0:imax,0:j1,0)=  0.5*(rho(0:imax,0:j1,0)+rho(1:i1,0:j1,0))
+	 rhV(0:i1,0:jmax,0)=  0.5*(rho(0:i1,0:jmax,0)+rho(0:i1,1:j1,0))
+	 rhW(0:i1,0:j1,0)=    0.5*(rho(0:i1,0:j1,0)+rho(0:i1,0:j1,1))
 	
 		!! boundary conditions in y-dir as last to prevail (especially for internal partitions this is essential)
 !c get stuff from other CPU's
-	call shiftf(rhU,ubf) 
-	call shiftf(rhV,vbf)
-	call shiftf(rhW,wbf)
-	call shiftb(rhU,ubb)
-	call shiftb(rhV,vbb)
-	call shiftb(rhW,wbb)
-	if (periodicy.eq.0.or.periodicy.eq.2) then !for rho it does not matter periodicy is 0 or 2
+	 call shiftf(rhU,ubf) 
+	 call shiftf(rhV,vbf)
+	 call shiftf(rhW,wbf)
+	 call shiftb(rhU,ubb)
+	 call shiftb(rhV,vbb)
+	 call shiftb(rhW,wbb)
+	 if (periodicy.eq.0.or.periodicy.eq.2) then !for rho it does not matter periodicy is 0 or 2
 	  if (rank.eq.0) then ! boundaries in j-direction
 		do k=0,k1
 		   do i=0,i1
@@ -1529,7 +1533,7 @@ c	x,y,z coordinate system, not in r,theta,z like this code
 		   enddo
 		enddo
 	  endif
-	elseif (periodicy.eq.1) then !periodic in y:
+	 elseif (periodicy.eq.1) then !periodic in y:
 		do k=0,k1
 		   do i=0,i1
 		   rhU(i,0,k) = Ubf(i,k)
@@ -1540,7 +1544,7 @@ c	x,y,z coordinate system, not in r,theta,z like this code
 		   rhW(i,j1,k) =Wbb(i,k)
 	   enddo
 	  enddo
-	endif
+	 endif
 		 DO i=0,i1
 		  DO j=0,j1
 		   DO k=1,kbed(i,j) !kbed22(i,j) !prevent source term at immersed boundary in PPE --> rhW not adapted because dpdn=0 has been enforced in bound_p already
@@ -1551,6 +1555,7 @@ c	x,y,z coordinate system, not in r,theta,z like this code
 		  ENDDO
 		 ENDDO
 		ENDDO  
+	ENDIF 
 	
 c 	influence of waves on lateral boundaries:
 	IF(Hs>0.) THEN
@@ -2188,7 +2193,7 @@ c 	influence of waves on lateral boundaries:
          Wbound(i,j,k1)   = 0.
          Ubound(i,j,0)    = -Ubound(i,j,1) 
          Vbound(i,j,0)    = -Vbound(i,j,1)
-         Wbound(i,j,0)    = 0.
+         Wbound(i,j,0)    = Wbed(i,j)*rhW(i,j,0) !0.
          xx=Rp(i)*cos_u(j)-schuif_x
 	     yy=Rp(i)*sin_u(j)
 	     Wbound(i,j,kmax)=(om_w+kx_w*U_TSHD*cos(phi)+ky_w*U_TSHD*sin(phi))*Hs/2.
@@ -2204,7 +2209,7 @@ c 	influence of waves on lateral boundaries:
          Wbound(i,j,k1) = 0.
          Ubound(i,j,0)    = -Ubound(i,j,1) 
          Vbound(i,j,0)    = -Vbound(i,j,1)
-         Wbound(i,j,0)    = 0.
+         Wbound(i,j,0)    = Wbed(i,j)*rhW(i,j,0) !0.
 
          xx=Rp(i)*cos_u(j)-schuif_x
 	     yy=Rp(i)*sin_u(j)
@@ -2268,7 +2273,7 @@ c 	influence of waves on lateral boundaries:
          Wbound(i,j,k1)   = 0.
          Ubound(i,j,0)    = Ubound(i,j,1) 
          Vbound(i,j,0)    = Vbound(i,j,1)
-         Wbound(i,j,0)    = 0.
+         Wbound(i,j,0)    = Wbed(i,j)*rhW(i,j,0) !0.
 
          xx=Rp(i)*cos_u(j)-schuif_x
 	     yy=Rp(i)*sin_u(j)
@@ -3188,7 +3193,7 @@ c*************************************************************
 	 ! boundaries in i-direction
 	if (periodicx.eq.0) then
          do j=0,j1
-		   Cbound(0,j)    =    0. !Cbound(1,j)
+		   Cbound(0,j)    =    Cbound(1,j)
 		   Cbound(i1,j)   =    Cbound(imax,j)
          enddo   
 	elseif (periodicx.eq.2) then

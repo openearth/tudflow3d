@@ -294,13 +294,13 @@
 		write(*,*) '# or ''VR1984_Cbed'' #'
 	CASE(096)
 		write(*,*) '# namelist &constants                            #'			
-		write(*,*) '# kn_d50_multiplier must be >0.                  #'		
+		write(*,*) '# kn_d50_multiplier and kn_d50_multiplier_bl must be >0.                  #'		
 	CASE(097)
 		write(*,*) '# namelist &constants                            #'			
 		write(*,*) '# avalanche_slope must be >=0.                   #'			
 	CASE(098)
 		write(*,*) '# namelist &constants                            #'			
-		write(*,*) '# calibfac_sand_pickup must be >=0.              #'	
+		write(*,*) '# calibfac_sand_pickup and calibfac_sand_bedload must be >=0.              #'	
 	CASE(099)
 		write(*,*) '# namelist &constants                            #'			
 		write(*,*) '# calibfac_Shields_cr must be >=0.               #'			
@@ -326,6 +326,15 @@
 		write(*,*) '# permeability_kl must be >=0.                   #'		
 		write(*,*) '# relation of Kozeny-Carmen could be used for kl #'		
 		write(*,*) '# kl = gD15^2/160nu*nl^3/(1-nl)^2                #'		
+	CASE(106)
+		write(*,*) '# namelist &constants                            #'			
+		write(*,*) '# k_layer_pickup must be >=1 (default 1)         #'		
+	CASE(107)
+		write(*,*) '# namelist &constants                            #'			
+		write(*,*) '# bl_relax must be between 0 and 1               #'		
+	CASE(108)
+		write(*,*) '# namelist &constants                            #'			
+		write(*,*) '# fcor must be >=0.                              #'			
 	CASE(110)
 		write(*,*) '# i history > imax                               #'			
 		write(*,*) '#                                                #'
@@ -537,9 +546,10 @@
 		write(*,*) '# namelist &num_scheme                           #'		
 		write(*,*) '# comp_filter_n is not positive                  #'	
 	CASE(406)
-		write(*,*) '# namelist &num_scheme                           #'		
-		write(*,*) '# CNdiffz must be 0 (explicit diffusion in z dir)#'
-		write(*,*) '# or 1 (Crank Nicolson implicit diffusion in z dir)      #'
+		write(*,*) '# namelist &num_scheme                                        #'		
+		write(*,*) '# CNdiffz must be 0 (explicit diffusion in z dir)             #'
+		write(*,*) '# or 1 (Crank Nicolson semi-implicit diffusion in z dir)      #'
+		write(*,*) '# or 2 (Euler backward implicit diffusion in z dir)           #'
 	CASE(407)
 		write(*,*) '# namelist &num_scheme                           #'		
 		write(*,*) '# npresIBM must be >0                            #'

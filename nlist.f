@@ -25,9 +25,9 @@
       
       INTEGER i,j,k,imax,jmax,kmax,i1,j1,k1,px,rank,kjet,nmax1,nmax2,nmax3,istep,CNdiffz,npresIBM,counter,npresPRHO,oPRHO
       INTEGER Lmix_type,slip_bot,SEM,azi_n,outflow_overflow_down,azi_n2,wiggle_detector,wd,applyVOF,Poutflow
-      REAL ekm_mol,nu_mol,pi,kappa,gx,gy,gz,Cs,Sc,calibfac_sand_pickup,calibfac_Shields_cr,morfac,morfac2
+      REAL ekm_mol,nu_mol,pi,kappa,gx,gy,gz,Cs,Sc,calibfac_sand_pickup,calibfac_Shields_cr,morfac,morfac2,calibfac_sand_bedload
       REAL dt,time_nm,time_n,time_np,t_end,t0_output,dt_output,te_output,dt_max,tstart_rms,CFL,dt_ini,tstart_morf,trestart,dt_old
-      REAL dt_output_movie,t0_output_movie,te_output_movie,te_rms,time_nm2,b_update,tstart_morf2
+      REAL dt_output_movie,t0_output_movie,te_output_movie,te_rms,time_nm2,b_update,tstart_morf2,fcor
       REAL U_b,V_b,W_b,rho_b,W_j,Awjet,Aujet,Avjet,Strouhal,radius_j,kn,W_ox,U_bSEM,V_bSEM,U_w,V_w,U_init,V_init
       REAL U_j2,Awjet2,Aujet2,Avjet2,Strouhal2,radius_j2,zjet2,rho_b2
       REAL xj(4),yj(4),radius_inner_j,W_j_powerlaw,plume_z_outflow_belowsurf
@@ -44,7 +44,7 @@
       CHARACTER*3 time_int,advec_conc,cutter,split_rho_cont
       CHARACTER*5 sgs_model
       CHARACTER*4 damping_drho_dz,extra_mix_visc
-	  CHARACTER*11 pickup_formula
+	  CHARACTER*11 pickup_formula,bedload_formula
 	  CHARACTER*8 transporteq_fracs
 	  CHARACTER*20 pickup_correction
       REAL damping_a1,damping_b1,damping_a2,damping_b2,cfixedbed
@@ -63,8 +63,8 @@
       CHARACTER*256 plumeQtseriesfile,plumectseriesfile,avfile      
       REAL Q_j,plumeQseries(1:10000),plumeQtseries(1:10000),plumectseries(1:10000),plumecseries(30,1:10000) !c(30) matches with size frac_init
       REAL Aplume,driftfluxforce_calfac
-	  REAL vwal,delta_nsed,nl,permeability_kl,pickup_fluctuations_ampl,z_tau_sed
-	  INTEGER pickup_fluctuations,cbed_method
+	  REAL vwal,delta_nsed,nl,permeability_kl,pickup_fluctuations_ampl,z_tau_sed,kn_d50_multiplier_bl,bl_relax
+	  INTEGER pickup_fluctuations,cbed_method,k_layer_pickup,nu_minimum_wall,pickup_bedslope_geo,wbed_correction
 	  
 	  
       CHARACTER*4 convection,diffusion
@@ -115,7 +115,7 @@
 	  REAL*8, DIMENSION(:),ALLOCATABLE :: rSEM3,thetaSEM3,zSEM3,wSEM3,xSEM3,ySEM3
 	  REAL, DIMENSION(:,:,:,:),ALLOCATABLE :: AA1,AA2,AA3
       REAL*8, DIMENSION(:),ALLOCATABLE :: lmrSEM3,lmzSEM3
-      REAL, DIMENSION(:,:),ALLOCATABLE :: azi_angle_p,azi_angle_u,azi_angle_v,zbed,Ubc1,Vbc1,Ubc2,Vbc2,rhocorr_air_z
+      REAL, DIMENSION(:,:),ALLOCATABLE :: azi_angle_p,azi_angle_u,azi_angle_v,zbed,Ubc1,Vbc1,Ubc2,Vbc2,rhocorr_air_z,Wbed
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: ekm,Diffcof,bednotfixed,bednotfixed_depo
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: Uold,Vold,Wold,Rold
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: Unew,Vnew,Wnew,Rnew
@@ -136,6 +136,8 @@
 	  REAL, DIMENSION(:,:,:),ALLOCATABLE :: Chisbp
 	  REAL, DIMENSION(:,:),ALLOCATABLE :: Uhisbp,Vhisbp,Whisbp
 	  REAL*4, DIMENSION(:,:,:),ALLOCATABLE :: fc_global
+	  REAL, DIMENSION(:,:),ALLOCATABLE :: uuR_relax,uuL_relax,vvR_relax,vvL_relax
+	  REAL, DIMENSION(:,:,:),ALLOCATABLE :: qbU,qbV
 
  !     REAL, DIMENSION(:,:,:),ALLOCATABLE :: Uf,Vf,Wf
 
@@ -233,7 +235,7 @@
      & t0_output_movie,dt_output_movie,te_output_movie,tstart_morf,te_rms,tstart_morf2
 	NAMELIST /num_scheme/convection,numdiff,wiggle_detector,diffusion,comp_filter_a,comp_filter_n,CNdiffz,npresIBM,advec_conc,
      & continuity_solver,transporteq_fracs,split_rho_cont,driftfluxforce_calfac,depo_implicit,IBMorder,npresPRHO,
-     & pres_in_predictor_step,Poutflow,oPRHO
+     & pres_in_predictor_step,Poutflow,oPRHO,applyVOF
 	NAMELIST /ambient/U_b,V_b,W_b,bcfile,rho_b,SEM,nmax2,nmax1,nmax3,lm_min,lm_min3,slip_bot,kn,interaction_bed,
      & periodicx,periodicy,dpdx,dpdy,W_ox,Hs,Tp,nx_w,ny_w,obst,bc_obst_h,U_b3,V_b3,surf_layer,wallup,bedlevelfile,
      & U_bSEM,V_bSEM,U_w,V_w,c_bed,cfixedbed,U_init,V_init,initconditionsfile,rho_b2,monopile,kn_mp,kn_sidewalls
@@ -241,11 +243,12 @@
      & U_j2,plumetseriesfile2,Awjet2,Aujet2,Avjet2,Strouhal2,azi_n2,radius_j2,zjet2,bedplume,radius_inner_j,xj,yj,W_j_powerlaw,
      & plume_z_outflow_belowsurf,hindered_settling,Q_j,plumeQtseriesfile,plumectseriesfile
 	NAMELIST /LESmodel/sgs_model,Cs,Lmix_type,nr_HPfilter,damping_drho_dz,damping_a1,damping_b1,damping_a2,damping_b2,
-     & extra_mix_visc
+     & extra_mix_visc,nu_minimum_wall
 	NAMELIST /constants/kappa,gx,gy,gz,ekm_mol,calibfac_sand_pickup,pickup_formula,kn_d50_multiplier,avalanche_slope,
      &	av_slope_z,calibfac_Shields_cr,reduction_sedimentation_shields,morfac,morfac2,avalanche_until_done,avfile,
      & settling_along_gvector,vwal,nl,permeability_kl,pickup_fluctuations_ampl,pickup_fluctuations,pickup_correction,cbed_method,
-     & z_tau_sed
+     & z_tau_sed,k_layer_pickup,pickup_bedslope_geo,bedload_formula,kn_d50_multiplier_bl,calibfac_sand_bedload,bl_relax,fcor,
+     & wbed_correction
 	NAMELIST /fractions_in_plume/fract
 	NAMELIST /ship/U_TSHD,LOA,Lfront,Breadth,Draught,Lback,Hback,xfront,yfront,kn_TSHD,nprop,Dprop,xprop,yprop,zprop,
      &   Pprop,rudder,rot_prop,draghead,Dsp,xdh,perc_dh_suction,softnose,Hfront,cutter
@@ -311,6 +314,7 @@
 	depo_cbed_option=0 !2-3-2020 obsolete; user input not read anymore from num_scheme always option 0 is used in code 
 	IBMorder=0 
 	Poutflow=0 ! 0 (default, most robust) Poutflow is zero for complete outflow crosssection at rmax; 1 (optional) Poutflow is zero at just one grid-location at rmax --> sometimes better but less robust
+	applyVOF=0
 	!! ambient:
 	U_b = -999.
 	V_b = -999.
@@ -493,6 +497,8 @@
 	damping_a2 = -999.
 	damping_b2 = -999.
 	extra_mix_visc='none'
+	nu_minimum_wall = 0 
+	
 	!!constants
 	kappa=-999.
 	gx = -999.
@@ -504,9 +510,12 @@
 	time_n=0.
 	time_np=0.
 	calibfac_sand_pickup = 1.
+	calibfac_sand_bedload = 1.
 	calibfac_Shields_cr = 1.
 	pickup_formula = 'vanrijn1984' !default
+	bedload_formula ='nonenon0000' !default no bedload taken into account 
 	kn_d50_multiplier = 2. !default, kn=2*d50 defined in paper Van Rijn 1984
+	kn_d50_multiplier_bl = 2. !default, kn=d90~2*d50 
 	avalanche_slope = -99. 
 	avalanche_slope(1)=0. !default vertical slopes are allowed
 	av_slope_z= -1.
@@ -517,12 +526,17 @@
 	avalanche_until_done=0
 	pickup_correction='nonenonenonenonenone'
 	vwal=-999.
+	wbed_correction = 0
 	nl=-999.
+	fcor =1.
 	permeability_kl=-999.
 	pickup_fluctuations_ampl=0.
 	pickup_fluctuations=0
 	cbed_method = 1
+	k_layer_pickup = 1
 	z_tau_sed = -999.
+	pickup_bedslope_geo=0
+	bl_relax=0.01 
 	!! ship
 	U_TSHD=-999.
 	LOA=-999.
@@ -617,8 +631,8 @@
 	else
 	  numdiff=numdiff*2.  !needed to get correct value (in advec is a 'hidden' factor 2/4)
 	endif
-	IF (CNdiffz.ne.0.and.CNdiffz.ne.1) CALL writeerror(406)
-	IF (CNdiffz<0) CALL writeerror(407)
+	IF (CNdiffz.ne.0.and.CNdiffz.ne.1.and.CNdiffz.ne.2) CALL writeerror(406)
+	IF (npresIBM<0) CALL writeerror(407)
 	pres_in_predictor_step_internal = pres_in_predictor_step
 
 	READ (UNIT=1,NML=ambient,IOSTAT=ios)
@@ -811,7 +825,6 @@
 		nfrac_air(i)=n
 		write(*,*),'air fraction found: ',n
 	  ENDIF
-	  applyVOF=0
 	  IF (frac(n)%type.eq.1) THEN
 		n1=n1+1
 		nfrac_silt(n1)=n
@@ -1307,9 +1320,9 @@
 	IF (pickup_formula.ne.'vanrijn1984'.and.pickup_formula.ne.'nielsen1992'.and.pickup_formula.ne.'okayasu2010'
      & .and.pickup_formula.ne.'vanrijn2019'.and.pickup_formula.ne.'VR2019_Cbed'
      & .and.pickup_formula.ne.'VR1984_Cbed')   CALL writeerror(95)
-	IF (kn_d50_multiplier<0.) CALL writeerror(96)
+	IF (kn_d50_multiplier<0.or.kn_d50_multiplier_bl<0.) CALL writeerror(96)
 	IF (MINVAL(avalanche_slope)<0.and.MINVAL(avalanche_slope).ne.-99.) CALL writeerror(97)
-	IF (calibfac_sand_pickup<0.) CALL writeerror(98)
+	IF (calibfac_sand_pickup<0.or.calibfac_sand_bedload<0.) CALL writeerror(98)
 	IF (calibfac_Shields_cr<0.) CALL writeerror(99)
 	IF (morfac<0.) CALL writeerror(101)
 	IF (morfac2<1.) CALL writeerror(102)
@@ -1318,7 +1331,10 @@
 		IF (nl<0.or.nl<(1.-cfixedbed)) CALL writeerror(104)
 		delta_nsed=(nl-(1.-cfixedbed))/(cfixedbed) !delta_nsed=(nl-n0)/(1-n0)
 		IF (permeability_kl<0) CALL writeerror(105)
+		IF (fcor<0.) CALL writeerror(108)
 	ENDIF
+	IF (k_layer_pickup<1) CALL writeerror(106)
+	IF (bl_relax>1.or.bl_relax<0.) CALL writeerror(107)
 
 	READ (UNIT=1,NML=ship,IOSTAT=ios)
 	!! check input constants
@@ -1710,6 +1726,22 @@
 	ALLOCATE(Ubc2(0:j1,1:kmax))
 	ALLOCATE(Vbc2(0:j1,1:kmax))
 	ALLOCATE(ubot(0:i1,0:j1))
+	ALLOCATE(Wbed(0:i1,0:j1))
+	Wbed = 0.
+	
+	ALLOCATE(qbU(1:nfrac,0:i1,0:j1))
+	ALLOCATE(qbV(1:nfrac,0:i1,0:j1))
+	ALLOCATE(uuR_relax(0:i1,0:j1))
+	ALLOCATE(uuL_relax(0:i1,0:j1))
+	ALLOCATE(vvR_relax(0:i1,0:j1))
+	ALLOCATE(vvL_relax(0:i1,0:j1))	
+	uuR_relax = 0. 
+	uuL_relax = 0. 
+	vvR_relax = 0. 
+	vvL_relax = 0. 
+	qbU = 0.
+	qbV = 0.
+
 	! init at zero (when no bcfile it stays zero)
 	Ubcoarse1=0.
 	Ubcoarse2=0.

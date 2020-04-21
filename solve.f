@@ -673,7 +673,7 @@ c
 	real dnewcbot(nfrac,0:i1,0:j1)	
 	real aaa(0:k1),bbb(0:k1),ccc(0:k1),ekm_min,ekm_plus,rhss(0:k1)
 	real utr(0:i1,0:j1,0:k1),vtr(0:i1,0:j1,0:k1),wtr(0:i1,0:j1,0:k1)	
-	real ws(0:i1,0:j1,0:k1),gvector 
+	real ws(0:i1,0:j1,0:k1),gvector,CNz
 !		real dUdt1(0:i1,0:j1,0:k1),dVdt1(0:i1,0:j1,0:k1),dWdt1(0:i1,0:j1,0:k1)
 !	
 !	dUdt1=dudt
@@ -736,7 +736,9 @@ c********************************************************************
 
 	endif
 
-
+	   if (applyVOF.eq.1) then ! VOF fraction apply real density for gravity and sediment settling related things
+		 CALL state(cnew,rnew)
+	   endif 
 	dcdt = 0.
 	sumWkm = 0.
 	dnewc=0.
@@ -854,7 +856,12 @@ c********************************************************************
 	      	    call adveccbot_TVD(dnewcbot(n,:,:),cnewbot(n,:,:),Ubot_TSHD,Vbot_TSHD,Ru,Rp,dr,phiv,phipt,dz,
      +            	i1,j1,ib,ie,jb,je,dt,rank,px,periodicx,periodicy)
 				dcdtbot(n,:,:)= cnewbot(n,:,:) + dt*dnewcbot(n,:,:) ! time update	
-           IF (CNdiffz.eq.1) THEN !CN semi implicit treatment diff-z:
+           IF (CNdiffz.eq.1.or.CNdiffz.eq.2) THEN !CN semi implicit treatment diff-z:
+			IF (CNdiffz.eq.1) THEN 
+				CNz=0.5 
+			ELSE 
+				CNz=1.
+			ENDIF 
 	     call bound_c(dcdt(n,:,:,:),frac(n)%c,n,0.) ! bc start CN-diffz ABv
 	     do k=k1,k1 !-kjet,k1
 	       do t=1,tmax_inPpunt
@@ -871,9 +878,9 @@ c********************************************************************
 	           kpp=MIN(k1,k+2)
 	           ekm_min=0.5*(Diffcof(i,j,km)+Diffcof(i,j,k))
 	           ekm_plus=0.5*(Diffcof(i,j,kp)+Diffcof(i,j,k))
-	           aaa(k)=-0.5*ekm_min*dt/dz**2
-	           bbb(k)=1.+0.5*(ekm_min+ekm_plus)*dt/dz**2
-	           ccc(k)=-0.5*ekm_plus*dt/dz**2
+	           aaa(k)=-CNz*ekm_min*dt/dz**2
+	           bbb(k)=1.+CNz*(ekm_min+ekm_plus)*dt/dz**2
+	           ccc(k)=-CNz*ekm_plus*dt/dz**2
                  enddo
 		 aaa(0)=0.
 		 aaa(k1)=0.
@@ -904,10 +911,10 @@ c********************************************************************
 	    call state(dcdt,drdt) ! determine drdt with intermediate dcdt
 
 	   if (applyVOF.eq.1) then ! VOF fraction, do not solve fully variable density NavierStokes but NS with constant density in advection and diffusion; only apply variable density in gravity term
-		 drdt=1.
-		 rhU=1.
-		 rhV=1.
-		 rhW=1. 
+		 drdt=rho_b
+		 rhU=rho_b
+		 rhV=rho_b
+		 rhW=rho_b
 	   endif
 	endif
 
@@ -953,7 +960,25 @@ c********************************************************************
       call diffu_com4(dnew,Srr,Spr,Szr,Spp,Ru,Rp,dr,phipt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	endif
 
-
+	if (applyVOF.eq.1) then ! VOF fraction apply real density only here for correct determination gravity
+      do k=1,kmax
+         do j=1,jmax
+            do i=1,imax
+	    dnew(i,j,k)=dnew(i,j,k)-(gx*cos_u(j)+gy*sin_u(j))*(0.5*(rnew(i,j,k)+rnew(i+1,j,k))-rho_b)/
+     1 (0.5*(rnew(i,j,k)+rnew(i+1,j,k))/rho_b)
+     1     +Ppropx(i,j,k) 
+            dUdt(i,j,k)=Unew(i,j,k)*rhU(i,j,k)+ !0.5*(rnew(i,j,k)+rnew(i+1,j,k))+
+     1     dt*(     facAB3_1*dnew(i,j,k)+
+     1              facAB3_2*wx(i,j,k)+
+     1              facAB3_3*wxold(i,j,k)+
+     1              facAB3_4*wxolder(i,j,k))
+              wxolder(i,j,k) = wxold(i,j,k)
+              wxold(i,j,k)   = wx(i,j,k)
+              wx(i,j,k)      = dnew(i,j,k)
+            enddo
+         enddo
+      enddo	
+	else 
       do k=1,kmax
          do j=1,jmax
             do i=1,imax
@@ -970,6 +995,7 @@ c********************************************************************
             enddo
          enddo
       enddo
+	endif 
 
 c********************************************************************
 c     CALCULATE advection, diffusion and Force V-velocity
@@ -1010,6 +1036,25 @@ c********************************************************************
       call diffv_com4(dnew,Spr,Spp,Spz,Ru,Rp,dr,phipt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 	endif
 
+	if (applyVOF.eq.1) then ! VOF fraction apply real density only here for correct determination gravity
+      do k=1,kmax
+         do j=1,jmax
+            do i=1,imax
+	    dnew(i,j,k)=dnew(i,j,k)-(-gx*sin_v(j)+gy*cos_v(j))*(0.5*(rnew(i,j,k)+rnew(i,j+1,k))-rho_b)/
+     1 (0.5*(rnew(i,j,k)+rnew(i,j+1,k))/rho_b)
+     1     +Ppropy(i,j,k) 
+            dVdt(i,j,k)=Vnew(i,j,k)*rhV(i,j,k)+ !*0.5*(rnew(i,j,k)+rnew(i,j+1,k))+
+     1     dt*(      facAB3_1*dnew(i,j,k)+
+     1               facAB3_2*wy(i,j,k)+
+     1               facAB3_3*wyold(i,j,k)+
+     1               facAB3_4*wyolder(i,j,k))
+             wyolder(i,j,k) = wyold(i,j,k)
+             wyold(i,j,k)   = wy(i,j,k)
+             wy(i,j,k)      = dnew(i,j,k)
+            enddo
+         enddo
+      enddo	
+	else 
       do k=1,kmax
          do j=1,jmax
             do i=1,imax
@@ -1026,6 +1071,7 @@ c********************************************************************
             enddo
          enddo
       enddo
+	endif 
 c********************************************************************
 c     CALCULATE advection, diffusion and Force W-velocity
 c********************************************************************
@@ -1070,11 +1116,10 @@ c********************************************************************
 	endif
 	
 	   if (applyVOF.eq.1) then ! VOF fraction apply real density only here for correct determination gravity
-		 CALL state(cnew,rnew)
       do k=1,kmax
          do j=1,jmax
             do i=1,imax
-	    dnew(i,j,k)=dnew(i,j,k)-gz*(0.5*(rnew(i,j,k)+rnew(i,j,k+1))-rho_b)/(0.5*(rnew(i,j,k)+rnew(i,j,k+1)))
+	    dnew(i,j,k)=dnew(i,j,k)-gz*(0.5*(rnew(i,j,k)+rnew(i,j,k+1))-rho_b)/(0.5*(rnew(i,j,k)+rnew(i,j,k+1))/rho_b)
      1     +Ppropz(i,j,k)
             dWdt(i,j,k)= Wnew(i,j,k)*rhW(i,j,k)+ !0.5*(rnew(i,j,k)+rnew(i,j,k+1))+
      1     dt*(      facAB3_1*dnew(i,j,k)+
@@ -1088,7 +1133,6 @@ c********************************************************************
             enddo
          enddo
       enddo	
-	    rnew=1. ! make density 1 again
 	   else 
       do k=1,kmax
          do j=1,jmax
@@ -1110,7 +1154,12 @@ c********************************************************************
 	   endif
   
 
-      IF (CNdiffz.eq.1) THEN !CN semi implicit treatment diff-z:
+      IF (CNdiffz.eq.1.or.CNdiffz.eq.2) THEN !CN semi implicit treatment diff-z:
+			IF (CNdiffz.eq.1) THEN 
+				CNz=0.5 
+			ELSE 
+				CNz=1.
+			ENDIF 	  
       call bound_rhoU(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,
      & Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
        do j=1,jmax
@@ -1121,9 +1170,9 @@ c********************************************************************
 	    kpp=MIN(k1,k+2)
 	    ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i+1,j,k)+ekm(i+1,j,km))
 	    ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i+1,j,k)+ekm(i+1,j,kp))
-	    aaa(k)=-0.5*ekm_min*dt/dz**2/(0.5*(drdt(i,j,km)+drdt(i+1,j,km)))
-	    bbb(k)=1.+0.5*(ekm_min+ekm_plus)*dt/dz**2/(0.5*(drdt(i,j,k)+drdt(i+1,j,k)))
-	    ccc(k)=-0.5*ekm_plus*dt/dz**2/(0.5*(drdt(i,j,kp)+drdt(i+1,j,kp)))
+	    aaa(k)=-CNz*ekm_min*dt/dz**2/(0.5*(drdt(i,j,km)+drdt(i+1,j,km)))
+	    bbb(k)=1.+CNz*(ekm_min+ekm_plus)*dt/dz**2/(0.5*(drdt(i,j,k)+drdt(i+1,j,k)))
+	    ccc(k)=-CNz*ekm_plus*dt/dz**2/(0.5*(drdt(i,j,kp)+drdt(i+1,j,kp)))
             enddo
 	    aaa(0)=0.
 	    aaa(k1)=0.
@@ -1143,9 +1192,9 @@ c********************************************************************
 	    kpp=MIN(k1,k+2)
 	    ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i,j+1,k)+ekm(i,j+1,km))
 	    ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i,j+1,k)+ekm(i,j+1,kp))
-	    aaa(k)=-0.5*ekm_min*dt/dz**2/(0.5*(drdt(i,j,km)+drdt(i,j+1,km)))
-	    bbb(k)=1.+0.5*(ekm_min+ekm_plus)*dt/dz**2/(0.5*(drdt(i,j,k)+drdt(i,j+1,k)))
-	    ccc(k)=-0.5*ekm_plus*dt/dz**2/(0.5*(drdt(i,j,kp)+drdt(i,j+1,kp)))
+	    aaa(k)=-CNz*ekm_min*dt/dz**2/(0.5*(drdt(i,j,km)+drdt(i,j+1,km)))
+	    bbb(k)=1.+CNz*(ekm_min+ekm_plus)*dt/dz**2/(0.5*(drdt(i,j,k)+drdt(i,j+1,k)))
+	    ccc(k)=-CNz*ekm_plus*dt/dz**2/(0.5*(drdt(i,j,kp)+drdt(i,j+1,kp)))
             enddo
 	    aaa(0)=0.
 	    aaa(k1)=0.
@@ -1166,9 +1215,9 @@ c********************************************************************
 	    kpp=MIN(k1,k+2)
 	    ekm_min=ekm(i,j,k)
 	    ekm_plus=ekm(i,j,kp)
-	    aaa(k)=-0.5*ekm_min*dt/dz**2/(0.5*(drdt(i,j,km)+drdt(i+1,j,k)))
-	    bbb(k)=1.+0.5*(ekm_min+ekm_plus)*dt/dz**2/(0.5*(drdt(i,j,k)+drdt(i+1,j,kp)))
-	    ccc(k)=-0.5*ekm_plus*dt/dz**2/(0.5*(drdt(i,j,kp)+drdt(i+1,j,kpp)))
+	    aaa(k)=-CNz*ekm_min*dt/dz**2/(0.5*(drdt(i,j,km)+drdt(i+1,j,k)))
+	    bbb(k)=1.+CNz*(ekm_min+ekm_plus)*dt/dz**2/(0.5*(drdt(i,j,k)+drdt(i+1,j,kp)))
+	    ccc(k)=-CNz*ekm_plus*dt/dz**2/(0.5*(drdt(i,j,kp)+drdt(i+1,j,kpp)))
             enddo
 	    aaa(0)=0.
 	    aaa(k1)=0.
@@ -1182,13 +1231,11 @@ c********************************************************************
        enddo
        ENDIF
 		pold=p+pold    !what is called p here was dp in reality, now p is 			--> P^n 
-		!IF (applyVOF.eq.1) THEN 
+
 		  !IF (continuity_solver.eq.35) THEN
 			!pold1=pold2 !-->P^n-2
 			!pold2=pold3 !-->P^n-1
 			!pold3=pold !--> P^n		  
-		  !  CALL state(cnew,rnew)		  
-		  !  pold=pold/rnew(1:imax,1:jmax,1:kmax)
 		  IF (continuity_solver.eq.35.or.continuity_solver.eq.36) THEN
 			pold1=pold2 !-->P^n-2
 			pold2=pold3 !-->P^n-1
@@ -1197,6 +1244,9 @@ c********************************************************************
 		  IF (pres_in_predictor_step.eq.0) THEN 
 		    pold=0.
 		  ENDIF
+		  IF (applyVOF.eq.1) THEN 
+			pold=rho_b*pold/rnew(1:imax,1:jmax,1:kmax)
+		  ENDIF 
 		!ENDIF 
 	  
       call pshiftb(pold,pplus) !,rank,imax,jmax,kmax,px)
@@ -1261,6 +1311,10 @@ c********************************************************************
 		!  rnew=1.
 		! ENDIF
 		!ENDIF 
+		IF (applyVOF.eq.1) THEN 
+			pold=pold/rho_b*rnew(1:imax,1:jmax,1:kmax)  
+			rnew=rho_b
+		ENDIF 
 		
 
       return
@@ -2833,7 +2887,7 @@ c
 	real aaa(0:k1),bbb(0:k1),ccc(0:k1),ekm_min,ekm_plus,rhss(0:k1)
 	real utr(0:i1,0:j1,0:k1),vtr(0:i1,0:j1,0:k1),wtr(0:i1,0:j1,0:k1)	
 !		real dUdt1(0:i1,0:j1,0:k1),dVdt1(0:i1,0:j1,0:k1),dWdt1(0:i1,0:j1,0:k1)
-	real ws(0:i1,0:j1,0:k1),gvector 
+	real ws(0:i1,0:j1,0:k1),gvector,CNz
 !	
 !	dUdt1=dudt
 !	dVdt1=dvdt
@@ -2949,7 +3003,12 @@ c********************************************************************
      +            	i1,j1,ib,ie,jb,je,dt,rank,px,periodicx,periodicy)
 		    dcdtbot(n,:,:)= cnewbot(n,:,:) + dt*dnewcbot(n,:,:) ! time update			  
 	      	  !endif
-           IF (CNdiffz.eq.1) THEN !CN semi implicit treatment diff-z:
+           IF (CNdiffz.eq.1.or.CNdiffz.eq.2) THEN !CN semi implicit treatment diff-z:
+			IF (CNdiffz.eq.1) THEN 
+				CNz=0.5 
+			ELSE 
+				CNz=1.
+			ENDIF 		   
 	     call bound_c(dcdt(n,:,:,:),frac(n)%c,n,0.) ! bc start CN-diffz ABv
 	     do k=k1,k1 !-kjet,k1
 	       do t=1,tmax_inPpunt
@@ -2966,9 +3025,9 @@ c********************************************************************
 	           kpp=MIN(k1,k+2)
 	           ekm_min=0.5*(Diffcof(i,j,km)+Diffcof(i,j,k))
 	           ekm_plus=0.5*(Diffcof(i,j,kp)+Diffcof(i,j,k))
-	           aaa(k)=-0.5*ekm_min*dt/dz**2
-	           bbb(k)=1.+0.5*(ekm_min+ekm_plus)*dt/dz**2
-	           ccc(k)=-0.5*ekm_plus*dt/dz**2
+	           aaa(k)=-CNz*ekm_min*dt/dz**2
+	           bbb(k)=1.+CNz*(ekm_min+ekm_plus)*dt/dz**2
+	           ccc(k)=-CNz*ekm_plus*dt/dz**2
                  enddo
 		 aaa(0)=0.
 		 aaa(k1)=0.
@@ -2998,10 +3057,10 @@ c********************************************************************
 	    enddo
 	  call state(dcdt,drdt) ! determine drdt with intermediate dcdt
 	   if (applyVOF.eq.1) then ! VOF fraction, do not solve fully variable density NavierStokes but NS with constant density in advection and diffusion; only apply variable density in gravity term
-		 drdt=1.
-		 rhU=1.
-		 rhV=1.
-		 rhW=1. 
+		 drdt=rho_b
+		 rhU=rho_b
+		 rhV=rho_b
+		 rhW=rho_b 
 	   endif		  
 	endif
 
@@ -3148,7 +3207,7 @@ c********************************************************************
             enddo
          enddo
       enddo	
-	    rnew=1. ! make density 1 again
+	    rnew=rho_b ! make density 1 again
 	   else 
       do k=1,kmax
          do j=1,jmax
@@ -3162,7 +3221,12 @@ c********************************************************************
       enddo
 	 endif 
 
-      IF (CNdiffz.eq.1) THEN !CN semi implicit treatment diff-z:
+      IF (CNdiffz.eq.1.or.CNdiffz.eq.2) THEN !CN semi implicit treatment diff-z:
+			IF (CNdiffz.eq.1) THEN 
+				CNz=0.5 
+			ELSE 
+				CNz=1.
+			ENDIF 	  
       call bound_rhoU(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,
      & Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
        do j=1,jmax
@@ -3173,9 +3237,9 @@ c********************************************************************
 	    kpp=MIN(k1,k+2)
 	    ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i+1,j,k)+ekm(i+1,j,km))
 	    ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i+1,j,k)+ekm(i+1,j,kp))
-	    aaa(k)=-0.5*ekm_min*dt/dz**2/(0.5*(drdt(i,j,km)+drdt(i+1,j,km)))
-	    bbb(k)=1.+0.5*(ekm_min+ekm_plus)*dt/dz**2/(0.5*(drdt(i,j,k)+drdt(i+1,j,k)))
-	    ccc(k)=-0.5*ekm_plus*dt/dz**2/(0.5*(drdt(i,j,kp)+drdt(i+1,j,kp)))
+	    aaa(k)=-CNz*ekm_min*dt/dz**2/(0.5*(drdt(i,j,km)+drdt(i+1,j,km)))
+	    bbb(k)=1.+CNz*(ekm_min+ekm_plus)*dt/dz**2/(0.5*(drdt(i,j,k)+drdt(i+1,j,k)))
+	    ccc(k)=-CNz*ekm_plus*dt/dz**2/(0.5*(drdt(i,j,kp)+drdt(i+1,j,kp)))
             enddo
 	    aaa(0)=0.
 	    aaa(k1)=0.
@@ -3195,9 +3259,9 @@ c********************************************************************
 	    kpp=MIN(k1,k+2)
 	    ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i,j+1,k)+ekm(i,j+1,km))
 	    ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i,j+1,k)+ekm(i,j+1,kp))
-	    aaa(k)=-0.5*ekm_min*dt/dz**2/(0.5*(drdt(i,j,km)+drdt(i,j+1,km)))
-	    bbb(k)=1.+0.5*(ekm_min+ekm_plus)*dt/dz**2/(0.5*(drdt(i,j,k)+drdt(i,j+1,k)))
-	    ccc(k)=-0.5*ekm_plus*dt/dz**2/(0.5*(drdt(i,j,kp)+drdt(i,j+1,kp)))
+	    aaa(k)=-CNz*ekm_min*dt/dz**2/(0.5*(drdt(i,j,km)+drdt(i,j+1,km)))
+	    bbb(k)=1.+CNz*(ekm_min+ekm_plus)*dt/dz**2/(0.5*(drdt(i,j,k)+drdt(i,j+1,k)))
+	    ccc(k)=-CNz*ekm_plus*dt/dz**2/(0.5*(drdt(i,j,kp)+drdt(i,j+1,kp)))
             enddo
 	    aaa(0)=0.
 	    aaa(k1)=0.
@@ -3218,9 +3282,9 @@ c********************************************************************
 	    kpp=MIN(k1,k+2)
 	    ekm_min=ekm(i,j,k)
 	    ekm_plus=ekm(i,j,kp)
-	    aaa(k)=-0.5*ekm_min*dt/dz**2/(0.5*(drdt(i,j,km)+drdt(i+1,j,k)))
-	    bbb(k)=1.+0.5*(ekm_min+ekm_plus)*dt/dz**2/(0.5*(drdt(i,j,k)+drdt(i+1,j,kp)))
-	    ccc(k)=-0.5*ekm_plus*dt/dz**2/(0.5*(drdt(i,j,kp)+drdt(i+1,j,kpp)))
+	    aaa(k)=-CNz*ekm_min*dt/dz**2/(0.5*(drdt(i,j,km)+drdt(i+1,j,k)))
+	    bbb(k)=1.+CNz*(ekm_min+ekm_plus)*dt/dz**2/(0.5*(drdt(i,j,k)+drdt(i+1,j,kp)))
+	    ccc(k)=-CNz*ekm_plus*dt/dz**2/(0.5*(drdt(i,j,kp)+drdt(i+1,j,kpp)))
             enddo
 	    aaa(0)=0.
 	    aaa(k1)=0.
@@ -3659,7 +3723,6 @@ c
 		call state_edges(cU,rhU)
 		call state_edges(cV,rhV)
 		call state_edges(cW,rhW)
-		call state(dcdt,drdt)
 	  endif	 
 	 IF (slipvel.eq.2) THEN
 	  do j=1,jmax
@@ -4738,10 +4801,10 @@ c
 		!p=(p(1:imax,1:jmax,1:kmax)+(1./drdt(1:imax,1:jmax,1:kmax)+1./rho_b)*dp(1:imax,1:jmax,1:kmax))*rho_b 
 		
 	  if (applyVOF.eq.1) then !make rhU,rhV,rhW 1 again 
-		rhU=1.
-		rhV=1.
-		rhW=1.
-		drdt=1.
+		rhU=rho_b
+		rhV=rho_b
+		rhW=rho_b
+		drdt=rho_b
 	  endif		
 	ELSEIF (continuity_solver.eq.36) THEN 
 	 IF (slipvel.eq.2) THEN
@@ -4791,10 +4854,10 @@ c
       enddo 	
 		p=p(1:imax,1:jmax,1:kmax)*rho_b2 !drdt(1:imax,1:jmax,1:kmax)  !scale P back with rho	  
 	  if (applyVOF.eq.1) then !make rhU,rhV,rhW 1 again 
-		rhU=1.
-		rhV=1.
-		rhW=1.
-		drdt=1.
+		rhU=rho_b
+		rhV=rho_b
+		rhW=rho_b
+		drdt=rho_b
 	  endif		  
 
 	ELSE

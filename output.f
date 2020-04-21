@@ -368,7 +368,7 @@
        integer :: ncid, varid1,varid2,varid3, varid4, varid5, varid6, varid7, varid8, varid9, varid10,varid11
 	   integer :: dimids(NDIMS), dimids2(NDIMS2),dimids3(NDIMS3),dimids5(NDIMS5)
        integer :: x_dimid, y_dimid, z_dimid, nfrac_dimid, par_dimid
-	integer :: dimids4(NDIMS),varid20,varid21,varid22
+	integer :: dimids4(NDIMS),varid20,varid21,varid22,varid12,varid13
 	character(1024) :: svnversion
 	character(1024) :: svnurl
       include 'version.inc'
@@ -456,7 +456,14 @@
 		   call check( nf90_put_att(ncid, varid22, 'long_name', 'Volume concentration for each fraction inside bed') )		
        call check( nf90_def_var(ncid, "kbed", NF90_SHORT, dimids5, varid11) )
        call check( nf90_put_att(ncid, varid11, 'units', '-') )
-       call check( nf90_put_att(ncid, varid11, 'long_name', '2D index of highest bed cell') )		   
+       call check( nf90_put_att(ncid, varid11, 'long_name', '2D index of highest bed cell') )
+
+       call check( nf90_def_var(ncid, "Sbedload_u", NF90_REAL, dimids4, varid12) )
+       call check( nf90_put_att(ncid, varid12, 'units', 'kg/m/s') )
+       call check( nf90_put_att(ncid, varid12, 'long_name', 'U-bedload flux for each fraction (multiplied by morfac)') )	
+       call check( nf90_def_var(ncid, "Sbedload_v", NF90_REAL, dimids4, varid13) )
+       call check( nf90_put_att(ncid, varid13, 'units', 'kg/m/s') )
+       call check( nf90_put_att(ncid, varid13, 'long_name', 'V-bedload flux for each fraction (multiplied by morfac)') )	   
 		endif
 	endif
        call check( nf90_def_var(ncid, "rho", NF90_REAL, dimids, varid5) )
@@ -511,6 +518,8 @@
 		  call check( nf90_put_var(ncid, varid21, zzbed(1:imax,1:jmax) ))
 		  call check( nf90_put_var(ncid, varid22, Clivebed(1:nfrac,1:imax,1:jmax,1:kmax)) )
 		  call check( nf90_put_var(ncid, varid11, kbed(1:imax,1:jmax) ))
+		  call check( nf90_put_var(ncid, varid12, qbU(1:nfrac,1:imax,1:jmax) ))
+		  call check( nf90_put_var(ncid, varid13, qbV(1:nfrac,1:imax,1:jmax) ))
 		endif
 		  
 	endif
@@ -537,7 +546,7 @@
 	   
 	   
 	   if (applyVOF.eq.1) then 
-		 rnew=1.
+		 rnew=rho_b
 	   endif
 
 	end

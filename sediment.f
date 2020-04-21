@@ -150,7 +150,13 @@
 	ENDIF
 
 	csed2=cW !csed
-	rr2=rhW  !rr
+	IF (applyVOF.eq.1) THEN
+		call state_edges(cW,rhW)
+	ENDIF 
+	rr2=rhW
+	IF (applyVOF.eq.1) THEN
+		rhW=rho_b 
+	ENDIF 
 	if (nobst>0.or.bedlevelfile.ne.''.or.interaction_bed.ge.4) then ! default C(k=0)=C(k=1); therefore only for cases when bed is not necessarily at k=0 this fix is needed:
 	 DO i=0,i1
 	  DO j=0,j1
@@ -299,7 +305,13 @@
 	  ENDDO
 
 	csed2=cW !csed
-	rr2=rhW  !rr 
+	IF (applyVOF.eq.1) THEN
+		call state_edges(cW,rhW)
+	ENDIF 
+	rr2=rhW
+	IF (applyVOF.eq.1) THEN
+		rhW=rho_b 
+	ENDIF 
 	if (nobst>0.or.bedlevelfile.ne.''.or.interaction_bed.ge.4) then ! default C(k=0)=C(k=1); therefore only for cases when bed is not necessarily at k=0 this fix is needed:
 	 DO i=0,i1
 	  DO j=0,j1
@@ -408,7 +420,7 @@
 	REAL     cbottot,kn_sed_avg,Mr_avg,tau_e_avg,ctot_firstcel,cbotnewtot,cbotnewtot_pos
 	REAL PSD_bot_sand_massfrac(nfr_sand),PSD_bed_sand_massfrac(nfr_sand),PSD_sand(0:nfr_sand),factor,d50
 	REAL cbottot_sand,mbottot_sand,cbedtot,mbedtot_sand,diameter_sand_PSD(0:nfr_sand)
-	REAL cbedtot_sand,rho_botsand,rho_bedsand,rho_sand,delta,Dstar,Shields_cr,ustc2,TT,phip,erosion_sand
+	REAL cbedtot_sand,rho_botsand,rho_bedsand,rho_sand,delta,Dstar,Shields_cr,ustc2,TT,phipp,erosion_sand
 	REAL ws_botsand,ws_bedsand,ws_sand,Re_p,CD,Shields_eff,dubdt,Fd,Fi,Fl,W
 	REAL erosionf(nfrac),depositionf(nfrac),erosion_avg(nfrac)
 	REAL zb_all(0:i1,0:j1),maxbedslope(0:i1,0:j1),sl1,sl2,sl3,sl4,sl5,sl6,sl7,sl8
@@ -417,10 +429,11 @@
 	INTEGER itrgt,jtrgt,nav,n_av,kplus2,kpp
 	REAL ws_botsand2,rho_botsand2,mbottot_sand2,PSD_bot_sand_massfrac2(nfr_sand),have_avalanched,have_avalanched_tmp,cctot
 	REAL ccfdtot_firstcel,wsedbed,distance_to_bed,zb_W,gvector
-	REAL pickup_random(1:imax,1:jmax),vs,ve,Uhor(1:imax,1:jmax,1:kmax),cbed 
+	REAL pickup_random(1:imax,1:jmax),vs,ve,Uhor(1:imax,1:jmax,1:kmax),cbed,uu2,vv2,bed_slope,facx,facy,bs_geo
+	REAL qb,MMM,MME,flux,ucr,qbf(1:nfrac),uuRrel,uuLrel,vvRrel,vvLrel,Shields,absUbl,ve_check
       integer clock,nnn,k_maxU
       INTEGER, DIMENSION(:), ALLOCATABLE :: seed	
-	  INTEGER kbedp(0:i1,0:j1),ibeg,iend
+	  INTEGER kbedp(0:i1,0:j1),ibeg,iend 
 	
 	erosion=0.
 	deposition=0.
@@ -440,18 +453,23 @@
 		kbedp(i,j)=MIN(kbed(i,j)+2,k1) 
 	  ENDDO 
 	ENDDO 
-		  
+	IF (interaction_bed.ge.4) THEN
+	 DO i=1,imax
+	  DO j=1,jmax
+		zbed(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(cbotcfd(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
+	  ENDDO 
+	 ENDDO 
+	 call bound_cbot(zbed)
+	ENDIF 
+				  
+	d_cbotnew = 0.	  
 	IF (interaction_bed.le.3.and.time_n.ge.tstart_morf) THEN ! erosion sedimentation without bed update and for each sediment fraction independently
 		DO i=1,imax
 		  DO j=1,jmax
 			!! First Ubot_TSHD and Vbot_TSHD is subtracted to determine tau 
 			!! only over ambient velocities not over U_TSHD
 			IF (IBMorder.eq.2) THEN
-				IF (interaction_bed.ge.4) THEN
-				  zb_W=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(cbotcfd(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
-				ELSE 
-				  zb_W=zbed(i,j)
-				ENDIF
+				zb_W=zbed(i,j)
 				kpp=MIN(CEILING(zb_W/dz+0.5)+1,k1)		!kpp is between 1*dz-2*dz distance from bed 	
 				!kpp=MIN(CEILING(zb_W/dz+0.5),k1)		!kpp is between 0-dz distance from bed 	
 				distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W
@@ -460,17 +478,6 @@
 !				  kpp=MIN(CEILING(zb_W/dz+0.5)+1,k1)		!kpp is in principle between 1*dz-2*dz distance from bed, but due to this if-statement only 1-1.5 from bed
 !				  distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W
 !				ENDIF 
-				IF (kbed(i,j)+2<kbedp(i+1,j).and.kbed(i,j)+2<kbedp(i-1,j)) THEN ! pit
-					uu=0.5*(ucfd(i,j,kpp)+ucfd(i-1,j,kpp))-Ubot_TSHD(j)
-				ELSE 
-					uu=0.5*(ucfd(i,j,MAX(kbedp(i,j),kbedp(i+1,j),kpp))+ucfd(i-1,j,MAX(kbedp(i,j),kbedp(i-1,j),kpp)))-Ubot_TSHD(j) !choice to not alter distance_to_bed at slopes
-				ENDIF
-				IF (kbed(i,j)+2<kbedp(i,j+1).and.kbed(i,j)+2<kbedp(i,j-1)) THEN ! pit
-					vv=0.5*(vcfd(i,j,kpp)+vcfd(i,j-1,kpp))-Vbot_TSHD(j)
-				ELSE 
-					vv=0.5*(vcfd(i,j,MAX(kbedp(i,j),kbedp(i,j+1),kpp))+vcfd(i,j-1,MAX(kbedp(i,j),kbedp(i,j-1),kpp)))-Vbot_TSHD(j) !choice to not alter distance_to_bed at slopes
-				ENDIF 
-				absU=sqrt((uu)**2+(vv)**2)				
 				ust=0.1*absU
 				do tel=1,10 ! 10 iter is more than enough
 					z0=MAX(kn/30.+0.11*nu_mol/MAX(ust,1.e-9),1e-9) 
@@ -479,18 +486,7 @@
 				distance_to_bed=z_tau_sed
 				absU=ust/kappa*log(distance_to_bed/z0) ! replace absU with velocity that is valid at z_tau_sed from bed (user input to make result less dependent of grid resolution)
 			ELSE 
-				kpp = MIN(kbed(i,j)+2,k1)                !kpp is 1.5*dz from 0-order ibm bed
-				IF (kbed(i,j)+2<kbedp(i+1,j).and.kbed(i,j)+2<kbedp(i-1,j)) THEN ! pit
-					uu=0.5*(ucfd(i,j,kpp)+ucfd(i-1,j,kpp))-Ubot_TSHD(j)
-				ELSE 
-					uu=0.5*(ucfd(i,j,MAX(kbedp(i,j),kbedp(i+1,j),kpp))+ucfd(i-1,j,MAX(kbedp(i,j),kbedp(i-1,j),kpp)))-Ubot_TSHD(j) !choice to not alter distance_to_bed at slopes
-				ENDIF
-				IF (kbed(i,j)+2<kbedp(i,j+1).and.kbed(i,j)+2<kbedp(i,j-1)) THEN ! pit
-					vv=0.5*(vcfd(i,j,kpp)+vcfd(i,j-1,kpp))-Vbot_TSHD(j)
-				ELSE 
-					vv=0.5*(vcfd(i,j,MAX(kbedp(i,j),kbedp(i,j+1),kpp))+vcfd(i,j-1,MAX(kbedp(i,j),kbedp(i,j-1),kpp)))-Vbot_TSHD(j) !choice to not alter distance_to_bed at slopes
-				ENDIF 
-				absU=sqrt((uu)**2+(vv)**2)	
+				kpp = MIN(kbedp(i,j),k1)                !kpp is 1.5*dz from 0-order ibm bed
 				distance_to_bed=1.5*dz				
 				ust=0.1*absU
 				do tel=1,10 ! 10 iter is more than enough
@@ -499,6 +495,29 @@
 				enddo
 				distance_to_bed=z_tau_sed
 				absU=ust/kappa*log(distance_to_bed/z0) ! replace absU with velocity that is valid at z_tau_sed from bed (user input to make result less dependent of grid resolution)
+			ENDIF
+			IF (kbedp(i,j)<kbedp(i+1,j).and.kbedp(i,j)<kbedp(i-1,j)) THEN ! pit
+				uu=0.5*(ucfd(i,j,kpp)+ucfd(i-1,j,kpp))-Ubot_TSHD(j)
+			ELSE 
+				uu=0.5*(ucfd(i,j,MAX(kbedp(i,j),kbedp(i+1,j),kpp))+ucfd(i-1,j,MAX(kbedp(i,j),kbedp(i-1,j),kpp)))-Ubot_TSHD(j) !choice to not alter distance_to_bed at slopes
+			ENDIF
+			IF (kbedp(i,j)<kbedp(i,j+1).and.kbedp(i,j)<kbedp(i,j-1)) THEN ! pit
+				vv=0.5*(vcfd(i,j,kpp)+vcfd(i,j-1,kpp))-Vbot_TSHD(j)
+			ELSE 
+				vv=0.5*(vcfd(i,j,MAX(kbedp(i,j),kbedp(i,j+1),kpp))+vcfd(i,j-1,MAX(kbedp(i,j),kbedp(i,j-1),kpp)))-Vbot_TSHD(j) !choice to not alter distance_to_bed at slopes
+			ENDIF 
+			IF (pickup_bedslope_geo.eq.1) THEN 
+				bed_slope = atan(zbed(i+1,j)-zbed(i-1,j))/(Rp(i+1)-Rp(i-1))
+				uu2 = uu*cos(bed_slope)+wcfd(i,j,kpp)*sin(bed_slope)
+				facx = 1./cos(bed_slope)
+				bed_slope = atan(zbed(i,j+1)-zbed(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1)))
+				vv2 = vv*cos(bed_slope)+wcfd(i,j,kpp)*sin(bed_slope)
+				facy = 1./cos(bed_slope)
+				bs_geo = facx*facy ! increase in dx and dy (area) over which pickup and deposition take place
+				absU = sqrt((uu2)**2+(vv2)**2)	
+			ELSE 
+				absU=sqrt((uu)**2+(vv)**2)	
+				bs_geo = 1.
 			ENDIF
 
 			DO n=1,nfrac
@@ -511,14 +530,14 @@
 
 				kplus = MIN(kbed(i,j)+1,k1)
 				kplus2 = MIN(kbed(i,j)+2,k1)
-				tau=rcfd(i,j,kplus)*ust*ust  
+				tau=rho_b*ust*ust  
 
 					 ! called before update in correc (in last k3 step of RK3) so Cnewbot and Cnew are used to determine interaction with bed, 
 					 ! but effect is added to dcdtbot and dcdt to make superposition on other terms already included in dcdt
 					 ! dcdtbot contains sediment volume concentration in bed [-] with ghost bed-cells of dz deep
 					 ! dcdt contains sediment volume concentration in water-cells [-] 
 				 IF (interaction_bed.ge.2) THEN
-					  erosion = frac(n)%M*MAX(0.,(tau/frac(n)%tau_e-1.))*ddt/frac(n)%rho ! m3/m2
+					  erosion = frac(n)%M*MAX(0.,(tau/frac(n)%tau_e-1.))*ddt/frac(n)%rho*bs_geo ! m3/m2
 				 ENDIF
 !				 erosion = erosion -MIN(0.,ddt*0.5*(Diffcof(i,j,kplus)+Diffcof(i,j,kplus2))*(ccnew(n,i,j,kplus2)-ccnew(n,i,j,kplus))/dz)  !add upward diffusion to erosion flux
 				 IF (interaction_bed.eq.3) THEN
@@ -576,11 +595,7 @@
 			!! First Ubot_TSHD and Vbot_TSHD is subtracted to determine tau 
 			!! only over ambient velocities not over U_TSHD
 			IF (IBMorder.eq.2) THEN
-				IF (interaction_bed.ge.4) THEN
-				  zb_W=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(cbotcfd(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
-				ELSE 
-				  zb_W=zbed(i,j)
-				ENDIF
+				zb_W=zbed(i,j)
 				kpp=MIN(CEILING(zb_W/dz+0.5)+1,k1)		!kpp is between 1*dz-2*dz distance from bed 	
 				!kpp=MIN(CEILING(zb_W/dz+0.5),k1)		!kpp is between 0-dz distance from bed 	
 				distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W
@@ -589,46 +604,54 @@
 !				  kpp=MIN(CEILING(zb_W/dz+0.5)+1,k1)		!kpp is in principle between 1*dz-2*dz distance from bed, but due to this if-statement only 1-1.5 from bed
 !				  distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W
 !				ENDIF 
-				IF (kbed(i,j)+2<kbedp(i+1,j).and.kbed(i,j)+2<kbedp(i-1,j)) THEN ! pit
-					uu=0.5*(ucfd(i,j,kpp)+ucfd(i-1,j,kpp))-Ubot_TSHD(j)
-				ELSE 
-					uu=0.5*(ucfd(i,j,MAX(kbedp(i,j),kbedp(i+1,j),kpp))+ucfd(i-1,j,MAX(kbedp(i,j),kbedp(i-1,j),kpp)))-Ubot_TSHD(j) !choice to not alter distance_to_bed at slopes
-				ENDIF
-				IF (kbed(i,j)+2<kbedp(i,j+1).and.kbed(i,j)+2<kbedp(i,j-1)) THEN ! pit
-					vv=0.5*(vcfd(i,j,kpp)+vcfd(i,j-1,kpp))-Vbot_TSHD(j)
-				ELSE 
-					vv=0.5*(vcfd(i,j,MAX(kbedp(i,j),kbedp(i,j+1),kpp))+vcfd(i,j-1,MAX(kbedp(i,j),kbedp(i,j-1),kpp)))-Vbot_TSHD(j) !choice to not alter distance_to_bed at slopes
-				ENDIF 
-				absU=sqrt((uu)**2+(vv)**2)				
-				ust=0.1*absU
-				do tel=1,10 ! 10 iter is more than enough
-					z0=MAX(kn/30.+0.11*nu_mol/MAX(ust,1.e-9),1e-9) 
-					ust=absU/MAX(1./kappa*log(MAX(distance_to_bed/z0,1.001)),2.) !ust maximal 0.5*absU
-				enddo
-				distance_to_bed=z_tau_sed
-				absU=ust/kappa*log(distance_to_bed/z0) ! replace absU with velocity that is valid at z_tau_sed from bed (user input to make result less dependent of grid resolution)
 			ELSE 
-				kpp = MIN(kbed(i,j)+2,k1)                !kpp is 1.5*dz from 0-order ibm bed
-				IF (kbed(i,j)+2<kbedp(i+1,j).and.kbed(i,j)+2<kbedp(i-1,j)) THEN ! pit
-					uu=0.5*(ucfd(i,j,kpp)+ucfd(i-1,j,kpp))-Ubot_TSHD(j)
-				ELSE 
-					uu=0.5*(ucfd(i,j,MAX(kbedp(i,j),kbedp(i+1,j),kpp))+ucfd(i-1,j,MAX(kbedp(i,j),kbedp(i-1,j),kpp)))-Ubot_TSHD(j) !choice to not alter distance_to_bed at slopes
-				ENDIF
-				IF (kbed(i,j)+2<kbedp(i,j+1).and.kbed(i,j)+2<kbedp(i,j-1)) THEN ! pit
-					vv=0.5*(vcfd(i,j,kpp)+vcfd(i,j-1,kpp))-Vbot_TSHD(j)
-				ELSE 
-					vv=0.5*(vcfd(i,j,MAX(kbedp(i,j),kbedp(i,j+1),kpp))+vcfd(i,j-1,MAX(kbedp(i,j),kbedp(i,j-1),kpp)))-Vbot_TSHD(j) !choice to not alter distance_to_bed at slopes
-				ENDIF 
-				absU=sqrt((uu)**2+(vv)**2)	
+				kpp = MIN(kbedp(i,j),k1)                !kpp is 1.5*dz from 0-order ibm bed
 				distance_to_bed=1.5*dz				
-				ust=0.1*absU
-				do tel=1,10 ! 10 iter is more than enough
-					z0=MAX(kn/30.+0.11*nu_mol/MAX(ust,1.e-9),1e-9) 
-					ust=absU/MAX(1./kappa*log(MAX(distance_to_bed/z0,1.001)),2.) !ust maximal 0.5*absU
-				enddo
-				distance_to_bed=z_tau_sed
-				absU=ust/kappa*log(distance_to_bed/z0) ! replace absU with velocity that is valid at z_tau_sed from bed (user input to make result less dependent of grid resolution)
-			ENDIF			
+			ENDIF
+			IF (kbedp(i,j)<kbedp(i+1,j).and.kbedp(i,j)<kbedp(i-1,j)) THEN ! pit
+				uu=0.5*(ucfd(i,j,kpp)+ucfd(i-1,j,kpp))-Ubot_TSHD(j)
+			ELSE 
+				uu=0.5*(ucfd(i,j,MAX(kbedp(i,j),kbedp(i+1,j),kpp))+ucfd(i-1,j,MAX(kbedp(i,j),kbedp(i-1,j),kpp)))-Ubot_TSHD(j) !choice to not alter distance_to_bed at slopes
+			ENDIF
+			IF (kbedp(i,j)<kbedp(i,j+1).and.kbedp(i,j)<kbedp(i,j-1)) THEN ! pit
+				vv=0.5*(vcfd(i,j,kpp)+vcfd(i,j-1,kpp))-Vbot_TSHD(j)
+			ELSE 
+				vv=0.5*(vcfd(i,j,MAX(kbedp(i,j),kbedp(i,j+1),kpp))+vcfd(i,j-1,MAX(kbedp(i,j),kbedp(i,j-1),kpp)))-Vbot_TSHD(j) !choice to not alter distance_to_bed at slopes
+			ENDIF
+			uuRrel = ucfd(i  ,j,MAX(kbedp(i,j),kbedp(i+1,j),kpp))-Ubot_TSHD(j)  !no correction for pit because uuR from cell i always needs to be same as uuL from i+1 in bedload otherwise interuption and pit may never fill up
+			uuLrel = ucfd(i-1,j,MAX(kbedp(i,j),kbedp(i-1,j),kpp))-Ubot_TSHD(j)			
+			vvRrel = vcfd(i,j  ,MAX(kbedp(i,j),kbedp(i,j+1),kpp))-Vbot_TSHD(j)
+			vvLrel = vcfd(i,j-1,MAX(kbedp(i,j),kbedp(i,j-1),kpp))-Vbot_TSHD(j)			
+			uuR_relax(i,j)  = bl_relax*uuRrel+(1.-bl_relax)*uuR_relax(i,j)  	!needed for bedload-fluxes
+			uuL_relax(i,j)  = bl_relax*uuLrel+(1.-bl_relax)*uuL_relax(i,j)
+			vvR_relax(i,j)  = bl_relax*vvRrel+(1.-bl_relax)*vvR_relax(i,j)
+			vvL_relax(i,j)  = bl_relax*vvLrel+(1.-bl_relax)*vvL_relax(i,j)
+			absUbl = MAX(sqrt((0.5*(uuR_relax(i,j)+uuL_relax(i,j)))**2+(0.5*(vvR_relax(i,j)+vvL_relax(i,j)))**2),1.e-6)
+			uuRrel = uuR_relax(i,j)/absUbl
+			uuLrel = uuL_relax(i,j)/absUbl
+			vvRrel = vvR_relax(i,j)/absUbl
+			vvLrel = vvL_relax(i,j)/absUbl
+
+			IF (pickup_bedslope_geo.eq.1) THEN 
+				bed_slope = atan(zbed(i+1,j)-zbed(i-1,j))/(Rp(i+1)-Rp(i-1))
+				uu2 = uu*cos(bed_slope)+wcfd(i,j,kpp)*sin(bed_slope)
+				facx = 1./cos(bed_slope)
+				bed_slope = atan(zbed(i,j+1)-zbed(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1)))
+				vv2 = vv*cos(bed_slope)+wcfd(i,j,kpp)*sin(bed_slope)
+				facy = 1./cos(bed_slope)
+				bs_geo = facx*facy ! increase in dx and dy (area) over which pickup and deposition take place
+				absU = sqrt((uu2)**2+(vv2)**2)	
+			ELSE 
+				absU=sqrt((uu)**2+(vv)**2)	
+				bs_geo = 1.
+			ENDIF 
+			ust=0.1*absU
+			do tel=1,10 ! 10 iter is more than enough
+				z0=MAX(kn/30.+0.11*nu_mol/MAX(ust,1.e-9),1e-9) 
+				ust=absU/MAX(1./kappa*log(MAX(distance_to_bed/z0,1.001)),2.) !ust maximal 0.5*absU
+			enddo
+			distance_to_bed=z_tau_sed
+			absU=ust/kappa*log(distance_to_bed/z0) ! replace absU with velocity that is valid at z_tau_sed from bed (user input to make result less dependent of grid resolution)			
 			cbottot=0.
 			cbedtot=0.
 			IF (nfr_silt>0) THEN			
@@ -642,7 +665,14 @@
 				kn_sed_avg=0.
 				Mr_avg=0.
 				tau_e_avg=0.
-				IF (cbottot>0.) THEN
+				IF ((interaction_bed.ge.6.and.kbed(i,j).eq.0).or.interaction_bed.eq.7) THEN !unlimited erosion in case kbed.eq.0
+					DO n1=1,nfr_silt
+						n=nfrac_silt(n1)
+						kn_sed_avg=kn_sed_avg+(c_bed(n)/cfixedbed)*frac(n)%kn_sed
+						Mr_avg=Mr_avg+(c_bed(n)/cfixedbed)*frac(n)%M/frac(n)%rho
+						tau_e_avg=tau_e_avg+(c_bed(n)/cfixedbed)*frac(n)%tau_e
+					ENDDO					
+				ELSEIF (cbottot>0.) THEN
 					DO n1=1,nfr_silt
 						n=nfrac_silt(n1)
 						kn_sed_avg=kn_sed_avg+(MAX(cbotnew(n,i,j),0.)/cbottot)*frac(n)%kn_sed
@@ -656,13 +686,6 @@
 						Mr_avg=Mr_avg+(Clivebed(n,i,j,kbed(i,j))/cbedtot)*frac(n)%M/frac(n)%rho
 						tau_e_avg=tau_e_avg+(Clivebed(n,i,j,kbed(i,j))/cbedtot)*frac(n)%tau_e
 					ENDDO
-				ELSEIF (interaction_bed.ge.6.and.kbed(i,j).eq.0) THEN !unlimited erosion in case kbed.eq.0
-					DO n1=1,nfr_silt
-						n=nfrac_silt(n1)
-						kn_sed_avg=kn_sed_avg+(c_bed(n)/cfixedbed)*frac(n)%kn_sed
-						Mr_avg=Mr_avg+(c_bed(n)/cfixedbed)*frac(n)%M/frac(n)%rho
-						tau_e_avg=tau_e_avg+(c_bed(n)/cfixedbed)*frac(n)%tau_e
-					ENDDO				
 				ELSE !arbitrarily choose silt frac 1, no effect as there is no erosion possible
 					kn_sed_avg=frac(nfrac_silt(1))%kn_sed
 					Mr_avg=frac(nfrac_silt(1))%M/frac(n)%rho
@@ -680,8 +703,8 @@
 				tau=rho_b*ust*ust  
 				DO n1=1,nfr_silt
 					n=nfrac_silt(n1)
-					erosion_avg(n) = Mr_avg*MAX(0.,(tau/tau_e_avg-1.))*ddt*bednotfixed(i,j,kbed(i,j))*morfac ! m3/m2	 erosion_avg is filled for silt fractions only with silt erosion
-					IF (interaction_bed.ge.6.and.kbed(i,j).eq.0) THEN !unlimited erosion in case kbed.eq.0
+					erosion_avg(n) = Mr_avg*MAX(0.,(tau/tau_e_avg-1.))*ddt*bednotfixed(i,j,kbed(i,j))*morfac*bs_geo ! m3/m2	 erosion_avg is filled for silt fractions only with silt erosion
+					IF ((interaction_bed.ge.6.and.kbed(i,j).eq.0).or.interaction_bed.eq.7) THEN !unlimited erosion in case kbed.eq.0
 						erosionf(n) = erosion_avg(n) * (c_bed(n)/cfixedbed) !erosion per fraction
 !						erosionf(n) = erosionf(n) 
 !     &					-MIN(0.,ddt*0.5*(Diffcof(i,j,kplus)+Diffcof(i,j,kplus2))*(ccnew(n,i,j,kplus2)-ccnew(n,i,j,kplus))/dz)  !add upward diffusion to erosion flux
@@ -711,16 +734,16 @@
 					tau=rho_b*ust*ust  !for deposition apply tau belonging to own frac(n)%kn_sed
 					IF (depo_implicit.eq.1) THEN  !determine deposition as sink implicit
 					 ccnew(n,i,j,kplus)=(ccnew(n,i,j,kplus)+erosionf(n)/dz)/ ! vol conc. [-]
-     &				(1.-MAX(0.,(1.-tau/frac(n)%tau_d))*MIN(0.,Wsed(n,i,j,kbed(i,j)))*ddt/dz*bednotfixed_depo(i,j,kbed(i,j))*morfac)
+     &				(1.-MAX(0.,(1.-tau/frac(n)%tau_d))*MIN(0.,Wsed(n,i,j,kbed(i,j)))*ddt/dz*bednotfixed_depo(i,j,kbed(i,j))*morfac*bs_geo)
 					 depositionf(n) = MAX(0.,(1.-tau/frac(n)%tau_d))*ccnew(n,i,j,kplus)*MIN(0.,Wsed(n,i,j,kbed(i,j)))*ddt !ccfd
-     & *bednotfixed_depo(i,j,kbed(i,j))*morfac				 ! m --> dep is negative due to negative wsed					 
+     & *bednotfixed_depo(i,j,kbed(i,j))*morfac*bs_geo				 ! m --> dep is negative due to negative wsed					 
 					 cbotnew(n,i,j)=cbotnew(n,i,j)-b_update*morfac2*(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-]  !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
 					 cbotnewtot=cbotnewtot+cbotnew(n,i,j)
 					 cbotnewtot_pos=cbotnewtot_pos+MAX(cbotnew(n,i,j),0.)
 					 ctot_firstcel=ccnew(n,i,j,kplus)+ctot_firstcel					
 					ELSE
 					 depositionf(n) = MAX(0.,(1.-tau/frac(n)%tau_d))*ccnew(n,i,j,kplus)*MIN(0.,Wsed(n,i,j,kbed(i,j)))*ddt !ccfd
-     & *bednotfixed_depo(i,j,kbed(i,j))*morfac				 ! m --> dep is negative due to negative wsed
+     & *bednotfixed_depo(i,j,kbed(i,j))*morfac*bs_geo			 ! m --> dep is negative due to negative wsed
 					 ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus)+(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-]
 					 cbotnew(n,i,j)=cbotnew(n,i,j)-b_update*morfac2*(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-]  !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
 					 cbotnewtot=cbotnewtot+cbotnew(n,i,j)
@@ -772,7 +795,11 @@
 					ws_botsand2=ws_botsand2+c_bed(n)*frac(n)%ws
 					ws_bedsand=ws_bedsand+Clivebed(n,i,j,kbed(i,j))*frac(n)%ws					
 				ENDDO
-				IF (mbottot_sand>0.) THEN
+				IF ((interaction_bed.ge.6.and.kbed(i,j).eq.0).or.interaction_bed.eq.7) THEN !unlimited erosion in case kbed.eq.0
+					PSD_sand(1:nfr_sand)=PSD_bot_sand_massfrac2/mbottot_sand2
+					rho_sand=rho_botsand2/cfixedbed
+					ws_sand=ws_botsand2/cfixedbed				
+				ELSEIF (mbottot_sand>0.) THEN
 					PSD_sand(1:nfr_sand)=PSD_bot_sand_massfrac/mbottot_sand
 					rho_sand=rho_botsand/cbottot_sand
 					ws_sand=ws_botsand/cbottot_sand
@@ -780,10 +807,6 @@
 					PSD_sand(1:nfr_sand)=PSD_bed_sand_massfrac/mbedtot_sand
 					rho_sand=rho_bedsand/cbedtot_sand
 					ws_sand=ws_bedsand/cbedtot_sand
-				ELSEIF (interaction_bed.ge.6.and.kbed(i,j).eq.0) THEN !unlimited erosion in case kbed.eq.0
-					PSD_sand(1:nfr_sand)=PSD_bot_sand_massfrac2/mbottot_sand2
-					rho_sand=rho_botsand2/cfixedbed
-					ws_sand=ws_botsand2/cfixedbed			
 				ELSE
 					PSD_sand=0. ! there is no sand, hence there will be no erosion either therefore choice in PSD and resulting d50 is not important
 					rho_sand=frac(nfrac_sand(1))%rho
@@ -839,14 +862,14 @@
 				
 				IF (cbed_method.eq.2) THEN
 					k_maxU = MAXLOC(Uhor(i,j,1:kmax),DIM=1)
-					IF (k_maxU.lt.kbed(i,j)) THEN 
+					IF (k_maxU.le.kbed(i,j)) THEN 
 						cbed = MIN(cfixedbed,SUM(ccfd(1:nfrac,i,j,kplus)))
 					ELSE 
 						cbed = 0.
-						DO k=kbed(i,j),k_maxU
+						DO k=kplus,k_maxU
 							cbed = cbed + SUM(ccfd(1:nfrac,i,j,k))
 						ENDDO 					
-						cbed = cbed /MAX(DBLE(k_maxU-kbed(i,j)+1),1.)
+						cbed = cbed /MAX(DBLE(k_maxU-kbed(i,j)),1.)
 						cbed = MIN(cfixedbed,cbed)	
 					ENDIF 
 				ELSE 
@@ -856,8 +879,7 @@
 					ustc2 = Shields_cr * gvector*delta*d50
 					TT = (ust*ust-ustc2)/(MAX(ustc2,1.e-12))
 					TT = MAX(TT,0.) !TT must be positive
-					phip = calibfac_sand_pickup*0.00033*Dstar**0.3*TT**1.5   ! general pickup function					
-					
+					phipp = calibfac_sand_pickup*0.00033*Dstar**0.3*TT**1.5   ! general pickup function					
 				ELSEIF (pickup_formula.eq.'nielsen1992') THEN
 					Re_p=ABS(ws_sand)*d50/nu_mol
 					CD = MAX(0.4,24./Re_p*(1.+0.15*Re_p**0.687)) ! Okayasu et al 2010 Eq.4 combined with van Rhee p28 eq3.5 0.4 limit for Re>2000 	
@@ -865,8 +887,7 @@
 					Shields_eff = 0.75 * CD * ust**2/(delta*gvector*d50)
 					TT = (Shields_eff - Shields_cr)/Shields_cr
 					TT = MAX(TT,0.) !TT must be positive
-					phip = calibfac_sand_pickup*0.00033*Dstar**0.3*TT**1.5   ! general pickup function					
-					
+					phipp = calibfac_sand_pickup*0.00033*Dstar**0.3*TT**1.5   ! general pickup function						
 				ELSEIF (pickup_formula.eq.'okayasu2010') THEN
 					Re_p=ABS(ws_sand)*d50/nu_mol
 					CD = MAX(0.4,24./Re_p*(1.+0.15*Re_p**0.687)) ! Okayasu et al 2010 Eq.4 combined with van Rhee p28 eq3.5 0.4 limit for Re>2000 	
@@ -880,40 +901,46 @@
 					Shields_eff = (Fd+Fi)/MAX(W-Fl,1.e-12)
 					TT = (Shields_eff - Shields_cr)/Shields_cr	
 					TT = MAX(TT,0.) !TT must be positive
-					phip = calibfac_sand_pickup*0.00033*Dstar**0.3*TT**1.5   ! general pickup function	
+					phipp = calibfac_sand_pickup*0.00033*Dstar**0.3*TT**1.5   ! general pickup function	
 				ELSEIF (pickup_formula.eq.'vanrijn2019') THEN
 					ustc2 = Shields_cr * gvector*delta*d50
 					TT = (ust*ust-ustc2)/(MAX(ustc2,1.e-12))
 					TT = MAX(TT,0.) !TT must be positive
-					phip = calibfac_sand_pickup*0.00033*Dstar**0.3*TT**1.5   ! general pickup function	
+					phipp = calibfac_sand_pickup*0.00033*Dstar**0.3*TT**1.5   ! general pickup function	
 					Shields_eff = ust**2/(delta*gvector*d50)
-					phip = phip/(MAX(Shields_eff,1.)) ! correction: reduced pickup for high speed erosion
+					phipp = phipp/(MAX(Shields_eff,1.)) ! correction: reduced pickup for high speed erosion
 				ELSEIF (pickup_formula.eq.'VR2019_Cbed') THEN
 					ustc2 = Shields_cr * gvector*delta*d50
 					TT = (ust*ust-ustc2)/(MAX(ustc2,1.e-12))
 					TT = MAX(TT,0.) !TT must be positive
-					phip = calibfac_sand_pickup*0.00033*Dstar**0.3*TT**1.5   ! general pickup function	
+					phipp = calibfac_sand_pickup*0.00033*Dstar**0.3*TT**1.5   ! general pickup function	
 					Shields_eff = ust**2/(delta*gvector*d50)
-					phip = phip/(MAX(Shields_eff,1.))*(cfixedbed-cbed)/(cfixedbed) ! correction: reduced pickup for high speed erosion and reduction for cbed according to VanRhee and Talmon 2010
+					phipp = phipp/(MAX(Shields_eff,1.))*(cfixedbed-cbed)/(cfixedbed) ! correction: reduced pickup for high speed erosion and reduction for cbed according to VanRhee and Talmon 2010
 				ELSEIF (pickup_formula.eq.'VR1984_Cbed') THEN
 					ustc2 = Shields_cr * gvector*delta*d50
 					TT = (ust*ust-ustc2)/(MAX(ustc2,1.e-12))
 					TT = MAX(TT,0.) !TT must be positive
-					phip = calibfac_sand_pickup*0.00033*Dstar**0.3*TT**1.5   ! general pickup function	
-					phip = phip*(cfixedbed-cbed)/(cfixedbed) ! correction: reduced pickup for for cbed according to VanRhee and Talmon 2010					
+					phipp = calibfac_sand_pickup*0.00033*Dstar**0.3*TT**1.5   ! general pickup function	
+					phipp = phipp*(cfixedbed-cbed)/(cfixedbed) ! correction: reduced pickup for for cbed according to VanRhee and Talmon 2010					
 				ELSE
 					TT=0.
-					phip = 0.  ! general pickup function					
+					phipp = 0.  ! general pickup function					
 				ENDIF
 				IF (pickup_correction.eq.'MastBergenvdBerg2003') THEN 
 					vs = MAX(sqrt(gvector*delta*d50),1.e-12)
 					!vwal = (-cfixedbed*delta*sin(phi-alpha)/sin(alpha))/(delta_nsed/permeability_kt) !vwal is user input, here Eq.6 from MastBergenvdBerg2003 is mentioned to know how to calculate it (in Eq. 6 the minus sign was forgotten)
-					ve = 0.5*vwal+vs*sqrt((0.5*vwal/vs)**2+phip*delta/delta_nsed*(permeability_kl/vs))
-					phip = ve*cfixedbed/vs 
+					ve = 0.5*vwal+vs*sqrt((0.5*vwal/vs)**2+fcor*phipp*delta/delta_nsed*(permeability_kl/vs))
+					phipp = ve*cfixedbed/vs 
+					
+					ve_check = phipp*(delta*gvector*d50)**0.5*morfac*bs_geo +  ! this is erosion (positive value)
+     & 					SUM(ccnew(1:nfrac,i,j,kplus))*(MIN(0.,Wsed(n,i,j,kbed(i,j)))) ! this is depo (neg value) in m/s 
+					ve_check = ve_check/cfixedbed  ! correction needed for pore volume 
+					phipp = phipp + MAX(vwal-ve_check,0.)/((delta*gvector*d50)**0.5*morfac*bs_geo)*cfixedbed
+					IF (wbed_correction.eq.1) Wbed(i,j)=ve_check+MAX(vwal-ve_check,0.)
 				ENDIF
 				IF (pickup_fluctuations.eq.1) THEN
 					!1 add white noise to pickup
-					phip = phip*pickup_random(i,j)					
+					phipp = phipp*pickup_random(i,j)					
 				ENDIF
 					
 				IF (reduction_sedimentation_shields>0) THEN ! PhD thesis vRhee p146 eq 7.74
@@ -932,16 +959,56 @@
 				ENDDO
 				wsedbed=wsedbed/MAX(1.-cfixedbed-ccfdtot_firstcel,1.e-6)
 				wsedbed=MIN(wsedbed,0.1*dz/ddt) !to keep concentration positive: never may wsed be more than 0.1 grid cell in one time step
-				
+				IF (bedload_formula.eq.'vanrijn2007'.and.time_n.ge.tstart_morf2) THEN 
+					kn_sed_avg=kn_d50_multiplier_bl*d50 
+					ust=0.1*absUbl
+					do tel=1,10 ! 10 iter is more than enough
+						z0=kn_sed_avg/30.+0.11*nu_mol/MAX(ust,1.e-9) 
+						ust=absUbl/MAX(1./kappa*log(distance_to_bed/z0),2.) !ust maximal 0.5*absU
+					enddo	
+					ustc2 = Shields_cr * gvector*delta*d50
+					MME = MAX(0.,(ust*ust-ustc2)/ustc2)
+					qb = calibfac_sand_bedload*0.5*rho_sand*d50*Dstar**(-0.3)*ust*MME ! [kg/m/s]	
+!		IF (ABS(SUM(cbotnew(1:nfrac,i,j)))>0.5*cfixedbed) write(*,'(a,i6.1,i6.1,i6.1,f11.6,f11.6,f11.6,f11.6,f11.6,f11.6,f11.6)'),
+!     & 'rank,i,j,qb,absU,uuR,uuL,vvR,vvL,cbotnew'
+!     & ,rank,i,j,qb,absUbl,uuR_relax(i,j),uuL_relax(i,j),vvR_relax(i,j),vvL_relax(i,j),SUM(cbotnew(1:nfrac,i,j))
+		IF ((rank.eq.1.or.rank.eq.0).and.i>96.and.i<100.and.j>1.and.j<8) write
+     & (*,'(a,i6.1,i6.1,i6.1,i6.1,f11.6,f11.6,f11.6,f11.6,f11.6,f11.6,f11.6)'),'istep,rank,i,j,qb,absU,uuR,uuL,vvR,vvL,cbotnew'
+     & ,istep,rank,i,j,qb,absUbl,uuR_relax(i,j),uuL_relax(i,j),vvR_relax(i,j),vvL_relax(i,j),SUM(cbotnew(1:nfrac,i,j))	 
+					qb = qb*bednotfixed(i,j,kbed(i,j))*morfac*morfac2 !kg/m/s				
+				ELSEIF (bedload_formula.eq.'vanrijn2003'.and.time_n.ge.tstart_morf2) THEN !as taken from D3D manual
+					kn_sed_avg=kn_d50_multiplier_bl*d50 
+					ust=0.1*absUbl
+					do tel=1,10 ! 10 iter is more than enough
+						z0=kn_sed_avg/30.+0.11*nu_mol/MAX(ust,1.e-9) 
+						ust=absUbl/MAX(1./kappa*log(distance_to_bed/z0),2.) !ust maximal 0.5*absU
+					enddo	
+					ucr = sqrt(Shields_cr * gvector*delta*d50)*log(distance_to_bed/z0)/kappa
+					MMM = absUbl**2/(delta*gvector*d50)
+					MME = (MAX(absUbl-ucr,0.))**2/(delta*gvector*d50)
+					qb = calibfac_sand_bedload*0.006*rho_sand*ws_sand*d50*MMM**0.5*MME**0.7 ! [kg/m/s] 
+					qb = qb*bednotfixed(i,j,kbed(i,j))*morfac*morfac2 !kg/m/s				
+				ELSEIF (bedload_formula.eq.'MeyPeMu1947'.and.time_n.ge.tstart_morf2) THEN !as taken from D3D manual
+					kn_sed_avg=kn_d50_multiplier_bl*d50 
+					ust=0.1*absUbl
+					do tel=1,10 ! 10 iter is more than enough
+						z0=kn_sed_avg/30.+0.11*nu_mol/MAX(ust,1.e-9) 
+						ust=absUbl/MAX(1./kappa*log(distance_to_bed/z0),2.) !ust maximal 0.5*absU
+					enddo	
+					MME = (MAX(Shields-Shields_cr,0.))**1.5
+					qb = calibfac_sand_bedload*8.*rho_sand*d50*sqrt(gvector*delta*d50)*MME ! [kg/m/s] 
+					qb = qb*bednotfixed(i,j,kbed(i,j))*morfac*morfac2 !kg/m/s
+				ENDIF 
 				
 				DO n1=1,nfr_sand
 					n=nfrac_sand(n1)			
-					erosion_avg(n) = phip * (delta*gvector*d50)**0.5*ddt*bednotfixed(i,j,kbed(i,j))*morfac  !*rho_sand/rho_sand ! erosion flux in kg/m2/(kg/m3)= m3/m2=m
-					IF (interaction_bed.ge.6.and.kbed(i,j).eq.0) THEN !unlimited erosion in case kbed.eq.0
+					erosion_avg(n) = phipp * (delta*gvector*d50)**0.5*ddt*bednotfixed(i,j,kbed(i,j))*morfac*bs_geo  !*rho_sand/rho_sand ! erosion flux in kg/m2/(kg/m3)= m3/m2=m
+					IF ((interaction_bed.ge.6.and.kbed(i,j).eq.0).or.interaction_bed.eq.7) THEN !unlimited erosion in case kbed.eq.0
 						erosionf(n) = erosion_avg(n) * (c_bed(n)/cfixedbed) !erosion per fraction
 						erosionf(n) = erosionf(n) + ccnew(n,i,j,kplus)*MAX(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))*ddt !when wsed upward (e.g. fine fractions) then add negative deposition to erosion
 !						erosionf(n) = erosionf(n) 
 !     &					-MIN(0.,ddt*0.5*(Diffcof(i,j,kplus)+Diffcof(i,j,kplus2))*(ccnew(n,i,j,kplus2)-ccnew(n,i,j,kplus))/dz)  !add upward diffusion to erosion flux
+						qbf(n) = qb * (c_bed(n)/cfixedbed)
 					ELSEIF (cbottot_sand>0.) THEN
 						erosionf(n) = erosion_avg(n) * (cbotnew(n,i,j)/cbottot_sand) !erosion per fraction
 						erosionf(n) = erosionf(n) + ccnew(n,i,j,kplus)*MAX(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))*ddt !when wsed upward (e.g. fine fractions) then add negative deposition to erosion
@@ -949,34 +1016,69 @@
 !     &					-MIN(0.,ddt*0.5*(Diffcof(i,j,kplus)+Diffcof(i,j,kplus2))*(ccnew(n,i,j,kplus2)-ccnew(n,i,j,kplus))/dz)  !add upward diffusion to erosion flux
 						erosionf(n) = MIN(erosionf(n),(cbotnew(n,i,j)+SUM(Clivebed(n,i,j,0:kbed(i,j))))*dz/morfac2) ! m3/m2, not more material can be eroded as available 
 						erosionf(n) = MAX(erosionf(n),0.)
-					ELSEIF (cbedtot_sand>0.) THEN
+						qbf(n) = qb * (cbotnew(n,i,j)/cbottot_sand)
+					ELSEIF (cbedtot_sand>0.0) THEN
 						erosionf(n) = erosion_avg(n) * (Clivebed(n,i,j,kbed(i,j))/cbedtot_sand) !erosion per fraction
 						erosionf(n) = erosionf(n) + ccnew(n,i,j,kplus)*MAX(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))*ddt !when wsed upward (e.g. fine fractions) then add negative deposition to erosion
 !						erosionf(n) = erosionf(n) 
 !     &					-MIN(0.,ddt*0.5*(Diffcof(i,j,kplus)+Diffcof(i,j,kplus2))*(ccnew(n,i,j,kplus2)-ccnew(n,i,j,kplus))/dz)  !add upward diffusion to erosion flux
 						erosionf(n) = MIN(erosionf(n),(cbotnew(n,i,j)+SUM(Clivebed(n,i,j,0:kbed(i,j))))*dz/morfac2) ! m3/m2, not more material can be eroded as available 
 						erosionf(n) = MAX(erosionf(n),0.)
+						qbf(n) = qb * (Clivebed(n,i,j,kbed(i,j))/cbedtot_sand)
 					ELSE
 						erosionf(n) = 0.
+						qbf(n) = qb * (c_bed(n)/cfixedbed) !don't make qb zero this is not robust 
 					ENDIF
+					qbU(n,i,j) = qbf(n)*uuRrel
+					qbV(n,i,j) = qbf(n)*vvRrel					
+					erosionf(n)=erosionf(n)/REAL(k_layer_pickup) !default k_layer_pickup=1
+					DO k=kplus+1,kplus+k_layer_pickup-1 
+						ccnew(n,i,j,k) = ccnew(n,i,j,k) + erosionf(n)/dz !pickup is spread over multiple k-layers 
+					ENDDO 
 					IF (depo_implicit.eq.1) THEN  !determine deposition as sink implicit
 					ccnew(n,i,j,kplus)=(ccnew(n,i,j,kplus)+erosionf(n)/dz)/ ! vol conc. [-]
-     &      		(1.-(MIN(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))-wsedbed)*ddt/dz*bednotfixed_depo(i,j,kbed(i,j))*morfac)					
+     &      		(1.-(MIN(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))-wsedbed)*ddt/dz*bednotfixed_depo(i,j,kbed(i,j))*morfac*bs_geo)					
 					depositionf(n) = ccnew(n,i,j,kplus)*(MIN(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))-wsedbed)*ddt !ccfd
-     &     *bednotfixed_depo(i,j,kbed(i,j))*morfac ! m --> dep is negative due to negative wsed					
-					cbotnew(n,i,j)=cbotnew(n,i,j)-b_update*morfac2*(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-] !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+     &     *bednotfixed_depo(i,j,kbed(i,j))*morfac*bs_geo ! m --> dep is negative due to negative wsed					
+					cbotnew(n,i,j)=cbotnew(n,i,j)-b_update*morfac2*(erosionf(n)*REAL(k_layer_pickup)+depositionf(n))/(dz) ! vol conc. [-] !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
 					cbotnewtot=cbotnewtot+cbotnew(n,i,j)
 					cbotnewtot_pos=cbotnewtot_pos+MAX(cbotnew(n,i,j),0.)
 					ctot_firstcel=ccnew(n,i,j,kplus)+ctot_firstcel
 					ELSE
 					depositionf(n) = ccnew(n,i,j,kplus)*(MIN(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))-wsedbed)*ddt !ccfd
-     &     *bednotfixed_depo(i,j,kbed(i,j))*morfac ! m --> dep is negative due to negative wsed
+     &     *bednotfixed_depo(i,j,kbed(i,j))*morfac*bs_geo ! m --> dep is negative due to negative wsed
 					ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus)+(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-]
-					cbotnew(n,i,j)=cbotnew(n,i,j)-b_update*morfac2*(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-] !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+					cbotnew(n,i,j)=cbotnew(n,i,j)-b_update*morfac2*(erosionf(n)*REAL(k_layer_pickup)+depositionf(n))/(dz) ! vol conc. [-] !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
 					cbotnewtot=cbotnewtot+cbotnew(n,i,j)
 					cbotnewtot_pos=cbotnewtot_pos+MAX(cbotnew(n,i,j),0.)
 					ctot_firstcel=ccnew(n,i,j,kplus)+ctot_firstcel
 					ENDIF
+					IF ((bedload_formula.ne.'nonenon0000').and.time_n.ge.tstart_morf2) THEN
+						flux = uuRrel*qbf(n)*Ru(i)*dphi2(j)*ddt ![kg] change in mass over this edge
+				!write(*,*),'i,j,kbed(i,j),flux,uuRrel,qbf(n),Ru(i)*dphi2(j)',i,j,kbed(i,j),flux,uuRrel,qbf(n),Ru(i)*dphi2(j)
+						IF (flux>0.) THEN
+							d_cbotnew(n,i,j) = d_cbotnew(n,i,j) - flux/(rho_sand*dr(i)*Rp(i)*dphi2(j)*dz)
+							d_cbotnew(n,i+1,j) = d_cbotnew(n,i+1,j) + flux/(rho_sand*dr(i+1)*Rp(i+1)*dphi2(j)*dz)
+						ENDIF 
+						flux = uuLrel*qbf(n)*Ru(i-1)*dphi2(j)*ddt ![kg] change in mass over this edge
+				!write(*,*),'i,j,kbed(i,j),flux,uuLrel,qbf(n),Ru(i-1)*dphi2(j)',i,j,kbed(i,j),flux,uuLrel,qbf(n),Ru(i-1)*dphi2(j)
+						IF (flux<0.) THEN
+							d_cbotnew(n,i,j) = d_cbotnew(n,i,j) + flux/(rho_sand*dr(i)*Rp(i)*dphi2(j)*dz)
+							d_cbotnew(n,i-1,j) = d_cbotnew(n,i-1,j) - flux/(rho_sand*dr(i-1)*Rp(i-1)*dphi2(j)*dz)
+						ENDIF 						
+						flux = vvRrel*qbf(n)*dr(i)*ddt ![kg] change in mass over this edge
+				!write(*,*),'i,j,kbed(i,j),flux,vvRrel,qbf(n),dr(i)',i,j,kbed(i,j),flux,vvRrel,qbf(n),dr(i)
+						IF (flux>0.) THEN 
+							d_cbotnew(n,i,j) = d_cbotnew(n,i,j) - flux/(rho_sand*dr(i)*Rp(i)*dphi2(j)*dz)
+							d_cbotnew(n,i,j+1) = d_cbotnew(n,i,j+1) + flux/(rho_sand*dr(i)*Rp(i)*dphi2(j+1)*dz)
+						ENDIF 
+						flux = vvLrel*qbf(n)*dr(i)*ddt ![kg] change in mass over this edge
+				!write(*,*),'i,j,kbed(i,j),flux,vvLrel,qbf(n),dr(i)',i,j,kbed(i,j),flux,vvLrel,qbf(n),dr(i)
+						IF (flux<0.) THEN 
+							d_cbotnew(n,i,j) = d_cbotnew(n,i,j) + flux/(rho_sand*dr(i)*Rp(i)*dphi2(j)*dz)
+							d_cbotnew(n,i,j-1) = d_cbotnew(n,i,j-1) - flux/(rho_sand*dr(i)*Rp(i)*dphi2(j-1)*dz)
+						ENDIF						
+					ENDIF 
 				ENDDO
 			ENDIF	
 	
@@ -989,13 +1091,13 @@
 			IF ((interaction_bed.eq.4.or.interaction_bed.eq.6).and.time_n.ge.tstart_morf2) THEN
 				IF (cbotnewtot.lt.0.and.(kbed(i,j)-1).ge.0.and.SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed-1.e-9) THEN 
 				!add half cell sediment on cbot account for further erosion without lowering 1 dz yet (because otherwise flipflop between ero-1dz and depo+1dz)
-				! this is at 0.9*dz			
+				! this is at 1*dz			
 					DO n=1,nfrac ! also cbotnew(n,i,j) is le 0:
 						cbotnew(n,i,j)=cbotnew(n,i,j)+0.5*Clivebed(n,i,j,kbed(i,j)) 
 						Clivebed(n,i,j,kbed(i,j))=0.5*Clivebed(n,i,j,kbed(i,j)) 
 					ENDDO	
 				ELSEIF (cbotnewtot.lt.0.and.(kbed(i,j)-1).ge.0) THEN !erosion of 1 layer dz:
-				! this is at 0.4*dz
+				! this is at 0.5*dz
 					kplus = MIN(kbed(i,j)+1,k1)
 					drdt(i,j,kbed(i,j))=rho_b
 					rnew(i,j,kbed(i,j))=rho_b
@@ -1103,9 +1205,9 @@
 						rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 						rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density							
 					ENDDO	
-				ELSEIF (cbotnewtot_pos.ge.0.6*cfixedbed.and.kbed(i,j)+1.le.kmax) THEN
+				ELSEIF (cbotnewtot_pos.ge.0.5*cfixedbed.and.kbed(i,j)+1.le.kmax) THEN
 				! Clivebed not completely full; therefore no bedupdate kbed+1, but only redistribution from cbotnew tot Clivebed 
-				! delay this elseif to keep a remainder in cbotnew as buffer against flip-flop erosion behavior				
+				! delay in this elseif is no longer needed as the potential flip-flop is with the first IF which is only a bookkeeping flip-flop; not changing kbed up and down unneeded			
 					c_adjustA = (cfixedbed-SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cbotnewtot_pos
 					! top off Clivebed to cfixedbed from cbotnew and leave remainder into cbotnew 
 					DO n=1,nfrac 
@@ -1326,9 +1428,62 @@
 !!!			ENDIF			
 		  ENDDO
 		ENDDO
+		IF (wbed_correction.eq.1) call bound_cbot(Wbed)
 	ENDIF		
 	
 	IF ((interaction_bed.eq.4.or.interaction_bed.eq.6).and.time_n.ge.tstart_morf.and.time_n.ge.tstart_morf2) THEN
+		IF (bedload_formula.ne.'nonenon0000') THEN 
+!! mpi transfer sum d_cbotnew over edges:
+			call shiftf_lreverse(d_cbotnew,cbf) 
+			call shiftb_lreverse(d_cbotnew,cbb) 
+
+			if (periodicy.eq.0.or.periodicy.eq.2) then
+				if (rank.eq.0) then ! boundaries in j-direction
+				  do n=1,nfrac
+				   do i=1,imax
+					   d_cbotnew(n,i,1) = 0. !bedload cannot fill or empty first grid cell: d.dn flux = 0.
+					   d_cbotnew(n,i,jmax) = d_cbotnew(n,i,jmax) + cbb(n,i) 
+				   enddo
+				  enddo
+				elseif (rank.eq.px-1) then
+				  do n=1,nfrac
+				   do i=1,imax
+					   d_cbotnew(n,i,1) = d_cbotnew(n,i,1) + cbf(n,i)
+					   d_cbotnew(n,i,jmax) = 0. !bedload cannot fill or empty first grid cell: d.dn flux = 0.
+				   enddo
+				  enddo		   
+				else
+				  do n=1,nfrac
+				   do i=1,imax
+					   d_cbotnew(n,i,1) = d_cbotnew(n,i,1) + cbf(n,i)
+					   d_cbotnew(n,i,jmax) = d_cbotnew(n,i,jmax) + cbb(n,i) 
+				   enddo
+				  enddo
+				endif
+			else
+			  do n=1,nfrac
+			   do i=1,imax
+				   d_cbotnew(n,i,1) = d_cbotnew(n,i,1) + cbf(n,i)
+				   d_cbotnew(n,i,jmax) = d_cbotnew(n,i,jmax) + cbb(n,i) 
+			   enddo
+			  enddo
+			endif
+			  do n=1,nfrac
+			   do j=1,jmax
+				   d_cbotnew(n,1,j) = 0. !bedload cannot fill or empty first grid cell: d.dn flux = 0.
+				   d_cbotnew(n,imax,j) = 0.
+			   enddo
+			  enddo
+	
+!! add c_cbotnew with original cbotnew:
+			DO i=1,imax
+				DO j=1,jmax
+					DO n=1,nfrac
+						cbotnew(n,i,j)=cbotnew(n,i,j)+d_cbotnew(n,i,j)
+					ENDDO
+				ENDDO
+			ENDDO	
+		ENDIF 
 		IF (U_TSHD>0.) THEN !reset "inflow" bedlevel
 			kbed(1,0:j1)=kbedin(0:j1)
 			kbedt(1,0:j1)=kbedin(0:j1)
@@ -1427,12 +1582,12 @@
 				DO j=1,jmax
 					sl1=(Rp(i)-Rp(i-1))/MAX(zb_all(i,j)-zb_all(i-1,j),1.e-18)
 					sl2=(Rp(i+1)-Rp(i))/MAX(zb_all(i,j)-zb_all(i+1,j),1.e-18)
-					sl3=(Rp(i)*sin_u(j)-Rp(i)*sin_u(j-1))/MAX(zb_all(i,j)-zb_all(i,j-1),1.e-18)
-					sl4=(Rp(i)*sin_u(j+1)-Rp(i)*sin_u(j))/MAX(zb_all(i,j)-zb_all(i,j+1),1.e-18)					
-					sl5=SQRT((Rp(i)*sin_u(j+1)-Rp(i)*sin_u(j))**2+(Rp(i)-Rp(i-1))**2)/MAX(zb_all(i,j)-zb_all(i-1,j+1),1.e-18)
-					sl6=SQRT((Rp(i)*sin_u(j+1)-Rp(i)*sin_u(j))**2+(Rp(i)-Rp(i+1))**2)/MAX(zb_all(i,j)-zb_all(i+1,j+1),1.e-18)
-					sl7=SQRT((Rp(i)*sin_u(j-1)-Rp(i)*sin_u(j))**2+(Rp(i)-Rp(i+1))**2)/MAX(zb_all(i,j)-zb_all(i+1,j-1),1.e-18)
-					sl8=SQRT((Rp(i)*sin_u(j-1)-Rp(i)*sin_u(j))**2+(Rp(i)-Rp(i-1))**2)/MAX(zb_all(i,j)-zb_all(i-1,j-1),1.e-18)
+					sl3=(Rp(i)*phip(j)-Rp(i)*phip(j-1))/MAX(zb_all(i,j)-zb_all(i,j-1),1.e-18)
+					sl4=(Rp(i)*phip(j+1)-Rp(i)*phip(j))/MAX(zb_all(i,j)-zb_all(i,j+1),1.e-18)					
+					sl5=SQRT((Rp(i)*phip(j+1)-Rp(i)*phip(j))**2+(Rp(i)-Rp(i-1))**2)/MAX(zb_all(i,j)-zb_all(i-1,j+1),1.e-18)
+					sl6=SQRT((Rp(i)*phip(j+1)-Rp(i)*phip(j))**2+(Rp(i)-Rp(i+1))**2)/MAX(zb_all(i,j)-zb_all(i+1,j+1),1.e-18)
+					sl7=SQRT((Rp(i)*phip(j-1)-Rp(i)*phip(j))**2+(Rp(i)-Rp(i+1))**2)/MAX(zb_all(i,j)-zb_all(i+1,j-1),1.e-18)
+					sl8=SQRT((Rp(i)*phip(j-1)-Rp(i)*phip(j))**2+(Rp(i)-Rp(i-1))**2)/MAX(zb_all(i,j)-zb_all(i-1,j-1),1.e-18)
 					maxbedslope(i,j)=MIN(sl1,sl2,sl3,sl4,sl5,sl6,sl7,sl8)
 					IF (maxbedslope(i,j).lt.0.9999*av_slope(i,j,kbed(i,j))*bednotfixed(i,j,kbed(i,j)).and.kbed(i,j).ge.1) THEN
 					! avalanche...
@@ -1451,32 +1606,32 @@
 							itrgt=i
 							jtrgt=j-1
 							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
-							dl = Rp(i)*sin_u(j)-Rp(i)*sin_u(j-1)							
+							dl = Rp(i)*phip(j)-Rp(i)*phip(j-1)							
 						ELSEIF (sl4.le.maxbedslope(i,j)) THEN
 							itrgt=i
 							jtrgt=j+1
 							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
-							dl = Rp(i)*sin_u(j+1)-Rp(i)*sin_u(j)
+							dl = Rp(i)*phip(j+1)-Rp(i)*phip(j)
 						ELSEIF (sl5.le.maxbedslope(i,j)) THEN
 							itrgt=i-1
 							jtrgt=j+1
 							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
-							dl = SQRT((Rp(i)*sin_u(j)-Rp(i)*sin_u(jtrgt))**2+(Rp(i)-Rp(itrgt))**2)	
+							dl = SQRT((Rp(i)*phip(j)-Rp(i)*phip(jtrgt))**2+(Rp(i)-Rp(itrgt))**2)	
 						ELSEIF (sl6.le.maxbedslope(i,j)) THEN
 							itrgt=i+1
 							jtrgt=j+1
 							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
-							dl = SQRT((Rp(i)*sin_u(j)-Rp(i)*sin_u(jtrgt))**2+(Rp(i)-Rp(itrgt))**2)		
+							dl = SQRT((Rp(i)*phip(j)-Rp(i)*phip(jtrgt))**2+(Rp(i)-Rp(itrgt))**2)		
 						ELSEIF (sl7.le.maxbedslope(i,j)) THEN
 							itrgt=i+1
 							jtrgt=j-1
 							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
-							dl = SQRT((Rp(i)*sin_u(j)-Rp(i)*sin_u(jtrgt))**2+(Rp(i)-Rp(itrgt))**2)
+							dl = SQRT((Rp(i)*phip(j)-Rp(i)*phip(jtrgt))**2+(Rp(i)-Rp(itrgt))**2)
 						ELSEIF (sl8.le.maxbedslope(i,j)) THEN
 							itrgt=i-1
 							jtrgt=j-1
 							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
-							dl = SQRT((Rp(i)*sin_u(j)-Rp(i)*sin_u(jtrgt))**2+(Rp(i)-Rp(itrgt))**2)								
+							dl = SQRT((Rp(i)*phip(j)-Rp(i)*phip(jtrgt))**2+(Rp(i)-Rp(itrgt))**2)								
 						ELSE
 							write(*,*),'Warning avalanche cell not found,i,j:',i,j
 							CYCLE 

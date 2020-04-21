@@ -3178,7 +3178,7 @@ C ...  Locals
 	      enddo
 
 
-		IF (interaction_bed.eq.4.or.interaction_bed.eq.6) THEN   
+		IF (interaction_bed.ge.4) THEN   
 			do j=0,j1 
 				do i=0,i1 !imax !including i1 strangely gives crash (13/4/15) !1,imax !0,i1
 					do k=1,kbed(i,j) ! assign initial bed concentrations; k=0 remains empty
@@ -3203,9 +3203,9 @@ C ...  Locals
 			kbedin(0:j1)=kbed(1,0:j1)
 		ENDIF
 		
-		  IF (IBMorder.ne.2) THEN 
-		    kbed22=kbed 
-		  ELSE 
+!		  IF (IBMorder.ne.2) THEN 
+!		    kbed22=kbed 
+!		  ELSE 
 		  	do j=1,jmax 
 				do i=1,imax 
 					IF (interaction_bed.ge.4) THEN 
@@ -3217,7 +3217,7 @@ C ...  Locals
 				ENDDO
 			ENDDO 
 			call bound_cbot_integer(kbed22) 
-		  ENDIF 
+!		  ENDIF 
       end
 
 	subroutine bedroughness_init
