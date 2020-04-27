@@ -508,10 +508,10 @@
 			ENDIF 
 			IF (pickup_bedslope_geo.eq.1) THEN 
 				bed_slope = atan(zbed(i+1,j)-zbed(i-1,j))/(Rp(i+1)-Rp(i-1))
-				uu2 = uu*cos(bed_slope)+wcfd(i,j,kpp)*sin(bed_slope)
+				uu2 = uu*cos(bed_slope)-wcfd(i,j,kpp)*sin(bed_slope)
 				facx = 1./cos(bed_slope)
 				bed_slope = atan(zbed(i,j+1)-zbed(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1)))
-				vv2 = vv*cos(bed_slope)+wcfd(i,j,kpp)*sin(bed_slope)
+				vv2 = vv*cos(bed_slope)-wcfd(i,j,kpp)*sin(bed_slope)
 				facy = 1./cos(bed_slope)
 				bs_geo = facx*facy ! increase in dx and dy (area) over which pickup and deposition take place
 				absU = sqrt((uu2)**2+(vv2)**2)	
@@ -633,11 +633,11 @@
 			vvLrel = vvL_relax(i,j)/absUbl
 
 			IF (pickup_bedslope_geo.eq.1) THEN 
-				bed_slope = atan(zbed(i+1,j)-zbed(i-1,j))/(Rp(i+1)-Rp(i-1))
-				uu2 = uu*cos(bed_slope)+wcfd(i,j,kpp)*sin(bed_slope)
+				bed_slope = atan((zbed(i+1,j)-zbed(i-1,j))/(Rp(i+1)-Rp(i-1)))
+				uu2 = uu*cos(bed_slope)-wcfd(i,j,kpp)*sin(bed_slope)
 				facx = 1./cos(bed_slope)
-				bed_slope = atan(zbed(i,j+1)-zbed(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1)))
-				vv2 = vv*cos(bed_slope)+wcfd(i,j,kpp)*sin(bed_slope)
+				bed_slope = atan((zbed(i,j+1)-zbed(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1))))
+				vv2 = vv*cos(bed_slope)-wcfd(i,j,kpp)*sin(bed_slope)
 				facy = 1./cos(bed_slope)
 				bs_geo = facx*facy ! increase in dx and dy (area) over which pickup and deposition take place
 				absU = sqrt((uu2)**2+(vv2)**2)	
@@ -734,16 +734,16 @@
 					tau=rho_b*ust*ust  !for deposition apply tau belonging to own frac(n)%kn_sed
 					IF (depo_implicit.eq.1) THEN  !determine deposition as sink implicit
 					 ccnew(n,i,j,kplus)=(ccnew(n,i,j,kplus)+erosionf(n)/dz)/ ! vol conc. [-]
-     &				(1.-MAX(0.,(1.-tau/frac(n)%tau_d))*MIN(0.,Wsed(n,i,j,kbed(i,j)))*ddt/dz*bednotfixed_depo(i,j,kbed(i,j))*morfac*bs_geo)
+     &				(1.-MAX(0.,(1.-tau/frac(n)%tau_d))*MIN(0.,Wsed(n,i,j,kbed(i,j)))*ddt/dz*bednotfixed_depo(i,j,kbed(i,j))*morfac)
 					 depositionf(n) = MAX(0.,(1.-tau/frac(n)%tau_d))*ccnew(n,i,j,kplus)*MIN(0.,Wsed(n,i,j,kbed(i,j)))*ddt !ccfd
-     & *bednotfixed_depo(i,j,kbed(i,j))*morfac*bs_geo				 ! m --> dep is negative due to negative wsed					 
+     & *bednotfixed_depo(i,j,kbed(i,j))*morfac				 ! m --> dep is negative due to negative wsed					 
 					 cbotnew(n,i,j)=cbotnew(n,i,j)-b_update*morfac2*(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-]  !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
 					 cbotnewtot=cbotnewtot+cbotnew(n,i,j)
 					 cbotnewtot_pos=cbotnewtot_pos+MAX(cbotnew(n,i,j),0.)
 					 ctot_firstcel=ccnew(n,i,j,kplus)+ctot_firstcel					
 					ELSE
 					 depositionf(n) = MAX(0.,(1.-tau/frac(n)%tau_d))*ccnew(n,i,j,kplus)*MIN(0.,Wsed(n,i,j,kbed(i,j)))*ddt !ccfd
-     & *bednotfixed_depo(i,j,kbed(i,j))*morfac*bs_geo			 ! m --> dep is negative due to negative wsed
+     & *bednotfixed_depo(i,j,kbed(i,j))*morfac			 ! m --> dep is negative due to negative wsed
 					 ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus)+(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-]
 					 cbotnew(n,i,j)=cbotnew(n,i,j)-b_update*morfac2*(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-]  !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
 					 cbotnewtot=cbotnewtot+cbotnew(n,i,j)
@@ -933,10 +933,10 @@
 					phipp = ve*cfixedbed/vs 
 					
 					ve_check = phipp*(delta*gvector*d50)**0.5*morfac*bs_geo +  ! this is erosion (positive value)
-     & 					SUM(ccnew(1:nfrac,i,j,kplus))*(MIN(0.,Wsed(n,i,j,kbed(i,j)))) ! this is depo (neg value) in m/s 
+     & 					SUM(ccnew(1:nfrac,i,j,kplus))*(MIN(0.,Wsed(n,i,j,kbed(i,j))))*morfac ! this is depo (neg value) in m/s 
 					ve_check = ve_check/cfixedbed  ! correction needed for pore volume 
-					phipp = phipp + MAX(vwal-ve_check,0.)/((delta*gvector*d50)**0.5*morfac*bs_geo)*cfixedbed
-					IF (wbed_correction.eq.1) Wbed(i,j)=ve_check+MAX(vwal-ve_check,0.)
+					phipp = phipp + MAX(vwal*bs_geo-ve_check,0.)/((delta*gvector*d50)**0.5*morfac*bs_geo)*cfixedbed
+					IF (wbed_correction.eq.1) Wbed(i,j)=ve_check+MAX(vwal*bs_geo-ve_check,0.)
 				ENDIF
 				IF (pickup_fluctuations.eq.1) THEN
 					!1 add white noise to pickup
@@ -1030,25 +1030,28 @@
 						qbf(n) = qb * (c_bed(n)/cfixedbed) !don't make qb zero this is not robust 
 					ENDIF
 					qbU(n,i,j) = qbf(n)*uuRrel
-					qbV(n,i,j) = qbf(n)*vvRrel					
-					erosionf(n)=erosionf(n)/REAL(k_layer_pickup) !default k_layer_pickup=1
+					qbV(n,i,j) = qbf(n)*vvRrel	
+					cctot=0.
+					DO k=kplus,kbed(i,j)+k_layer_pickup
+						cctot=cctot+MAX(ccfd(n,i,j,k)+1.e-12,0.)
+					ENDDO
 					DO k=kplus+1,kplus+k_layer_pickup-1 
-						ccnew(n,i,j,k) = ccnew(n,i,j,k) + erosionf(n)/dz !pickup is spread over multiple k-layers 
+						ccnew(n,i,j,k) = ccnew(n,i,j,k) + erosionf(n)*MAX(ccfd(n,i,j,k)+1.e-12,0.)/cctot/dz !pickup is spread over multiple k-layers 
 					ENDDO 
 					IF (depo_implicit.eq.1) THEN  !determine deposition as sink implicit
-					ccnew(n,i,j,kplus)=(ccnew(n,i,j,kplus)+erosionf(n)/dz)/ ! vol conc. [-]
-     &      		(1.-(MIN(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))-wsedbed)*ddt/dz*bednotfixed_depo(i,j,kbed(i,j))*morfac*bs_geo)					
+					ccnew(n,i,j,kplus)=(ccnew(n,i,j,kplus)+erosionf(n)*MAX(ccfd(n,i,j,kplus)+1.e-12,0.)/cctot/dz)/ ! vol conc. [-]
+     &      		(1.-(MIN(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))-wsedbed)*ddt/dz*bednotfixed_depo(i,j,kbed(i,j))*morfac)					
 					depositionf(n) = ccnew(n,i,j,kplus)*(MIN(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))-wsedbed)*ddt !ccfd
-     &     *bednotfixed_depo(i,j,kbed(i,j))*morfac*bs_geo ! m --> dep is negative due to negative wsed					
-					cbotnew(n,i,j)=cbotnew(n,i,j)-b_update*morfac2*(erosionf(n)*REAL(k_layer_pickup)+depositionf(n))/(dz) ! vol conc. [-] !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+     &     *bednotfixed_depo(i,j,kbed(i,j))*morfac! m --> dep is negative due to negative wsed					
+					cbotnew(n,i,j)=cbotnew(n,i,j)-b_update*morfac2*(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-] !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
 					cbotnewtot=cbotnewtot+cbotnew(n,i,j)
 					cbotnewtot_pos=cbotnewtot_pos+MAX(cbotnew(n,i,j),0.)
 					ctot_firstcel=ccnew(n,i,j,kplus)+ctot_firstcel
 					ELSE
 					depositionf(n) = ccnew(n,i,j,kplus)*(MIN(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))-wsedbed)*ddt !ccfd
-     &     *bednotfixed_depo(i,j,kbed(i,j))*morfac*bs_geo ! m --> dep is negative due to negative wsed
-					ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus)+(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-]
-					cbotnew(n,i,j)=cbotnew(n,i,j)-b_update*morfac2*(erosionf(n)*REAL(k_layer_pickup)+depositionf(n))/(dz) ! vol conc. [-] !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+     &     *bednotfixed_depo(i,j,kbed(i,j))*morfac ! m --> dep is negative due to negative wsed
+					ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus)+(erosionf(n)*MAX(ccfd(n,i,j,kplus)+1.e-12,0.)/cctot+depositionf(n))/(dz) ! vol conc. [-]
+					cbotnew(n,i,j)=cbotnew(n,i,j)-b_update*morfac2*(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-] !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
 					cbotnewtot=cbotnewtot+cbotnew(n,i,j)
 					cbotnewtot_pos=cbotnewtot_pos+MAX(cbotnew(n,i,j),0.)
 					ctot_firstcel=ccnew(n,i,j,kplus)+ctot_firstcel
