@@ -508,10 +508,10 @@
 			ENDIF 
 			IF (pickup_bedslope_geo.eq.1) THEN 
 				bed_slope = atan(zbed(i+1,j)-zbed(i-1,j))/(Rp(i+1)-Rp(i-1))
-				uu2 = uu*cos(bed_slope)-wcfd(i,j,kpp)*sin(bed_slope)
+				uu2 = uu*cos(bed_slope)+wcfd(i,j,kpp)*sin(bed_slope)
 				facx = 1./cos(bed_slope)
 				bed_slope = atan(zbed(i,j+1)-zbed(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1)))
-				vv2 = vv*cos(bed_slope)-wcfd(i,j,kpp)*sin(bed_slope)
+				vv2 = vv*cos(bed_slope)+wcfd(i,j,kpp)*sin(bed_slope)
 				facy = 1./cos(bed_slope)
 				bs_geo = facx*facy ! increase in dx and dy (area) over which pickup and deposition take place
 				absU = sqrt((uu2)**2+(vv2)**2)	
@@ -634,10 +634,10 @@
 
 			IF (pickup_bedslope_geo.eq.1) THEN 
 				bed_slope = atan((zbed(i+1,j)-zbed(i-1,j))/(Rp(i+1)-Rp(i-1)))
-				uu2 = uu*cos(bed_slope)-wcfd(i,j,kpp)*sin(bed_slope)
+				uu2 = uu*cos(bed_slope)+wcfd(i,j,kpp)*sin(bed_slope)
 				facx = 1./cos(bed_slope)
 				bed_slope = atan((zbed(i,j+1)-zbed(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1))))
-				vv2 = vv*cos(bed_slope)-wcfd(i,j,kpp)*sin(bed_slope)
+				vv2 = vv*cos(bed_slope)+wcfd(i,j,kpp)*sin(bed_slope)
 				facy = 1./cos(bed_slope)
 				bs_geo = facx*facy ! increase in dx and dy (area) over which pickup and deposition take place
 				absU = sqrt((uu2)**2+(vv2)**2)	
