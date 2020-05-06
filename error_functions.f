@@ -246,9 +246,9 @@
 	CASE(082)
 		write(*,*) '# namelist &LESmodel                             #'			
 		write(*,*) '# sgs_model is not defined                       #'	
-		write(*,*) '# choose ''SSmag'',or ''DSmag'',or ''FSmag'',or''SWALE'',or''Sigma'',or''MixLe''  #'	
+		write(*,*) '# choose ''SSmag'',or ''DSmag'',or ''FSmag'',or''SWALE'',or''Sigma'',or''MixLe'',or''ReaKE''   #'	
 		write(*,*) '# for Standard, Filtered Smagorinsky, WALE,      #'
-		write(*,*) '# Sigma, Mixing Length model                     #'
+		write(*,*) '# Sigma, Mixing Length RANS model, Realizible K-Eps model  #'
 	CASE(083)
 		write(*,*) '# namelist &LESmodel                             #'			
 		write(*,*) '# nr_HPfilter is not defined                     #'	

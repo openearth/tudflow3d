@@ -1431,6 +1431,12 @@
 !!!			ENDIF			
 		  ENDDO
 		ENDDO
+		! kbed is updated, hence also zbed needs to be updated:
+		DO i=0,i1
+			DO j=0,j1
+				zbed(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(cbotnew(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
+			ENDDO
+		ENDDO		
 		IF (wbed_correction.eq.1) call bound_cbot(Wbed)
 	ENDIF		
 	
@@ -1515,7 +1521,7 @@
 		call bound_cbot_integer(kbed) ! apply correct boundary conditions for updated kbed	
 		DO i=0,i1
 			DO j=0,j1
-				zbed(i,j)=REAL(kbed(i,j))*dz
+				zbed(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(cbotnew(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
 			ENDDO
 		ENDDO
 		
@@ -1686,7 +1692,7 @@
 			call bound_cbot_integer(kbed) ! apply correct boundary conditions for updated kbed
 			DO i=0,i1
 				DO j=0,j1
-					zbed(i,j)=REAL(kbed(i,j))*dz
+					zbed(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(cbotnew(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
 				ENDDO
 			ENDDO			
 			
@@ -1878,7 +1884,7 @@
 		call bound_cbot_integer(kbed) ! apply correct boundary conditions for updated kbed	
 		DO i=0,i1
 			DO j=0,j1
-				zbed(i,j)=REAL(kbed(i,j))*dz
+				zbed(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(cbotnew(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
 			ENDDO
 		ENDDO		
 	 ENDIF	

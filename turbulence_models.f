@@ -2331,7 +2331,567 @@ c*************************************************************
 			 
       end
 	  
+      subroutine RealizibleKEps(Uvel,Vvel,Wvel,rr)
+      USE nlist
+      implicit none
+      !include 'mpif.h'
+      real xx,yy,f,dzi,uu,vv,absU,ust,z0,yplus
+      integer n,t,tel,n2
+      real ebb(0:i1,0:k1)
+      real ebf(0:i1,0:k1)
+      real dRpp_i,dRp_i,divergentie,SdijSdij
+      real     Uvel(0:i1,0:j1,0:k1),
+     +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),rr(0:i1,0:j1,0:k1)
+	 
+	 real dnew(0:i1,0:j1,0:k1),TKEnew(0:i1,0:j1,0:k1),EEEnew(0:i1,0:j1,0:k1)
+	 real Sabs(1:imax,1:jmax,1:kmax),drdz(1:imax,1:jmax,1:kmax),C1(1:imax,1:jmax,1:kmax),gvector
 
+	real dudx,dudy,dudz
+	real dvdx,dvdy,dvdz
+	real dwdx,dwdy,dwdz
+	real Sd11,Sd12,Sd13,Sd22,Sd23,Sd33,Sd21,Sd31,Sd32,SijSij
+	real Om11,Om12,Om13,Om22,Om23,Om33,Om21,Om31,Om32,OijOij
+	real MuAn_factor,Ri,sqrtsix,UUs,WWW,A0,As,eta
+	integer im,ip,jm,jp,km,kp,kpp
+	real ctot,cref,pwr,zb_C,distance_to_bed,nu_t,factor,absU2
+	integer fracs_included(nfr_sand+nfr_silt)
+	real aaa(0:k1),bbb(0:k1),ccc(0:k1),ekm_min,ekm_plus,rhss(0:k1),CNz
+
+	sqrtsix=sqrt(6.)
+	
+
+	SijSij = 0.
+	ekm=0.
+
+	dzi=1./dz
+	do i=1,imax
+	  dRpp_i=1./(Rp(i+1)-Rp(i))
+	  dRp_i=1./(Rp(i)-Rp(i-1))
+	  
+	  
+	  do j=1,jmax
+	     do k=1,kmax
+		 
+
+		 
+		 
+		dudx = (Uvel(i,j,k)-Uvel(i-1,j,k))/dr(i) 
+		dvdy = (Vvel(i,j,k)-Vvel(i,j-1,k))/(Rp(i)*(phiv(j)-phiv(j-1))) + 0.5*(Uvel(i,j,k)+Uvel(i-1,j,k))/Rp(i)
+		dwdz = (Wvel(i,j,k)-Wvel(i,j,k-1))*dzi
+      
+		dudy = ((Uvel(i  ,j+1,k  )-Uvel(i  ,j  ,k  ))/(Ru(i)*(phip(j+1)-phip(j))) + 
+     &		        (Uvel(i  ,j  ,k  )-Uvel(i  ,j-1,k  ))/(Ru(i)*(phip(j)-phip(j-1))) +
+     &		        (Uvel(i-1,j+1,k  )-Uvel(i-1,j  ,k  ))/(Ru(i-1)*(phip(j+1)-phip(j))) +
+     &		        (Uvel(i-1,j  ,k  )-Uvel(i-1,j-1,k  ))/(Ru(i-1)*(phip(j)-phip(j-1))) ) * 0.25
+		dudz = ((Uvel(i  ,j  ,k+1)-Uvel(i  ,j  ,k  ))*dzi +
+     &		        (Uvel(i  ,j  ,k  )-Uvel(i  ,j  ,k-1))*dzi +
+     &		        (Uvel(i-1,j  ,k+1)-Uvel(i-1,j  ,k  ))*dzi +
+     &		        (Uvel(i-1,j  ,k  )-Uvel(i-1,j  ,k-1))*dzi ) * 0.25
+		dvdx =(( Vvel(i+1,j  ,k  )/Rp(i+1)-Vvel(i  ,j  ,k  )/Rp(i))*dRpp_i*Ru(i) +
+     &		       ( Vvel(i+1,j-1,k  )/Rp(i+1)-Vvel(i  ,j-1,k  )/Rp(i))*dRpp_i*Ru(i) + 
+     &		       ( Vvel(i  ,j  ,k  )/Rp(i)-Vvel(i-1,j  ,k  )/Rp(i-1))*dRp_i*Ru(i-1)  +
+     &		       ( Vvel(i  ,j-1,k  )/Rp(i)-Vvel(i-1,j-1,k  )/Rp(i-1))*dRp_i*Ru(i-1) ) * 0.25
+		dvdz = ((Vvel(i  ,j  ,k+1)-Vvel(i  ,j  ,k  ))*dzi +
+     &		        (Vvel(i  ,j  ,k  )-Vvel(i  ,j  ,k-1))*dzi +
+     &		        (Vvel(i  ,j-1,k+1)-Vvel(i  ,j-1,k  ))*dzi +
+     &		        (Vvel(i  ,j-1,k  )-Vvel(i  ,j-1,k-1))*dzi ) * 0.25
+		dwdx =(( Wvel(i+1,j  ,k  )-Wvel(i  ,j  ,k  ))*dRpp_i + 
+     &		       ( Wvel(i+1,j  ,k-1)-Wvel(i  ,j  ,k-1))*dRpp_i +
+     &		       ( Wvel(i  ,j  ,k  )-Wvel(i-1,j  ,k  ))*dRp_i +
+     &		       ( Wvel(i  ,j  ,k-1)-Wvel(i-1,j  ,k-1))*dRp_i ) * 0.25
+		dwdy =(( Wvel(i  ,j+1,k  )-Wvel(i  ,j  ,k  ))/(Rp(i)*(phip(j+1)-phip(j))) +
+     &		       ( Wvel(i  ,j+1,k-1)-Wvel(i  ,j  ,k-1))/(Rp(i)*(phip(j+1)-phip(j))) +
+     &		       ( Wvel(i  ,j  ,k  )-Wvel(i  ,j-1,k  ))/(Rp(i)*(phip(j)-phip(j-1))) +
+     &		       ( Wvel(i  ,j  ,k-1)-Wvel(i  ,j-1,k-1))/(Rp(i)*(phip(j)-phip(j-1))) ) * 0.25
+
+		Sd11 =     (dudx )
+		Sd22 =     (dvdy )
+		Sd33 =     (dwdz )
+		Sd12 = 0.5*(dvdx+dudy)
+		Sd13 = 0.5*(dudz+dwdx)
+		Sd23 = 0.5*(dvdz+dwdy)
+		Sd21 = Sd12
+		Sd31 = Sd13
+		Sd32 = Sd23 
+		
+		Om21 = 0.5*(dvdx-dudy)
+		Om13 = 0.5*(dudz-dwdx)
+		Om23 = 0.5*(dvdz-dwdy)
+		Om12 = 0.5*(dudy-dvdx)
+		Om31 = 0.5*(dwdx-dudz)
+		Om32 = 0.5*(dwdy-dvdz)
+
+		SijSij = Sd11*Sd11 + Sd22*Sd22 + Sd33*Sd33 + 2.*Sd12*Sd12 + 2.*Sd13*Sd13 + 2.*Sd23*Sd23
+		OijOij = Om12*Om12+Om21*Om21 + Om13*Om13+Om31*Om31 + Om23*Om23+Om32*Om32
+		Sabs(i,j,k)=sqrt(2.*SijSij)
+		UUs    = sqrt(SijSij+OijOij)
+		
+		WWW = Sd11*Sd11*Sd11 + Sd12*Sd21*Sd11 + Sd13*Sd31*Sd11 +
+     &        Sd21*Sd11*Sd12 + Sd22*Sd21*Sd12 + Sd23*Sd31*Sd12 +
+     &        Sd31*Sd11*Sd13 + Sd32*Sd21*Sd13 + Sd33*Sd31*Sd13 +
+     &        Sd11*Sd12*Sd21 + Sd12*Sd22*Sd21 + Sd13*Sd32*Sd21 +
+     &        Sd21*Sd12*Sd22 + Sd22*Sd22*Sd22 + Sd23*Sd32*Sd22 +
+     &        Sd31*Sd12*Sd23 + Sd32*Sd22*Sd23 + Sd33*Sd32*Sd23 +
+     &        Sd11*Sd13*Sd31 + Sd12*Sd23*Sd31 + Sd13*Sd33*Sd31 +
+     &        Sd21*Sd13*Sd32 + Sd22*Sd23*Sd32 + Sd23*Sd33*Sd32 +
+     &        Sd31*Sd13*Sd33 + Sd32*Sd23*Sd33 + Sd33*Sd33*Sd33
+		WWW = WWW/(SijSij**1.5+1.e-12) 
+		WWW = WWW*sqrtsix 
+		WWW = MIN(ABS(WWW),1.)*SIGN(1.,WWW)  !may not be >1 or <-1
+		A0  = 4.04
+		As  = sqrtsix*cos(0.3333333333*acos(WWW))
+		Cmu(i,j,k) = 1./(A0+As*TKE(i,j,k)*UUs/EEE(i,j,k))
+		eta = Sabs(i,j,k)*TKE(i,j,k)/EEE(i,j,k)
+		C1(i,j,k) = MAX(0.43,eta/(eta+5.))
+		IF (TKE(i,j,k)**1.5<EEE(i,j,k)*depth) then ! following RJ Labeur dissertation p. 198 to limit visc 
+			ekm(i,j,k)=rr(i,j,k)*Cmu(i,j,k)*TKE(i,j,k)*TKE(i,j,k)/EEE(i,j,k)
+		ELSE 
+			ekm(i,j,k)=rr(i,j,k)*depth*sqrt(TKE(i,j,k))
+		ENDIF 
+		! new ekm determined explicitly based on values at start of timestep: time-level n 
+		! make sure to limit elsewhere TKE>1e-12 and EEE>1e-12 at all time to prevent division by zero
+
+		
+		drdz(i,j,k)=0.5*(rr(i,j,k+1  )-rr(i,j,k-1))*dzi
+     	    enddo			
+	  enddo
+	enddo
+	
+		IF (extra_mix_visc.eq.'Krie') THEN
+			pwr=-2.5*cfixedbed
+			cref=1.001*cfixedbed !max ekm_mix is 3e4*ekm_mol
+			tel=0
+			DO n=1,nfr_silt
+				tel=tel+1
+				fracs_included(tel)=nfrac_silt(n)
+			ENDDO
+			DO n=1,nfr_sand
+				tel=tel+1
+				fracs_included(tel)=nfrac_sand(n)
+			ENDDO				
+			DO i=1,imax
+			  DO j=1,jmax
+			    DO k=1,kmax
+				  !ctot=SUM(cnew(fracs_included,i,j,k))
+				  ctot=0.
+				  DO n2=1,tel
+				    n=fracs_included(n2)
+					ctot = ctot + cnew(n,i,j,k)*frac(n)%dfloc/frac(n)%dpart
+					ctot = MIN(cfixedbed,ctot)
+				  ENDDO 
+				  ekm(i,j,k)=ekm(i,j,k)+ekm_mol*(1.-ctot/cref)**pwr
+				ENDDO
+			  ENDDO
+			ENDDO
+		ELSE
+			ekm=ekm+ekm_mol
+		ENDIF
+		if ((slip_bot.eq.1.or.slip_bot.eq.2).and.nu_minimum_wall.ge.1) then
+		  do i=1,imax
+			do j=1,jmax
+				IF (IBMorder.eq.2) THEN
+					IF (interaction_bed.ge.4) THEN
+					  zb_C=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(dcdtbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
+					ELSE 
+					  zb_C=zbed(i,j)
+					ENDIF
+					kp=MIN(CEILING(zb_C/dz+0.5)+1,k1)	!location velocity which must be adjusted 2nd order IBM -->(0-1)*dz distance from bed
+					distance_to_bed=(REAL(kp)-0.5)*dz-zb_C
+					IF (distance_to_bed<0.1*dz) THEN 
+						kp = MIN(k1,kp+1)
+						distance_to_bed=(REAL(kp)-0.5)*dz-zb_C
+					ENDIF 
+				ELSE 
+					kp = MIN(k1,kbedt(i,j)+1)
+					distance_to_bed = 0.5*dz 
+				ENDIF 
+				uu=0.5*(Uvel(i,j,kp)+Uvel(i-1,j,kp))
+				vv=0.5*(Vvel(i,j,kp)+Vvel(i,j-1,kp))
+				absU=sqrt(uu*uu+vv*vv)
+				ust=0.1*absU
+				if (kn>0.) then !walls with rougness (log-law used which can be hydr smooth or hydr rough):
+					do tel=1,10 ! 10 iter is more than enough
+						z0=kn/30.+0.11*nu_mol/MAX(ust,1.e-9)
+						ust=absU/MAX(1./kappa*log(distance_to_bed/z0),2.) !ust maximal 0.5*absU
+					enddo
+				else
+					do tel=1,10 ! 10 iter is more than enough
+						yplus=MAX(distance_to_bed*ust/nu_mol,1e-12)
+						ust=absU/MAX((2.5*log(yplus)+5.5),2.) !ust maximal 0.5*absU			
+					enddo
+					if (yplus<30.) then
+					  do tel=1,10 ! 10 iter is more than enough
+						yplus=MAX(distance_to_bed*ust/nu_mol,1e-12)
+						ust=absU/MAX((5.*log(yplus)-3.05),2.) !ust maximal 0.5*absU			
+					  enddo	
+					endif
+					if (yplus<5.) then !viscous sublayer uplus=yplus
+						ust=sqrt(absU*nu_mol/(distance_to_bed))
+					endif
+				endif
+				IF (nu_minimum_wall.eq.1) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(i,j,kp) = MAX(ekm(i,j,kp),nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2) 
+				!minimum eddy viscosity is Prandtl mixing length theory including Van Driest damping (factor A=19 and power 2 is found in Van Balen 2010 dissertation p15 and Catalano et al. 2010 circular cylinder flow)
+				ELSEIF (nu_minimum_wall.eq.2) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(i,j,kp) = MAX(ekm(i,j,kp),nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2) 				
+					distance_to_bed=distance_to_bed+dz 
+					kp=MIN(kp+1,k1) 
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(i,j,kp) = MAX(ekm(i,j,kp),nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2) 	
+				ELSEIF (nu_minimum_wall.eq.3) THEN 
+					kp=MIN(kp+1,k1) 
+					uu=0.5*(Uvel(i,j,kp)+Uvel(i-1,j,kp))
+					vv=0.5*(Vvel(i,j,kp)+Vvel(i,j-1,kp))
+					absU2=sqrt(uu*uu+vv*vv)
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					IF (absU2>1.1*absU) THEN
+						nu_t = ust*ust/((absU2-absU)/dz)
+						factor = nu_t/(0.5*(ekm(i,j,kp)/rr(i,j,kp)+ekm(i,j,kp-1)/rr(i,j,kp-1)))
+						factor = MAX(factor,1.) 
+						ekm(i,j,kp)=factor*ekm(i,j,kp)
+						ekm(i,j,kp-1)=factor*ekm(i,j,kp-1)
+					ELSE 
+						kp=kp-1 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(i,j,kp) = MAX(ekm(i,j,kp),nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2) 				
+						distance_to_bed=distance_to_bed+dz 
+						kp=MIN(kp+1,k1) 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(i,j,kp) = MAX(ekm(i,j,kp),nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2)					
+					ENDIF  
+				ELSEIF (nu_minimum_wall.eq.11) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(i,j,kp) = nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2 
+				!minimum eddy viscosity is Prandtl mixing length theory including Van Driest damping (factor A=19 and power 2 is found in Van Balen 2010 dissertation p15 and Catalano et al. 2010 circular cylinder flow)
+				ELSEIF (nu_minimum_wall.eq.12) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(i,j,kp) = nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2 				
+					distance_to_bed=distance_to_bed+dz 
+					kp=MIN(kp+1,k1) 
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(i,j,kp) = nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2 	
+				ELSEIF (nu_minimum_wall.eq.13) THEN 
+					kp=MIN(kp+1,k1) 
+					uu=0.5*(Uvel(i,j,kp)+Uvel(i-1,j,kp))
+					vv=0.5*(Vvel(i,j,kp)+Vvel(i,j-1,kp))
+					absU2=sqrt(uu*uu+vv*vv)
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					IF (absU2>1.1*absU) THEN
+						nu_t = ust*ust/((absU2-absU)/dz)
+						factor = nu_t/(0.5*(ekm(i,j,kp)/rr(i,j,kp)+ekm(i,j,kp-1)/rr(i,j,kp-1)))
+						!factor = MAX(factor,1.) 
+						ekm(i,j,kp)=factor*ekm(i,j,kp)
+						ekm(i,j,kp-1)=factor*ekm(i,j,kp-1)
+					ELSE 
+						kp=kp-1 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(i,j,kp) = nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2 				
+						distance_to_bed=distance_to_bed+dz 
+						kp=MIN(kp+1,k1) 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(i,j,kp) = nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2					
+					ENDIF  
+				ENDIF					
+			enddo
+		  enddo
+		endif		
+		
+		
+!!      Boundary conditions Neumann
+        call shiftf(ekm,ebf) 
+        call shiftb(ekm,ebb) 
+	if (periodicy.eq.0.or.periodicy.eq.2) then
+		if (rank.eq.0) then ! boundaries in j-direction
+		        do k=1,kmax
+		           do i=1,imax
+		           ekm(i,0,k) = ekm(i,1,k) 
+		           ekm(i,j1,k)= ebb(i,k) 
+		           enddo
+		        enddo
+		elseif (rank.eq.px-1) then
+		        do k=1,kmax
+		           do i=1,imax
+		           ekm(i,0,k) = ebf(i,k)
+		           ekm(i,j1,k)= ekm(i,jmax,k) 
+		           enddo
+		        enddo   
+		else
+		        do k=1,kmax
+		           do i=1,imax
+		           ekm(i,0,k) = ebf(i,k)
+		           ekm(i,j1,k) =ebb(i,k) 
+		           enddo
+		        enddo
+		endif
+	else
+	        do k=1,kmax
+	           do i=1,imax
+	           ekm(i,0,k) = ebf(i,k)
+	           ekm(i,j1,k) =ebb(i,k) 
+	           enddo
+	        enddo
+	endif
+	if (periodicx.eq.0.or.periodicx.eq.2) then
+		do k=1,kmax ! boundaries in i-direction
+		        do j=0,j1
+		                ekm(0,j,k) = ekm(1,j,k)
+		                ekm(i1,j,k) = ekm(imax,j,k)
+		        enddo
+		enddo
+	else
+		do k=1,kmax ! boundaries in i-direction
+		        do j=0,j1
+		                ekm(0,j,k) = ekm(imax,j,k)
+		                ekm(i1,j,k) = ekm(1,j,k)
+		        enddo
+		enddo
+	endif
+        do i=0,i1 ! boundaries in k-direction
+                do j=0,j1
+                        ekm(i,j,0) = ekm(i,j,1)
+                        ekm(i,j,k1) = ekm(i,j,kmax)
+                enddo
+        enddo
+
+		Diffcof=ekm/Sc/rr        
+        do k=kmax-kjet+1,k1 ! maak Diffcof rand buisje nul
+          do t=1,tmax_inPpuntrand
+            i=i_inPpuntrand(t)
+            j=j_inPpuntrand(t)
+            Diffcof(i,j,k)=0.
+          enddo
+        enddo
+        IF (LOA>0.or.nobst>0) THEN ! ship:
+          do t=1,tmax_inPpuntTSHD
+            i=i_inPpuntTSHD(t)
+            j=j_inPpuntTSHD(t)
+            k=k_inPpuntTSHD(t)
+            !ekm(i,j,k)=0.
+			Diffcof(i,j,k)=0. 
+			im=MAX(0,i-1)
+			ip=MIN(i1,i+1)
+			jm=MAX(0,j-1)
+			jp=MIN(j1,j+1)
+			km=MAX(0,k-1)
+			kp=MIN(k1,k+1)
+			Diffcof(im,j,k)=0.
+			Diffcof(ip,j,k)=0.
+			Diffcof(i,jm,k)=0.
+			Diffcof(i,jp,k)=0.
+			Diffcof(i,j,km)=0.
+			Diffcof(i,j,kp)=0.				
+          enddo
+	ELSEIF (kjet>0) THEN
+          !ekm(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
+		  Diffcof(0:i1,0:j1,kmax-kjet+1:k1)=0.
+	ENDIF		
+		 ! no horizontal or vertical diffusion allowed into bed:
+			DO i=0,i1
+				DO j=0,j1
+					DO k=0,kbed(i,j)
+						im=MAX(0,i-1)
+						ip=MIN(i1,i+1)
+						jm=MAX(0,j-1)
+						jp=MIN(j1,j+1)
+						km=MAX(0,k-1)
+						kp=MIN(k1,k+1)					
+						Diffcof(im,j,k)=0.
+						Diffcof(ip,j,k)=0.
+						Diffcof(i,jm,k)=0.
+						Diffcof(i,jp,k)=0.
+						Diffcof(i,j,k)=0.
+						Diffcof(i,j,kp)=0.									
+					ENDDO
+				ENDDO
+			ENDDO		
+		
+		gvector=sqrt(gx**2+gy**2+gz**2)
+		dnew = 0.
+	      call advecc_VLE(dnew,TKE,rhU*Uvel,rhV*Vvel,rhW*Wvel,rr,Ru,Rp,dr,phiv,phipt,dz,
+     +            i1,j1,k1,1,imax,1,jmax,1,kmax,dt,rank,px,periodicx,periodicy,'massfrac',kbed)
+	      call diffc_CDS2 (dnew,TKE,ekm/Sc_k,1,imax,1,jmax,1,kmax)
+
+		TKEnew(1:imax,1:jmax,1:kmax)=TKE(1:imax,1:jmax,1:kmax)*rr(1:imax,1:jmax,1:kmax) + dt*dnew(1:imax,1:jmax,1:kmax) 	!advection and diffusion 
+     &  +dt*ekm(1:imax,1:jmax,1:kmax)*Sabs(1:imax,1:jmax,1:kmax)**2 															!P production TKE 
+     &  +dt*Cal_buoyancy_k*Diffcof(1:imax,1:jmax,1:kmax)*gvector*MAX(drdz(1:imax,1:jmax,1:kmax),0.)							!Pb buoyancy term; treated explicitly if Pb>0 generation of TKE for unstable stratification 
+	 
+		TKEnew(1:imax,1:jmax,1:kmax) = TKEnew(1:imax,1:jmax,1:kmax) / rr(1:imax,1:jmax,1:kmax)
+		TKEnew(1:imax,1:jmax,1:kmax) = TKEnew(1:imax,1:jmax,1:kmax) / (1.+dt*EEE(1:imax,1:jmax,1:kmax)/TKE(1:imax,1:jmax,1:kmax)
+     &  -dt*Cal_buoyancy_k*Diffcof(1:imax,1:jmax,1:kmax)*gvector/rr(1:imax,1:jmax,1:kmax)*MIN(drdz(1:imax,1:jmax,1:kmax),0.)
+     &  /TKE(1:imax,1:jmax,1:kmax))
+	 !implicit treatment negative epsilon term destruction of TKE, following Van Rhee 2002 p. 164, following Stelling2000
+	 !implicit treatment negative Pb term for stable stratification giving destruction of TKE 
+        IF (CNdiffz.eq.1.or.CNdiffz.eq.2) THEN !CN semi implicit treatment diff-z:
+			IF (CNdiffz.eq.1) THEN 
+				CNz=0.5 
+			ELSE 
+				CNz=1.
+			ENDIF 		   
+			call bound_p(TKEnew) ! bc start CN-diffz 
+            do j=1,jmax
+              do i=1,imax
+                do k=0,k1
+					km=MAX(0,k-1)
+					kp=MIN(k1,k+1)
+					kpp=MIN(k1,k+2)
+					ekm_min=0.5*(ekm(i,j,km)/rr(i,j,km)+ekm(i,j,k)/rr(i,j,k))/Sc_k
+					ekm_plus=0.5*(ekm(i,j,kp)/rr(i,j,kp)+ekm(i,j,k)/rr(i,j,k))/Sc_k
+					aaa(k)=-CNz*ekm_min*dt/dz**2
+					bbb(k)=1.+CNz*(ekm_min+ekm_plus)*dt/dz**2
+					ccc(k)=-CNz*ekm_plus*dt/dz**2
+                enddo
+				aaa(0)=0.
+				aaa(k1)=0.
+				ccc(0)=0.
+				ccc(k1)=0.
+				bbb(0)=1.
+				bbb(k1)=1.
+				rhss=TKEnew(i,j,0:k1)
+				CALL solve_tridiag(TKEnew(i,j,0:k1),aaa,bbb,ccc,rhss,k1+1) 
+              enddo
+            enddo
+		ENDIF	 
+		TKEnew=MAX(1.e-12,TKEnew) 
+		
+		dnew = 0.
+	      call advecc_VLE(dnew,EEE,rhU*Uvel,rhV*Vvel,rhW*Wvel,rr,Ru,Rp,dr,phiv,phipt,dz,
+     +            i1,j1,k1,1,imax,1,jmax,1,kmax,dt,rank,px,periodicx,periodicy,'massfrac',kbed)
+	      call diffc_CDS2 (dnew,EEE,ekm/Sc_eps,1,imax,1,jmax,1,kmax)		
+		EEEnew(1:imax,1:jmax,1:kmax)=EEE(1:imax,1:jmax,1:kmax) + dt*dnew(1:imax,1:jmax,1:kmax)/rr(1:imax,1:jmax,1:kmax) 	!advection and diffusion --> divide by rho straight away 
+     &  +dt*C1(1:imax,1:jmax,1:kmax)*Sabs(1:imax,1:jmax,1:kmax)*EEE(1:imax,1:jmax,1:kmax) 									!eps production	
+     &  +dt*Cal_buoyancy_eps*Const1eps*EEE(1:imax,1:jmax,1:kmax)/TKE(1:imax,1:jmax,1:kmax)
+     &  *Diffcof(1:imax,1:jmax,1:kmax)*gvector/rr(1:imax,1:jmax,1:kmax)*MAX(drdz(1:imax,1:jmax,1:kmax),0.)					! Pb buoyancy term; only when Pb>0 for unstable stratification 	 
+		EEEnew(1:imax,1:jmax,1:kmax)=EEEnew(1:imax,1:jmax,1:kmax) / 
+     &  (1.+dt*Const2*EEE(1:imax,1:jmax,1:kmax)/(TKE(1:imax,1:jmax,1:kmax)+sqrt(nu_mol*EEE(1:imax,1:jmax,1:kmax))))
+	 ! implicit treatment sink term eps equation 
+	 
+        IF (CNdiffz.eq.1.or.CNdiffz.eq.2) THEN !CN semi implicit treatment diff-z:
+			IF (CNdiffz.eq.1) THEN 
+				CNz=0.5 
+			ELSE 
+				CNz=1.
+			ENDIF 		   
+			call bound_p(EEEnew) ! bc start CN-diffz 
+            do j=1,jmax
+              do i=1,imax
+                do k=0,k1
+					km=MAX(0,k-1)
+					kp=MIN(k1,k+1)
+					kpp=MIN(k1,k+2)
+					ekm_min=0.5*(ekm(i,j,km)/rr(i,j,km)+ekm(i,j,k)/rr(i,j,k))/Sc_eps
+					ekm_plus=0.5*(ekm(i,j,kp)/rr(i,j,kp)+ekm(i,j,k)/rr(i,j,k))/Sc_eps
+					aaa(k)=-CNz*ekm_min*dt/dz**2
+					bbb(k)=1.+CNz*(ekm_min+ekm_plus)*dt/dz**2
+					ccc(k)=-CNz*ekm_plus*dt/dz**2
+                enddo
+				aaa(0)=0.
+				aaa(k1)=0.
+				ccc(0)=0.
+				ccc(k1)=0.
+				bbb(0)=1.
+				bbb(k1)=1.
+				rhss=EEEnew(i,j,0:k1)
+				CALL solve_tridiag(EEEnew(i,j,0:k1),aaa,bbb,ccc,rhss,k1+1) 
+              enddo
+            enddo
+		ENDIF	 
+		EEEnew=MAX(1.e-12,EEEnew) 
+		
+		! buoyancy term in epsilon equation is ommitted in Fluent because influence on epsilon is unknown
+		! Van Rhee2002 p.133 follows Winterwerp1999 and Uittenbogaard1995 to include buoyancy term in eps for unstable stratification 
+		! (generation of small scal turbulence by Rayleigh Taylor instabilities) and ommit it for stable stratification
+		! Realizible K-eps description in Fluent manual gives extra constant c3eps, but in VanRhee2002 c3eps is used as switch 1/0 for including Pb in eps equation or not as described above. In TUDflow3d I follow VanRhee2002, with a user option to ommit Pb in eps equation completely via Cal_buoyancy_eps 
+		TKE=TKEnew 
+		EEE=EEEnew 
+		if ((slip_bot.eq.1.or.slip_bot.eq.2).and.wallup.ne.1) then !partial slip wall below and free surface bc up 
+		  do i=1,imax
+			do j=1,jmax
+				IF (IBMorder.eq.2) THEN
+					IF (interaction_bed.ge.4) THEN
+					  zb_C=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(dcdtbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
+					ELSE 
+					  zb_C=zbed(i,j)
+					ENDIF
+					kp=MIN(CEILING(zb_C/dz+0.5)+1,k1)	!location velocity which must be adjusted 2nd order IBM -->(0-1)*dz distance from bed
+					distance_to_bed=(REAL(kp)-0.5)*dz-zb_C
+					IF (distance_to_bed<0.1*dz) THEN 
+						kp = MIN(k1,kp+1)
+						distance_to_bed=(REAL(kp)-0.5)*dz-zb_C
+					ENDIF 
+				ELSE 
+					kp = MIN(k1,kbedt(i,j)+1)
+					distance_to_bed = 0.5*dz 
+				ENDIF 
+				uu=0.5*(Uvel(i,j,kp)+Uvel(i-1,j,kp))
+				vv=0.5*(Vvel(i,j,kp)+Vvel(i,j-1,kp))
+				absU=sqrt(uu*uu+vv*vv)
+				ust=0.1*absU
+				if (kn>0.) then !walls with rougness (log-law used which can be hydr smooth or hydr rough):
+					do tel=1,10 ! 10 iter is more than enough
+						z0=kn/30.+0.11*nu_mol/MAX(ust,1.e-9)
+						ust=absU/MAX(1./kappa*log(distance_to_bed/z0),2.) !ust maximal 0.5*absU
+					enddo
+				else
+					do tel=1,10 ! 10 iter is more than enough
+						yplus=MAX(distance_to_bed*ust/nu_mol,1e-12)
+						ust=absU/MAX((2.5*log(yplus)+5.5),2.) !ust maximal 0.5*absU			
+					enddo
+					if (yplus<30.) then
+					  do tel=1,10 ! 10 iter is more than enough
+						yplus=MAX(distance_to_bed*ust/nu_mol,1e-12)
+						ust=absU/MAX((5.*log(yplus)-3.05),2.) !ust maximal 0.5*absU			
+					  enddo	
+					endif
+					if (yplus<5.) then !viscous sublayer uplus=yplus
+						ust=sqrt(absU*nu_mol/(distance_to_bed))
+					endif
+				endif
+				TKE(i,j,kp) = MAX(ust*ust/sqrt(Cmu(i,j,kp)),1.e-12)
+				EEE(i,j,kp) = MAX(ust**3/(kappa*distance_to_bed),1.e-12)
+				EEE(i,j,kmax) = MAX(TKE(i,j,kmax)**1.5*Cmu(i,j,kmax)**0.75/(0.07*kappa*(depth-zbed(i,j))),1.e-12)
+				! this bc for eps at free surface is essential to reduce nu_t near the free surface and get nice Rouse curve also in upper region
+			enddo
+		  enddo 
+		endif 
+		if ((slip_bot.eq.1.or.slip_bot.eq.2).and.wallup.ge.1) then !wall at kmax 
+		  do i=1,imax
+			do j=1,jmax
+				kp = kmax
+				distance_to_bed = 0.5*dz 
+				uu=0.5*(Uvel(i,j,kp)+Uvel(i-1,j,kp))
+				vv=0.5*(Vvel(i,j,kp)+Vvel(i,j-1,kp))
+				absU=sqrt(uu*uu+vv*vv)
+				ust=0.1*absU
+				if (kn>0.) then !walls with rougness (log-law used which can be hydr smooth or hydr rough):
+					do tel=1,10 ! 10 iter is more than enough
+						z0=kn/30.+0.11*nu_mol/MAX(ust,1.e-9)
+						ust=absU/MAX(1./kappa*log(distance_to_bed/z0),2.) !ust maximal 0.5*absU
+					enddo
+				else
+					do tel=1,10 ! 10 iter is more than enough
+						yplus=MAX(distance_to_bed*ust/nu_mol,1e-12)
+						ust=absU/MAX((2.5*log(yplus)+5.5),2.) !ust maximal 0.5*absU			
+					enddo
+					if (yplus<30.) then
+					  do tel=1,10 ! 10 iter is more than enough
+						yplus=MAX(distance_to_bed*ust/nu_mol,1e-12)
+						ust=absU/MAX((5.*log(yplus)-3.05),2.) !ust maximal 0.5*absU			
+					  enddo	
+					endif
+					if (yplus<5.) then !viscous sublayer uplus=yplus
+						ust=sqrt(absU*nu_mol/(distance_to_bed))
+					endif
+				endif
+				TKE(i,j,kp) = MAX(ust*ust/sqrt(Cmu(i,j,kp)),1.e-12)
+				EEE(i,j,kp) = MAX(ust**3/(kappa*distance_to_bed),1.e-12)
+			enddo
+		  enddo 
+		endif 		
+		call bound_p(TKE)  !periodic boundaries in x or y when needed, otherwise all Neumann boundaries d./dn=0
+		call bound_p(EEE)  !periodic boundaries in x or y when needed, otherwise all Neumann boundaries d./dn=0
+      end
 
 
       subroutine LES_filteredSmagorinsky(Uvel4,Vvel4,Wvel4,rr)

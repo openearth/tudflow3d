@@ -159,7 +159,7 @@
 	phnew=pold 
 
 		
-	if (Cs>0.or.sgs_model.eq.'MixLe') then
+	if (Cs>0.or.sgs_model.eq.'MixLe'.or.sgs_model.eq.'ReaKE'.or.sgs_model.eq.'DSmag') then
           if (sgs_model.eq.'SSmag') then
             call LES_smagorinsky(Unew,Vnew,Wnew,rnew)
           elseif (sgs_model.eq.'DSmag') then
@@ -172,6 +172,8 @@
 	    call LES_Sigma(Unew,Vnew,Wnew,rnew)
 	  elseif (sgs_model.eq.'MixLe') then
 	    call LES_mixinglengthdamped(Unew,Vnew,Wnew,rnew)
+		elseif (sgs_model.eq.'ReaKE') then
+            call RealizibleKEps(Unew,Vnew,Wnew,rnew)
           endif
 	else 
 	  ekm(:,:,:)=ekm_mol
@@ -213,7 +215,7 @@
 	!do istep=1,nstep
 		istep=istep   + 1
 !		call calc_div 
-		if (Cs>0.or.sgs_model.eq.'MixLe' ) then
+		if (Cs>0.or.sgs_model.eq.'MixLe'.or.sgs_model.eq.'ReaKE'.or.sgs_model.eq.'DSmag') then
 		  if (sgs_model.eq.'SSmag') then
 			call LES_smagorinsky(Unew,Vnew,Wnew,rnew)
           elseif (sgs_model.eq.'DSmag') then
@@ -226,6 +228,8 @@
 		    	call LES_Sigma(Unew,Vnew,Wnew,rnew)
 		  elseif (sgs_model.eq.'MixLe') then
 		    call LES_mixinglengthdamped(Unew,Vnew,Wnew,rnew)
+		elseif (sgs_model.eq.'ReaKE') then
+            call RealizibleKEps(Unew,Vnew,Wnew,rnew)			
 		  endif
 		else
 		      ekm(:,:,:)=ekm_mol 

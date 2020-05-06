@@ -197,16 +197,22 @@ fract(1)%type = 1			! 1 = silt/mud (default), 2=sand, 3=air, -1=VOF (VOF is nerd
 /
 
 &LESmodel
-sgs_model='SWALE'		! Smagorinsky, WALE or SIGMA sgs model: 'SSmag','SWALE','Sigma','DSmag','MixLe'
-Cs=0.325			! Constant in sgs model [-]
-Lmix_type=1			! 1=(dx*dy*dz)^1/3 | 2=sqrt((dx^2+dy^2+dz^2)/3)
+sgs_model='SWALE'			! Smagorinsky, WALE or SIGMA sgs model: 'SSmag','SWALE','Sigma','DSmag','MixLe','ReaKE'
+Cs=0.325					! Constant in sgs model [-]
+Lmix_type=1					! 1=(dx*dy*dz)^1/3 | 2=sqrt((dx^2+dy^2+dz^2)/3)
 !damping_drho_dz = 'MuAn'	! Turbulence damping at density interface in Munk-Anderson type of way:
-!damping_a1 = 100.		! Damping applied to eddy visc. fluid: Fdamp(Ri)=(1+damping_a1*Ri)^damping_b1
+!damping_a1 = 100.			! Damping applied to eddy visc. fluid: Fdamp(Ri)=(1+damping_a1*Ri)^damping_b1
 !damping_b1 = -0.333333		! Damping applied to eddy visc. fluid: Fdamp(Ri)=(1+damping_a1*Ri)^damping_b1
-!damping_a2 = 21.		! Damping applied to diffusion sediment fractions: Fdamp(Ri)=(1+damping_a2*Ri)^damping_b2
-!damping_b2 = -0.8		! Damping applied to diffusion sediment fractions: Fdamp(Ri)=(1+damping_a2*Ri)^damping_b2
-extra_mix_visc='none'   ! Extra mixture viscosity = fac*ekm_mol: 'none' (default) or 'Krie' Krieger & Dougherty 1959 relation 
-nu_minimum_wall = 0 	! default(0) no minimum eddy viscosity first cells from wall, 1 = minimum is Prandtl mixing length including Van Driest damping nu_t = nu_mol*kappa*zplus(1-exp(-zplus/19))**2 applied at lowest grid cell; 2 = applied at lowest 2 grid cells; 3 = apply minimum eddy viscosity at lowest 2 grid cells to provide ust^2=nu_t*dUdz; 11,12,13 similar to 1,2,3 but prescribed exactly and not as minimum 
+!damping_a2 = 21.			! Damping applied to diffusion sediment fractions: Fdamp(Ri)=(1+damping_a2*Ri)^damping_b2
+!damping_b2 = -0.8			! Damping applied to diffusion sediment fractions: Fdamp(Ri)=(1+damping_a2*Ri)^damping_b2
+extra_mix_visc='none'   	! Extra mixture viscosity = fac*ekm_mol: 'none' (default) or 'Krie' Krieger & Dougherty 1959 relation 
+nu_minimum_wall = 0 		! default(0) no minimum eddy viscosity first cells from wall, 1 = minimum is Prandtl mixing length including Van Driest damping nu_t = nu_mol*kappa*zplus(1-exp(-zplus/19))**2 applied at lowest grid cell; 2 = applied at lowest 2 grid cells; 3 = apply minimum eddy viscosity at lowest 2 grid cells to provide ust^2=nu_t*dUdz; 11,12,13 similar to 1,2,3 but prescribed exactly and not as minimum 
+Const1eps = 1.44 			! Constant used in Realizible K-Eps turbulence model 'ReaKE', default 1.44 [-] 	
+Const2 = 1.9 				! Constant used in Realizible K-Eps turbulence model 'ReaKE', default 1.9 [-] 
+Sc_k = 1.0					! Schmidt nr for TKE used in Realizible K-Eps turbulence model 'ReaKE', default 1.0 [-] 
+Sc_eps = 1.2				! Schmidt nr for Eps used in Realizible K-Eps turbulence model 'ReaKE', default 1.2 [-] 
+Cal_buoyancy_k = 1.			! Calibration factor for buoyancy term in K equation in Realizible K-Eps turbulence model 'ReaKE', default 1. [-]
+Cal_buoyancy_eps = 1.		! Calibration factor for buoyancy term in Eps equation in Realizible K-Eps turbulence model 'ReaKE', default 1. [-] -->buoyancy term in Eps equation is only applied for unstable stratification, not for stable stratification (destruction of turbulence) 
 /
 
 

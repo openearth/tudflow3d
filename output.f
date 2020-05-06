@@ -368,7 +368,7 @@
        integer :: ncid, varid1,varid2,varid3, varid4, varid5, varid6, varid7, varid8, varid9, varid10,varid11
 	   integer :: dimids(NDIMS), dimids2(NDIMS2),dimids3(NDIMS3),dimids5(NDIMS5)
        integer :: x_dimid, y_dimid, z_dimid, nfrac_dimid, par_dimid
-	integer :: dimids4(NDIMS),varid20,varid21,varid22,varid12,varid13
+	integer :: dimids4(NDIMS),varid20,varid21,varid22,varid12,varid13,varid14,varid15,varid16
 	character(1024) :: svnversion
 	character(1024) :: svnurl
       include 'version.inc'
@@ -483,6 +483,17 @@
          call check( nf90_put_att(ncid, varid9, 'units', '-') )
          call check( nf90_put_att(ncid, varid9, 'long_name', 'Smagorinsky constant from dynamic Germano-Lilly sgs model') )	   
        endif
+	   if (sgs_model.eq.'ReaKE') then
+         call check( nf90_def_var(ncid, "TKE", NF90_REAL, dimids, varid14) )
+         call check( nf90_put_att(ncid, varid14, 'units', 'm2/s2') )
+         call check( nf90_put_att(ncid, varid14, 'long_name', 'Simulated TKE from K-Epsilon model') )	  
+         call check( nf90_def_var(ncid, "EPS", NF90_REAL, dimids, varid15) )
+         call check( nf90_put_att(ncid, varid15, 'units', 'm2/s3') )
+         call check( nf90_put_att(ncid, varid15, 'long_name', 'Simulated Epsilon (TKE dissipation) from K-Epsilon model') )		
+         call check( nf90_def_var(ncid, "Cmu", NF90_REAL, dimids, varid16) )
+         call check( nf90_put_att(ncid, varid16, 'units', '-') )
+         call check( nf90_put_att(ncid, varid16, 'long_name', 'Simulated Cmu from realizible K-Epsilon model') )			 
+       endif
 	   
        call check( nf90_def_var(ncid, "wiggle_factor", NF90_REAL, dimids, varid10) )
        call check( nf90_put_att(ncid, varid10, 'units', '-') )
@@ -537,6 +548,11 @@
 	     Csgrid=sqrt(Csgrid)
 	     call check( nf90_put_var(ncid, varid9, Csgrid(1:imax,1:jmax,1:kmax)) )
 	   endif
+	   if (sgs_model.eq.'ReaKE') then
+	     call check( nf90_put_var(ncid, varid14, TKE(1:imax,1:jmax,1:kmax)) )
+		 call check( nf90_put_var(ncid, varid15, EEE(1:imax,1:jmax,1:kmax)) )
+		 call check( nf90_put_var(ncid, varid16, Cmu(1:imax,1:jmax,1:kmax)) )
+	   endif	   
 	   call check( nf90_put_var(ncid, varid10, wf(1:imax,1:jmax,1:kmax)) )
        call check( nf90_put_var(ncid, varid8, tt) )
     

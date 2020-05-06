@@ -65,6 +65,7 @@
       REAL Aplume,driftfluxforce_calfac
 	  REAL vwal,delta_nsed,nl,permeability_kl,pickup_fluctuations_ampl,z_tau_sed,kn_d50_multiplier_bl,bl_relax
 	  INTEGER pickup_fluctuations,cbed_method,k_layer_pickup,nu_minimum_wall,pickup_bedslope_geo,wbed_correction
+	  REAL Const1eps,Const2,Sc_k,Sc_eps,Cal_buoyancy_k,Cal_buoyancy_eps
 	  
 	  
       CHARACTER*4 convection,diffusion
@@ -121,7 +122,7 @@
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: Unew,Vnew,Wnew,Rnew
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: dUdt,dVdt,dWdt,drdt
 	  REAL, DIMENSION(:,:,:),ALLOCATABLE :: rhoU,rhoV,rhoW
-      REAL, DIMENSION(:,:,:),ALLOCATABLE :: Srr,Spr,Szr,Spp,Spz,Szz
+      REAL, DIMENSION(:,:,:),ALLOCATABLE :: Srr,Spr,Szr,Spp,Spz,Szz,TKE,EEE,Cmu
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: Ppropx_dummy,Ppropy_dummy,Ppropz_dummy,wf,av_slope 
       INTEGER, DIMENSION(:),ALLOCATABLE, TARGET :: jco,iro,beg,di,di2
       REAL Hs,Tp,Lw,nx_w,ny_w,kabs_w,kx_w,ky_w,om_w
@@ -243,7 +244,7 @@
      & U_j2,plumetseriesfile2,Awjet2,Aujet2,Avjet2,Strouhal2,azi_n2,radius_j2,zjet2,bedplume,radius_inner_j,xj,yj,W_j_powerlaw,
      & plume_z_outflow_belowsurf,hindered_settling,Q_j,plumeQtseriesfile,plumectseriesfile
 	NAMELIST /LESmodel/sgs_model,Cs,Lmix_type,nr_HPfilter,damping_drho_dz,damping_a1,damping_b1,damping_a2,damping_b2,
-     & extra_mix_visc,nu_minimum_wall
+     & extra_mix_visc,nu_minimum_wall,Const1eps,Const2,Sc_k,Sc_eps,Cal_buoyancy_k,Cal_buoyancy_eps
 	NAMELIST /constants/kappa,gx,gy,gz,ekm_mol,calibfac_sand_pickup,pickup_formula,kn_d50_multiplier,avalanche_slope,
      &	av_slope_z,calibfac_Shields_cr,reduction_sedimentation_shields,morfac,morfac2,avalanche_until_done,avfile,
      & settling_along_gvector,vwal,nl,permeability_kl,pickup_fluctuations_ampl,pickup_fluctuations,pickup_correction,cbed_method,
@@ -498,6 +499,13 @@
 	damping_b2 = -999.
 	extra_mix_visc='none'
 	nu_minimum_wall = 0 
+	! four constants default given value for default Realizible K-Epsilon turbulence model:
+	Const1eps = 1.44 
+	Const2 = 1.9 
+	Sc_k = 1.0
+	Sc_eps = 1.2
+	Cal_buoyancy_k = 1.
+	Cal_buoyancy_eps = 1.
 	
 	!!constants
 	kappa=-999.
@@ -1298,7 +1306,7 @@
 	READ (UNIT=1,NML=LESmodel,IOSTAT=ios)
 	!! check input LESmodel
 	IF (sgs_model.ne.'SSmag'.and.sgs_model.ne.'FSmag'.and.sgs_model.ne.'SWALE'.and.
-     &  sgs_model.ne.'Sigma'.and.sgs_model.ne.'MixLe'.and.sgs_model.ne.'DSmag') CALL writeerror(82)
+     &  sgs_model.ne.'Sigma'.and.sgs_model.ne.'MixLe'.and.sgs_model.ne.'DSmag'.and.sgs_model.ne.'ReaKE') CALL writeerror(82)
 	IF (Cs<0.) CALL writeerror(80)
 	IF (Lmix_type<0) CALL writeerror(81)
 	IF (nr_HPfilter<0) CALL writeerror(83)
@@ -1587,6 +1595,13 @@
 		ALLOCATE(rhoU(0:i1,0:j1,0:k1))  
 		ALLOCATE(rhoV(0:i1,0:j1,0:k1))  
 		ALLOCATE(rhoW(0:i1,0:j1,0:k1))  
+	endif
+	if (sgs_model.eq.'ReaKE') then
+		ALLOCATE(TKE(0:i1,0:j1,0:k1))  
+		ALLOCATE(EEE(0:i1,0:j1,0:k1))  
+		ALLOCATE(Cmu(1:imax,1:jmax,1:kmax)) 
+		TKE=1.e-12
+		EEE=1.e-12
 	endif
 
 !        ALLOCATE(Uf(0:i1,0:j1,0:k1))
