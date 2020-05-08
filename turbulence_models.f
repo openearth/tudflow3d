@@ -2335,8 +2335,8 @@ c*************************************************************
       USE nlist
       implicit none
       !include 'mpif.h'
-      real xx,yy,f,dzi,uu,vv,absU,ust,z0,yplus
-      integer n,t,tel,n2
+      real xx,yy,f,dzi,uu,vv,absU,ust,z0,yplus,uu2,vv2,bed_slope
+      integer n,t,tel,n2,kbedp(0:i1,0:j1)
       real ebb(0:i1,0:k1)
       real ebf(0:i1,0:k1)
       real dRpp_i,dRp_i,divergentie,SdijSdij
@@ -2353,9 +2353,9 @@ c*************************************************************
 	real Om11,Om12,Om13,Om22,Om23,Om33,Om21,Om31,Om32,OijOij
 	real MuAn_factor,Ri,sqrtsix,UUs,WWW,A0,As,eta
 	integer im,ip,jm,jp,km,kp,kpp
-	real ctot,cref,pwr,zb_C,distance_to_bed,nu_t,factor,absU2
+	real ctot,cref,pwr,zb_C,distance_to_bed,nu_t,factor,absU2,LLL,III,ww
 	integer fracs_included(nfr_sand+nfr_silt)
-	real aaa(0:k1),bbb(0:k1),ccc(0:k1),ekm_min,ekm_plus,rhss(0:k1),CNz
+	real aaa(0:k1),bbb(0:k1),ccc(0:k1),ekm_min,ekm_plus,rhss(0:k1),CNz,zb_W
 
 	sqrtsix=sqrt(6.)
 	
@@ -2370,11 +2370,17 @@ c*************************************************************
 	  
 	  
 	  do j=1,jmax
-	     do k=1,kmax
-		 
+		 do k=1,kbed(i,j)
+			 TKE(i,j,k) = 1.e-12 
+			 EEE(i,j,k) = 1.e-12 
+			 Sabs(i,j,k) = 0.
+			 Cmu(i,j,k) = 1./4.04 
+			 C1(i,j,k) = 0.43
+			 drdz(i,j,k) = 0.
+			 ekm(i,j,k) = 0.		 
+		 enddo 
+	     do k=kbed(i,j)+1,kmax !k=1,kmax
 
-		 
-		 
 		dudx = (Uvel(i,j,k)-Uvel(i-1,j,k))/dr(i) 
 		dvdy = (Vvel(i,j,k)-Vvel(i,j-1,k))/(Rp(i)*(phiv(j)-phiv(j-1))) + 0.5*(Uvel(i,j,k)+Uvel(i-1,j,k))/Rp(i)
 		dwdz = (Wvel(i,j,k)-Wvel(i,j,k-1))*dzi
@@ -2443,11 +2449,11 @@ c*************************************************************
 		Cmu(i,j,k) = 1./(A0+As*TKE(i,j,k)*UUs/EEE(i,j,k))
 		eta = Sabs(i,j,k)*TKE(i,j,k)/EEE(i,j,k)
 		C1(i,j,k) = MAX(0.43,eta/(eta+5.))
-		IF (TKE(i,j,k)**1.5<EEE(i,j,k)*depth) then ! following RJ Labeur dissertation p. 198 to limit visc 
+!		IF (TKE(i,j,k)**1.5<EEE(i,j,k)*depth) then ! following RJ Labeur dissertation p. 198 to limit visc 
 			ekm(i,j,k)=rr(i,j,k)*Cmu(i,j,k)*TKE(i,j,k)*TKE(i,j,k)/EEE(i,j,k)
-		ELSE 
-			ekm(i,j,k)=rr(i,j,k)*depth*sqrt(TKE(i,j,k))
-		ENDIF 
+!		ELSE 
+!			ekm(i,j,k)=rr(i,j,k)*depth*sqrt(TKE(i,j,k))
+!		ENDIF 
 		! new ekm determined explicitly based on values at start of timestep: time-level n 
 		! make sure to limit elsewhere TKE>1e-12 and EEE>1e-12 at all time to prevent division by zero
 
@@ -2805,28 +2811,71 @@ c*************************************************************
 		! Realizible K-eps description in Fluent manual gives extra constant c3eps, but in VanRhee2002 c3eps is used as switch 1/0 for including Pb in eps equation or not as described above. In TUDflow3d I follow VanRhee2002, with a user option to ommit Pb in eps equation completely via Cal_buoyancy_eps 
 		TKE=TKEnew 
 		EEE=EEEnew 
+!		DO n2=1,nbedplume
+!		IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end)
+!     &     .or.(bp(n2)%forever.eq.0.and.time_n.lt.bp(n2)%t0.and.time_np.gt.bp(n2)%t0)) THEN
+!		  do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz))! do k=0,k1
+!		   do tel=1,bp(n2)%tmax 
+!			 i=MIN(MAX(bp(n2)%i(tel),1),imax)
+!			 j=MIN(MAX(bp(n2)%j(tel),1),jmax) 	  
+!			 if (k>kbed(i,j)) then
+!				uu=0.5*(Uvel(i,j,k)+Uvel(i-1,j,k))
+!				vv=0.5*(Vvel(i,j,k)+Vvel(i,j-1,k))
+!				ww=0.5*(Wvel(i,j,k)+Wvel(i,j,k-1))
+!				absU=sqrt(uu*uu+vv*vv+ww*ww)
+!				LLL = (bp(n2)%height-bp(n2)%zbottom)
+!				III = 0.16*(absU*LLL/nu_mol)**(-0.125)
+!				TKE(i,j,k)=MAX(1.5*(III*absU)**2,1.e-12)
+!				EEE(i,j,k)=MAX(Cmu(i,j,k)**0.75*TKE(i,j,k)**1.5/(Cmu(i,j,k)*0.5*LLL),1.e-12) !Mixing length Celik et al 1985 (following vRhee 2002 p.143)
+!			 endif
+!		 enddo
+!		enddo
+!		ENDIF
+!		ENDDO ! bedplume loop		
 		if ((slip_bot.eq.1.or.slip_bot.eq.2).and.wallup.ne.1) then !partial slip wall below and free surface bc up 
-		  do i=1,imax
-			do j=1,jmax
+				DO i=0,i1
+				  DO j=0,j1
+					kbedp(i,j)=MIN(kbed(i,j)+2,k1) 
+				  ENDDO 
+				ENDDO 
+				IF (interaction_bed.ge.4) THEN
+				 DO i=1,imax
+				  DO j=1,jmax
+					zbed(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(dcdtbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
+				  ENDDO 
+				 ENDDO 
+				 call bound_cbot(zbed)
+				ENDIF 		
+			  do i=1,imax
+				do j=1,jmax
 				IF (IBMorder.eq.2) THEN
-					IF (interaction_bed.ge.4) THEN
-					  zb_C=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(dcdtbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
-					ELSE 
-					  zb_C=zbed(i,j)
-					ENDIF
-					kp=MIN(CEILING(zb_C/dz+0.5)+1,k1)	!location velocity which must be adjusted 2nd order IBM -->(0-1)*dz distance from bed
-					distance_to_bed=(REAL(kp)-0.5)*dz-zb_C
-					IF (distance_to_bed<0.1*dz) THEN 
-						kp = MIN(k1,kp+1)
-						distance_to_bed=(REAL(kp)-0.5)*dz-zb_C
-					ENDIF 
+					zb_W=zbed(i,j)
+					kpp=MIN(CEILING(zb_W/dz+0.5)+1,k1)		!kpp is between 1*dz-2*dz distance from bed 	
+					!kpp=MIN(CEILING(zb_W/dz+0.5),k1)		!kpp is between 0-dz distance from bed 	
+					distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W
 				ELSE 
-					kp = MIN(k1,kbedt(i,j)+1)
-					distance_to_bed = 0.5*dz 
+					kpp = MIN(kbedp(i,j),k1)                !kpp is 1.5*dz from 0-order ibm bed
+					distance_to_bed=1.5*dz
+				ENDIF
+				IF (kbedp(i,j)<kbedp(i+1,j).and.kbedp(i,j)<kbedp(i-1,j)) THEN ! pit
+					uu=0.5*(Uvel(i,j,kpp)+Uvel(i-1,j,kpp))-Ubot_TSHD(j)
+				ELSE 
+					uu=0.5*(Uvel(i,j,MAX(kbedp(i,j),kbedp(i+1,j),kpp))+Uvel(i-1,j,MAX(kbedp(i,j),kbedp(i-1,j),kpp)))-Ubot_TSHD(j) !choice to not alter distance_to_bed at slopes
+				ENDIF
+				IF (kbedp(i,j)<kbedp(i,j+1).and.kbedp(i,j)<kbedp(i,j-1)) THEN ! pit
+					vv=0.5*(Vvel(i,j,kpp)+Vvel(i,j-1,kpp))-Vbot_TSHD(j)
+				ELSE 
+					vv=0.5*(Vvel(i,j,MAX(kbedp(i,j),kbedp(i,j+1),kpp))+Vvel(i,j-1,MAX(kbedp(i,j),kbedp(i,j-1),kpp)))-Vbot_TSHD(j) !choice to not alter distance_to_bed at slopes
+				ENDIF
+				IF (pickup_bedslope_geo.eq.1) THEN 
+					bed_slope = atan((zbed(i+1,j)-zbed(i-1,j))/(Rp(i+1)-Rp(i-1)))
+					uu2 = uu*cos(bed_slope)+Wvel(i,j,kpp)*sin(bed_slope)
+					bed_slope = atan((zbed(i,j+1)-zbed(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1))))
+					vv2 = vv*cos(bed_slope)+Wvel(i,j,kpp)*sin(bed_slope)
+					absU = sqrt((uu2)**2+(vv2)**2)	
+				ELSE 
+					absU=sqrt((uu)**2+(vv)**2)	
 				ENDIF 
-				uu=0.5*(Uvel(i,j,kp)+Uvel(i-1,j,kp))
-				vv=0.5*(Vvel(i,j,kp)+Vvel(i,j-1,kp))
-				absU=sqrt(uu*uu+vv*vv)
 				ust=0.1*absU
 				if (kn>0.) then !walls with rougness (log-law used which can be hydr smooth or hydr rough):
 					do tel=1,10 ! 10 iter is more than enough
@@ -2836,20 +2885,33 @@ c*************************************************************
 				else
 					do tel=1,10 ! 10 iter is more than enough
 						yplus=MAX(distance_to_bed*ust/nu_mol,1e-12)
-						ust=absU/MAX((2.5*log(yplus)+5.5),2.) !ust maximal 0.5*absU			
+						ust=absU/MAX((2.5*log(yplus)+5.5),2.) !ust maximal 0.5*absU		
 					enddo
 					if (yplus<30.) then
 					  do tel=1,10 ! 10 iter is more than enough
 						yplus=MAX(distance_to_bed*ust/nu_mol,1e-12)
-						ust=absU/MAX((5.*log(yplus)-3.05),2.) !ust maximal 0.5*absU			
+						ust=absU/MAX((5.*log(yplus)-3.05),2.) !ust maximal 0.5*absU		
 					  enddo	
 					endif
 					if (yplus<5.) then !viscous sublayer uplus=yplus
 						ust=sqrt(absU*nu_mol/(distance_to_bed))
 					endif
 				endif
+				! apply bc for TKE and EEE on cell at least 0.1dz above bed:
+				IF (IBMorder.eq.2) THEN
+					kp=MIN(CEILING(zb_W/dz+0.5),kmax)		!kpp is between 0-dz distance from bed 
+					distance_to_bed=(REAL(kp)-0.5)*dz-zb_W
+					IF (distance_to_bed<0.1*dz) THEN !first cell too close to bed, therefore use second cell from bed
+					  kp=kp+1		
+					  distance_to_bed=(REAL(kp)-0.5)*dz-zb_W
+					ENDIF 
+				ELSE
+					kp=kbedt(i,j)+1 
+					distance_to_bed=0.5*dz 
+				ENDIF 
 				TKE(i,j,kp) = MAX(ust*ust/sqrt(Cmu(i,j,kp)),1.e-12)
-				EEE(i,j,kp) = MAX(ust**3/(kappa*distance_to_bed),1.e-12)
+				!EEE(i,j,kp) = MAX(ust**3/(kappa*MIN(z0,distance_to_bed)),1.e-12)
+				EEE(i,j,kp) = MAX(ust**3/(kappa*distance_to_bed),1.e-12) !conform vRhee, Labeur, theory distance_to_bed should be used, in D3D z0 is used 
 				EEE(i,j,kmax) = MAX(TKE(i,j,kmax)**1.5*Cmu(i,j,kmax)**0.75/(0.07*kappa*(depth-zbed(i,j))),1.e-12)
 				! this bc for eps at free surface is essential to reduce nu_t near the free surface and get nice Rouse curve also in upper region
 			enddo

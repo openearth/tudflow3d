@@ -478,23 +478,9 @@
 !				  kpp=MIN(CEILING(zb_W/dz+0.5)+1,k1)		!kpp is in principle between 1*dz-2*dz distance from bed, but due to this if-statement only 1-1.5 from bed
 !				  distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W
 !				ENDIF 
-				ust=0.1*absU
-				do tel=1,10 ! 10 iter is more than enough
-					z0=MAX(kn/30.+0.11*nu_mol/MAX(ust,1.e-9),1e-9) 
-					ust=absU/MAX(1./kappa*log(MAX(distance_to_bed/z0,1.001)),2.) !ust maximal 0.5*absU
-				enddo
-				distance_to_bed=z_tau_sed
-				absU=ust/kappa*log(distance_to_bed/z0) ! replace absU with velocity that is valid at z_tau_sed from bed (user input to make result less dependent of grid resolution)
 			ELSE 
 				kpp = MIN(kbedp(i,j),k1)                !kpp is 1.5*dz from 0-order ibm bed
 				distance_to_bed=1.5*dz				
-				ust=0.1*absU
-				do tel=1,10 ! 10 iter is more than enough
-					z0=MAX(kn/30.+0.11*nu_mol/MAX(ust,1.e-9),1e-9) 
-					ust=absU/MAX(1./kappa*log(MAX(distance_to_bed/z0,1.001)),2.) !ust maximal 0.5*absU
-				enddo
-				distance_to_bed=z_tau_sed
-				absU=ust/kappa*log(distance_to_bed/z0) ! replace absU with velocity that is valid at z_tau_sed from bed (user input to make result less dependent of grid resolution)
 			ENDIF
 			IF (kbedp(i,j)<kbedp(i+1,j).and.kbedp(i,j)<kbedp(i-1,j)) THEN ! pit
 				uu=0.5*(ucfd(i,j,kpp)+ucfd(i-1,j,kpp))-Ubot_TSHD(j)
@@ -505,12 +491,12 @@
 				vv=0.5*(vcfd(i,j,kpp)+vcfd(i,j-1,kpp))-Vbot_TSHD(j)
 			ELSE 
 				vv=0.5*(vcfd(i,j,MAX(kbedp(i,j),kbedp(i,j+1),kpp))+vcfd(i,j-1,MAX(kbedp(i,j),kbedp(i,j-1),kpp)))-Vbot_TSHD(j) !choice to not alter distance_to_bed at slopes
-			ENDIF 
+			ENDIF
 			IF (pickup_bedslope_geo.eq.1) THEN 
-				bed_slope = atan(zbed(i+1,j)-zbed(i-1,j))/(Rp(i+1)-Rp(i-1))
+				bed_slope = atan((zbed(i+1,j)-zbed(i-1,j))/(Rp(i+1)-Rp(i-1)))
 				uu2 = uu*cos(bed_slope)+wcfd(i,j,kpp)*sin(bed_slope)
 				facx = 1./cos(bed_slope)
-				bed_slope = atan(zbed(i,j+1)-zbed(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1)))
+				bed_slope = atan((zbed(i,j+1)-zbed(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1))))
 				vv2 = vv*cos(bed_slope)+wcfd(i,j,kpp)*sin(bed_slope)
 				facy = 1./cos(bed_slope)
 				bs_geo = facx*facy ! increase in dx and dy (area) over which pickup and deposition take place
@@ -518,7 +504,14 @@
 			ELSE 
 				absU=sqrt((uu)**2+(vv)**2)	
 				bs_geo = 1.
-			ENDIF
+			ENDIF 
+			ust=0.1*absU
+			do tel=1,10 ! 10 iter is more than enough
+				z0=MAX(kn/30.+0.11*nu_mol/MAX(ust,1.e-9),1e-9) 
+				ust=absU/MAX(1./kappa*log(MAX(distance_to_bed/z0,1.001)),2.) !ust maximal 0.5*absU
+			enddo
+			distance_to_bed=z_tau_sed
+			absU=ust/kappa*log(distance_to_bed/z0) ! replace absU with velocity that is valid at z_tau_sed from bed (user input to make result less dependent of grid resolution)
 
 			DO n=1,nfrac
 				ust=0.1*absU
