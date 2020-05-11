@@ -24,7 +24,7 @@
       SAVE
       
       INTEGER i,j,k,imax,jmax,kmax,i1,j1,k1,px,rank,kjet,nmax1,nmax2,nmax3,istep,CNdiffz,npresIBM,counter,npresPRHO,oPRHO
-      INTEGER Lmix_type,slip_bot,SEM,azi_n,outflow_overflow_down,azi_n2,wiggle_detector,wd,applyVOF,Poutflow
+      INTEGER Lmix_type,slip_bot,SEM,azi_n,outflow_overflow_down,azi_n2,wiggle_detector,wd,applyVOF,Poutflow,k_ust_tau
       REAL ekm_mol,nu_mol,pi,kappa,gx,gy,gz,Cs,Sc,calibfac_sand_pickup,calibfac_Shields_cr,morfac,morfac2,calibfac_sand_bedload
       REAL dt,time_nm,time_n,time_np,t_end,t0_output,dt_output,te_output,dt_max,tstart_rms,CFL,dt_ini,tstart_morf,trestart,dt_old
       REAL dt_output_movie,t0_output_movie,te_output_movie,te_rms,time_nm2,b_update,tstart_morf2,fcor
@@ -236,7 +236,7 @@
      & t0_output_movie,dt_output_movie,te_output_movie,tstart_morf,te_rms,tstart_morf2
 	NAMELIST /num_scheme/convection,numdiff,wiggle_detector,diffusion,comp_filter_a,comp_filter_n,CNdiffz,npresIBM,advec_conc,
      & continuity_solver,transporteq_fracs,split_rho_cont,driftfluxforce_calfac,depo_implicit,IBMorder,npresPRHO,
-     & pres_in_predictor_step,Poutflow,oPRHO,applyVOF
+     & pres_in_predictor_step,Poutflow,oPRHO,applyVOF,k_ust_tau
 	NAMELIST /ambient/U_b,V_b,W_b,bcfile,rho_b,SEM,nmax2,nmax1,nmax3,lm_min,lm_min3,slip_bot,kn,interaction_bed,
      & periodicx,periodicy,dpdx,dpdy,W_ox,Hs,Tp,nx_w,ny_w,obst,bc_obst_h,U_b3,V_b3,surf_layer,wallup,bedlevelfile,
      & U_bSEM,V_bSEM,U_w,V_w,c_bed,cfixedbed,U_init,V_init,initconditionsfile,rho_b2,monopile,kn_mp,kn_sidewalls
@@ -316,6 +316,7 @@
 	IBMorder=0 
 	Poutflow=0 ! 0 (default, most robust) Poutflow is zero for complete outflow crosssection at rmax; 1 (optional) Poutflow is zero at just one grid-location at rmax --> sometimes better but less robust
 	applyVOF=0
+	k_ust_tau=1
 	!! ambient:
 	U_b = -999.
 	V_b = -999.
@@ -642,6 +643,7 @@
 	IF (CNdiffz.ne.0.and.CNdiffz.ne.1.and.CNdiffz.ne.2) CALL writeerror(406)
 	IF (npresIBM<0) CALL writeerror(407)
 	pres_in_predictor_step_internal = pres_in_predictor_step
+	IF (k_ust_tau<1.or.k_ust_tau>kmax) CALL writeerror(409)
 
 	READ (UNIT=1,NML=ambient,IOSTAT=ios)
 	!! check input ambient

@@ -556,6 +556,9 @@
 	CASE(408)
 		write(*,*) '# namelist &num_scheme                           #'		
 		write(*,*) '# wiggle_detector should be 0 or 1               #'			
+	CASE(409)
+		write(*,*) '# namelist &num_scheme                           #'		
+		write(*,*) '# k_ust_tau should be between 1 and kmax         #'	
 	CASE(501)
 		write(*,*) '# namelist &simulation                           #'			
 		write(*,*) '# imax_grid or jmax_grid is not increasing monotonously       #'	

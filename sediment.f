@@ -450,7 +450,7 @@
 	
 	DO i=0,i1
 	  DO j=0,j1
-		kbedp(i,j)=MIN(kbed(i,j)+2,k1) 
+		kbedp(i,j)=MIN(kbed(i,j)+k_ust_tau,k1) 
 	  ENDDO 
 	ENDDO 
 	IF (interaction_bed.ge.4) THEN
@@ -470,7 +470,7 @@
 			!! only over ambient velocities not over U_TSHD
 			IF (IBMorder.eq.2) THEN
 				zb_W=zbed(i,j)
-				kpp=MIN(CEILING(zb_W/dz+0.5)+1,k1)		!kpp is between 1*dz-2*dz distance from bed 	
+				kpp=MIN(CEILING(zb_W/dz+0.5)-1+k_ust_tau,k1)		!for k_ust_tau=2 kpp is between 1*dz-2*dz distance from bed 	
 				!kpp=MIN(CEILING(zb_W/dz+0.5),k1)		!kpp is between 0-dz distance from bed 	
 				distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W
 				!as start use first cell (0.5-1)*dz distance from bed 
@@ -479,8 +479,8 @@
 !				  distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W
 !				ENDIF 
 			ELSE 
-				kpp = MIN(kbedp(i,j),k1)                !kpp is 1.5*dz from 0-order ibm bed
-				distance_to_bed=1.5*dz				
+				kpp = MIN(kbedp(i,j),k1)                !for k_ust_tau=2 kpp is 1.5*dz from 0-order ibm bed
+				distance_to_bed=(REAL(k_ust_tau)-0.5)*dz				
 			ENDIF
 			IF (kbedp(i,j)<kbedp(i+1,j).and.kbedp(i,j)<kbedp(i-1,j)) THEN ! pit
 				uu=0.5*(ucfd(i,j,kpp)+ucfd(i-1,j,kpp))-Ubot_TSHD(j)
@@ -589,7 +589,7 @@
 			!! only over ambient velocities not over U_TSHD
 			IF (IBMorder.eq.2) THEN
 				zb_W=zbed(i,j)
-				kpp=MIN(CEILING(zb_W/dz+0.5)+1,k1)		!kpp is between 1*dz-2*dz distance from bed 	
+				kpp=MIN(CEILING(zb_W/dz+0.5)-1+k_ust_tau,k1)		!for k_ust_tau=2 kpp is between 1*dz-2*dz distance from bed 	
 				!kpp=MIN(CEILING(zb_W/dz+0.5),k1)		!kpp is between 0-dz distance from bed 	
 				distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W
 				!as start use first cell (0.5-1)*dz distance from bed 
@@ -598,8 +598,8 @@
 !				  distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W
 !				ENDIF 
 			ELSE 
-				kpp = MIN(kbedp(i,j),k1)                !kpp is 1.5*dz from 0-order ibm bed
-				distance_to_bed=1.5*dz				
+				kpp = MIN(kbedp(i,j),k1)                !for k_ust_tau=2 kpp is 1.5*dz from 0-order ibm bed
+				distance_to_bed=(REAL(k_ust_tau)-0.5)*dz				
 			ENDIF
 			IF (kbedp(i,j)<kbedp(i+1,j).and.kbedp(i,j)<kbedp(i-1,j)) THEN ! pit
 				uu=0.5*(ucfd(i,j,kpp)+ucfd(i-1,j,kpp))-Ubot_TSHD(j)

@@ -57,6 +57,7 @@ driftfluxforce_calfac = 1. ! calibration factor for driftflux force (default 1.)
 depo_implicit = 0			! 1=calculate deposition at the bed implicit; 0=explicit with old cfluid (default)
 IBMorder = 2 				! 0 (default) = normal staircase manner bed immersed boundary, 2 = 2nd order immersed boundary of bed, obstacles and TSHD higher in water are still staircase manner
 applyVOF = 0 	!Beta option, default 0 take variable rho fully in account in momentum eq.; 1 = only take variable density in account in gravity term, not in rest of momentum eq.
+k_ust_tau = 1 	! defines which k-layer from bed is used to determine ust/tau for sediment pickup and K-Eps bed-bc, default 1 (first cell from bed is used) and sometimes for IBM bed k_ust_tau=2 is recommended because 2nd cell is less influenced by nearby immersed bed grid cells with zero velocity 
 /
 
 &ambient
