@@ -568,16 +568,16 @@
      &    				(0.5*(vcfd(1:imax,0:jmax-1,1:kmax)+vcfd(1:imax,1:jmax,1:kmax)))**2)	
 		ENDIF 
 		
-		IF (periodicx.eq.0.and.monopile<0) THEN
-		  ibeg=2
-		  iend=imax-1
-		ELSEIF (periodicx.eq.0.and.monopile>0) THEN
-		  ibeg=1
-		  iend=imax-1 
-		ELSE 
+!		IF ((periodicx.eq.0.and.monopile<0).and.(interaction_bed.eq.4.or.interaction_bed.eq.6)) THEN
+!		  ibeg=2
+!		  iend=imax-1
+!		ELSEIF ((periodicx.eq.0.and.monopile>0).and.(interaction_bed.eq.4.or.interaction_bed.eq.6)) THEN
+!		  ibeg=1
+!		  iend=imax-1 
+!		ELSE 
 		  ibeg=1
 		  iend=imax 
-		ENDIF 
+!		ENDIF 
 		DO i=ibeg,iend
 		  DO j=1,jmax 
 			erosionf=0.
