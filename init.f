@@ -890,9 +890,9 @@ c******************************************************************
 			  do j=1,jmax
 				k=1
 				do WHILE (SUM(Clivebed(1:nfrac,i,j,k)).gt.0.)
-				  k=k+1
 				  kbed(i,j)=k
 				  kbedt(i,j)=k
+				  k=k+1				  
 				enddo
 			  enddo
 			enddo
@@ -1845,11 +1845,13 @@ C ...  Locals
 ! 	include 'param.txt'
 ! 	include 'common.txt'
 
-	integer :: ncid, rhVarId, status2, ndims, xtype,natts
+	integer :: ncid, rhVarId, status2, ndims, xtype,natts,status
 	integer, dimension(nf90_max_var_dims) :: dimids
+	integer :: size1,size2,size3
+	real :: obb(0:i1,0:j1,0:k1),obb_ero(0:i1,0:j1,0:k1),obb_depo(0:i1,0:j1,0:k1)
 
 	REAL xx,yy,zz,phi
-	INTEGER tel1,tel2,tel3,inout,kmaxTSHD,t,n
+	INTEGER tel1,tel2,tel3,tel4,inout,kmaxTSHD,t,n
 	LOGICAL in
 
 	REAL xnoseS(20),ynoseS(20),xnoseP(20),ynoseP(20)
@@ -2829,7 +2831,107 @@ C ...  Locals
 !	       enddo
 !	      enddo
 !	ENDDO
+	if (obstfile.ne.'') then
+       	status2 = nf90_open(obstfile, nf90_NoWrite, ncid) 
+		IF (status2/= nf90_noerr) THEN
+			write(*,*),'obstacle file =',obstfile
+			CALL writeerror(606)
+		ENDIF
+		status = nf90_inq_varid(ncid, "obstacle_Ploc",rhVarid)
+		if (status.eq.nf90_NoErr) then
+			call check( nf90_inquire_variable(ncid, rhVarid, dimids = dimIDs))
+			call check( nf90_inquire_dimension(ncid, dimIDs(1), len = size1))
+			call check( nf90_inquire_dimension(ncid, dimIDs(2), len = size2))
+			call check( nf90_inquire_dimension(ncid, dimIDs(3), len = size3))
+			IF(size1.ne.imax+2.or.size2.ne.jmax*px+2.or.size3.ne.kmax+2) CALL writeerror(705)
+			call check( nf90_get_var(ncid,rhVarid,obb(0:i1,0:j1,0:k1),start=(/1,rank*jmax+1,1/),count=(/imax+2,jmax+2,kmax+2/)) )
+			write(*,*),'3D Obstacles "obstacle_Ploc" read from obstacle file =',obstfile
+		else
+			write(*,*),'obstacle file =',obstfile,' variable "obstacle_Ploc" not found correctly'
+		endif
+		status = nf90_inq_varid(ncid, "obstacle_ero",rhVarid)
+		if (status.eq.nf90_NoErr) then
+			call check( nf90_inquire_variable(ncid, rhVarid, dimids = dimIDs))
+			call check( nf90_inquire_dimension(ncid, dimIDs(1), len = size1))
+			call check( nf90_inquire_dimension(ncid, dimIDs(2), len = size2))
+			call check( nf90_inquire_dimension(ncid, dimIDs(3), len = size3))
+			IF(size1.ne.imax+2.or.size2.ne.jmax*px+2.or.size3.ne.kmax+2) CALL writeerror(705)
+			call check( nf90_get_var(ncid,rhVarid,obb_ero(0:i1,0:j1,0:k1),start=(/1,rank*jmax+1,1/),count=(/imax+2,jmax+2,kmax+2/)) )
+			write(*,*),'3D Obstacles "obstacle_ero" read from obstacle file =',obstfile
+		else
+			write(*,*),'obstacle file =',obstfile,' variable "obstacle_ero" not found correctly'
+		endif
+		status = nf90_inq_varid(ncid, "obstacle_depo",rhVarid)
+		if (status.eq.nf90_NoErr) then
+			call check( nf90_inquire_variable(ncid, rhVarid, dimids = dimIDs))
+			call check( nf90_inquire_dimension(ncid, dimIDs(1), len = size1))
+			call check( nf90_inquire_dimension(ncid, dimIDs(2), len = size2))
+			call check( nf90_inquire_dimension(ncid, dimIDs(3), len = size3))
+			IF(size1.ne.imax+2.or.size2.ne.jmax*px+2.or.size3.ne.kmax+2) CALL writeerror(705)
+			call check( nf90_get_var(ncid,rhVarid,obb_depo(0:i1,0:j1,0:k1),start=(/1,rank*jmax+1,1/),count=(/imax+2,jmax+2,kmax+2/)) )
+			write(*,*),'3D Obstacles "obstacle_depo" read from obstacle file =',obstfile
+		else
+			write(*,*),'obstacle file =',obstfile,' variable "obstacle_depo" not found correctly'
+		endif
+		call check( nf90_close(ncid) )     
+	endif 
 
+	tel1 = tmax_inPpuntTSHD
+	tel2 = tmax_inUpuntTSHD
+	tel3 = tmax_inVpuntTSHD
+	tel4 = tmax_inWpuntTSHD
+	do i=0,i1
+	  do j=0,j1 
+		do k=0,k1
+			if (obb_ero(i,j,k).eq.1.and.interaction_bed.ge.4) then
+			  bednotfixed(i,j,k)=obb_ero(i,j,k) ! obstacle in bed cannot be avalanched or eroded if 0. (default) user can choose to have erosion: 1.
+			endif 
+			if (obb_depo(i,j,k).eq.1.and.interaction_bed.ge.4) then
+			  bednotfixed_depo(i,j,k)=obb_depo(i,j,k) ! obstacle in bed cannot have deposition if 0. (default)
+			endif			
+			if (obb(i,j,k).eq.1) then 
+			  tel1=tel1+1
+			  i_inPpuntTSHD(tel1)=i 
+			  j_inPpuntTSHD(tel1)=j
+			  k_inPpuntTSHD(tel1)=k
+      	      tel2=tel2+1
+			  i_inUpuntTSHD(tel2)=i 
+			  j_inUpuntTSHD(tel2)=j
+			  k_inUpuntTSHD(tel2)=k	
+			  if (i-1.ge.0) then 
+				  tel2=tel2+1
+				  i_inUpuntTSHD(tel2)=i-1 
+				  j_inUpuntTSHD(tel2)=j
+				  k_inUpuntTSHD(tel2)=k			
+			  endif 
+     	      tel3=tel3+1
+			  i_inVpuntTSHD(tel3)=i 
+			  j_inVpuntTSHD(tel3)=j
+			  k_inVpuntTSHD(tel3)=k	
+			  if (j-1.ge.0) then 
+				  tel3=tel3+1
+				  i_inVpuntTSHD(tel3)=i 
+				  j_inVpuntTSHD(tel3)=j-1
+				  k_inVpuntTSHD(tel3)=k			
+			  endif	
+      	      tel4=tel4+1
+			  i_inWpuntTSHD(tel4)=i 
+			  j_inWpuntTSHD(tel4)=j
+			  k_inWpuntTSHD(tel4)=k	
+			  if (k-1.ge.0) then 
+				  tel4=tel4+1
+				  i_inWpuntTSHD(tel4)=i
+				  j_inWpuntTSHD(tel4)=j
+				  k_inWpuntTSHD(tel4)=k-1		
+			  endif 
+			endif
+		enddo
+	  enddo
+	enddo
+	tmax_inPpuntTSHD = tel1  
+	tmax_inUpuntTSHD = tel2  
+	tmax_inVpuntTSHD = tel3  
+	tmax_inWpuntTSHD = tel4  
 	
 	if (.true.) then ! true = 0th order IBM staircase manner, false = 1st order IBM scaling with volume grid cell inside object
 	if (bedlevelfile.ne.'') then

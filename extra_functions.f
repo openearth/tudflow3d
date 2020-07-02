@@ -48,7 +48,11 @@
       ELSE
 	dt = dt_max
       ENDIF
-	  
+      IF (istep.le.1000) THEN
+		IF (Uoutflow.eq.2) Uoutflow=999 !first 1000 time steps don't use convective outflow 
+      ELSE
+		IF (Uoutflow.eq.999) Uoutflow=2 !after 10 time steps use convective outflow 
+      ENDIF	  
 !		write(*,*),'dt,rank voor',dt,rank
       IF (CNdiffz.eq.1.or.CNdiffz.eq.2) THEN
 	dz2 = 1.e9*dz*dz ! no dt restriction for vertical diff with CN implicit scheme

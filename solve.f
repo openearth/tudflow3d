@@ -1160,7 +1160,7 @@ c********************************************************************
 			ELSE 
 				CNz=1.
 			ENDIF 	  
-      call bound_rhoU(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,
+      call bound_rhoU(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
      & Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
        do j=1,jmax
          do i=1,imax
@@ -1729,7 +1729,7 @@ c********************************************************************
 	if (nfrac>0) then
 	  call state(dcdt,drdt) ! determine drdt1 with pred1
 	endif
-      call bound_rhoU(dUdt,dVdt,dWdt,drdt,MIN(0,slip_bot),time_n+c2*dt,(1.-c2)*Ub1old+c2*Ub1new,(1.-c2)*Vb1old+c2*Vb1new,
+      call bound_rhoU(dUdt,dVdt,dWdt,drdt,MIN(0,slip_bot),0,time_n+c2*dt,(1.-c2)*Ub1old+c2*Ub1new,(1.-c2)*Vb1old+c2*Vb1new,
      & (1.-c2)*Wb1old+c2*Wb1new,(1.-c2)*Ub2old+c2*Ub2new,(1.-c2)*Vb2old+c2*Vb2new,(1.-c2)*Wb2old+c2*Wb2new,
      $ (1.-c2)*Ub3old+c2*Ub3new,(1.-c2)*Vb3old+c2*Vb3new,(1.-c2)*Wb3old+c2*Wb3new)
        do j=1,jmax
@@ -1862,7 +1862,7 @@ c********************************************************************
       enddo
 
 !      DO n=1,npresIBM+1	!default npresIBM=0, then only one pres-cor, with npresIBM>0 extra pres-cor for better impermeable IBM boundaries
-      call bound_rhoU(dUdt,dVdt,dWdt,drdt,MIN(0,slip_bot),time_n+c2*dt,(1.-c2)*Ub1old+c2*Ub1new,(1.-c2)*Vb1old+c2*Vb1new,
+      call bound_rhoU(dUdt,dVdt,dWdt,drdt,MIN(0,slip_bot),0,time_n+c2*dt,(1.-c2)*Ub1old+c2*Ub1new,(1.-c2)*Vb1old+c2*Vb1new,
      & (1.-c2)*Wb1old+c2*Wb1new,(1.-c2)*Ub2old+c2*Ub2new,(1.-c2)*Vb2old+c2*Vb2new,(1.-c2)*Wb2old+c2*Wb2new,
      & (1.-c2)*Ub3old+c2*Ub3new,(1.-c2)*Vb3old+c2*Vb3new,(1.-c2)*Wb3old+c2*Wb3new)
 
@@ -1940,7 +1940,7 @@ c********************************************************************
 !	  dUdt1=dudt
 !	  dVdt1=dvdt
 !	  dWdt1=dWdt
-      call bound_rhoU(dUdt,dVdt,dWdt,drdt,MIN(0,slip_bot),time_n+c2*dt,(1.-c2)*Ub1old+c2*Ub1new,(1.-c2)*Vb1old+c2*Vb1new,
+      call bound_rhoU(dUdt,dVdt,dWdt,drdt,MIN(0,slip_bot),0,time_n+c2*dt,(1.-c2)*Ub1old+c2*Ub1new,(1.-c2)*Vb1old+c2*Vb1new,
      & (1.-c2)*Wb1old+c2*Wb1new,(1.-c2)*Ub2old+c2*Ub2new,(1.-c2)*Vb2old+c2*Vb2new,(1.-c2)*Wb2old+c2*Wb2new,
      & (1.-c2)*Ub3old+c2*Ub3new,(1.-c2)*Vb3old+c2*Vb3new,(1.-c2)*Wb3old+c2*Wb3new)
 
@@ -2222,7 +2222,7 @@ c********************************************************************
 	if (nfrac>0) then
 	  call state(dcdt,drdt) ! determine drdt1 with pred1
 	endif
-      call bound_rhoU(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),time_n+c3*dt,(1.-c3)*Ub1old+c3*Ub1new,(1.-c3)*Vb1old+c3*Vb1new,
+      call bound_rhoU(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_n+c3*dt,(1.-c3)*Ub1old+c3*Ub1new,(1.-c3)*Vb1old+c3*Vb1new,
      & (1.-c3)*Wb1old+c3*Wb1new,(1.-c3)*Ub2old+c3*Ub2new,(1.-c3)*Vb2old+c3*Vb2new,(1.-c3)*Wb2old+c3*Wb2new,
      & (1.-c3)*Ub3old+c3*Ub3new,(1.-c3)*Vb3old+c3*Vb3new,(1.-c3)*Wb3old+c2*Wb3new)
        do j=1,jmax
@@ -2353,7 +2353,7 @@ c********************************************************************
       enddo  
 
 !      DO n=1,npresIBM+1	!default npresIBM=0, then only one pres-cor, with npresIBM>0 extra pres-cor for better impermeable IBM boundaries
-      call bound_rhoU(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),time_n+c3*dt,(1.-c3)*Ub1old+c3*Ub1new,(1.-c3)*Vb1old+c3*Vb1new,
+      call bound_rhoU(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_n+c3*dt,(1.-c3)*Ub1old+c3*Ub1new,(1.-c3)*Vb1old+c3*Vb1new,
      & (1.-c3)*Wb1old+c3*Wb1new,(1.-c3)*Ub2old+c3*Ub2new,(1.-c3)*Vb2old+c3*Vb2new,(1.-c3)*Wb2old+c3*Wb2new,
      & (1.-c3)*Ub3old+c3*Ub3new,(1.-c3)*Vb3old+c3*Vb3new,(1.-c3)*Wb3old+c2*Wb3new) 
 !      call bound_rhoU(dUdt2,dVdt2,dWdt2,dRdt2,slip_bot,time_n+c3*dt,(1.-c3)*Ub1old+c3*Ub1new,(1.-c3)*Vb1old+c3*Vb1new,
@@ -2427,7 +2427,7 @@ c********************************************************************
 !		dUdt1=dudt
 !		dVdt1=dvdt
 !		dWdt1=dwdt
-      call bound_rhoU(dUdt,dVdt,dWdt,drdt,MIN(0,slip_bot),time_n+c3*dt,(1.-c3)*Ub1old+c3*Ub1new,(1.-c3)*Vb1old+c3*Vb1new,
+      call bound_rhoU(dUdt,dVdt,dWdt,drdt,MIN(0,slip_bot),0,time_n+c3*dt,(1.-c3)*Ub1old+c3*Ub1new,(1.-c3)*Vb1old+c3*Vb1new,
      & (1.-c3)*Wb1old+c3*Wb1new,(1.-c3)*Ub2old+c3*Ub2new,(1.-c3)*Vb2old+c3*Vb2new,(1.-c3)*Wb2old+c3*Wb2new,
      & (1.-c3)*Ub3old+c3*Ub3new,(1.-c3)*Vb3old+c3*Vb3new,(1.-c3)*Wb3old+c2*Wb3new)
 
@@ -2714,7 +2714,7 @@ c********************************************************************
 	if (nfrac>0) then
 	  call state(dcdt,drdt) ! determine drdt1 with pred1
 	endif
-      call bound_rhoU(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,
+      call bound_rhoU(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
      & Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
        do j=1,jmax
          do i=1,imax
@@ -3227,7 +3227,7 @@ c********************************************************************
 			ELSE 
 				CNz=1.
 			ENDIF 	  
-      call bound_rhoU(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,
+      call bound_rhoU(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
      & Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
        do j=1,jmax
          do i=1,imax

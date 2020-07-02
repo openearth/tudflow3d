@@ -43,13 +43,14 @@ convection = 'HYB6'		! Numerical scheme for convection term, options: 'CDS2','CD
 numdiff = 0.001953125		! Amount of extra 6th diffusion in case of 'CDS6','CDS4','HYB6','C4A6' ('CDS6' -> 1/60=UPW5, 0=CDS6); or blend slope for TVD-r<0 'C2Bl' and 'C4Bl' 
 wiggle_detector = 0			! Use wiggle detector to adjust amount of numdiff for each individual grid cell (default 0-->numdiff applied for all cells; optional 1)
 diffusion = 'CDS2'		! Numerical scheme for diffusion term.
-CNdiffz = 0			! 1 is implicit CN treatment of diffusion in z-dir 0 is explicit in z-dir (default 0)
+CNdiffz = 0			! 1 is 2nd order CN treatment of diffusion in z-dir; 0 is explicit in z-dir (default 0); 2 is implicit 1st order Euler backward
 continuity_solver =36    !default is 1 (drdt+drudx=0). Optional:  35 (dudx=0 U-mix), 36 (dudx=0 U-vol); 36 is best option for mixture flow 
 npresIBM = 0			! number of extra pres-correction steps to make IBM objects better impermeable (default 0)
 npresPRHO = 0			! number of extra pres-correction steps to get predicted P^n+1 as input in variable-density-Poisson-solver more accurate (default 0)
 oPRHO = 2				! (default 2) 2 = linear extrapolation for predicted P*; 1 = predicted P* equal to P^n; 3 = linear extrapolation for predicted P* using 2dt before to reduce wiggles in time; 4 = high order extrapolation for dPdt to get predicted P*
 pres_in_predictor_step = 1 ! 1 (default) = apply P^n in predictor step and apply corrector step with dP; 0 = predictor step without pressure and apply corrector step with P^n+1; 2 = like 1, but every 100th timestep like 0
 Poutflow=0 				! 0 (default, most robust) Poutflow is zero for complete outflow crosssection at rmax; 1 (optional) Poutflow is zero at just one grid-location at rmax --> sometimes better but less robust
+Uoutflow=0 				! 0 (default) Neumann outflow dUdn=0 (for U,V,W); 2 means convective outflow condition dUdt+U_normal*dUdn=0 (for U,V,W)
 !advec_conc='VLE'		! optional advection scheme concentration, options: 'VLE' (default) 'VL2' 'ARO' 'SBE' SB2' 'NVD' :'VLE' VanLeer(via LW)(default) 'ARO' Arora(via LW) 'SBE' Superbee(via LW) 'VL2' VanLeer(via CDS2) or 'SB2' Superbee(via CDS2) TVD schemes or 'NVD' for NVD scheme 
 !transporteq_fracs = 'volufrac' !nerd option default volume fractions, but as option also 'massfrac' can be used internally (input/output still is volume frac!)
 !split_rho_cont = 'SB2'  ! optional 'VL2' or 'SB2' TVD scheme (via CDS2 without 1-cfl term) to split off rho from rho*U, default 'CDS' scheme
@@ -81,7 +82,7 @@ kn = 0.1			! Nikkuradse roughness flow [m]
 interaction_bed = 4		! 0 no erosion/sedimentation, 1 only deposition, 2 deposition & unlimited erosion, 3 deposition & erosion previously deposited material, 4 depo&ero including bed-update, 5 depo&ero excluding bed-update, 6 depo&ero including bed-update & unlimited erosion base layer, 7 depo&ero excluding bed-update & unlimited erosion base layer
 periodicx = 0			! 1 periodic in x dir; 0 not periodic (default 0); 2 closed box (in and outflow in x-dir is zero)
 periodicy = 0			! 1 periodic in y dir; 0 not periodic; 2 is free slip lateral boundaries (default 0)
-monopile = -1			! -1 (default) no monopile; >0 is monopile : closed bc at i=0 and combined in/outflow at i=imax; 1=partial slip monopile wall; 2=free slip monopile wall
+monopile = -1			! -1 (default) no monopile; >0 is monopile : closed bc at i=0 and combined in/outflow at i=imax; 1=partial slip monopile wall log-law; 2=free slip monopile wall; 3=partial slip monopile wall-law including dpdx, 4=no-slip monopile wall
 kn_mp = 0.01 			! must be defined icw monopile=1 and gives Nikkuradse monopile wall roughness is implemented 
 kn_sidewalls = 0.01		! when defined >0 icw periodicy=2 then side wall Nikkuradse roughness is implemented (default <0 no sidewall tau)
 dpdx = 0.0			! Driving pressure gradient in x dir in case periodic [Pa/m] (default 0)
@@ -94,6 +95,7 @@ obst(1)%height = 0.5            ! vertical height obstacle
 obst(1)%zbottom = 0.2            ! vertical bottom start height obstacle [m] (optional, default 0)
 obst(1)%ero = 0. 				! 0. = no erosion on top of obstacle, 1. = erosion possible  (optional, default 0)
 obst(1)%depo = 0. 				! 0. = no deposition on top of obstacle, 1. = deposition possible  (optional, default 0)
+obstfile = './inputfiles/obstacles_v01.nc'         ! Input netcdf file 3D obstacles; must contain obstacle_Ploc (1=obst, 0=not), obstacle_ero, obstacle_depo (0:i1,0:jmax*px+1,0:k1) [-]) 
 U_b3 = -0.47			! Ambient bc U velocity [m/s] in surf_layer with respect to TSHD motion: negative means TSHD sailing against current (Utotal=U_TSHD-U_b), without TSHD positive is inward velocity
 V_b3 = -0.29			! Ambient bc V velocity [m/s] in surf_layer with respect to TSHD motion: positive means current from starboard  
 surf_layer = 0.			! Layer depth [m] from free surface with U_b3,V_b3 ambient current (default 0)

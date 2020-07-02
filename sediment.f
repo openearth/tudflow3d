@@ -962,12 +962,12 @@
 					ustc2 = Shields_cr * gvector*delta*d50
 					MME = MAX(0.,(ust*ust-ustc2)/ustc2)
 					qb = calibfac_sand_bedload*0.5*rho_sand*d50*Dstar**(-0.3)*ust*MME ! [kg/m/s]	
-!		IF (ABS(SUM(cbotnew(1:nfrac,i,j)))>0.5*cfixedbed) write(*,'(a,i6.1,i6.1,i6.1,f11.6,f11.6,f11.6,f11.6,f11.6,f11.6,f11.6)'),
-!     & 'rank,i,j,qb,absU,uuR,uuL,vvR,vvL,cbotnew'
-!     & ,rank,i,j,qb,absUbl,uuR_relax(i,j),uuL_relax(i,j),vvR_relax(i,j),vvL_relax(i,j),SUM(cbotnew(1:nfrac,i,j))
-		IF ((rank.eq.1.or.rank.eq.0).and.i>96.and.i<100.and.j>1.and.j<8) write
-     & (*,'(a,i6.1,i6.1,i6.1,i6.1,f11.6,f11.6,f11.6,f11.6,f11.6,f11.6,f11.6)'),'istep,rank,i,j,qb,absU,uuR,uuL,vvR,vvL,cbotnew'
-     & ,istep,rank,i,j,qb,absUbl,uuR_relax(i,j),uuL_relax(i,j),vvR_relax(i,j),vvL_relax(i,j),SUM(cbotnew(1:nfrac,i,j))	 
+!!		IF (ABS(SUM(cbotnew(1:nfrac,i,j)))>0.5*cfixedbed) write(*,'(a,i6.1,i6.1,i6.1,f11.6,f11.6,f11.6,f11.6,f11.6,f11.6,f11.6)'),
+!!     & 'rank,i,j,qb,absU,uuR,uuL,vvR,vvL,cbotnew'
+!!     & ,rank,i,j,qb,absUbl,uuR_relax(i,j),uuL_relax(i,j),vvR_relax(i,j),vvL_relax(i,j),SUM(cbotnew(1:nfrac,i,j))
+!		IF ((rank.eq.1.or.rank.eq.0).and.i>96.and.i<100.and.j>1.and.j<8) write
+!     & (*,'(a,i6.1,i6.1,i6.1,i6.1,f11.6,f11.6,f11.6,f11.6,f11.6,f11.6,f11.6)'),'istep,rank,i,j,qb,absU,uuR,uuL,vvR,vvL,cbotnew'
+!     & ,istep,rank,i,j,qb,absUbl,uuR_relax(i,j),uuL_relax(i,j),vvR_relax(i,j),vvL_relax(i,j),SUM(cbotnew(1:nfrac,i,j))	 
 					qb = qb*bednotfixed(i,j,kbed(i,j))*morfac*morfac2 !kg/m/s				
 				ELSEIF (bedload_formula.eq.'vanrijn2003'.and.time_n.ge.tstart_morf2) THEN !as taken from D3D manual
 					kn_sed_avg=kn_d50_multiplier_bl*d50 
@@ -992,7 +992,10 @@
 					qb = calibfac_sand_bedload*8.*rho_sand*d50*sqrt(gvector*delta*d50)*MME ! [kg/m/s] 
 					qb = qb*bednotfixed(i,j,kbed(i,j))*morfac*morfac2 !kg/m/s
 				ENDIF 
-				
+				IF ((bedload_formula.ne.'nonenon0000').and.time_n.ge.tstart_morf2) THEN
+					qb  = bl_relax*qb+(1.-bl_relax)*qb_relax(i,j)  	!relaxation for bedload-fluxes
+					qb_relax(i,j)=qb 
+				ENDIF 	
 				DO n1=1,nfr_sand
 					n=nfrac_sand(n1)			
 					erosion_avg(n) = phipp * (delta*gvector*d50)**0.5*ddt*bednotfixed(i,j,kbed(i,j))*morfac*bs_geo  !*rho_sand/rho_sand ! erosion flux in kg/m2/(kg/m3)= m3/m2=m

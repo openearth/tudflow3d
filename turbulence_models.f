@@ -2355,7 +2355,7 @@ c*************************************************************
 	integer im,ip,jm,jp,km,kp,kpp
 	real ctot,cref,pwr,zb_C,distance_to_bed,nu_t,factor,absU2,LLL,III,ww
 	integer fracs_included(nfr_sand+nfr_silt)
-	real aaa(0:k1),bbb(0:k1),ccc(0:k1),ekm_min,ekm_plus,rhss(0:k1),CNz,zb_W
+	real aaa(0:k1),bbb(0:k1),ccc(0:k1),ekm_min,ekm_plus,rhss(0:k1),CNz,zb_W,tauw,tauv
 
 	sqrtsix=sqrt(6.)
 	
@@ -2909,11 +2909,13 @@ c*************************************************************
 					kp=kbedt(i,j)+1 
 					distance_to_bed=0.5*dz 
 				ENDIF 
-				TKE(i,j,kp) = MAX(ust*ust/sqrt(Cmu(i,j,kp)),1.e-12)
-				!EEE(i,j,kp) = MAX(ust**3/(kappa*MIN(z0,distance_to_bed)),1.e-12)
-				EEE(i,j,kp) = MAX(ust**3/(kappa*distance_to_bed),1.e-12) !conform vRhee, Labeur, theory distance_to_bed should be used, in D3D z0 is used 
-				EEE(i,j,kmax) = MAX(TKE(i,j,kmax)**1.5*Cmu(i,j,kmax)**0.75/(0.07*kappa*(depth-zbed(i,j))),1.e-12)
+				IF (kp<kmax) THEN 
+				  TKE(i,j,kp) = MAX(ust*ust/sqrt(Cmu(i,j,kp)),1.e-12)
+				  !EEE(i,j,kp) = MAX(ust**3/(kappa*MIN(z0,distance_to_bed)),1.e-12)
+				  EEE(i,j,kp) = MAX(ust**3/(kappa*distance_to_bed),1.e-12) !conform vRhee, Labeur, theory distance_to_bed should be used, in D3D z0 is used 
+				  EEE(i,j,kmax) = MAX(TKE(i,j,kmax)**1.5*Cmu(i,j,kmax)**0.75/(0.07*kappa*(depth-zbed(i,j))),1.e-12)
 				! this bc for eps at free surface is essential to reduce nu_t near the free surface and get nice Rouse curve also in upper region
+				ENDIF 
 			enddo
 		  enddo 
 		endif 
@@ -2950,7 +2952,51 @@ c*************************************************************
 				EEE(i,j,kp) = MAX(ust**3/(kappa*distance_to_bed),1.e-12)
 			enddo
 		  enddo 
-		endif 		
+		endif 	
+		IF (monopile.eq.1) then ! partial slip tau based on log-wall 
+			 do k=1,kmax 
+			   do j=1,jmax
+				distance_to_bed = 0.5*dr(1)
+				ww=0.5*(Wvel(1,j,k)+Wvel(1,j,k-1))
+				vv=0.5*(Vvel(1,j,k)+Vvel(1,j-1,k))				
+				absU=sqrt(ww*ww+vv*vv)
+				ust=0.1*absU
+				if (kn>0.) then !walls with rougness (log-law used which can be hydr smooth or hydr rough):
+					do tel=1,10 ! 10 iter is more than enough
+						z0=kn/30.+0.11*nu_mol/MAX(ust,1.e-9)
+						ust=absU/MAX(1./kappa*log(distance_to_bed/z0),2.) !ust maximal 0.5*absU
+					enddo
+				else
+					do tel=1,10 ! 10 iter is more than enough
+						yplus=MAX(distance_to_bed*ust/nu_mol,1e-12)
+						ust=absU/MAX((2.5*log(yplus)+5.5),2.) !ust maximal 0.5*absU			
+					enddo
+					if (yplus<30.) then
+					  do tel=1,10 ! 10 iter is more than enough
+						yplus=MAX(distance_to_bed*ust/nu_mol,1e-12)
+						ust=absU/MAX((5.*log(yplus)-3.05),2.) !ust maximal 0.5*absU			
+					  enddo	
+					endif
+					if (yplus<5.) then !viscous sublayer uplus=yplus
+						ust=sqrt(absU*nu_mol/(distance_to_bed))
+					endif
+				endif
+				TKE(1,j,k) = MAX(ust*ust/sqrt(Cmu(1,j,k)),1.e-12)
+				EEE(1,j,k) = MAX(ust**3/(kappa*distance_to_bed),1.e-12)				
+			  enddo
+			 enddo 
+		ELSEIF (monopile.eq.3) then ! partial slip tau based on simplified TBL wall-law taking pressure gradient into account
+			 do k=1,kmax 
+			   do j=1,jmax
+			    distance_to_bed = 0.5*dr(1)
+				tauw=0.5*(tau2Wold(j,k)+tau2Wold(j,k-1))
+				tauv=0.5*(tau2Vold(j,k)+tau2Vold(j-1,k))			   
+				ust = ((tauw/rr(1,j,k))**2+(tauv/rr(1,j,k))**2)**0.25								!at W-gridpoint
+				TKE(1,j,k) = MAX(ust*ust/sqrt(Cmu(1,j,k)),1.e-12)
+				EEE(1,j,k) = MAX(ust**3/(kappa*distance_to_bed),1.e-12)			
+			  enddo
+			 enddo 
+		ENDIF		
 		call bound_p(TKE)  !periodic boundaries in x or y when needed, otherwise all Neumann boundaries d./dn=0
 		call bound_p(EEE)  !periodic boundaries in x or y when needed, otherwise all Neumann boundaries d./dn=0
       end

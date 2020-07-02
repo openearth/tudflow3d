@@ -588,8 +588,7 @@
 		write(*,*) '# namelist &ambient                              #'
 		write(*,*) '# wallup should be 0,1 or 2 (default 0)          #'
 	CASE(606)
-		write(*,*) '# namelist &ambient                              #'			
-		write(*,*) '# input bedlevel file does not exist             #'	
+		write(*,*) '# file does not exist             #'	
 	CASE(607)
 		write(*,*) '# namelist &ambient                              #'			
 		write(*,*) '# cfixedbed must be >=0 and <=1 (default 0.6)    #'			
@@ -627,7 +626,10 @@
 		write(*,*) '# avfile does not exist                          #'	
 	CASE(704)
 		write(*,*) '# namelist &constants                            #'			
-		write(*,*) '# avfile does not contain correct data           #'			
+		write(*,*) '# avfile does not contain correct data           #'	
+	CASE(705)
+		write(*,*) '# namelist &ambient                              #'			
+		write(*,*) '# obstfile does not contain correct size data    #'			
 	CASE(1001)
 		write(*,*) '# namelist &timeseries                           #'			
 		write(*,*) '# file cannot be found                           #'	

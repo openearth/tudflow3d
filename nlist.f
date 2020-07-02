@@ -24,7 +24,7 @@
       SAVE
       
       INTEGER i,j,k,imax,jmax,kmax,i1,j1,k1,px,rank,kjet,nmax1,nmax2,nmax3,istep,CNdiffz,npresIBM,counter,npresPRHO,oPRHO
-      INTEGER Lmix_type,slip_bot,SEM,azi_n,outflow_overflow_down,azi_n2,wiggle_detector,wd,applyVOF,Poutflow,k_ust_tau
+      INTEGER Lmix_type,slip_bot,SEM,azi_n,outflow_overflow_down,azi_n2,wiggle_detector,wd,applyVOF,Poutflow,k_ust_tau,Uoutflow
       REAL ekm_mol,nu_mol,pi,kappa,gx,gy,gz,Cs,Sc,calibfac_sand_pickup,calibfac_Shields_cr,morfac,morfac2,calibfac_sand_bedload
       REAL dt,time_nm,time_n,time_np,t_end,t0_output,dt_output,te_output,dt_max,tstart_rms,CFL,dt_ini,tstart_morf,trestart,dt_old
       REAL dt_output_movie,t0_output_movie,te_output_movie,te_rms,time_nm2,b_update,tstart_morf2,fcor
@@ -60,7 +60,7 @@
       INTEGER ksurf_bc,kmaxTSHD_ind,nair
       INTEGER poissolver,nm1,istep_output_bpmove,avalanche_until_done,IBMorder
       INTEGER iparm(64)
-      CHARACTER*256 plumeQtseriesfile,plumectseriesfile,avfile      
+      CHARACTER*256 plumeQtseriesfile,plumectseriesfile,avfile,obstfile     
       REAL Q_j,plumeQseries(1:10000),plumeQtseries(1:10000),plumectseries(1:10000),plumecseries(30,1:10000) !c(30) matches with size frac_init
       REAL Aplume,driftfluxforce_calfac
 	  REAL vwal,delta_nsed,nl,permeability_kl,pickup_fluctuations_ampl,z_tau_sed,kn_d50_multiplier_bl,bl_relax
@@ -137,7 +137,7 @@
 	  REAL, DIMENSION(:,:,:),ALLOCATABLE :: Chisbp
 	  REAL, DIMENSION(:,:),ALLOCATABLE :: Uhisbp,Vhisbp,Whisbp
 	  REAL*4, DIMENSION(:,:,:),ALLOCATABLE :: fc_global
-	  REAL, DIMENSION(:,:),ALLOCATABLE :: uuR_relax,uuL_relax,vvR_relax,vvL_relax
+	  REAL, DIMENSION(:,:),ALLOCATABLE :: uuR_relax,uuL_relax,vvR_relax,vvL_relax,tau2Vold,tau2Vnew,tau2Wold,tau2Wnew,qb_relax
 	  REAL, DIMENSION(:,:,:),ALLOCATABLE :: qbU,qbV
 
  !     REAL, DIMENSION(:,:,:),ALLOCATABLE :: Uf,Vf,Wf
@@ -236,10 +236,10 @@
      & t0_output_movie,dt_output_movie,te_output_movie,tstart_morf,te_rms,tstart_morf2
 	NAMELIST /num_scheme/convection,numdiff,wiggle_detector,diffusion,comp_filter_a,comp_filter_n,CNdiffz,npresIBM,advec_conc,
      & continuity_solver,transporteq_fracs,split_rho_cont,driftfluxforce_calfac,depo_implicit,IBMorder,npresPRHO,
-     & pres_in_predictor_step,Poutflow,oPRHO,applyVOF,k_ust_tau
+     & pres_in_predictor_step,Poutflow,oPRHO,applyVOF,k_ust_tau,Uoutflow
 	NAMELIST /ambient/U_b,V_b,W_b,bcfile,rho_b,SEM,nmax2,nmax1,nmax3,lm_min,lm_min3,slip_bot,kn,interaction_bed,
      & periodicx,periodicy,dpdx,dpdy,W_ox,Hs,Tp,nx_w,ny_w,obst,bc_obst_h,U_b3,V_b3,surf_layer,wallup,bedlevelfile,
-     & U_bSEM,V_bSEM,U_w,V_w,c_bed,cfixedbed,U_init,V_init,initconditionsfile,rho_b2,monopile,kn_mp,kn_sidewalls
+     & U_bSEM,V_bSEM,U_w,V_w,c_bed,cfixedbed,U_init,V_init,initconditionsfile,rho_b2,monopile,kn_mp,kn_sidewalls,obstfile
 	NAMELIST /plume/W_j,plumetseriesfile,Awjet,Aujet,Avjet,Strouhal,azi_n,kjet,radius_j,Sc,slipvel,outflow_overflow_down,
      & U_j2,plumetseriesfile2,Awjet2,Aujet2,Avjet2,Strouhal2,azi_n2,radius_j2,zjet2,bedplume,radius_inner_j,xj,yj,W_j_powerlaw,
      & plume_z_outflow_belowsurf,hindered_settling,Q_j,plumeQtseriesfile,plumectseriesfile
@@ -315,6 +315,7 @@
 	depo_cbed_option=0 !2-3-2020 obsolete; user input not read anymore from num_scheme always option 0 is used in code 
 	IBMorder=0 
 	Poutflow=0 ! 0 (default, most robust) Poutflow is zero for complete outflow crosssection at rmax; 1 (optional) Poutflow is zero at just one grid-location at rmax --> sometimes better but less robust
+	Uoutflow=0 !0 (default) Neumann outflow dUdn=0 (for U,V,W); 2 means Convective outflow condition dUdt+U_normal*dUdn=0 (for U,V,W)
 	applyVOF=0
 	k_ust_tau=1
 	!! ambient:
@@ -372,6 +373,7 @@
 	V_b3=-9999.
 	surf_layer=0.
 	wallup=0
+	obstfile = ''
 	!! plume
 	W_j = -999.
 	plumetseriesfile=''
@@ -1752,13 +1754,25 @@
 	ALLOCATE(uuL_relax(0:i1,0:j1))
 	ALLOCATE(vvR_relax(0:i1,0:j1))
 	ALLOCATE(vvL_relax(0:i1,0:j1))	
+	ALLOCATE(qb_relax(0:i1,0:j1))
 	uuR_relax = 0. 
 	uuL_relax = 0. 
 	vvR_relax = 0. 
 	vvL_relax = 0. 
+	qb_relax = 0. 
 	qbU = 0.
 	qbV = 0.
-
+	
+	if (monopile.eq.3) then 
+		ALLOCATE(tau2Vold(0:j1,0:k1))
+		ALLOCATE(tau2Wold(0:j1,0:k1))
+		ALLOCATE(tau2Vnew(0:j1,0:k1))
+		ALLOCATE(tau2Wnew(0:j1,0:k1))
+		tau2Vold = 0.
+		tau2Wold = 0.
+		tau2Vnew = 0.
+		tau2Wnew = 0.
+	endif 
 	! init at zero (when no bcfile it stays zero)
 	Ubcoarse1=0.
 	Ubcoarse2=0.
