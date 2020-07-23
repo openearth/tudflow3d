@@ -584,49 +584,50 @@ c*************************************************************
             Diffcof(i,j,k)=0.
           enddo
         enddo
-        IF (LOA>0.or.nobst>0) THEN ! ship:
-          do t=1,tmax_inPpuntTSHD
-            i=i_inPpuntTSHD(t)
-            j=j_inPpuntTSHD(t)
-            k=k_inPpuntTSHD(t)
-            !ekm(i,j,k)=0.
-			Diffcof(i,j,k)=0. 
-			im=MAX(0,i-1)
-			ip=MIN(i1,i+1)
-			jm=MAX(0,j-1)
-			jp=MIN(j1,j+1)
-			km=MAX(0,k-1)
-			kp=MIN(k1,k+1)
-			Diffcof(im,j,k)=0.
-			Diffcof(ip,j,k)=0.
-			Diffcof(i,jm,k)=0.
-			Diffcof(i,jp,k)=0.
-			Diffcof(i,j,km)=0.
-			Diffcof(i,j,kp)=0.			
-          enddo
-		ELSEIF(kjet>0) THEN
+!        IF (LOA>0.or.nobst>0) THEN ! ship:
+!          do t=1,tmax_inPpuntTSHD
+!            i=i_inPpuntTSHD(t)
+!            j=j_inPpuntTSHD(t)
+!            k=k_inPpuntTSHD(t)
+!            !ekm(i,j,k)=0.
+!			Diffcof(i,j,k)=0. 
+!			im=MAX(0,i-1)
+!			ip=MIN(i1,i+1)
+!			jm=MAX(0,j-1)
+!			jp=MIN(j1,j+1)
+!			km=MAX(0,k-1)
+!			kp=MIN(k1,k+1)
+!			Diffcof(im,j,k)=0.
+!			Diffcof(ip,j,k)=0.
+!			Diffcof(i,jm,k)=0.
+!			Diffcof(i,jp,k)=0.
+!			Diffcof(i,j,km)=0.
+!			Diffcof(i,j,kp)=0.			
+!          enddo
+!		ELSEIF(kjet>0) THEN
+		IF (kjet>0) THEN
           !ekm(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
 		  Diffcof(0:i1,0:j1,kmax-kjet+1:k1)=0.
 		ENDIF
-		! no diffusion allowed into bed:
-			DO i=0,i1
-				DO j=0,j1
-					DO k=0,kbed(i,j)
-						im=MAX(0,i-1)
-						ip=MIN(i1,i+1)
-						jm=MAX(0,j-1)
-						jp=MIN(j1,j+1)
-						km=MAX(0,k-1)
-						kp=MIN(k1,k+1)					
-						Diffcof(im,j,k)=0.
-						Diffcof(ip,j,k)=0.
-						Diffcof(i,jm,k)=0.
-						Diffcof(i,jp,k)=0.
-						Diffcof(i,j,k)=0.
-						Diffcof(i,j,kp)=0.									
-					ENDDO
-				ENDDO
-			ENDDO
+!		! no diffusion allowed into bed:
+!			DO i=0,i1
+!				DO j=0,j1
+!					DO k=0,kbed(i,j)
+!						im=MAX(0,i-1)
+!						ip=MIN(i1,i+1)
+!						jm=MAX(0,j-1)
+!						jp=MIN(j1,j+1)
+!						km=MAX(0,k-1)
+!						kp=MIN(k1,k+1)					
+!						Diffcof(im,j,k)=0.
+!						Diffcof(ip,j,k)=0.
+!						Diffcof(i,jm,k)=0.
+!						Diffcof(i,jp,k)=0.
+!						Diffcof(i,j,k)=0.
+!						Diffcof(i,j,kp)=0.									
+!					ENDDO
+!				ENDDO
+!			ENDDO
 
       end
 
@@ -1015,49 +1016,50 @@ c*************************************************************
  
 	ekm2=ekm
 	Diffcof2=Diffcof
-        IF (LOA>0.or.nobst>0) THEN ! ship:
-          do t=1,tmax_inPpuntTSHD
-            i=i_inPpuntTSHD(t)
-            j=j_inPpuntTSHD(t)
-            k=k_inPpuntTSHD(t)
-            !ekm(i,j,k)=0.
-	    Diffcof(i,j,k)=0.
-			im=MAX(0,i-1)
-			ip=MIN(i1,i+1)
-			jm=MAX(0,j-1)
-			jp=MIN(j1,j+1)
-			km=MAX(0,k-1)
-			kp=MIN(k1,k+1)
-			Diffcof(im,j,k)=0.
-			Diffcof(ip,j,k)=0.
-			Diffcof(i,jm,k)=0.
-			Diffcof(i,jp,k)=0.
-			Diffcof(i,j,km)=0.
-			Diffcof(i,j,kp)=0.			
-          enddo
-	ELSEIF(kjet>0) THEN
+!        IF (LOA>0.or.nobst>0) THEN ! ship:
+!          do t=1,tmax_inPpuntTSHD
+!            i=i_inPpuntTSHD(t)
+!            j=j_inPpuntTSHD(t)
+!            k=k_inPpuntTSHD(t)
+!            !ekm(i,j,k)=0.
+!	    Diffcof(i,j,k)=0.
+!			im=MAX(0,i-1)
+!			ip=MIN(i1,i+1)
+!			jm=MAX(0,j-1)
+!			jp=MIN(j1,j+1)
+!			km=MAX(0,k-1)
+!			kp=MIN(k1,k+1)
+!			Diffcof(im,j,k)=0.
+!			Diffcof(ip,j,k)=0.
+!			Diffcof(i,jm,k)=0.
+!			Diffcof(i,jp,k)=0.
+!			Diffcof(i,j,km)=0.
+!			Diffcof(i,j,kp)=0.			
+!          enddo
+!	ELSEIF(kjet>0) THEN
+	IF (kjet>0) THEN
           !ekm(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
           Diffcof(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
 	ENDIF
-		!no diffusion allowed into bed:
-			DO i=0,i1
-				DO j=0,j1
-					DO k=0,kbed(i,j)
-						im=MAX(0,i-1)
-						ip=MIN(i1,i+1)
-						jm=MAX(0,j-1)
-						jp=MIN(j1,j+1)
-						km=MAX(0,k-1)
-						kp=MIN(k1,k+1)					
-						Diffcof(im,j,k)=0.
-						Diffcof(ip,j,k)=0.
-						Diffcof(i,jm,k)=0.
-						Diffcof(i,jp,k)=0.
-						Diffcof(i,j,k)=0.
-						Diffcof(i,j,kp)=0.									
-					ENDDO
-				ENDDO
-			ENDDO
+!		!no diffusion allowed into bed:
+!			DO i=0,i1
+!				DO j=0,j1
+!					DO k=0,kbed(i,j)
+!						im=MAX(0,i-1)
+!						ip=MIN(i1,i+1)
+!						jm=MAX(0,j-1)
+!						jp=MIN(j1,j+1)
+!						km=MAX(0,k-1)
+!						kp=MIN(k1,k+1)					
+!						Diffcof(im,j,k)=0.
+!						Diffcof(ip,j,k)=0.
+!						Diffcof(i,jm,k)=0.
+!						Diffcof(i,jp,k)=0.
+!						Diffcof(i,j,k)=0.
+!						Diffcof(i,j,kp)=0.									
+!					ENDDO
+!				ENDDO
+!			ENDDO
  
 	if (LOA>0.and.kn_TSHD>0.) then
 	  do t=1,tmax_inUpunt_tauTSHD
@@ -1417,49 +1419,50 @@ c*************************************************************
             Diffcof(i,j,k)=0.
           enddo
         enddo
-        IF (LOA>0.or.nobst>0) THEN ! ship:
-          do t=1,tmax_inPpuntTSHD
-            i=i_inPpuntTSHD(t)
-            j=j_inPpuntTSHD(t)
-            k=k_inPpuntTSHD(t)
-            !ekm(i,j,k)=0.
-			Diffcof(i,j,k)=0. 
-			im=MAX(0,i-1)
-			ip=MIN(i1,i+1)
-			jm=MAX(0,j-1)
-			jp=MIN(j1,j+1)
-			km=MAX(0,k-1)
-			kp=MIN(k1,k+1)
-			Diffcof(im,j,k)=0.
-			Diffcof(ip,j,k)=0.
-			Diffcof(i,jm,k)=0.
-			Diffcof(i,jp,k)=0.
-			Diffcof(i,j,km)=0.
-			Diffcof(i,j,kp)=0.				
-          enddo
-	ELSEIF (kjet>0) THEN
+!        IF (LOA>0.or.nobst>0) THEN ! ship:
+!          do t=1,tmax_inPpuntTSHD
+!            i=i_inPpuntTSHD(t)
+!            j=j_inPpuntTSHD(t)
+!            k=k_inPpuntTSHD(t)
+!            !ekm(i,j,k)=0.
+!			Diffcof(i,j,k)=0. 
+!			im=MAX(0,i-1)
+!			ip=MIN(i1,i+1)
+!			jm=MAX(0,j-1)
+!			jp=MIN(j1,j+1)
+!			km=MAX(0,k-1)
+!			kp=MIN(k1,k+1)
+!			Diffcof(im,j,k)=0.
+!			Diffcof(ip,j,k)=0.
+!			Diffcof(i,jm,k)=0.
+!			Diffcof(i,jp,k)=0.
+!			Diffcof(i,j,km)=0.
+!			Diffcof(i,j,kp)=0.				
+!          enddo
+!	ELSEIF (kjet>0) THEN
+	IF (kjet>0) THEN
           !ekm(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
 		  Diffcof(0:i1,0:j1,kmax-kjet+1:k1)=0.
 	ENDIF		
-		 ! no horizontal or vertical diffusion allowed into bed:
-			DO i=0,i1
-				DO j=0,j1
-					DO k=0,kbed(i,j)
-						im=MAX(0,i-1)
-						ip=MIN(i1,i+1)
-						jm=MAX(0,j-1)
-						jp=MIN(j1,j+1)
-						km=MAX(0,k-1)
-						kp=MIN(k1,k+1)					
-						Diffcof(im,j,k)=0.
-						Diffcof(ip,j,k)=0.
-						Diffcof(i,jm,k)=0.
-						Diffcof(i,jp,k)=0.
-						Diffcof(i,j,k)=0.
-						Diffcof(i,j,kp)=0.									
-					ENDDO
-				ENDDO
-			ENDDO
+!		 ! no horizontal or vertical diffusion allowed into bed:
+!			DO i=0,i1
+!				DO j=0,j1
+!					DO k=0,kbed(i,j)
+!						im=MAX(0,i-1)
+!						ip=MIN(i1,i+1)
+!						jm=MAX(0,j-1)
+!						jp=MIN(j1,j+1)
+!						km=MAX(0,k-1)
+!						kp=MIN(k1,k+1)					
+!						Diffcof(im,j,k)=0.
+!						Diffcof(ip,j,k)=0.
+!						Diffcof(i,jm,k)=0.
+!						Diffcof(i,jp,k)=0.
+!						Diffcof(i,j,k)=0.
+!						Diffcof(i,j,kp)=0.									
+!					ENDDO
+!				ENDDO
+!			ENDDO
 		
       end
 
@@ -1693,49 +1696,50 @@ c*************************************************************
             Diffcof(i,j,k)=0.
           enddo
         enddo
-        IF (LOA>0.or.nobst>0) THEN ! ship:
-          do t=1,tmax_inPpuntTSHD
-            i=i_inPpuntTSHD(t)
-            j=j_inPpuntTSHD(t)
-            k=k_inPpuntTSHD(t)
-            !ekm(i,j,k)=0.
-			Diffcof(i,j,k)=0. 
-			im=MAX(0,i-1)
-			ip=MIN(i1,i+1)
-			jm=MAX(0,j-1)
-			jp=MIN(j1,j+1)
-			km=MAX(0,k-1)
-			kp=MIN(k1,k+1)
-			Diffcof(im,j,k)=0.
-			Diffcof(ip,j,k)=0.
-			Diffcof(i,jm,k)=0.
-			Diffcof(i,jp,k)=0.
-			Diffcof(i,j,km)=0.
-			Diffcof(i,j,kp)=0.				
-          enddo
-		ELSEIF (kjet>0) THEN
+!        IF (LOA>0.or.nobst>0) THEN ! ship:
+!          do t=1,tmax_inPpuntTSHD
+!            i=i_inPpuntTSHD(t)
+!            j=j_inPpuntTSHD(t)
+!            k=k_inPpuntTSHD(t)
+!            !ekm(i,j,k)=0.
+!			Diffcof(i,j,k)=0. 
+!			im=MAX(0,i-1)
+!			ip=MIN(i1,i+1)
+!			jm=MAX(0,j-1)
+!			jp=MIN(j1,j+1)
+!			km=MAX(0,k-1)
+!			kp=MIN(k1,k+1)
+!			Diffcof(im,j,k)=0.
+!			Diffcof(ip,j,k)=0.
+!			Diffcof(i,jm,k)=0.
+!			Diffcof(i,jp,k)=0.
+!			Diffcof(i,j,km)=0.
+!			Diffcof(i,j,kp)=0.				
+!          enddo
+!		ELSEIF (kjet>0) THEN
+		IF (kjet>0) THEN
 			  !ekm(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
 			  Diffcof(0:i1,0:j1,kmax-kjet+1:k1)=0.
 		ENDIF
-		 ! no horizontal or vertical diffusion allowed into bed:
-			DO i=0,i1
-				DO j=0,j1
-					DO k=0,kbed(i,j)
-						im=MAX(0,i-1)
-						ip=MIN(i1,i+1)
-						jm=MAX(0,j-1)
-						jp=MIN(j1,j+1)
-						km=MAX(0,k-1)
-						kp=MIN(k1,k+1)					
-						Diffcof(im,j,k)=0.
-						Diffcof(ip,j,k)=0.
-						Diffcof(i,jm,k)=0.
-						Diffcof(i,jp,k)=0.
-						Diffcof(i,j,k)=0.
-						Diffcof(i,j,kp)=0.									
-					ENDDO
-				ENDDO
-			ENDDO
+!		 ! no horizontal or vertical diffusion allowed into bed:
+!			DO i=0,i1
+!				DO j=0,j1
+!					DO k=0,kbed(i,j)
+!						im=MAX(0,i-1)
+!						ip=MIN(i1,i+1)
+!						jm=MAX(0,j-1)
+!						jp=MIN(j1,j+1)
+!						km=MAX(0,k-1)
+!						kp=MIN(k1,k+1)					
+!						Diffcof(im,j,k)=0.
+!						Diffcof(ip,j,k)=0.
+!						Diffcof(i,jm,k)=0.
+!						Diffcof(i,jp,k)=0.
+!						Diffcof(i,j,k)=0.
+!						Diffcof(i,j,kp)=0.									
+!					ENDDO
+!				ENDDO
+!			ENDDO
 
       end
 
@@ -2285,49 +2289,50 @@ c*************************************************************
             Diffcof(i,j,k)=0.
           enddo
         enddo
-        IF (LOA>0.or.nobst>0) THEN ! ship:
-          do t=1,tmax_inPpuntTSHD
-            i=i_inPpuntTSHD(t)
-            j=j_inPpuntTSHD(t)
-            k=k_inPpuntTSHD(t)
-            !ekm(i,j,k)=0.
-			Diffcof(i,j,k)=0.
-			im=MAX(0,i-1)
-			ip=MIN(i1,i+1)
-			jm=MAX(0,j-1)
-			jp=MIN(j1,j+1)
-			km=MAX(0,k-1)
-			kp=MIN(k1,k+1)
-			Diffcof(im,j,k)=0.
-			Diffcof(ip,j,k)=0.
-			Diffcof(i,jm,k)=0.
-			Diffcof(i,jp,k)=0.
-			Diffcof(i,j,km)=0.
-			Diffcof(i,j,kp)=0.				
-          enddo
-		ELSEIF (kjet>0) THEN
+!        IF (LOA>0.or.nobst>0) THEN ! ship:
+!          do t=1,tmax_inPpuntTSHD
+!            i=i_inPpuntTSHD(t)
+!            j=j_inPpuntTSHD(t)
+!            k=k_inPpuntTSHD(t)
+!            !ekm(i,j,k)=0.
+!			Diffcof(i,j,k)=0.
+!			im=MAX(0,i-1)
+!			ip=MIN(i1,i+1)
+!			jm=MAX(0,j-1)
+!			jp=MIN(j1,j+1)
+!			km=MAX(0,k-1)
+!			kp=MIN(k1,k+1)
+!			Diffcof(im,j,k)=0.
+!			Diffcof(ip,j,k)=0.
+!			Diffcof(i,jm,k)=0.
+!			Diffcof(i,jp,k)=0.
+!			Diffcof(i,j,km)=0.
+!			Diffcof(i,j,kp)=0.				
+!          enddo
+!		ELSEIF (kjet>0) THEN
+		IF (kjet>0) THEN
 			  !ekm(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
 			  Diffcof(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
 		ENDIF		
-		 ! no horizontal or vertical diffusion allowed into bed:
-			DO i=0,i1
-				DO j=0,j1
-					DO k=0,kbed(i,j)
-						im=MAX(0,i-1)
-						ip=MIN(i1,i+1)
-						jm=MAX(0,j-1)
-						jp=MIN(j1,j+1)
-						km=MAX(0,k-1)
-						kp=MIN(k1,k+1)					
-						Diffcof(im,j,k)=0.
-						Diffcof(ip,j,k)=0.
-						Diffcof(i,jm,k)=0.
-						Diffcof(i,jp,k)=0.
-						Diffcof(i,j,k)=0.
-						Diffcof(i,j,kp)=0.									
-					ENDDO
-				ENDDO
-			ENDDO
+!		 ! no horizontal or vertical diffusion allowed into bed:
+!			DO i=0,i1
+!				DO j=0,j1
+!					DO k=0,kbed(i,j)
+!						im=MAX(0,i-1)
+!						ip=MIN(i1,i+1)
+!						jm=MAX(0,j-1)
+!						jp=MIN(j1,j+1)
+!						km=MAX(0,k-1)
+!						kp=MIN(k1,k+1)					
+!						Diffcof(im,j,k)=0.
+!						Diffcof(ip,j,k)=0.
+!						Diffcof(i,jm,k)=0.
+!						Diffcof(i,jp,k)=0.
+!						Diffcof(i,j,k)=0.
+!						Diffcof(i,j,kp)=0.									
+!					ENDDO
+!				ENDDO
+!			ENDDO
 			 
       end
 	  
@@ -2669,49 +2674,50 @@ c*************************************************************
             Diffcof(i,j,k)=0.
           enddo
         enddo
-        IF (LOA>0.or.nobst>0) THEN ! ship:
-          do t=1,tmax_inPpuntTSHD
-            i=i_inPpuntTSHD(t)
-            j=j_inPpuntTSHD(t)
-            k=k_inPpuntTSHD(t)
-            !ekm(i,j,k)=0.
-			Diffcof(i,j,k)=0. 
-			im=MAX(0,i-1)
-			ip=MIN(i1,i+1)
-			jm=MAX(0,j-1)
-			jp=MIN(j1,j+1)
-			km=MAX(0,k-1)
-			kp=MIN(k1,k+1)
-			Diffcof(im,j,k)=0.
-			Diffcof(ip,j,k)=0.
-			Diffcof(i,jm,k)=0.
-			Diffcof(i,jp,k)=0.
-			Diffcof(i,j,km)=0.
-			Diffcof(i,j,kp)=0.				
-          enddo
-	ELSEIF (kjet>0) THEN
+!        IF (LOA>0.or.nobst>0) THEN ! ship:
+!          do t=1,tmax_inPpuntTSHD
+!            i=i_inPpuntTSHD(t)
+!            j=j_inPpuntTSHD(t)
+!            k=k_inPpuntTSHD(t)
+!            !ekm(i,j,k)=0.
+!			Diffcof(i,j,k)=0. 
+!			im=MAX(0,i-1)
+!			ip=MIN(i1,i+1)
+!			jm=MAX(0,j-1)
+!			jp=MIN(j1,j+1)
+!			km=MAX(0,k-1)
+!			kp=MIN(k1,k+1)
+!			Diffcof(im,j,k)=0.
+!			Diffcof(ip,j,k)=0.
+!			Diffcof(i,jm,k)=0.
+!			Diffcof(i,jp,k)=0.
+!			Diffcof(i,j,km)=0.
+!			Diffcof(i,j,kp)=0.				
+!          enddo
+!	ELSEIF (kjet>0) THEN
+	IF (kjet>0) THEN
           !ekm(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
 		  Diffcof(0:i1,0:j1,kmax-kjet+1:k1)=0.
 	ENDIF		
-		 ! no horizontal or vertical diffusion allowed into bed:
-			DO i=0,i1
-				DO j=0,j1
-					DO k=0,kbed(i,j)
-						im=MAX(0,i-1)
-						ip=MIN(i1,i+1)
-						jm=MAX(0,j-1)
-						jp=MIN(j1,j+1)
-						km=MAX(0,k-1)
-						kp=MIN(k1,k+1)					
-						Diffcof(im,j,k)=0.
-						Diffcof(ip,j,k)=0.
-						Diffcof(i,jm,k)=0.
-						Diffcof(i,jp,k)=0.
-						Diffcof(i,j,k)=0.
-						Diffcof(i,j,kp)=0.									
-					ENDDO
-				ENDDO
-			ENDDO		
+!		 ! no horizontal or vertical diffusion allowed into bed:
+!			DO i=0,i1
+!				DO j=0,j1
+!					DO k=0,kbed(i,j)
+!						im=MAX(0,i-1)
+!						ip=MIN(i1,i+1)
+!						jm=MAX(0,j-1)
+!						jp=MIN(j1,j+1)
+!						km=MAX(0,k-1)
+!						kp=MIN(k1,k+1)					
+!						Diffcof(im,j,k)=0.
+!						Diffcof(ip,j,k)=0.
+!						Diffcof(i,jm,k)=0.
+!						Diffcof(i,jp,k)=0.
+!						Diffcof(i,j,k)=0.
+!						Diffcof(i,j,kp)=0.									
+!					ENDDO
+!				ENDDO
+!			ENDDO		
 		
 		gvector=sqrt(gx**2+gy**2+gz**2)
 		dnew = 0.
@@ -2853,6 +2859,10 @@ c*************************************************************
 					kpp=MIN(CEILING(zb_W/dz+0.5)+k_ust_tau-1,k1)		!for k_ust_tau=2 kpp is between 1*dz-2*dz distance from bed 	
 					!kpp=MIN(CEILING(zb_W/dz+0.5),k1)		!kpp is between 0-dz distance from bed 	
 					distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W
+					IF (distance_to_bed<0.5*dz) THEN !first cell too close to bed, therefore use second cell (1-1.5)*dz distance from bed 
+					  kpp=MIN(kpp+1,k1)		!kpp is in principle between 1*dz-2*dz distance from bed, but due to this if-statement only 1-1.5 from bed
+					  distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W
+					ENDIF					
 				ELSE 
 					kpp = MIN(kbedp(i,j),k1)                !for k_ust_tau=2 kpp is 1.5*dz from 0-order ibm bed
 					distance_to_bed=(REAL(k_ust_tau)-0.5)*dz
@@ -3359,49 +3369,50 @@ c*************************************************************
             Diffcof(i,j,k)=0.
           enddo
         enddo
-        IF (LOA>0.or.nobst>0) THEN ! ship:
-          do t=1,tmax_inPpuntTSHD
-            i=i_inPpuntTSHD(t)
-            j=j_inPpuntTSHD(t)
-            k=k_inPpuntTSHD(t)
-            !ekm(i,j,k)=0.
-			Diffcof(i,j,k)=0. 
-			im=MAX(0,i-1)
-			ip=MIN(i1,i+1)
-			jm=MAX(0,j-1)
-			jp=MIN(j1,j+1)
-			km=MAX(0,k-1)
-			kp=MIN(k1,k+1)
-			Diffcof(im,j,k)=0.
-			Diffcof(ip,j,k)=0.
-			Diffcof(i,jm,k)=0.
-			Diffcof(i,jp,k)=0.
-			Diffcof(i,j,km)=0.
-			Diffcof(i,j,kp)=0.				
-          enddo
-		ELSEIF (kjet>0) THEN
+!        IF (LOA>0.or.nobst>0) THEN ! ship:
+!          do t=1,tmax_inPpuntTSHD
+!            i=i_inPpuntTSHD(t)
+!            j=j_inPpuntTSHD(t)
+!            k=k_inPpuntTSHD(t)
+!            !ekm(i,j,k)=0.
+!			Diffcof(i,j,k)=0. 
+!			im=MAX(0,i-1)
+!			ip=MIN(i1,i+1)
+!			jm=MAX(0,j-1)
+!			jp=MIN(j1,j+1)
+!			km=MAX(0,k-1)
+!			kp=MIN(k1,k+1)
+!			Diffcof(im,j,k)=0.
+!			Diffcof(ip,j,k)=0.
+!			Diffcof(i,jm,k)=0.
+!			Diffcof(i,jp,k)=0.
+!			Diffcof(i,j,km)=0.
+!			Diffcof(i,j,kp)=0.				
+!          enddo
+!		ELSEIF (kjet>0) THEN
+		IF (kjet>0) THEN
 			  !ekm(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
 			  Diffcof(0:i1,0:j1,kmax-kjet+1:k1)=0. !maak ekm in zone rondom buisje nul
 		ENDIF		
-		 ! no horizontal or vertical diffusion allowed into bed:
-			DO i=0,i1
-				DO j=0,j1
-					DO k=0,kbed(i,j)
-						im=MAX(0,i-1)
-						ip=MIN(i1,i+1)
-						jm=MAX(0,j-1)
-						jp=MIN(j1,j+1)
-						km=MAX(0,k-1)
-						kp=MIN(k1,k+1)					
-						Diffcof(im,j,k)=0.
-						Diffcof(ip,j,k)=0.
-						Diffcof(i,jm,k)=0.
-						Diffcof(i,jp,k)=0.
-						Diffcof(i,j,k)=0.
-						Diffcof(i,j,kp)=0.									
-					ENDDO
-				ENDDO
-			ENDDO
+!		 ! no horizontal or vertical diffusion allowed into bed:
+!			DO i=0,i1
+!				DO j=0,j1
+!					DO k=0,kbed(i,j)
+!						im=MAX(0,i-1)
+!						ip=MIN(i1,i+1)
+!						jm=MAX(0,j-1)
+!						jp=MIN(j1,j+1)
+!						km=MAX(0,k-1)
+!						kp=MIN(k1,k+1)					
+!						Diffcof(im,j,k)=0.
+!						Diffcof(ip,j,k)=0.
+!						Diffcof(i,jm,k)=0.
+!						Diffcof(i,jp,k)=0.
+!						Diffcof(i,j,k)=0.
+!						Diffcof(i,j,kp)=0.									
+!					ENDDO
+!				ENDDO
+!			ENDDO
       end
 
 
@@ -3700,7 +3711,7 @@ c*************************************************************
 	    z=(k-kbed_bc-kbed(i,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
 	    y=Ru(0)*sin_u(j)
 	    do ii=1,nmax2
-	      if(ABS(y-ySEM2(ii))/lmySEM2(ii).lt.1..and.ABS(z-zSEM2(ii))/lmzSEM2(ii).lt.1.) then
+	      if(ABS(y-ySEM2(ii))/lmySEM2(ii).lt.1..and.ABS(z-zSEM2(ii))/lmzSEM2(ii).lt.1.and.llmax2(j,k)<1000) then
 		llmax2(j,k)=llmax2(j,k)+1
 		llist2(j,k,llmax2(j,k))=ii
 	      endif
@@ -3749,7 +3760,7 @@ c*************************************************************
 	      z=(k-kbed_bc-kbed(i,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
  	      y=Rp(i)*sin_v(0)
  	      do ii=1,nmax1
- 		if(ABS(y-ySEM1(ii))/lmySEM1(ii).lt.1..and.ABS(z-zSEM1(ii))/lmzSEM1(ii).lt.1.) then
+ 		if(ABS(y-ySEM1(ii))/lmySEM1(ii).lt.1..and.ABS(z-zSEM1(ii))/lmzSEM1(ii).lt.1.and.llmax1(i,k)<2000) then
  		  llmax1(i,k)=llmax1(i,k)+1
  		  llist1(i,k,llmax1(i,k))=ii
  		endif
@@ -3797,7 +3808,7 @@ c*************************************************************
 		  z=(k-kbed_bc-kbed(i,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
  	      y=Rp(i)*sin_v(jmax)
  	      do ii=1,nmax1
- 		if(ABS(y-ySEM1(ii))/lmySEM1(ii).lt.1..and.ABS(z-zSEM1(ii))/lmzSEM1(ii).lt.1.) then
+ 		if(ABS(y-ySEM1(ii))/lmySEM1(ii).lt.1..and.ABS(z-zSEM1(ii))/lmzSEM1(ii).lt.1.and.llmax1(i,k)<2000) then
  		  llmax1(i,k)=llmax1(i,k)+1
  		  llist1(i,k,llmax1(i,k))=ii
  		endif
@@ -4078,7 +4089,7 @@ c*************************************************************
 	 	    do ii=0,i1
 			  z=(k-kbed_bc-kbed(ii,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
 	 	      y=Rp(ii)*sin_v(0)
-	 	      if(ABS(y-ySEM1(i))/lmySEM1(i).lt.1..and.ABS(z-zSEM1(i))/lmzSEM1(i).lt.1.) then
+	 	      if(ABS(y-ySEM1(i))/lmySEM1(i).lt.1..and.ABS(z-zSEM1(i))/lmzSEM1(i).lt.1.and.llmax1(ii,k)<2000) then
 	 		  llmax1(ii,k)=llmax1(ii,k)+1
 	 		  llist1(ii,k,llmax1(ii,k))=i
 	 	      endif
@@ -4144,7 +4155,7 @@ c*************************************************************
 	 	    do ii=0,i1
 			  z=(k-kbed_bc-kbed(ii,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
 	 	      y=Rp(ii)*sin_v(jmax)
-	 	      if(ABS(y-ySEM1(i))/lmySEM1(i).lt.1..and.ABS(z-zSEM1(i))/lmzSEM1(i).lt.1.) then
+	 	      if(ABS(y-ySEM1(i))/lmySEM1(i).lt.1..and.ABS(z-zSEM1(i))/lmzSEM1(i).lt.1.and.llmax1(ii,k)<2000) then
 	 		  llmax1(ii,k)=llmax1(ii,k)+1
 	 		  llist1(ii,k,llmax1(ii,k))=i
 	 	      endif
@@ -4279,7 +4290,7 @@ c*************************************************************
 	    do j=0,j1 !jminSEM,jmaxSEM
 		  z=(k-kbed_bc-kbed(i,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
 	      y=Ru(0)*sin_u(j)	
-	      if(ABS(y-ySEM2(ii))/lmySEM2(ii).lt.1..and.ABS(z-zSEM2(ii))/lmzSEM2(ii).lt.1.) then
+	      if(ABS(y-ySEM2(ii))/lmySEM2(ii).lt.1..and.ABS(z-zSEM2(ii))/lmzSEM2(ii).lt.1.and.llmax2(j,k)<1000) then
 		llmax2(j,k)=llmax2(j,k)+1
 		llist2(j,k,llmax2(j,k))=ii
 	      endif

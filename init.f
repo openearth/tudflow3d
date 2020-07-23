@@ -345,8 +345,8 @@ c******************************************************************
 		REAL dummy_var(1:imax,1:px*jmax,1:kmax),dummy_var2(1:imax,1:px*jmax,1:kmax) 
 		CHARACTER(len=256) :: command,dummy,restart_file(1000)
 		INTEGER ressystem, io, nfound,jpx,size1,size2,size3,size4,load_Cbed
-		real*8 fc_local(1:imax,1:jmax,1:kmax),fc_local_vec(imax*jmax*kmax),fc_global_vec(imax*jmax*px*kmax)
-		integer tel,ios,j2,r,status4(MPI_STATUS_SIZE),ierr,obstacle(imax,jmax,kmax),t
+		
+		integer tel,ios,j2,r,ierr,t
 
 !       include 'param.txt'
 !       include 'common.txt'
@@ -545,60 +545,6 @@ c******************************************************************
 	ENDDO ! bedplume loop
 	
 	
-	obstacle=0
-	  do t=1,tmax_inPpuntTSHD
- 	    i=i_inPpuntTSHD(t)
- 	    j=j_inPpuntTSHD(t)		
- 	    k=k_inPpuntTSHD(t)		
-		IF (i.ge.1.and.i.le.imax.and.j.ge.1.and.j.le.jmax.and.k.ge.1.and.k.le.kmax) THEN
-			obstacle(i,j,k)=1
-		ENDIF
-	  enddo
-      
-		do j=1,jmax
-			do i=1,imax
-				do k=1,kbed(i,j)
-					obstacle(i,j,k)=1
-				enddo
-			enddo
-		enddo	
-
-		do i=1,imax
-			do j=1,jmax
-				do k=1,kmax	
-					fc_local(i,j,k)=1.-DBLE(obstacle(i,j,k))
-					tel=k+(j-1)*kmax+(i-1)*kmax*jmax
-					fc_local_vec(tel)=fc_local(i,j,k)
-				enddo 
-			enddo
-		enddo
-					
-		call MPI_Allgather(fc_local_vec,imax*jmax*kmax,MPI_REAL8,fc_global_vec,imax*jmax*kmax,MPI_REAL8,MPI_COMM_WORLD,status4,ierr)
-		do r=1,px
-			do i=1,imax
-				do j=1,jmax
-					do k=1,kmax	
-						tel=k+(j-1)*kmax+(i-1)*kmax*jmax+(r-1)*(imax*jmax*kmax) 
-						j2=j+(r-1)*jmax
-						fc_global(i,j2,k)=fc_global_vec(tel)
-					enddo 
-				enddo
-			enddo	
-		enddo
-		if (periodicy.eq.1) then
-		  fc_global(1:imax,0,1:kmax)=fc_global(1:imax,jmax*px,1:kmax)
-		  fc_global(1:imax,jmax*px+1,1:kmax)=fc_global(1:imax,1,1:kmax)
-		else
-		  fc_global(1:imax,0,1:kmax)=fc_global(1:imax,1,1:kmax)
-		  fc_global(1:imax,jmax*px+1,1:kmax)=fc_global(1:imax,jmax*px,1:kmax)		
-		endif
-		if (periodicx.eq.1) then
-		  fc_global(0,0:jmax*px+1,1:kmax)=fc_global(imax,0:jmax*px+1,1:kmax)
-		  fc_global(i1,0:jmax*px+1,1:kmax)=fc_global(1,0:jmax*px+1,1:kmax)		
-		else
-		  fc_global(0,0:jmax*px+1,1:kmax)=fc_global(1,0:jmax*px+1,1:kmax)
-		  fc_global(i1,0:jmax*px+1,1:kmax)=fc_global(imax,0:jmax*px+1,1:kmax)
-		endif
 		
 	DO n=1,nbedplume
 	  bp(n)%volncells=0.
@@ -2883,13 +2829,11 @@ C ...  Locals
 	do i=0,i1
 	  do j=0,j1 
 		do k=0,k1
-			if (obb_ero(i,j,k).eq.1.and.interaction_bed.ge.4) then
-			  bednotfixed(i,j,k)=obb_ero(i,j,k) ! obstacle in bed cannot be avalanched or eroded if 0. (default) user can choose to have erosion: 1.
-			endif 
-			if (obb_depo(i,j,k).eq.1.and.interaction_bed.ge.4) then
-			  bednotfixed_depo(i,j,k)=obb_depo(i,j,k) ! obstacle in bed cannot have deposition if 0. (default)
-			endif			
 			if (obb(i,j,k).eq.1) then 
+			  if (interaction_bed.ge.4) then
+				  bednotfixed(i,j,k)=obb_ero(i,j,k) ! obstacle in bed cannot be avalanched or eroded if 0. (default) user can choose to have erosion: 1.
+				  bednotfixed_depo(i,j,k)=obb_depo(i,j,k) ! obstacle in bed cannot have deposition if 0. (default)
+			  endif 
 			  tel1=tel1+1
 			  i_inPpuntTSHD(tel1)=i 
 			  j_inPpuntTSHD(tel1)=j

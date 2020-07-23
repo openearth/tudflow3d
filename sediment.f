@@ -428,7 +428,7 @@
 	REAL*8 cbf(nfrac,0:i1),cbb(nfrac,0:i1),zbf(0:i1),zbb(0:i1),reduced_sed
 	INTEGER itrgt,jtrgt,nav,n_av,kplus2,kpp
 	REAL ws_botsand2,rho_botsand2,mbottot_sand2,PSD_bot_sand_massfrac2(nfr_sand),have_avalanched,have_avalanched_tmp,cctot
-	REAL ccfdtot_firstcel,wsedbed,distance_to_bed,zb_W,gvector
+	REAL ccfdtot_firstcel,wsedbed,distance_to_bed,zb_W,gvector,ero_factor
 	REAL pickup_random(1:imax,1:jmax),vs,ve,Uhor(1:imax,1:jmax,1:kmax),cbed,uu2,vv2,bed_slope,facx,facy,bs_geo
 	REAL qb,MMM,MME,flux,ucr,qbf(1:nfrac),uuRrel,uuLrel,vvRrel,vvLrel,Shields,absUbl,ve_check
       integer clock,nnn,k_maxU
@@ -474,10 +474,10 @@
 				!kpp=MIN(CEILING(zb_W/dz+0.5),k1)		!kpp is between 0-dz distance from bed 	
 				distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W
 				!as start use first cell (0.5-1)*dz distance from bed 
-!				IF (distance_to_bed<0.5*dz) THEN !first cell too close to bed, therefore use second cell (1-1.5)*dz distance from bed 
-!				  kpp=MIN(CEILING(zb_W/dz+0.5)+1,k1)		!kpp is in principle between 1*dz-2*dz distance from bed, but due to this if-statement only 1-1.5 from bed
-!				  distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W
-!				ENDIF 
+				IF (distance_to_bed<0.5*dz) THEN !first cell too close to bed, therefore use second cell (1-1.5)*dz distance from bed 
+				  kpp=MIN(kpp+1,k1)		!kpp is in principle between 1*dz-2*dz distance from bed, but due to this if-statement only 1-1.5 from bed
+				  distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W
+				ENDIF 
 			ELSE 
 				kpp = MIN(kbedp(i,j),k1)                !for k_ust_tau=2 kpp is 1.5*dz from 0-order ibm bed
 				distance_to_bed=(REAL(k_ust_tau)-0.5)*dz				
@@ -593,10 +593,10 @@
 				!kpp=MIN(CEILING(zb_W/dz+0.5),k1)		!kpp is between 0-dz distance from bed 	
 				distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W
 				!as start use first cell (0.5-1)*dz distance from bed 
-!				IF (distance_to_bed<0.5*dz) THEN !first cell too close to bed, therefore use second cell (1-1.5)*dz distance from bed 
-!				  kpp=MIN(CEILING(zb_W/dz+0.5)+1,k1)		!kpp is in principle between 1*dz-2*dz distance from bed, but due to this if-statement only 1-1.5 from bed
-!				  distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W
-!				ENDIF 
+				IF (distance_to_bed<0.5*dz) THEN !first cell too close to bed, therefore use second cell (1-1.5)*dz distance from bed 
+				  kpp=MIN(kpp+1,k1)		!kpp is in principle between 1*dz-2*dz distance from bed, but due to this if-statement only 1-1.5 from bed
+				  distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W
+				ENDIF 
 			ELSE 
 				kpp = MIN(kbedp(i,j),k1)                !for k_ust_tau=2 kpp is 1.5*dz from 0-order ibm bed
 				distance_to_bed=(REAL(k_ust_tau)-0.5)*dz				
@@ -992,10 +992,7 @@
 					qb = calibfac_sand_bedload*8.*rho_sand*d50*sqrt(gvector*delta*d50)*MME ! [kg/m/s] 
 					qb = qb*bednotfixed(i,j,kbed(i,j))*morfac*morfac2 !kg/m/s
 				ENDIF 
-				IF ((bedload_formula.ne.'nonenon0000').and.time_n.ge.tstart_morf2) THEN
-					qb  = bl_relax*qb+(1.-bl_relax)*qb_relax(i,j)  	!relaxation for bedload-fluxes
-					qb_relax(i,j)=qb 
-				ENDIF 	
+	
 				DO n1=1,nfr_sand
 					n=nfrac_sand(n1)			
 					erosion_avg(n) = phipp * (delta*gvector*d50)**0.5*ddt*bednotfixed(i,j,kbed(i,j))*morfac*bs_geo  !*rho_sand/rho_sand ! erosion flux in kg/m2/(kg/m3)= m3/m2=m
@@ -1028,14 +1025,20 @@
 					qbU(n,i,j) = qbf(n)*uuRrel
 					qbV(n,i,j) = qbf(n)*vvRrel	
 					cctot=0.
-					DO k=kplus,kbed(i,j)+k_layer_pickup
-						cctot=cctot+MAX(ccfd(n,i,j,k)+1.e-12,0.)
+					DO k=kplus,kbed(i,j)+k_layer_pickup 
+						cctot=cctot+MAX(ccfd(n,i,j,k),0.)
 					ENDDO
-					DO k=kplus+1,kplus+k_layer_pickup-1 
-						ccnew(n,i,j,k) = ccnew(n,i,j,k) + erosionf(n)*MAX(ccfd(n,i,j,k)+1.e-12,0.)/cctot/dz !pickup is spread over multiple k-layers 
-					ENDDO 
+					IF (cctot.le.1.e-12) THEN 
+						ero_factor=1. 
+					ELSE 
+						DO k=kplus+1,kplus+k_layer_pickup-1 
+							ccnew(n,i,j,k) = ccnew(n,i,j,k) + erosionf(n)*MAX(ccfd(n,i,j,k),0.)/cctot/dz !pickup is spread over multiple k-layers 
+						ENDDO 					
+						ero_factor=MAX(ccfd(n,i,j,kplus),0.)/cctot !needed to divide pickup over multiple layers, with k_layer_pickup=1 ero_factor=1.
+					ENDIF 
+
 					IF (depo_implicit.eq.1) THEN  !determine deposition as sink implicit
-					ccnew(n,i,j,kplus)=(ccnew(n,i,j,kplus)+erosionf(n)*MAX(ccfd(n,i,j,kplus)+1.e-12,0.)/cctot/dz)/ ! vol conc. [-]
+					ccnew(n,i,j,kplus)=(ccnew(n,i,j,kplus)+erosionf(n)*ero_factor/dz)/ ! vol conc. [-]
      &      		(1.-(MIN(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))-wsedbed)*ddt/dz*bednotfixed_depo(i,j,kbed(i,j))*morfac)					
 					depositionf(n) = ccnew(n,i,j,kplus)*(MIN(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))-wsedbed)*ddt !ccfd
      &     *bednotfixed_depo(i,j,kbed(i,j))*morfac! m --> dep is negative due to negative wsed					
@@ -1046,7 +1049,7 @@
 					ELSE
 					depositionf(n) = ccnew(n,i,j,kplus)*(MIN(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))-wsedbed)*ddt !ccfd
      &     *bednotfixed_depo(i,j,kbed(i,j))*morfac ! m --> dep is negative due to negative wsed
-					ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus)+(erosionf(n)*MAX(ccfd(n,i,j,kplus)+1.e-12,0.)/cctot+depositionf(n))/(dz) ! vol conc. [-]
+					ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus)+(erosionf(n)*ero_factor+depositionf(n))/(dz) ! vol conc. [-]
 					cbotnew(n,i,j)=cbotnew(n,i,j)-b_update*morfac2*(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-] !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
 					cbotnewtot=cbotnewtot+cbotnew(n,i,j)
 					cbotnewtot_pos=cbotnewtot_pos+MAX(cbotnew(n,i,j),0.)
@@ -1088,6 +1091,11 @@
 ! individual fraction in cbotnew can become <0 but cbotnewtot can still be >0 this may not enter Clivebed and is prevented below
 ! negative cbotnew still cannot enter Clivebed, but bedupdate (kbed+1) is allowed when total cbotnew(fracs>0) is enough even when individual fractions are negative in cbotnew
 			IF ((interaction_bed.eq.4.or.interaction_bed.eq.6).and.time_n.ge.tstart_morf2) THEN
+!			if (rank.eq.1.and.j.eq.3.and.(i.eq.56.or.i.eq.56)) then 
+!		write(*,*),'AA ',i,kbed(i,j),kplus,absU,SUM(cbotnew(1:nfrac,i,j)),cbotnewtot,cbotnewtot_pos,erosionf(1),erosionf(2),
+!     & depositionf(1),depositionf(2),Wsed(1,i,j,kbed(i,j)),Wsed(2,i,j,kbed(i,j)),ccnew(1,i,j,kplus),ccnew(2,i,j,kplus),
+!     & ctot_firstcel,ccfd(1,i,j,kplus),ccfd(2,i,j,kplus),cctot 
+!			endif 
 				IF (cbotnewtot.lt.0.and.(kbed(i,j)-1).ge.0.and.SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed-1.e-9) THEN 
 				!add half cell sediment on cbot account for further erosion without lowering 1 dz yet (because otherwise flipflop between ero-1dz and depo+1dz)
 				! this is at 1*dz			
@@ -1214,7 +1222,11 @@
 						cbotnew(n,i,j)=cbotnew(n,i,j)-c_adjustA*MAX(cbotnew(n,i,j),0.)						
 					ENDDO																			
 				ENDIF
-
+!			if (rank.eq.1.and.j.eq.3.and.(i.eq.56.or.i.eq.56)) then 
+!		write(*,*),'BB ',i,kbed(i,j),kplus,absU,SUM(cbotnew(1:nfrac,i,j)),cbotnewtot,cbotnewtot_pos,erosionf(1),erosionf(2),
+!     & depositionf(1),depositionf(2),Wsed(1,i,j,kbed(i,j)),Wsed(2,i,j,kbed(i,j)),ccnew(1,i,j,kplus),ccnew(2,i,j,kplus),
+!     & ctot_firstcel,ccfd(1,i,j,kplus),ccfd(2,i,j,kplus),cctot 
+!			endif 
 			ENDIF
 			
 			
@@ -1521,6 +1533,8 @@
 			ENDDO
 		ENDDO
 		
+			
+		
 		nav=0
 		have_avalanched=1  ! default do avalanche, during avalanche procedure this switch can be turned into 0 to stop avalanching
 		IF (avalanche_until_done.eq.1) THEN
@@ -1585,14 +1599,22 @@
 			ENDIF
 			DO i=1,imax
 				DO j=1,jmax
-					sl1=(Rp(i)-Rp(i-1))/MAX(zb_all(i,j)-zb_all(i-1,j),1.e-18)
-					sl2=(Rp(i+1)-Rp(i))/MAX(zb_all(i,j)-zb_all(i+1,j),1.e-18)
-					sl3=(Rp(i)*phip(j)-Rp(i)*phip(j-1))/MAX(zb_all(i,j)-zb_all(i,j-1),1.e-18)
-					sl4=(Rp(i)*phip(j+1)-Rp(i)*phip(j))/MAX(zb_all(i,j)-zb_all(i,j+1),1.e-18)					
-					sl5=SQRT((Rp(i)*phip(j+1)-Rp(i)*phip(j))**2+(Rp(i)-Rp(i-1))**2)/MAX(zb_all(i,j)-zb_all(i-1,j+1),1.e-18)
-					sl6=SQRT((Rp(i)*phip(j+1)-Rp(i)*phip(j))**2+(Rp(i)-Rp(i+1))**2)/MAX(zb_all(i,j)-zb_all(i+1,j+1),1.e-18)
-					sl7=SQRT((Rp(i)*phip(j-1)-Rp(i)*phip(j))**2+(Rp(i)-Rp(i+1))**2)/MAX(zb_all(i,j)-zb_all(i+1,j-1),1.e-18)
-					sl8=SQRT((Rp(i)*phip(j-1)-Rp(i)*phip(j))**2+(Rp(i)-Rp(i-1))**2)/MAX(zb_all(i,j)-zb_all(i-1,j-1),1.e-18)
+					sl1=(Rp(i)-Rp(i-1))/MAX((zb_all(i,j)-zb_all(i-1,j))
+     & *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed(i-1,j,kbed(i-1,j))),1.e-18)
+					sl2=(Rp(i+1)-Rp(i))/MAX((zb_all(i,j)-zb_all(i+1,j))
+     & *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed(i+1,j,kbed(i+1,j))),1.e-18)					
+					sl3=(Rp(i)*phip(j)-Rp(i)*phip(j-1))/MAX((zb_all(i,j)-zb_all(i,j-1))
+     & *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed(i,j-1,kbed(i,j-1))),1.e-18)					
+					sl4=(Rp(i)*phip(j+1)-Rp(i)*phip(j))/MAX((zb_all(i,j)-zb_all(i,j+1))
+     & *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed(i,j+1,kbed(i,j+1))),1.e-18)					
+					sl5=SQRT((Rp(i)*phip(j+1)-Rp(i)*phip(j))**2+(Rp(i)-Rp(i-1))**2)/MAX((zb_all(i,j)-zb_all(i-1,j+1))
+     & *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed(i-1,j+1,kbed(i-1,j+1))),1.e-18)					
+					sl6=SQRT((Rp(i)*phip(j+1)-Rp(i)*phip(j))**2+(Rp(i)-Rp(i+1))**2)/MAX((zb_all(i,j)-zb_all(i+1,j+1))
+     & *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed(i+1,j+1,kbed(i+1,j+1))),1.e-18)					
+					sl7=SQRT((Rp(i)*phip(j-1)-Rp(i)*phip(j))**2+(Rp(i)-Rp(i+1))**2)/MAX((zb_all(i,j)-zb_all(i+1,j-1))
+     & *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed(i+1,j-1,kbed(i+1,j-1))),1.e-18)					
+					sl8=SQRT((Rp(i)*phip(j-1)-Rp(i)*phip(j))**2+(Rp(i)-Rp(i-1))**2)/MAX((zb_all(i,j)-zb_all(i-1,j-1))
+     & *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed(i-1,j-1,kbed(i-1,j-1))),1.e-18)					
 					maxbedslope(i,j)=MIN(sl1,sl2,sl3,sl4,sl5,sl6,sl7,sl8)
 					IF (maxbedslope(i,j).lt.0.9999*av_slope(i,j,kbed(i,j))*bednotfixed(i,j,kbed(i,j)).and.kbed(i,j).ge.1) THEN
 					! avalanche...
@@ -1749,6 +1771,11 @@
 				DO j=1,jmax			
 					zb_W=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(cbotnew(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
 					kbed22(i,j)=FLOOR(zb_W/dz)
+!			if (rank.eq.1.and.j.eq.3.and.(i.eq.56.or.i.eq.56)) then 
+!		write(*,*),'CC ',i,kbed(i,j),kplus,absU,SUM(cbotnew(1:nfrac,i,j)),cbotnewtot,cbotnewtot_pos,erosionf(1),erosionf(2),
+!     & depositionf(1),depositionf(2),Wsed(1,i,j,kbed(i,j)),Wsed(2,i,j,kbed(i,j)),ccnew(1,i,j,kplus),ccnew(2,i,j,kplus),
+!     & ccfd(1,i,j,kplus),ccfd(2,i,j,kplus),cctot 
+!			endif 					
 				ENDDO 
 			ENDDO 
 			call bound_cbot_integer(kbed22)			

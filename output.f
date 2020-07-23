@@ -81,24 +81,6 @@
 		enddo
 	enddo
 	
-	obstacle=0
-	  do t=1,tmax_inPpuntTSHD
- 	    i=i_inPpuntTSHD(t)
- 	    j=j_inPpuntTSHD(t)		
- 	    k=k_inPpuntTSHD(t)		
-		IF (i.ge.1.and.i.le.imax.and.j.ge.1.and.j.le.jmax.and.k.ge.1.and.k.le.kmax) THEN
-			obstacle(i,j,k)=1
-		ENDIF
-	  enddo
-      
-		do j=1,jmax
-			do i=1,imax
-				do k=1,kbed(i,j)
-					obstacle(i,j,k)=1
-				enddo
-			enddo
-		enddo	
-	
 	WRITE(strng,'(a,a)')'mkdir ',TRIM(inpfile)
 
 	CALL SYSTEM(strng)
@@ -150,6 +132,7 @@
        call check( nf90_put_att(ncid, varid23, 'units', 'm') )
        call check( nf90_put_att(ncid, varid23, 'long_name', 'grid size dy C-grid') )
 	   
+	   obstacle=1.-fc_global(1:imax,1+rank*jmax:jmax+rank*jmax,1:kmax)
        call check( nf90_def_var(ncid, "obstacle", NF90_REAL, dimids, varid21) )
        call check( nf90_put_att(ncid, varid21, 'units', '-') )
        call check( nf90_put_att(ncid, varid21, 'long_name', 'If cell is in obstacle 1 else 0') )
@@ -344,7 +327,7 @@
 !	real x(1:imax,1:jmax,1:kmax)
 !	real y(1:imax,1:jmax,1:kmax)
 !	real z(1:imax,1:jmax,1:kmax)
-	real uu(1:imax,1:jmax,1:kmax)
+	real uu(1:imax,1:jmax,1:kmax),obstacle(1:imax,1:jmax,1:kmax)
 	real vv(1:imax,1:jmax,1:kmax),zzbed(1:imax,1:jmax)
 	real mass_bed(1:nfrac,1:imax,1:jmax)
 	real tt
@@ -368,7 +351,7 @@
        integer :: ncid, varid1,varid2,varid3, varid4, varid5, varid6, varid7, varid8, varid9, varid10,varid11
 	   integer :: dimids(NDIMS), dimids2(NDIMS2),dimids3(NDIMS3),dimids5(NDIMS5)
        integer :: x_dimid, y_dimid, z_dimid, nfrac_dimid, par_dimid
-	integer :: dimids4(NDIMS),varid20,varid21,varid22,varid12,varid13,varid14,varid15,varid16
+	integer :: dimids4(NDIMS),varid20,varid21,varid22,varid12,varid13,varid14,varid15,varid16,varid23
 	character(1024) :: svnversion
 	character(1024) :: svnurl
       include 'version.inc'
@@ -503,6 +486,11 @@
        call check( nf90_put_att(ncid, varid8, 'units', 's') )
        call check( nf90_put_att(ncid, varid8, 'long_name', 'Time from start simulation') )
 
+	   obstacle=1.-fc_global(1:imax,1+rank*jmax:jmax+rank*jmax,1:kmax)
+       call check( nf90_def_var(ncid, "obstacle", NF90_REAL, dimids, varid23) )
+       call check( nf90_put_att(ncid, varid23, 'units', '-') )
+       call check( nf90_put_att(ncid, varid23, 'long_name', 'If cell is in obstacle 1 else 0') )
+	   
 	! also add svn info in output files:
        CALL check( nf90_put_att(ncid,nf90_global, "svnversion", trim(svnversion)))
        CALL check( nf90_put_att(ncid,nf90_global, "svnurl", trim(svnurl)))
@@ -555,6 +543,7 @@
 	   endif	   
 	   call check( nf90_put_var(ncid, varid10, wf(1:imax,1:jmax,1:kmax)) )
        call check( nf90_put_var(ncid, varid8, tt) )
+	   call check( nf90_put_var(ncid, varid23, obstacle) )
     
        ! Close the file. This frees up any internal netCDF resources
        ! associated with the file, and flushes any buffers.

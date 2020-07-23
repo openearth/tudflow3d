@@ -73,6 +73,7 @@
       call determine_indices_ship_in
       call bedroughness_init
 	  call init_location_bedplume
+	  call update_fc_global
 	  call fkdat
 	  
 	  
@@ -187,7 +188,7 @@
 	  time_np=time_n+dt
 	  dt_old=dt
       
-	  call output_init_nc(time_np) ! determination fluid or obstacle cell in output_init_nc; therefore before update_nvol_bedplume
+	  call output_init_nc(time_np)
 	  call update_nvol_bedplume(time_n)
 	  call update_QSc_bedplume(time_n)
 	  call update_Qc_plume(time_n)
@@ -234,6 +235,9 @@
 		else
 		      ekm(:,:,:)=ekm_mol 
 		endif
+		if ((interaction_bed.eq.4.or.interaction_bed.eq.6).and.time_n.ge.tstart_morf2) then 
+			call update_fc_global
+		endif 		
 		if (SEM.eq.1) then
 		  call SEM_turb_bc
 		  call move_eddies_SEM
@@ -249,6 +253,7 @@
 		elseif (time_int.eq.'RK3') then
 			call RK3(ib,ie,jb,je,kb,ke)
 		endif
+
 		call bound_rhoU(dUdt,dVdt,dWdt,drdt,slip_bot,monopile,time_np,
      & Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new) !bound_rhoU on rhou^*
 		call update_QSc_bedplume(time_np)

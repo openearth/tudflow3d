@@ -136,7 +136,7 @@
 	  REAL, DIMENSION(:,:),ALLOCATABLE :: thisbp,zhisbp
 	  REAL, DIMENSION(:,:,:),ALLOCATABLE :: Chisbp
 	  REAL, DIMENSION(:,:),ALLOCATABLE :: Uhisbp,Vhisbp,Whisbp
-	  REAL*4, DIMENSION(:,:,:),ALLOCATABLE :: fc_global
+	  REAL*8, DIMENSION(:,:,:),ALLOCATABLE :: fc_global
 	  REAL, DIMENSION(:,:),ALLOCATABLE :: uuR_relax,uuL_relax,vvR_relax,vvL_relax,tau2Vold,tau2Vnew,tau2Wold,tau2Wnew,qb_relax
 	  REAL, DIMENSION(:,:,:),ALLOCATABLE :: qbU,qbV
 
@@ -1593,7 +1593,7 @@
 	ALLOCATE(cU(nfrac,0:i1,0:j1,0:k1))
 	ALLOCATE(cV(nfrac,0:i1,0:j1,0:k1))
 	ALLOCATE(cW(nfrac,0:i1,0:j1,0:k1))
-	ALLOCATE(fc_global(0:i1,0:jmax*px+1,1:kmax))
+	ALLOCATE(fc_global(0:i1,0:jmax*px+1,0:k1))
 	
 	if (transporteq_fracs.eq.'massfrac') then
 		ALLOCATE(rhoU(0:i1,0:j1,0:k1))  
@@ -1620,7 +1620,7 @@
 	ALLOCATE(Coldbot(nfrac,0:i1,0:j1))
 	ALLOCATE(Cnewbot(nfrac,0:i1,0:j1))
 	ALLOCATE(dCdtbot(nfrac,0:i1,0:j1))
-	IF ((nobst.gt.0.or.LOA.gt.0.).and.interaction_bed.ge.4) THEN
+	IF (interaction_bed.ge.4) THEN
 	  ALLOCATE(bednotfixed(0:i1,0:j1,0:k1))	
 	  ALLOCATE(bednotfixed_depo(0:i1,0:j1,0:k1))
 	  bednotfixed=1. !default avalanche or erosion is allowed everywhere, only in obstacles connected to bed not allowed, see init.f
