@@ -23,7 +23,7 @@
       IMPLICIT NONE
       SAVE
       
-      INTEGER i,j,k,imax,jmax,kmax,i1,j1,k1,px,rank,kjet,nmax1,nmax2,nmax3,istep,CNdiffz,npresIBM,counter,npresPRHO,oPRHO
+      INTEGER i,j,k,imax,jmax,kmax,i1,j1,k1,px,rank,kjet,nmax1,nmax2,nmax3,istep,CNdiffz,npresIBM,counter,npresPRHO,oPRHO,k_pzero
       INTEGER Lmix_type,slip_bot,SEM,azi_n,outflow_overflow_down,azi_n2,wiggle_detector,wd,applyVOF,Poutflow,k_ust_tau,Uoutflow
       REAL ekm_mol,nu_mol,pi,kappa,gx,gy,gz,Cs,Sc,calibfac_sand_pickup,calibfac_Shields_cr,morfac,morfac2,calibfac_sand_bedload
       REAL dt,time_nm,time_n,time_np,t_end,t0_output,dt_output,te_output,dt_max,tstart_rms,CFL,dt_ini,tstart_morf,trestart,dt_old
@@ -55,7 +55,7 @@
       INTEGER plumeseriesloc,plumeseriesloc2,plumeQseriesloc,plumecseriesloc
       INTEGER nr_HPfilter,depo_implicit,depo_cbed_option,monopile
       REAL timeAB_real(1:4),dpdx,dpdy,kn_d50_multiplier,avalanche_slope(100),av_slope_z(100),dpdx1,dpdy1,Uavold,Vavold
-      INTEGER periodicx,periodicy,wallup
+      INTEGER periodicx,periodicy,wallup,dUVdn_IBMbed
       REAL U_b3,V_b3,surf_layer,reduction_sedimentation_shields,kn_mp,kn_sidewalls
       INTEGER ksurf_bc,kmaxTSHD_ind,nair
       INTEGER poissolver,nm1,istep_output_bpmove,avalanche_until_done,IBMorder
@@ -65,7 +65,7 @@
       REAL Aplume,driftfluxforce_calfac
 	  REAL vwal,delta_nsed,nl,permeability_kl,pickup_fluctuations_ampl,z_tau_sed,kn_d50_multiplier_bl,bl_relax
 	  INTEGER pickup_fluctuations,cbed_method,k_layer_pickup,nu_minimum_wall,pickup_bedslope_geo,wbed_correction
-	  REAL Const1eps,Const2,Sc_k,Sc_eps,Cal_buoyancy_k,Cal_buoyancy_eps
+	  REAL Const1eps,Const2,Sc_k,Sc_eps,Cal_buoyancy_k,Cal_buoyancy_eps,Cs_relax
 	  
 	  
       CHARACTER*4 convection,diffusion
@@ -236,7 +236,7 @@
      & t0_output_movie,dt_output_movie,te_output_movie,tstart_morf,te_rms,tstart_morf2
 	NAMELIST /num_scheme/convection,numdiff,wiggle_detector,diffusion,comp_filter_a,comp_filter_n,CNdiffz,npresIBM,advec_conc,
      & continuity_solver,transporteq_fracs,split_rho_cont,driftfluxforce_calfac,depo_implicit,IBMorder,npresPRHO,
-     & pres_in_predictor_step,Poutflow,oPRHO,applyVOF,k_ust_tau,Uoutflow
+     & pres_in_predictor_step,Poutflow,oPRHO,applyVOF,k_ust_tau,Uoutflow,dUVdn_IBMbed,k_pzero
 	NAMELIST /ambient/U_b,V_b,W_b,bcfile,rho_b,SEM,nmax2,nmax1,nmax3,lm_min,lm_min3,slip_bot,kn,interaction_bed,
      & periodicx,periodicy,dpdx,dpdy,W_ox,Hs,Tp,nx_w,ny_w,obst,bc_obst_h,U_b3,V_b3,surf_layer,wallup,bedlevelfile,
      & U_bSEM,V_bSEM,U_w,V_w,c_bed,cfixedbed,U_init,V_init,initconditionsfile,rho_b2,monopile,kn_mp,kn_sidewalls,obstfile
@@ -244,7 +244,7 @@
      & U_j2,plumetseriesfile2,Awjet2,Aujet2,Avjet2,Strouhal2,azi_n2,radius_j2,zjet2,bedplume,radius_inner_j,xj,yj,W_j_powerlaw,
      & plume_z_outflow_belowsurf,hindered_settling,Q_j,plumeQtseriesfile,plumectseriesfile
 	NAMELIST /LESmodel/sgs_model,Cs,Lmix_type,nr_HPfilter,damping_drho_dz,damping_a1,damping_b1,damping_a2,damping_b2,
-     & extra_mix_visc,nu_minimum_wall,Const1eps,Const2,Sc_k,Sc_eps,Cal_buoyancy_k,Cal_buoyancy_eps
+     & extra_mix_visc,nu_minimum_wall,Const1eps,Const2,Sc_k,Sc_eps,Cal_buoyancy_k,Cal_buoyancy_eps,Cs_relax
 	NAMELIST /constants/kappa,gx,gy,gz,ekm_mol,calibfac_sand_pickup,pickup_formula,kn_d50_multiplier,avalanche_slope,
      &	av_slope_z,calibfac_Shields_cr,reduction_sedimentation_shields,morfac,morfac2,avalanche_until_done,avfile,
      & settling_along_gvector,vwal,nl,permeability_kl,pickup_fluctuations_ampl,pickup_fluctuations,pickup_correction,cbed_method,
@@ -315,9 +315,11 @@
 	depo_cbed_option=0 !2-3-2020 obsolete; user input not read anymore from num_scheme always option 0 is used in code 
 	IBMorder=0 
 	Poutflow=0 ! 0 (default, most robust) Poutflow is zero for complete outflow crosssection at rmax; 1 (optional) Poutflow is zero at just one grid-location at rmax --> sometimes better but less robust
+	k_pzero=1 ! default 1, defines vertical level where p=0 when Poutflow=1 is used
 	Uoutflow=0 !0 (default) Neumann outflow dUdn=0 (for U,V,W); 2 means Convective outflow condition dUdt+U_normal*dUdn=0 (for U,V,W)
 	applyVOF=0
 	k_ust_tau=1
+	dUVdn_IBMbed=-1 !default no correction, but with 0 then dUdn and dVdn is made zero over immersed bed 
 	!! ambient:
 	U_b = -999.
 	V_b = -999.
@@ -493,6 +495,7 @@
 	!! LESmodel
 	sgs_model = 'ARGHH'
 	Cs = -999.
+	Cs_relax = 0.01 
 	Lmix_type = -999
 	nr_HPfilter = 0
 	damping_drho_dz = 'none'
@@ -509,6 +512,7 @@
 	Sc_eps = 1.2
 	Cal_buoyancy_k = 1.
 	Cal_buoyancy_eps = 1.
+	
 	
 	!!constants
 	kappa=-999.
@@ -646,6 +650,7 @@
 	IF (npresIBM<0) CALL writeerror(407)
 	pres_in_predictor_step_internal = pres_in_predictor_step
 	IF (k_ust_tau<1.or.k_ust_tau>kmax) CALL writeerror(409)
+	IF (k_pzero<1.or.k_pzero>kmax) CALL writeerror(410)
 
 	READ (UNIT=1,NML=ambient,IOSTAT=ios)
 	!! check input ambient
@@ -1320,7 +1325,7 @@
 	IF ((damping_drho_dz.eq.'MuAn'.and.damping_b1.lt.-990.).or.(damping_drho_dz.eq.'MuAn'.and.damping_b2.lt.-990.)) 
      &  CALL writeerror(87)
 	IF (extra_mix_visc.ne.'none'.and.extra_mix_visc.ne.'Krie') CALL writeerror(88) 
-	
+	IF (Cs_relax>1.or.Cs_relax<0.) CALL writeerror(089)
 
 	READ (UNIT=1,NML=constants,IOSTAT=ios)
 	!! check input constants
@@ -1686,6 +1691,7 @@
 	ALLOCATE(dp(0:i1,0:j1,0:k1))
 	if (sgs_model.eq.'DSmag') then
 	  ALLOCATE(Csgrid(1:imax,1:jmax,1:kmax))
+	  Csgrid=0.1 !start with default Cs=0.1
 	endif
 	p=0.
 	pold=0.

@@ -638,7 +638,7 @@ c*************************************************************
 !       include 'common.txt'
       !include 'mpif.h'
 	real shear
-      real xx,yy,f,dzi,uu,vv,absU,ust,z0,yplus
+      real xx,yy,f,dzi,uu,vv,absU,ust,z0,yplus,ww,tauw,tauv
       integer n,t,tel,kt,n2
       real ebb(0:i1,0:k1)
       real ebf(0:i1,0:k1)
@@ -823,18 +823,15 @@ c*************************************************************
 				endif
 				IF (nu_minimum_wall.eq.1) THEN
 					yplus = distance_to_bed*ust/nu_mol
-					ekm(i,j,kp) = MAX(ekm(i,j,kp),nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2)
-					Diffcof(i,j,kp)=ekm(i,j,kp)/Sc/rr(i,j,kp) 
+					ekm(i,j,kp) = MAX(ekm(i,j,kp),nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2) 
 				!minimum eddy viscosity is Prandtl mixing length theory including Van Driest damping (factor A=19 and power 2 is found in Van Balen 2010 dissertation p15 and Catalano et al. 2010 circular cylinder flow)
 				ELSEIF (nu_minimum_wall.eq.2) THEN
 					yplus = distance_to_bed*ust/nu_mol
-					ekm(i,j,kp) = MAX(ekm(i,j,kp),nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2) 
-					Diffcof(i,j,kp)=ekm(i,j,kp)/Sc/rr(i,j,kp) 					
+					ekm(i,j,kp) = MAX(ekm(i,j,kp),nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2) 				
 					distance_to_bed=distance_to_bed+dz 
 					kp=MIN(kp+1,k1) 
 					yplus = distance_to_bed*ust/nu_mol
-					ekm(i,j,kp) = MAX(ekm(i,j,kp),nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2) 
-					Diffcof(i,j,kp)=ekm(i,j,kp)/Sc/rr(i,j,kp) 					
+					ekm(i,j,kp) = MAX(ekm(i,j,kp),nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2) 	
 				ELSEIF (nu_minimum_wall.eq.3) THEN 
 					kp=MIN(kp+1,k1) 
 					uu=0.5*(Uvel(i,j,kp)+Uvel(i-1,j,kp))
@@ -847,33 +844,38 @@ c*************************************************************
 						factor = MAX(factor,1.) 
 						ekm(i,j,kp)=factor*ekm(i,j,kp)
 						ekm(i,j,kp-1)=factor*ekm(i,j,kp-1)
-						Diffcof(i,j,kp)=ekm(i,j,kp)/Sc/rr(i,j,kp) 
-						Diffcof(i,j,kp-1)=ekm(i,j,kp-1)/Sc/rr(i,j,kp-1) 
 					ELSE 
 						kp=kp-1 
 						yplus = distance_to_bed*ust/nu_mol
-						ekm(i,j,kp) = MAX(ekm(i,j,kp),nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2) 
-						Diffcof(i,j,kp)=ekm(i,j,kp)/Sc/rr(i,j,kp) 						
+						ekm(i,j,kp) = MAX(ekm(i,j,kp),nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2) 				
 						distance_to_bed=distance_to_bed+dz 
 						kp=MIN(kp+1,k1) 
 						yplus = distance_to_bed*ust/nu_mol
-						ekm(i,j,kp) = MAX(ekm(i,j,kp),nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2)	
-						Diffcof(i,j,kp)=ekm(i,j,kp)/Sc/rr(i,j,kp) 
+						ekm(i,j,kp) = MAX(ekm(i,j,kp),nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2)					
 					ENDIF  
+				ELSEIF (nu_minimum_wall.eq.4) THEN 
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					nu_t = ust*ust/(MAX(absU,1.e-9)/distance_to_bed)
+					factor = nu_t/(ekm(i,j,kp)/rr(i,j,kp))
+					factor = MAX(factor,1.) 
+					ekm(i,j,kp)=factor*ekm(i,j,kp)
+				ELSEIF (nu_minimum_wall.eq.5) THEN 
+					! OpenFOAM manner: tau = rho*ust*ust and ust=absU/Uplus and tau=nu_t*dUdz combined:
+					nu_t = ust*distance_to_bed / (MAX(absU,1.e-9)/MAX(ust,1.e-9)) 
+					factor = nu_t/(ekm(i,j,kp)/rr(i,j,kp))
+					factor = MAX(factor,1.) 
+					ekm(i,j,kp)=factor*ekm(i,j,kp)
 				ELSEIF (nu_minimum_wall.eq.11) THEN
 					yplus = distance_to_bed*ust/nu_mol
 					ekm(i,j,kp) = nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2 
-					Diffcof(i,j,kp)=ekm(i,j,kp)/Sc/rr(i,j,kp) 
 				!minimum eddy viscosity is Prandtl mixing length theory including Van Driest damping (factor A=19 and power 2 is found in Van Balen 2010 dissertation p15 and Catalano et al. 2010 circular cylinder flow)
 				ELSEIF (nu_minimum_wall.eq.12) THEN
 					yplus = distance_to_bed*ust/nu_mol
-					ekm(i,j,kp) = nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2 	
-					Diffcof(i,j,kp)=ekm(i,j,kp)/Sc/rr(i,j,kp) 
+					ekm(i,j,kp) = nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2 				
 					distance_to_bed=distance_to_bed+dz 
 					kp=MIN(kp+1,k1) 
 					yplus = distance_to_bed*ust/nu_mol
 					ekm(i,j,kp) = nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2 	
-					Diffcof(i,j,kp)=ekm(i,j,kp)/Sc/rr(i,j,kp) 
 				ELSEIF (nu_minimum_wall.eq.13) THEN 
 					kp=MIN(kp+1,k1) 
 					uu=0.5*(Uvel(i,j,kp)+Uvel(i-1,j,kp))
@@ -886,23 +888,243 @@ c*************************************************************
 						!factor = MAX(factor,1.) 
 						ekm(i,j,kp)=factor*ekm(i,j,kp)
 						ekm(i,j,kp-1)=factor*ekm(i,j,kp-1)
-						Diffcof(i,j,kp)=ekm(i,j,kp)/Sc/rr(i,j,kp) 
-						Diffcof(i,j,kp-1)=ekm(i,j,kp-1)/Sc/rr(i,j,kp-1) 
 					ELSE 
 						kp=kp-1 
 						yplus = distance_to_bed*ust/nu_mol
-						ekm(i,j,kp) = nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2 	
-						Diffcof(i,j,kp)=ekm(i,j,kp)/Sc/rr(i,j,kp) 
+						ekm(i,j,kp) = nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2 				
 						distance_to_bed=distance_to_bed+dz 
 						kp=MIN(kp+1,k1) 
 						yplus = distance_to_bed*ust/nu_mol
-						ekm(i,j,kp) = nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2	
-						Diffcof(i,j,kp)=ekm(i,j,kp)/Sc/rr(i,j,kp) 
+						ekm(i,j,kp) = nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2					
 					ENDIF  
-				ENDIF
+				ELSEIF (nu_minimum_wall.eq.14) THEN 
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					nu_t = ust*ust/(MAX(absU,1.e-9)/distance_to_bed)
+					factor = nu_t/(ekm(i,j,kp)/rr(i,j,kp))
+					!factor = MAX(factor,1.) 
+					ekm(i,j,kp)=factor*ekm(i,j,kp)
+				ELSEIF (nu_minimum_wall.eq.15) THEN 
+					! OpenFOAM manner: tau = rho*ust*ust and ust=absU/Uplus and tau=nu_t*dUdz combined:
+					nu_t = ust*distance_to_bed / (MAX(absU,1.e-9)/MAX(ust,1.e-9)) 
+					factor = nu_t/(ekm(i,j,kp)/rr(i,j,kp))
+					!factor = MAX(factor,1.) 
+					ekm(i,j,kp)=factor*ekm(i,j,kp)					
+				ENDIF	
 			enddo
 		  enddo
-		endif		
+		endif	
+		IF (monopile.eq.1.and.nu_minimum_wall.ge.1) then ! partial slip tau based on log-wall 
+			 do k=1,kmax 
+			   do j=1,jmax
+				distance_to_bed = (Rp(1)-Ru(0))
+				ww=0.5*(Wvel(1,j,k)+Wvel(1,j,k-1))
+				vv=0.5*(Vvel(1,j,k)+Vvel(1,j-1,k))				
+				absU=sqrt(ww*ww+vv*vv)
+				ust=0.1*absU
+				if (kn_mp>0.) then !walls with rougness (log-law used which can be hydr smooth or hydr rough):
+					do tel=1,10 ! 10 iter is more than enough
+						z0=kn_mp/30.+0.11*nu_mol/MAX(ust,1.e-9)
+						ust=absU/MAX(1./kappa*log(distance_to_bed/z0),2.) !ust maximal 0.5*absU
+					enddo
+				else
+					do tel=1,10 ! 10 iter is more than enough
+						yplus=MAX(distance_to_bed*ust/nu_mol,1e-12)
+						ust=absU/MAX((2.5*log(yplus)+5.5),2.) !ust maximal 0.5*absU			
+					enddo
+					if (yplus<30.) then
+					  do tel=1,10 ! 10 iter is more than enough
+						yplus=MAX(distance_to_bed*ust/nu_mol,1e-12)
+						ust=absU/MAX((5.*log(yplus)-3.05),2.) !ust maximal 0.5*absU			
+					  enddo	
+					endif
+					if (yplus<5.) then !viscous sublayer uplus=yplus
+						ust=sqrt(absU*nu_mol/(distance_to_bed))
+					endif
+				endif
+				IF (nu_minimum_wall.eq.1) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = MAX(ekm(1,j,k),nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 
+				!minimum eddy viscosity is Prandtl mixing length theory including Van Driest damping (factor A=19 and power 2 is found in Van Balen 2010 dissertation p15 and Catalano et al. 2010 circular cylinder flow)
+				ELSEIF (nu_minimum_wall.eq.2) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = MAX(ekm(1,j,k),nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 				
+					distance_to_bed=Rp(2)-Ru(0) 
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(2,j,k) = MAX(ekm(2,j,k),nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 	
+				ELSEIF (nu_minimum_wall.eq.3) THEN 
+					kp=MIN(kp+1,k1) 
+					ww=0.5*(Wvel(2,j,k)+Wvel(2,j,k-1))
+					vv=0.5*(Vvel(2,j,k)+Vvel(2,j-1,k))				
+					absU2=sqrt(ww*ww+vv*vv)
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					IF (absU2>1.1*absU) THEN
+						nu_t = ust*ust/((absU2-absU)/(Rp(2)-Rp(1)))
+						factor = nu_t/(0.5*(ekm(1,j,k)/rr(1,j,k)+ekm(2,j,k)/rr(2,j,k)))
+						factor = MAX(factor,1.) 
+						ekm(1,j,k)=factor*ekm(1,j,k)
+						ekm(2,j,k)=factor*ekm(2,j,k)
+					ELSE 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(1,j,k) = MAX(ekm(1,j,k),nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 				
+						distance_to_bed=Rp(2)-Ru(0) 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(2,j,k) = MAX(ekm(2,j,k),nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2)				
+					ENDIF  
+				ELSEIF (nu_minimum_wall.eq.4) THEN 
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					nu_t = ust*ust/(MAX(absU,1.e-9)/distance_to_bed)
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)
+				ELSEIF (nu_minimum_wall.eq.5) THEN 
+					! OpenFOAM manner: tau = rho*ust*ust and ust=absU/Uplus and tau=nu_t*dUdz combined:
+					nu_t = ust*distance_to_bed / (MAX(absU,1.e-9)/MAX(ust,1.e-9)) 
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)
+				ELSEIF (nu_minimum_wall.eq.11) THEN 
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2 
+				!minimum eddy viscosity is Prandtl mixing length theory including Van Driest damping (factor A=19 and power 2 is found in Van Balen 2010 dissertation p15 and Catalano et al. 2010 circular cylinder flow)
+				ELSEIF (nu_minimum_wall.eq.12) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2 				
+					distance_to_bed=Rp(2)-Ru(0) 
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(2,j,k) = nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2	
+				ELSEIF (nu_minimum_wall.eq.13) THEN 
+					kp=MIN(kp+1,k1) 
+					ww=0.5*(Wvel(2,j,k)+Wvel(2,j,k-1))
+					vv=0.5*(Vvel(2,j,k)+Vvel(2,j-1,k))				
+					absU2=sqrt(ww*ww+vv*vv)
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					IF (absU2>1.1*absU) THEN
+						nu_t = ust*ust/((absU2-absU)/(Rp(2)-Rp(1)))
+						factor = nu_t/(0.5*(ekm(1,j,k)/rr(1,j,k)+ekm(2,j,k)/rr(2,j,k)))
+						!factor = MAX(factor,1.) 
+						ekm(1,j,k)=factor*ekm(1,j,k)
+						ekm(2,j,k)=factor*ekm(2,j,k)
+					ELSE 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(1,j,k) = nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2 				
+						distance_to_bed=Rp(2)-Ru(0) 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(2,j,k) = nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2				
+					ENDIF  
+				ELSEIF (nu_minimum_wall.eq.14) THEN 
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					nu_t = ust*ust/(MAX(absU,1.e-9)/distance_to_bed)
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					!factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)
+				ELSEIF (nu_minimum_wall.eq.15) THEN 
+					! OpenFOAM manner: tau = rho*ust*ust and ust=absU/Uplus and tau=nu_t*dUdz combined:
+					nu_t = ust*distance_to_bed / (MAX(absU,1.e-9)/MAX(ust,1.e-9)) 
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					!factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)					
+				ENDIF
+				
+			  enddo
+			 enddo 
+		ELSEIF (monopile.eq.3.and.nu_minimum_wall.ge.1) then ! partial slip tau based on simplified TBL wall-law taking pressure gradient into account
+			 do k=1,kmax 
+			   do j=1,jmax
+			    distance_to_bed = (Rp(1)-Ru(0))
+				tauw=0.5*(tau2Wold(j,k)+tau2Wold(j,k-1))
+				tauv=0.5*(tau2Vold(j,k)+tau2Vold(j-1,k))			   
+				ust = ((tauw/rr(1,j,k))**2+(tauv/rr(1,j,k))**2)**0.25								!at W-gridpoint
+				ww=0.5*(Wvel(1,j,k)+Wvel(1,j,k-1))
+				vv=0.5*(Vvel(1,j,k)+Vvel(1,j-1,k))				
+				absU=sqrt(ww*ww+vv*vv)								
+				IF (nu_minimum_wall.eq.1) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = MAX(ekm(1,j,k),nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 
+				!minimum eddy viscosity is Prandtl mixing length theory including Van Driest damping (factor A=19 and power 2 is found in Van Balen 2010 dissertation p15 and Catalano et al. 2010 circular cylinder flow)
+				ELSEIF (nu_minimum_wall.eq.2) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = MAX(ekm(1,j,k),nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 				
+					distance_to_bed=Rp(2)-Ru(0) 
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(2,j,k) = MAX(ekm(2,j,k),nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 	
+				ELSEIF (nu_minimum_wall.eq.3) THEN 
+					kp=MIN(kp+1,k1) 
+					ww=0.5*(Wvel(2,j,k)+Wvel(2,j,k-1))
+					vv=0.5*(Vvel(2,j,k)+Vvel(2,j-1,k))				
+					absU2=sqrt(ww*ww+vv*vv)
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					IF (absU2>1.1*absU) THEN
+						nu_t = ust*ust/((absU2-absU)/(Rp(2)-Rp(1)))
+						factor = nu_t/(0.5*(ekm(1,j,k)/rr(1,j,k)+ekm(2,j,k)/rr(2,j,k)))
+						factor = MAX(factor,1.) 
+						ekm(1,j,k)=factor*ekm(1,j,k)
+						ekm(2,j,k)=factor*ekm(2,j,k)
+					ELSE 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(1,j,k) = MAX(ekm(1,j,k),nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 				
+						distance_to_bed=Rp(2)-Ru(0) 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(2,j,k) = MAX(ekm(2,j,k),nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2)				
+					ENDIF  
+				ELSEIF (nu_minimum_wall.eq.4) THEN 
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					nu_t = ust*ust/(MAX(absU,1.e-9)/distance_to_bed)
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					IF (ust>0.5*absU) factor=1. !with monopile.eq.3 ust can be >0 with absU=0 because due to dPdx there can be tau without absU 
+					factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)
+				ELSEIF (nu_minimum_wall.eq.5) THEN 
+					! OpenFOAM manner: tau = rho*ust*ust and ust=absU/Uplus and tau=nu_t*dUdz combined:
+					nu_t = ust*distance_to_bed / (MAX(absU,1.e-9)/MAX(ust,1.e-9)) 
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					IF (ust>0.5*absU) factor=1. !with monopile.eq.3 ust can be >0 with absU=0 because due to dPdx there can be tau without absU 
+					factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)
+				ELSEIF (nu_minimum_wall.eq.11) THEN 
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2 
+				!minimum eddy viscosity is Prandtl mixing length theory including Van Driest damping (factor A=19 and power 2 is found in Van Balen 2010 dissertation p15 and Catalano et al. 2010 circular cylinder flow)
+				ELSEIF (nu_minimum_wall.eq.12) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2 				
+					distance_to_bed=Rp(2)-Ru(0) 
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(2,j,k) = nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2	
+				ELSEIF (nu_minimum_wall.eq.13) THEN 
+					kp=MIN(kp+1,k1) 
+					ww=0.5*(Wvel(2,j,k)+Wvel(2,j,k-1))
+					vv=0.5*(Vvel(2,j,k)+Vvel(2,j-1,k))				
+					absU2=sqrt(ww*ww+vv*vv)
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					IF (absU2>1.1*absU) THEN
+						nu_t = ust*ust/((absU2-absU)/(Rp(2)-Rp(1)))
+						factor = nu_t/(0.5*(ekm(1,j,k)/rr(1,j,k)+ekm(2,j,k)/rr(2,j,k)))
+						!factor = MAX(factor,1.) 
+						ekm(1,j,k)=factor*ekm(1,j,k)
+						ekm(2,j,k)=factor*ekm(2,j,k)
+					ELSE 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(1,j,k) = nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2 				
+						distance_to_bed=Rp(2)-Ru(0) 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(2,j,k) = nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2				
+					ENDIF  
+				ELSEIF (nu_minimum_wall.eq.14) THEN 
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					nu_t = ust*ust/(MAX(absU,1.e-9)/distance_to_bed)
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					!factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)
+				ELSEIF (nu_minimum_wall.eq.15) THEN 
+					! OpenFOAM manner: tau = rho*ust*ust and ust=absU/Uplus and tau=nu_t*dUdz combined:
+					nu_t = ust*distance_to_bed / (MAX(absU,1.e-9)/MAX(ust,1.e-9)) 
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					!factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)					
+				ENDIF		
+			  enddo
+			 enddo 
+		ENDIF		
 !!      Boundary conditions Neumann
         call shiftf(ekm,ebf) 
         call shiftb(ekm,ebb) 
@@ -1110,7 +1332,7 @@ c*************************************************************
       implicit none
       !include 'mpif.h'
 	real SijSij,SdijSdij
-      real xx,yy,f,dzi,uu,vv,absU,ust,z0,yplus
+      real xx,yy,f,dzi,uu,vv,absU,ust,z0,yplus,ww,tauw,tauv
       integer n,t,tel,n2
       real ebb(0:i1,0:k1)
       real ebf(0:i1,0:k1)
@@ -1317,6 +1539,18 @@ c*************************************************************
 						yplus = distance_to_bed*ust/nu_mol
 						ekm(i,j,kp) = MAX(ekm(i,j,kp),nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2)					
 					ENDIF  
+				ELSEIF (nu_minimum_wall.eq.4) THEN 
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					nu_t = ust*ust/(MAX(absU,1.e-9)/distance_to_bed)
+					factor = nu_t/(ekm(i,j,kp)/rr(i,j,kp))
+					factor = MAX(factor,1.) 
+					ekm(i,j,kp)=factor*ekm(i,j,kp)
+				ELSEIF (nu_minimum_wall.eq.5) THEN 
+					! OpenFOAM manner: tau = rho*ust*ust and ust=absU/Uplus and tau=nu_t*dUdz combined:
+					nu_t = ust*distance_to_bed / (MAX(absU,1.e-9)/MAX(ust,1.e-9)) 
+					factor = nu_t/(ekm(i,j,kp)/rr(i,j,kp))
+					factor = MAX(factor,1.) 
+					ekm(i,j,kp)=factor*ekm(i,j,kp)
 				ELSEIF (nu_minimum_wall.eq.11) THEN
 					yplus = distance_to_bed*ust/nu_mol
 					ekm(i,j,kp) = nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2 
@@ -1349,11 +1583,235 @@ c*************************************************************
 						yplus = distance_to_bed*ust/nu_mol
 						ekm(i,j,kp) = nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2					
 					ENDIF  
+				ELSEIF (nu_minimum_wall.eq.14) THEN 
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					nu_t = ust*ust/(MAX(absU,1.e-9)/distance_to_bed)
+					factor = nu_t/(ekm(i,j,kp)/rr(i,j,kp))
+					!factor = MAX(factor,1.) 
+					ekm(i,j,kp)=factor*ekm(i,j,kp)
+				ELSEIF (nu_minimum_wall.eq.15) THEN 
+					! OpenFOAM manner: tau = rho*ust*ust and ust=absU/Uplus and tau=nu_t*dUdz combined:
+					nu_t = ust*distance_to_bed / (MAX(absU,1.e-9)/MAX(ust,1.e-9)) 
+					factor = nu_t/(ekm(i,j,kp)/rr(i,j,kp))
+					!factor = MAX(factor,1.) 
+					ekm(i,j,kp)=factor*ekm(i,j,kp)					
 				ENDIF					
 			enddo
 		  enddo
 		endif		
-		
+		IF (monopile.eq.1.and.nu_minimum_wall.ge.1) then ! partial slip tau based on log-wall 
+			 do k=1,kmax 
+			   do j=1,jmax
+				distance_to_bed = (Rp(1)-Ru(0))
+				ww=0.5*(Wvel(1,j,k)+Wvel(1,j,k-1))
+				vv=0.5*(Vvel(1,j,k)+Vvel(1,j-1,k))				
+				absU=sqrt(ww*ww+vv*vv)
+				ust=0.1*absU
+				if (kn_mp>0.) then !walls with rougness (log-law used which can be hydr smooth or hydr rough):
+					do tel=1,10 ! 10 iter is more than enough
+						z0=kn_mp/30.+0.11*nu_mol/MAX(ust,1.e-9)
+						ust=absU/MAX(1./kappa*log(distance_to_bed/z0),2.) !ust maximal 0.5*absU
+					enddo
+				else
+					do tel=1,10 ! 10 iter is more than enough
+						yplus=MAX(distance_to_bed*ust/nu_mol,1e-12)
+						ust=absU/MAX((2.5*log(yplus)+5.5),2.) !ust maximal 0.5*absU			
+					enddo
+					if (yplus<30.) then
+					  do tel=1,10 ! 10 iter is more than enough
+						yplus=MAX(distance_to_bed*ust/nu_mol,1e-12)
+						ust=absU/MAX((5.*log(yplus)-3.05),2.) !ust maximal 0.5*absU			
+					  enddo	
+					endif
+					if (yplus<5.) then !viscous sublayer uplus=yplus
+						ust=sqrt(absU*nu_mol/(distance_to_bed))
+					endif
+				endif
+				IF (nu_minimum_wall.eq.1) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = MAX(ekm(1,j,k),nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 
+				!minimum eddy viscosity is Prandtl mixing length theory including Van Driest damping (factor A=19 and power 2 is found in Van Balen 2010 dissertation p15 and Catalano et al. 2010 circular cylinder flow)
+				ELSEIF (nu_minimum_wall.eq.2) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = MAX(ekm(1,j,k),nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 				
+					distance_to_bed=Rp(2)-Ru(0) 
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(2,j,k) = MAX(ekm(2,j,k),nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 	
+				ELSEIF (nu_minimum_wall.eq.3) THEN 
+					kp=MIN(kp+1,k1) 
+					ww=0.5*(Wvel(2,j,k)+Wvel(2,j,k-1))
+					vv=0.5*(Vvel(2,j,k)+Vvel(2,j-1,k))				
+					absU2=sqrt(ww*ww+vv*vv)
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					IF (absU2>1.1*absU) THEN
+						nu_t = ust*ust/((absU2-absU)/(Rp(2)-Rp(1)))
+						factor = nu_t/(0.5*(ekm(1,j,k)/rr(1,j,k)+ekm(2,j,k)/rr(2,j,k)))
+						factor = MAX(factor,1.) 
+						ekm(1,j,k)=factor*ekm(1,j,k)
+						ekm(2,j,k)=factor*ekm(2,j,k)
+					ELSE 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(1,j,k) = MAX(ekm(1,j,k),nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 				
+						distance_to_bed=Rp(2)-Ru(0) 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(2,j,k) = MAX(ekm(2,j,k),nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2)				
+					ENDIF  
+				ELSEIF (nu_minimum_wall.eq.4) THEN 
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					nu_t = ust*ust/(MAX(absU,1.e-9)/distance_to_bed)
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)
+				ELSEIF (nu_minimum_wall.eq.5) THEN 
+					! OpenFOAM manner: tau = rho*ust*ust and ust=absU/Uplus and tau=nu_t*dUdz combined:
+					nu_t = ust*distance_to_bed / (MAX(absU,1.e-9)/MAX(ust,1.e-9)) 
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)
+				ELSEIF (nu_minimum_wall.eq.11) THEN 
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2 
+				!minimum eddy viscosity is Prandtl mixing length theory including Van Driest damping (factor A=19 and power 2 is found in Van Balen 2010 dissertation p15 and Catalano et al. 2010 circular cylinder flow)
+				ELSEIF (nu_minimum_wall.eq.12) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2 				
+					distance_to_bed=Rp(2)-Ru(0) 
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(2,j,k) = nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2	
+				ELSEIF (nu_minimum_wall.eq.13) THEN 
+					kp=MIN(kp+1,k1) 
+					ww=0.5*(Wvel(2,j,k)+Wvel(2,j,k-1))
+					vv=0.5*(Vvel(2,j,k)+Vvel(2,j-1,k))				
+					absU2=sqrt(ww*ww+vv*vv)
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					IF (absU2>1.1*absU) THEN
+						nu_t = ust*ust/((absU2-absU)/(Rp(2)-Rp(1)))
+						factor = nu_t/(0.5*(ekm(1,j,k)/rr(1,j,k)+ekm(2,j,k)/rr(2,j,k)))
+						!factor = MAX(factor,1.) 
+						ekm(1,j,k)=factor*ekm(1,j,k)
+						ekm(2,j,k)=factor*ekm(2,j,k)
+					ELSE 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(1,j,k) = nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2 				
+						distance_to_bed=Rp(2)-Ru(0) 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(2,j,k) = nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2				
+					ENDIF  
+				ELSEIF (nu_minimum_wall.eq.14) THEN 
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					nu_t = ust*ust/(MAX(absU,1.e-9)/distance_to_bed)
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					!factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)
+				ELSEIF (nu_minimum_wall.eq.15) THEN 
+					! OpenFOAM manner: tau = rho*ust*ust and ust=absU/Uplus and tau=nu_t*dUdz combined:
+					nu_t = ust*distance_to_bed / (MAX(absU,1.e-9)/MAX(ust,1.e-9)) 
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					!factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)					
+				ENDIF
+				
+			  enddo
+			 enddo 
+		ELSEIF (monopile.eq.3.and.nu_minimum_wall.ge.1) then ! partial slip tau based on simplified TBL wall-law taking pressure gradient into account
+			 do k=1,kmax 
+			   do j=1,jmax
+			    distance_to_bed = (Rp(1)-Ru(0))
+				tauw=0.5*(tau2Wold(j,k)+tau2Wold(j,k-1))
+				tauv=0.5*(tau2Vold(j,k)+tau2Vold(j-1,k))			   
+				ust = ((tauw/rr(1,j,k))**2+(tauv/rr(1,j,k))**2)**0.25								!at W-gridpoint
+				ww=0.5*(Wvel(1,j,k)+Wvel(1,j,k-1))
+				vv=0.5*(Vvel(1,j,k)+Vvel(1,j-1,k))				
+				absU=sqrt(ww*ww+vv*vv)								
+				IF (nu_minimum_wall.eq.1) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = MAX(ekm(1,j,k),nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 
+				!minimum eddy viscosity is Prandtl mixing length theory including Van Driest damping (factor A=19 and power 2 is found in Van Balen 2010 dissertation p15 and Catalano et al. 2010 circular cylinder flow)
+				ELSEIF (nu_minimum_wall.eq.2) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = MAX(ekm(1,j,k),nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 				
+					distance_to_bed=Rp(2)-Ru(0) 
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(2,j,k) = MAX(ekm(2,j,k),nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 	
+				ELSEIF (nu_minimum_wall.eq.3) THEN 
+					kp=MIN(kp+1,k1) 
+					ww=0.5*(Wvel(2,j,k)+Wvel(2,j,k-1))
+					vv=0.5*(Vvel(2,j,k)+Vvel(2,j-1,k))				
+					absU2=sqrt(ww*ww+vv*vv)
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					IF (absU2>1.1*absU) THEN
+						nu_t = ust*ust/((absU2-absU)/(Rp(2)-Rp(1)))
+						factor = nu_t/(0.5*(ekm(1,j,k)/rr(1,j,k)+ekm(2,j,k)/rr(2,j,k)))
+						factor = MAX(factor,1.) 
+						ekm(1,j,k)=factor*ekm(1,j,k)
+						ekm(2,j,k)=factor*ekm(2,j,k)
+					ELSE 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(1,j,k) = MAX(ekm(1,j,k),nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 				
+						distance_to_bed=Rp(2)-Ru(0) 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(2,j,k) = MAX(ekm(2,j,k),nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2)				
+					ENDIF  
+				ELSEIF (nu_minimum_wall.eq.4) THEN 
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					nu_t = ust*ust/(MAX(absU,1.e-9)/distance_to_bed)
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					IF (ust>0.5*absU) factor=1. !with monopile.eq.3 ust can be >0 with absU=0 because due to dPdx there can be tau without absU 
+					!factor = MIN(factor,100.) 
+					factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)
+				ELSEIF (nu_minimum_wall.eq.5) THEN 
+					! OpenFOAM manner: tau = rho*ust*ust and ust=absU/Uplus and tau=nu_t*dUdz combined:
+					nu_t = ust*distance_to_bed / (MAX(absU,1.e-9)/MAX(ust,1.e-9)) 
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					IF (ust>0.5*absU) factor=1. !with monopile.eq.3 ust can be >0 with absU=0 because due to dPdx there can be tau without absU 
+					factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)
+				ELSEIF (nu_minimum_wall.eq.11) THEN 
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2 
+				!minimum eddy viscosity is Prandtl mixing length theory including Van Driest damping (factor A=19 and power 2 is found in Van Balen 2010 dissertation p15 and Catalano et al. 2010 circular cylinder flow)
+				ELSEIF (nu_minimum_wall.eq.12) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2 				
+					distance_to_bed=Rp(2)-Ru(0) 
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(2,j,k) = nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2	
+				ELSEIF (nu_minimum_wall.eq.13) THEN 
+					kp=MIN(kp+1,k1) 
+					ww=0.5*(Wvel(2,j,k)+Wvel(2,j,k-1))
+					vv=0.5*(Vvel(2,j,k)+Vvel(2,j-1,k))				
+					absU2=sqrt(ww*ww+vv*vv)
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					IF (absU2>1.1*absU) THEN
+						nu_t = ust*ust/((absU2-absU)/(Rp(2)-Rp(1)))
+						factor = nu_t/(0.5*(ekm(1,j,k)/rr(1,j,k)+ekm(2,j,k)/rr(2,j,k)))
+						!factor = MAX(factor,1.) 
+						ekm(1,j,k)=factor*ekm(1,j,k)
+						ekm(2,j,k)=factor*ekm(2,j,k)
+					ELSE 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(1,j,k) = nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2 				
+						distance_to_bed=Rp(2)-Ru(0) 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(2,j,k) = nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2				
+					ENDIF  
+				ELSEIF (nu_minimum_wall.eq.14) THEN 
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					nu_t = ust*ust/(MAX(absU,1.e-9)/distance_to_bed)
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					!factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)
+				ELSEIF (nu_minimum_wall.eq.15) THEN 
+					! OpenFOAM manner: tau = rho*ust*ust and ust=absU/Uplus and tau=nu_t*dUdz combined:
+					nu_t = ust*distance_to_bed / (MAX(absU,1.e-9)/MAX(ust,1.e-9)) 
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					!factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)					
+				ENDIF		
+			  enddo
+			 enddo 
+		ENDIF		
 		
 !!      Boundary conditions Neumann
         call shiftf(ekm,ebf) 
@@ -2187,10 +2645,11 @@ c*************************************************************
 			Cd = 0.5*(L11*M11+L22*M22+L33*M33+2.*L12*M12+2.*L13*M13+2.*L23*M23) /
      &          (M11*M11+M22*M22+M33*M33+2.*M12*M12+2.*M13*M13+2.*M23*M23+1.e-12)
 			Cd=MAX(0.,Cd)
-			Cd=MIN(0.0529,Cd) !clip Cs=sqrt(Cd) between 0 and 0.23
+			Cd = Cs_relax*sqrt(Cd)+(1.-Cs_relax)*Csgrid(i,j,k)
+			Cd=MIN(0.23,Cd) !clip Cs between 0 and 0.23
 			Csgrid(i,j,k)=Cd
 
-		   ekm(i,j,k) = rr(i,j,k) * Lmix2(i,j) * Cd * Sabs(i,j,k)
+		   ekm(i,j,k) = rr(i,j,k) * Lmix2(i,j) * Cd*Cd * Sabs(i,j,k)
 		
    	     enddo			
 	  enddo
@@ -2572,6 +3031,18 @@ c*************************************************************
 						yplus = distance_to_bed*ust/nu_mol
 						ekm(i,j,kp) = MAX(ekm(i,j,kp),nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2)					
 					ENDIF  
+				ELSEIF (nu_minimum_wall.eq.4) THEN 
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					nu_t = ust*ust/(MAX(absU,1.e-9)/distance_to_bed)
+					factor = nu_t/(ekm(i,j,kp)/rr(i,j,kp))
+					factor = MAX(factor,1.) 
+					ekm(i,j,kp)=factor*ekm(i,j,kp)
+				ELSEIF (nu_minimum_wall.eq.5) THEN 
+					! OpenFOAM manner: tau = rho*ust*ust and ust=absU/Uplus and tau=nu_t*dUdz combined:
+					nu_t = ust*distance_to_bed / (MAX(absU,1.e-9)/MAX(ust,1.e-9)) 
+					factor = nu_t/(ekm(i,j,kp)/rr(i,j,kp))
+					factor = MAX(factor,1.) 
+					ekm(i,j,kp)=factor*ekm(i,j,kp)
 				ELSEIF (nu_minimum_wall.eq.11) THEN
 					yplus = distance_to_bed*ust/nu_mol
 					ekm(i,j,kp) = nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2 
@@ -2604,10 +3075,234 @@ c*************************************************************
 						yplus = distance_to_bed*ust/nu_mol
 						ekm(i,j,kp) = nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2					
 					ENDIF  
-				ENDIF					
+				ELSEIF (nu_minimum_wall.eq.14) THEN 
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					nu_t = ust*ust/(MAX(absU,1.e-9)/distance_to_bed)
+					factor = nu_t/(ekm(i,j,kp)/rr(i,j,kp))
+					!factor = MAX(factor,1.) 
+					ekm(i,j,kp)=factor*ekm(i,j,kp)
+				ELSEIF (nu_minimum_wall.eq.15) THEN 
+					! OpenFOAM manner: tau = rho*ust*ust and ust=absU/Uplus and tau=nu_t*dUdz combined:
+					nu_t = ust*distance_to_bed / (MAX(absU,1.e-9)/MAX(ust,1.e-9)) 
+					factor = nu_t/(ekm(i,j,kp)/rr(i,j,kp))
+					!factor = MAX(factor,1.) 
+					ekm(i,j,kp)=factor*ekm(i,j,kp)					
+				ENDIF	
 			enddo
 		  enddo
 		endif		
+		IF (monopile.eq.1.and.nu_minimum_wall.ge.1) then ! partial slip tau based on log-wall 
+			 do k=1,kmax 
+			   do j=1,jmax
+				distance_to_bed = (Rp(1)-Ru(0))
+				ww=0.5*(Wvel(1,j,k)+Wvel(1,j,k-1))
+				vv=0.5*(Vvel(1,j,k)+Vvel(1,j-1,k))				
+				absU=sqrt(ww*ww+vv*vv)
+				ust=0.1*absU
+				if (kn_mp>0.) then !walls with rougness (log-law used which can be hydr smooth or hydr rough):
+					do tel=1,10 ! 10 iter is more than enough
+						z0=kn_mp/30.+0.11*nu_mol/MAX(ust,1.e-9)
+						ust=absU/MAX(1./kappa*log(distance_to_bed/z0),2.) !ust maximal 0.5*absU
+					enddo
+				else
+					do tel=1,10 ! 10 iter is more than enough
+						yplus=MAX(distance_to_bed*ust/nu_mol,1e-12)
+						ust=absU/MAX((2.5*log(yplus)+5.5),2.) !ust maximal 0.5*absU			
+					enddo
+					if (yplus<30.) then
+					  do tel=1,10 ! 10 iter is more than enough
+						yplus=MAX(distance_to_bed*ust/nu_mol,1e-12)
+						ust=absU/MAX((5.*log(yplus)-3.05),2.) !ust maximal 0.5*absU			
+					  enddo	
+					endif
+					if (yplus<5.) then !viscous sublayer uplus=yplus
+						ust=sqrt(absU*nu_mol/(distance_to_bed))
+					endif
+				endif
+				IF (nu_minimum_wall.eq.1) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = MAX(ekm(1,j,k),nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 
+				!minimum eddy viscosity is Prandtl mixing length theory including Van Driest damping (factor A=19 and power 2 is found in Van Balen 2010 dissertation p15 and Catalano et al. 2010 circular cylinder flow)
+				ELSEIF (nu_minimum_wall.eq.2) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = MAX(ekm(1,j,k),nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 				
+					distance_to_bed=Rp(2)-Ru(0) 
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(2,j,k) = MAX(ekm(2,j,k),nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 	
+				ELSEIF (nu_minimum_wall.eq.3) THEN 
+					kp=MIN(kp+1,k1) 
+					ww=0.5*(Wvel(2,j,k)+Wvel(2,j,k-1))
+					vv=0.5*(Vvel(2,j,k)+Vvel(2,j-1,k))				
+					absU2=sqrt(ww*ww+vv*vv)
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					IF (absU2>1.1*absU) THEN
+						nu_t = ust*ust/((absU2-absU)/(Rp(2)-Rp(1)))
+						factor = nu_t/(0.5*(ekm(1,j,k)/rr(1,j,k)+ekm(2,j,k)/rr(2,j,k)))
+						factor = MAX(factor,1.) 
+						ekm(1,j,k)=factor*ekm(1,j,k)
+						ekm(2,j,k)=factor*ekm(2,j,k)
+					ELSE 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(1,j,k) = MAX(ekm(1,j,k),nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 				
+						distance_to_bed=Rp(2)-Ru(0) 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(2,j,k) = MAX(ekm(2,j,k),nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2)				
+					ENDIF  
+				ELSEIF (nu_minimum_wall.eq.4) THEN 
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					nu_t = ust*ust/(MAX(absU,1.e-9)/distance_to_bed)
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)
+				ELSEIF (nu_minimum_wall.eq.5) THEN 
+					! OpenFOAM manner: tau = rho*ust*ust and ust=absU/Uplus and tau=nu_t*dUdz combined:
+					nu_t = ust*distance_to_bed / (MAX(absU,1.e-9)/MAX(ust,1.e-9)) 
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)
+				ELSEIF (nu_minimum_wall.eq.11) THEN 
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2 
+				!minimum eddy viscosity is Prandtl mixing length theory including Van Driest damping (factor A=19 and power 2 is found in Van Balen 2010 dissertation p15 and Catalano et al. 2010 circular cylinder flow)
+				ELSEIF (nu_minimum_wall.eq.12) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2 				
+					distance_to_bed=Rp(2)-Ru(0) 
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(2,j,k) = nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2	
+				ELSEIF (nu_minimum_wall.eq.13) THEN 
+					kp=MIN(kp+1,k1) 
+					ww=0.5*(Wvel(2,j,k)+Wvel(2,j,k-1))
+					vv=0.5*(Vvel(2,j,k)+Vvel(2,j-1,k))				
+					absU2=sqrt(ww*ww+vv*vv)
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					IF (absU2>1.1*absU) THEN
+						nu_t = ust*ust/((absU2-absU)/(Rp(2)-Rp(1)))
+						factor = nu_t/(0.5*(ekm(1,j,k)/rr(1,j,k)+ekm(2,j,k)/rr(2,j,k)))
+						!factor = MAX(factor,1.) 
+						ekm(1,j,k)=factor*ekm(1,j,k)
+						ekm(2,j,k)=factor*ekm(2,j,k)
+					ELSE 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(1,j,k) = nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2 				
+						distance_to_bed=Rp(2)-Ru(0) 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(2,j,k) = nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2				
+					ENDIF  
+				ELSEIF (nu_minimum_wall.eq.14) THEN 
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					nu_t = ust*ust/(MAX(absU,1.e-9)/distance_to_bed)
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					!factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)
+				ELSEIF (nu_minimum_wall.eq.15) THEN 
+					! OpenFOAM manner: tau = rho*ust*ust and ust=absU/Uplus and tau=nu_t*dUdz combined:
+					nu_t = ust*distance_to_bed / (MAX(absU,1.e-9)/MAX(ust,1.e-9)) 
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					!factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)					
+				ENDIF
+				
+			  enddo
+			 enddo 
+		ELSEIF (monopile.eq.3.and.nu_minimum_wall.ge.1) then ! partial slip tau based on simplified TBL wall-law taking pressure gradient into account
+			 do k=1,kmax 
+			   do j=1,jmax
+			    distance_to_bed = (Rp(1)-Ru(0))
+				tauw=0.5*(tau2Wold(j,k)+tau2Wold(j,k-1))
+				tauv=0.5*(tau2Vold(j,k)+tau2Vold(j-1,k))			   
+				ust = ((tauw/rr(1,j,k))**2+(tauv/rr(1,j,k))**2)**0.25								!at W-gridpoint
+				ww=0.5*(Wvel(1,j,k)+Wvel(1,j,k-1))
+				vv=0.5*(Vvel(1,j,k)+Vvel(1,j-1,k))				
+				absU=sqrt(ww*ww+vv*vv)				
+				IF (nu_minimum_wall.eq.1) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = MAX(ekm(1,j,k),nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 
+				!minimum eddy viscosity is Prandtl mixing length theory including Van Driest damping (factor A=19 and power 2 is found in Van Balen 2010 dissertation p15 and Catalano et al. 2010 circular cylinder flow)
+				ELSEIF (nu_minimum_wall.eq.2) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = MAX(ekm(1,j,k),nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 				
+					distance_to_bed=Rp(2)-Ru(0) 
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(2,j,k) = MAX(ekm(2,j,k),nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 	
+				ELSEIF (nu_minimum_wall.eq.3) THEN 
+					kp=MIN(kp+1,k1) 
+					ww=0.5*(Wvel(2,j,k)+Wvel(2,j,k-1))
+					vv=0.5*(Vvel(2,j,k)+Vvel(2,j-1,k))				
+					absU2=sqrt(ww*ww+vv*vv)
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					IF (absU2>1.1*absU) THEN
+						nu_t = ust*ust/((absU2-absU)/(Rp(2)-Rp(1)))
+						factor = nu_t/(0.5*(ekm(1,j,k)/rr(1,j,k)+ekm(2,j,k)/rr(2,j,k)))
+						factor = MAX(factor,1.) 
+						ekm(1,j,k)=factor*ekm(1,j,k)
+						ekm(2,j,k)=factor*ekm(2,j,k)
+					ELSE 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(1,j,k) = MAX(ekm(1,j,k),nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 				
+						distance_to_bed=Rp(2)-Ru(0) 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(2,j,k) = MAX(ekm(2,j,k),nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2)				
+					ENDIF  
+				ELSEIF (nu_minimum_wall.eq.4) THEN 
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					nu_t = ust*ust/(MAX(absU,1.e-9)/distance_to_bed)
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					IF (ust>0.5*absU) factor=1. !with monopile.eq.3 ust can be >0 with absU=0 because due to dPdx there can be tau without absU 
+					factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)
+				ELSEIF (nu_minimum_wall.eq.5) THEN 
+					! OpenFOAM manner: tau = rho*ust*ust and ust=absU/Uplus and tau=nu_t*dUdz combined:
+					nu_t = ust*distance_to_bed / (MAX(absU,1.e-9)/MAX(ust,1.e-9)) 
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					IF (ust>0.5*absU) factor=1. !with monopile.eq.3 ust can be >0 with absU=0 because due to dPdx there can be tau without absU 
+					factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)
+				ELSEIF (nu_minimum_wall.eq.11) THEN 
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2 
+				!minimum eddy viscosity is Prandtl mixing length theory including Van Driest damping (factor A=19 and power 2 is found in Van Balen 2010 dissertation p15 and Catalano et al. 2010 circular cylinder flow)
+				ELSEIF (nu_minimum_wall.eq.12) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2 				
+					distance_to_bed=Rp(2)-Ru(0) 
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(2,j,k) = nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2	
+				ELSEIF (nu_minimum_wall.eq.13) THEN 
+					kp=MIN(kp+1,k1) 
+					ww=0.5*(Wvel(2,j,k)+Wvel(2,j,k-1))
+					vv=0.5*(Vvel(2,j,k)+Vvel(2,j-1,k))				
+					absU2=sqrt(ww*ww+vv*vv)
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					IF (absU2>1.1*absU) THEN
+						nu_t = ust*ust/((absU2-absU)/(Rp(2)-Rp(1)))
+						factor = nu_t/(0.5*(ekm(1,j,k)/rr(1,j,k)+ekm(2,j,k)/rr(2,j,k)))
+						!factor = MAX(factor,1.) 
+						ekm(1,j,k)=factor*ekm(1,j,k)
+						ekm(2,j,k)=factor*ekm(2,j,k)
+					ELSE 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(1,j,k) = nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2 				
+						distance_to_bed=Rp(2)-Ru(0) 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(2,j,k) = nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2				
+					ENDIF  
+				ELSEIF (nu_minimum_wall.eq.14) THEN 
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					nu_t = ust*ust/(MAX(absU,1.e-9)/distance_to_bed)
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					!factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)
+				ELSEIF (nu_minimum_wall.eq.15) THEN 
+					! OpenFOAM manner: tau = rho*ust*ust and ust=absU/Uplus and tau=nu_t*dUdz combined:
+					nu_t = ust*distance_to_bed / (MAX(absU,1.e-9)/MAX(ust,1.e-9)) 
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					!factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)					
+				ENDIF		
+			  enddo
+			 enddo 
+		ENDIF
 		
 		
 !!      Boundary conditions Neumann
@@ -2966,7 +3661,7 @@ c*************************************************************
 		IF (monopile.eq.1) then ! partial slip tau based on log-wall 
 			 do k=1,kmax 
 			   do j=1,jmax
-				distance_to_bed = 0.5*dr(1)
+				distance_to_bed = (Rp(1)-Ru(0))
 				ww=0.5*(Wvel(1,j,k)+Wvel(1,j,k-1))
 				vv=0.5*(Vvel(1,j,k)+Vvel(1,j-1,k))				
 				absU=sqrt(ww*ww+vv*vv)
@@ -2998,7 +3693,7 @@ c*************************************************************
 		ELSEIF (monopile.eq.3) then ! partial slip tau based on simplified TBL wall-law taking pressure gradient into account
 			 do k=1,kmax 
 			   do j=1,jmax
-			    distance_to_bed = 0.5*dr(1)
+			    distance_to_bed = (Rp(1)-Ru(0))
 				tauw=0.5*(tau2Wold(j,k)+tau2Wold(j,k-1))
 				tauv=0.5*(tau2Vold(j,k)+tau2Vold(j-1,k))			   
 				ust = ((tauw/rr(1,j,k))**2+(tauv/rr(1,j,k))**2)**0.25								!at W-gridpoint
@@ -3677,12 +4372,24 @@ c*************************************************************
 	  zzmin=z0+1.e-6
 	  zzmax=(depth-bc_obst_h)
 	  zSEM2=(zzmax-zzmin)*zSEM2+zzmin
-	  yymin=Rp(0)*sin_vt(0)-0.22*(depth-bc_obst_h) !boxsize
-	  yymax=Rp(0)*sin_vt(jmax*px)+0.22*(depth-bc_obst_h) !boxsize
-	  ySEM2=(yymax-yymin)*ySEM2+yymin
-	  xxmin=Rp(0)*cos_vt(jmax*px)-schuif_x-0.6*(depth-bc_obst_h) !boxsize
-	  xxmax=Rp(0)-schuif_x+0.6*(depth-bc_obst_h) !boxsize
-	  xSEM2=(xxmax-xxmin)*xSEM2+xxmin
+!	  IF (monopile>0)  ! dy,dx is too coarse at inflow with monopile>0 for SEM to be effective + too much to be changed in rest of code 
+!		  yymin=pi/2.
+!		  yymax=1.5*pi 
+!		  ySEM2=(yymax-yymin)*ySEM2+yymin !angle describing left half circle at inflow
+!		  xxmin=-0.6*(depth-bc_obst_h) !boxsize
+!		  xxmax=0.6*(depth-bc_obst_h) !boxsize
+!		  xSEM2=(xxmax-xxmin)*xSEM2+xxmin	
+!		  !make xSEM2,ySEM2 as x,y coordinates in [m]:
+!		  xSEM2 = Rp(i1)*cos(ySEM2) + schuif_x + xSEM2  ! follow half circle of inflow boundary with random +/- boxsize_x
+!		  ySEM2 = Rp(i1)*sin(ySEM2) 
+!	  ELSE 
+		  yymin=Rp(0)*sin_vt(0)-0.22*(depth-bc_obst_h) !boxsize
+		  yymax=Rp(0)*sin_vt(jmax*px)+0.22*(depth-bc_obst_h) !boxsize
+		  ySEM2=(yymax-yymin)*ySEM2+yymin
+		  xxmin=Rp(0)*cos_vt(jmax*px)-schuif_x-0.6*(depth-bc_obst_h) !boxsize
+		  xxmax=Rp(0)-schuif_x+0.6*(depth-bc_obst_h) !boxsize
+		  xSEM2=(xxmax-xxmin)*xSEM2+xxmin
+!	  ENDIF 
 	  fac=kappa*(depth-bc_obst_h)
 	  do i=1,nmax2
 !	      uSEM2(i)=ust/kappa*log(zSEM2(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)  !correct sign with and without TSHD

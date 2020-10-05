@@ -271,6 +271,9 @@
 		write(*,*) '# namelist &LESmodel                             #'			
 		write(*,*) '# extra_mix_visc is not defined                  #'	
 		write(*,*) '# choose ''none'',or ''Krie''                        #'	
+	CASE(089)
+		write(*,*) '# namelist &constants                            #'			
+		write(*,*) '# Cs_relax must be between 0 and 1               #'			
 	CASE(090)
 		write(*,*) '# namelist &constants                            #'			
 		write(*,*) '# kappa is not defined                           #'	
@@ -559,6 +562,9 @@
 	CASE(409)
 		write(*,*) '# namelist &num_scheme                           #'		
 		write(*,*) '# k_ust_tau should be between 1 and kmax         #'	
+	CASE(410)
+		write(*,*) '# namelist &num_scheme                           #'		
+		write(*,*) '# k_pzero should be between 1 and kmax           #'	
 	CASE(501)
 		write(*,*) '# namelist &simulation                           #'			
 		write(*,*) '# imax_grid or jmax_grid is not increasing monotonously       #'	

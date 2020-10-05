@@ -148,7 +148,7 @@
 			pold(:,:,k)=pold(:,:,k+1)+(rnew(:,:,k)-rho_b)*ABS(gz)*dz
 		enddo
 		if (rank.eq.0) then
-		  pold_ref=pold(imax,1,1)
+		  pold_ref=pold(imax,1,k_pzero)
 		endif
 		call mpi_bcast(pold_ref,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
 		pold=pold-pold_ref	

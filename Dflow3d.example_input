@@ -43,13 +43,14 @@ convection = 'HYB6'		! Numerical scheme for convection term, options: 'CDS2','CD
 numdiff = 0.001953125		! Amount of extra 6th diffusion in case of 'CDS6','CDS4','HYB6','C4A6' ('CDS6' -> 1/60=UPW5, 0=CDS6); or blend slope for TVD-r<0 'C2Bl' and 'C4Bl' 
 wiggle_detector = 0			! Use wiggle detector to adjust amount of numdiff for each individual grid cell (default 0-->numdiff applied for all cells; optional 1)
 diffusion = 'CDS2'		! Numerical scheme for diffusion term.
-CNdiffz = 0			! 1 is 2nd order CN treatment of diffusion in z-dir; 0 is explicit in z-dir (default 0); 2 is implicit 1st order Euler backward
-continuity_solver =36    !default is 1 (drdt+drudx=0). Optional:  35 (dudx=0 U-mix), 36 (dudx=0 U-vol); 36 is best option for mixture flow 
+CNdiffz = 0				! 1 is 2nd order CN treatment of diffusion in z-dir; 0 is explicit in z-dir (default 0); 2 is implicit 1st order Euler backward
+continuity_solver =36   !default is 1 (drdt+drudx=0). Optional:  35 (dudx=0 U-mix), 36 (dudx=0 U-vol); 36 is best option for mixture flow 
 npresIBM = 0			! number of extra pres-correction steps to make IBM objects better impermeable (default 0)
 npresPRHO = 0			! number of extra pres-correction steps to get predicted P^n+1 as input in variable-density-Poisson-solver more accurate (default 0)
 oPRHO = 2				! (default 2) 2 = linear extrapolation for predicted P*; 1 = predicted P* equal to P^n; 3 = linear extrapolation for predicted P* using 2dt before to reduce wiggles in time; 4 = high order extrapolation for dPdt to get predicted P*
 pres_in_predictor_step = 1 ! 1 (default) = apply P^n in predictor step and apply corrector step with dP; 0 = predictor step without pressure and apply corrector step with P^n+1; 2 = like 1, but every 100th timestep like 0
 Poutflow=0 				! 0 (default, most robust) Poutflow is zero for complete outflow crosssection at rmax; 1 (optional) Poutflow is zero at just one grid-location at rmax --> sometimes better but less robust
+k_pzero=1 				! default 1, defines vertical level where p=0 when Poutflow=1 is used
 Uoutflow=0 				! 0 (default) Neumann outflow dUdn=0 (for U,V,W); 2 means convective outflow condition dUdt+U_normal*dUdn=0 (for U,V,W)
 !advec_conc='VLE'		! optional advection scheme concentration, options: 'VLE' (default) 'VL2' 'ARO' 'SBE' SB2' 'NVD' :'VLE' VanLeer(via LW)(default) 'ARO' Arora(via LW) 'SBE' Superbee(via LW) 'VL2' VanLeer(via CDS2) or 'SB2' Superbee(via CDS2) TVD schemes or 'NVD' for NVD scheme 
 !transporteq_fracs = 'volufrac' !nerd option default volume fractions, but as option also 'massfrac' can be used internally (input/output still is volume frac!)
@@ -59,6 +60,7 @@ depo_implicit = 0			! 1=calculate deposition at the bed implicit; 0=explicit wit
 IBMorder = 2 				! 0 (default) = normal staircase manner bed immersed boundary, 2 = 2nd order immersed boundary of bed, obstacles and TSHD higher in water are still staircase manner
 applyVOF = 0 	!Beta option, default 0 take variable rho fully in account in momentum eq.; 1 = only take variable density in account in gravity term, not in rest of momentum eq.
 k_ust_tau = 1 	! defines which k-layer from bed is used to determine ust/tau for sediment pickup and K-Eps bed-bc, default 1 (first cell from bed is used) and sometimes for IBM bed k_ust_tau=2 is recommended because 2nd cell is less influenced by nearby immersed bed grid cells with zero velocity 
+dUVdn_IBMbed=-1 ! -1 = default no correction, but when 0 then dUdn and dVdn is made zero over immersed bed
 /
 
 &ambient
@@ -202,6 +204,7 @@ fract(1)%type = 1			! 1 = silt/mud (default), 2=sand, 3=air, -1=VOF (VOF is nerd
 &LESmodel
 sgs_model='SWALE'			! Smagorinsky, WALE or SIGMA sgs model: 'SSmag','SWALE','Sigma','DSmag','MixLe','ReaKE'
 Cs=0.325					! Constant in sgs model [-]
+Cs_relax = 0.01 			! Relaxation factor for Cs dynamically determined within DSmag for stable results (default 0.01); additionally Cs is clipped between 0 and 0.23 
 Lmix_type=1					! 1=(dx*dy*dz)^1/3 | 2=sqrt((dx^2+dy^2+dz^2)/3)
 !damping_drho_dz = 'MuAn'	! Turbulence damping at density interface in Munk-Anderson type of way:
 !damping_a1 = 100.			! Damping applied to eddy visc. fluid: Fdamp(Ri)=(1+damping_a1*Ri)^damping_b1
@@ -209,7 +212,7 @@ Lmix_type=1					! 1=(dx*dy*dz)^1/3 | 2=sqrt((dx^2+dy^2+dz^2)/3)
 !damping_a2 = 21.			! Damping applied to diffusion sediment fractions: Fdamp(Ri)=(1+damping_a2*Ri)^damping_b2
 !damping_b2 = -0.8			! Damping applied to diffusion sediment fractions: Fdamp(Ri)=(1+damping_a2*Ri)^damping_b2
 extra_mix_visc='none'   	! Extra mixture viscosity = fac*ekm_mol: 'none' (default) or 'Krie' Krieger & Dougherty 1959 relation 
-nu_minimum_wall = 0 		! default(0) no minimum eddy viscosity first cells from wall, 1 = minimum is Prandtl mixing length including Van Driest damping nu_t = nu_mol*kappa*zplus(1-exp(-zplus/19))**2 applied at lowest grid cell; 2 = applied at lowest 2 grid cells; 3 = apply minimum eddy viscosity at lowest 2 grid cells to provide ust^2=nu_t*dUdz; 11,12,13 similar to 1,2,3 but prescribed exactly and not as minimum 
+nu_minimum_wall = 0 		! default(0) no minimum eddy viscosity first cells from wall (bed and monopile wall), 1 = minimum is Prandtl mixing length including Van Driest damping nu_t = nu_mol*kappa*zplus(1-exp(-zplus/19))**2 applied at lowest grid cell; 2 = applied at lowest 2 grid cells; 3 = apply minimum eddy viscosity at lowest 2 grid cells to provide ust^2=nu_t*dUdz based on dUdz=(U(2)-U(1))/dz; 4 = apply minimum eddy viscosity at lowest grid cell to provide ust^2=nu_t*dUdz based on dUdz=U(1)/(0.5*dz); 5 is similar to 4 but using OpenFOAM manner; 11,12,13,14,15 similar to 1,2,3,4,5 but prescribed exactly and not as minimum 
 Const1eps = 1.44 			! Constant used in Realizible K-Eps turbulence model 'ReaKE', default 1.44 [-] 	
 Const2 = 1.9 				! Constant used in Realizible K-Eps turbulence model 'ReaKE', default 1.9 [-] 
 Sc_k = 1.0					! Schmidt nr for TKE used in Realizible K-Eps turbulence model 'ReaKE', default 1.0 [-] 

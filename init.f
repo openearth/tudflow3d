@@ -2778,6 +2778,7 @@ C ...  Locals
 !	      enddo
 !	ENDDO
 	if (obstfile.ne.'') then
+		obb = 0.
        	status2 = nf90_open(obstfile, nf90_NoWrite, ncid) 
 		IF (status2/= nf90_noerr) THEN
 			write(*,*),'obstacle file =',obstfile
@@ -2792,6 +2793,7 @@ C ...  Locals
 			IF(size1.ne.imax+2.or.size2.ne.jmax*px+2.or.size3.ne.kmax+2) CALL writeerror(705)
 			call check( nf90_get_var(ncid,rhVarid,obb(0:i1,0:j1,0:k1),start=(/1,rank*jmax+1,1/),count=(/imax+2,jmax+2,kmax+2/)) )
 			write(*,*),'3D Obstacles "obstacle_Ploc" read from obstacle file =',obstfile
+			nobst=MAX(1,nobst) !nobst acts as a switch which turns on several switches in rest of the code, in the remainder it is not used as counter in DO loops
 		else
 			write(*,*),'obstacle file =',obstfile,' variable "obstacle_Ploc" not found correctly'
 		endif
@@ -2819,81 +2821,80 @@ C ...  Locals
 		else
 			write(*,*),'obstacle file =',obstfile,' variable "obstacle_depo" not found correctly'
 		endif
-		call check( nf90_close(ncid) )     
-	endif 
+		call check( nf90_close(ncid) )  
 
-	tel1 = tmax_inPpuntTSHD
-	tel2 = tmax_inUpuntTSHD
-	tel3 = tmax_inVpuntTSHD
-	tel4 = tmax_inWpuntTSHD
-	do i=0,i1
-	  do j=0,j1 
-		do k=0,k1
-			if (obb(i,j,k).eq.1) then 
-			  if (interaction_bed.ge.4) then
-				  bednotfixed(i,j,k)=obb_ero(i,j,k) ! obstacle in bed cannot be avalanched or eroded if 0. (default) user can choose to have erosion: 1.
-				  bednotfixed_depo(i,j,k)=obb_depo(i,j,k) ! obstacle in bed cannot have deposition if 0. (default)
-			  endif 
-			  tel1=tel1+1
-			  i_inPpuntTSHD(tel1)=i 
-			  j_inPpuntTSHD(tel1)=j
-			  k_inPpuntTSHD(tel1)=k
-      	      tel2=tel2+1
-			  i_inUpuntTSHD(tel2)=i 
-			  j_inUpuntTSHD(tel2)=j
-			  k_inUpuntTSHD(tel2)=k	
-			  if (i-1.ge.0) then 
+		tel1 = tmax_inPpuntTSHD
+		tel2 = tmax_inUpuntTSHD
+		tel3 = tmax_inVpuntTSHD
+		tel4 = tmax_inWpuntTSHD
+		do i=0,i1
+		  do j=0,j1 
+			do k=0,k1
+				if (obb(i,j,k).eq.1) then 
+				  if (interaction_bed.ge.4) then
+					  bednotfixed(i,j,k)=obb_ero(i,j,k) ! obstacle in bed cannot be avalanched or eroded if 0. (default) user can choose to have erosion: 1.
+					  bednotfixed_depo(i,j,k)=obb_depo(i,j,k) ! obstacle in bed cannot have deposition if 0. (default)
+				  endif 
+				  tel1=tel1+1
+				  i_inPpuntTSHD(tel1)=i 
+				  j_inPpuntTSHD(tel1)=j
+				  k_inPpuntTSHD(tel1)=k
 				  tel2=tel2+1
-				  i_inUpuntTSHD(tel2)=i-1 
+				  i_inUpuntTSHD(tel2)=i 
 				  j_inUpuntTSHD(tel2)=j
-				  k_inUpuntTSHD(tel2)=k			
-			  endif 
-     	      tel3=tel3+1
-			  i_inVpuntTSHD(tel3)=i 
-			  j_inVpuntTSHD(tel3)=j
-			  k_inVpuntTSHD(tel3)=k	
-			  if (j-1.ge.0) then 
+				  k_inUpuntTSHD(tel2)=k	
+				  if (i-1.ge.0) then 
+					  tel2=tel2+1
+					  i_inUpuntTSHD(tel2)=i-1 
+					  j_inUpuntTSHD(tel2)=j
+					  k_inUpuntTSHD(tel2)=k			
+				  endif 
 				  tel3=tel3+1
 				  i_inVpuntTSHD(tel3)=i 
-				  j_inVpuntTSHD(tel3)=j-1
-				  k_inVpuntTSHD(tel3)=k			
-			  endif	
-      	      tel4=tel4+1
-			  i_inWpuntTSHD(tel4)=i 
-			  j_inWpuntTSHD(tel4)=j
-			  k_inWpuntTSHD(tel4)=k	
-			  if (k-1.ge.0) then 
+				  j_inVpuntTSHD(tel3)=j
+				  k_inVpuntTSHD(tel3)=k	
+				  if (j-1.ge.0) then 
+					  tel3=tel3+1
+					  i_inVpuntTSHD(tel3)=i 
+					  j_inVpuntTSHD(tel3)=j-1
+					  k_inVpuntTSHD(tel3)=k			
+				  endif	
 				  tel4=tel4+1
-				  i_inWpuntTSHD(tel4)=i
+				  i_inWpuntTSHD(tel4)=i 
 				  j_inWpuntTSHD(tel4)=j
-				  k_inWpuntTSHD(tel4)=k-1		
-			  endif 
-			endif
+				  k_inWpuntTSHD(tel4)=k	
+				  if (k-1.ge.0) then 
+					  tel4=tel4+1
+					  i_inWpuntTSHD(tel4)=i
+					  j_inWpuntTSHD(tel4)=j
+					  k_inWpuntTSHD(tel4)=k-1		
+				  endif 
+				endif
+			enddo
+		  enddo
 		enddo
-	  enddo
-	enddo
-	tmax_inPpuntTSHD = tel1  
-	tmax_inUpuntTSHD = tel2  
-	tmax_inVpuntTSHD = tel3  
-	tmax_inWpuntTSHD = tel4  
+		tmax_inPpuntTSHD = tel1  
+		tmax_inUpuntTSHD = tel2  
+		tmax_inVpuntTSHD = tel3  
+		tmax_inWpuntTSHD = tel4  
+	endif
 	
-	if (.true.) then ! true = 0th order IBM staircase manner, false = 1st order IBM scaling with volume grid cell inside object
 	if (bedlevelfile.ne.'') then
 
        	status2 = nf90_open(bedlevelfile, nf90_NoWrite, ncid) 
-	IF (status2/= nf90_noerr) THEN
-		write(*,*),'bedlevelfile =',bedlevelfile
-		CALL writeerror(606)
-	ENDIF
-	call check( nf90_inq_varid(ncid, "zbed",rhVarid) )
-	call check( nf90_get_var(ncid,rhVarid,zbed3(1:imax,0:j1),start=(/1,rank*jmax+1/),count=(/imax,jmax+2/)) )
-	call check( nf90_close(ncid) )
+		IF (status2/= nf90_noerr) THEN
+			write(*,*),'bedlevelfile =',bedlevelfile
+			CALL writeerror(606)
+		ENDIF
+		call check( nf90_inq_varid(ncid, "zbed",rhVarid) )
+		call check( nf90_get_var(ncid,rhVarid,zbed3(1:imax,0:j1),start=(/1,rank*jmax+1/),count=(/imax,jmax+2/)) )
+		call check( nf90_close(ncid) )
 	
-	! bedlevel file obstacles have no i=0 or i=i1 in zbed3, but do have j=0 and j=j1
-	kbed3=0
-	zbed3(0,0:j1)=zbed3(1,0:j1)
-	zbed3(i1,0:j1)=zbed3(imax,0:j1)
-	!! search for zbed and kbed on each proc (j=0,j1): (used for deposition and bc in solver [adjusted for ob(n)%zbottom])
+		! bedlevel file obstacles have no i=0 or i=i1 in zbed3, but do have j=0 and j=j1
+		kbed3=0
+		zbed3(0,0:j1)=zbed3(1,0:j1)
+		zbed3(i1,0:j1)=zbed3(imax,0:j1)
+		!! search for zbed and kbed on each proc (j=0,j1): (used for deposition and bc in solver [adjusted for ob(n)%zbottom])
 	      do j=0,j1 
 	       do i=0,i1 !imax  !including i1 strangely gives crash (13/4/15) !1,imax !0,i1
 				kbed3(i,j)=FLOOR(zbed3(i,j)/dz+0.5) !added+0.5 10-3-2020 because now top kbed level is within +0.5 and -0.5dz from real bed (cnewbot can be positive and negative) 
@@ -2901,321 +2902,16 @@ C ...  Locals
 				kbed3(i,j)=MIN(kmax,kbed3(i,j))
 				zbed(i,j)=MAX(zbed(i,j),zbed3(i,j)) !zero without obstacle, otherwise max of all obstacles at i,j  
 				
-		enddo
-	       enddo
-		
-		
-		IF(.false.) THEN ! 11-2-2017 adjusted; bedlevelfile is now immersed boundary via kbed not via TSHD arrays
-      !! Search for P,V:
-      tel1=tmax_inPpuntTSHD
-      tel2=tmax_inVpuntTSHD
-      do k=0,k1
-       do i=0,i1  
-	in=.false.
-        do j=j1,0,-1       
-	  IF (k.le.kbed3(i,j).and.kbed3(i,j).gt.kbed(i,j)) THEN ! new obstacle:
-		inout=1
-	  ELSE 
-	 	inout=0
-	  ENDIF
-	  if (inout.eq.1) then
-	      tel1=tel1+1
-	      i_inPpuntTSHD(tel1)=i ! Ppunt
-	      j_inPpuntTSHD(tel1)=j
-  	      k_inPpuntTSHD(tel1)=k
-      	      tel2=tel2+1
-	      i_inVpuntTSHD(tel2)=i ! Vpunt
-	      j_inVpuntTSHD(tel2)=j
-	      k_inVpuntTSHD(tel2)=k
-	    in=.true.
-	  endif
-	enddo
-!	add one Vpunt extra because staggered:
-	if (tel2>0) then
-		if (in.and.j_inVpuntTSHD_dummy(tel2)>0) then !always if a jet-point is found an extra Vpunt must be included
-		  tel2=tel2+1
-		  i_inVpuntTSHD(tel2)=i_inVpuntTSHD(tel2-1)
-		  j_inVpuntTSHD(tel2)=j_inVpuntTSHD(tel2-1)-1
-		  k_inVpuntTSHD(tel2)=k_inVpuntTSHD(tel2-1)
-		endif
-	endif
-       enddo
-      enddo
-      tmax_inPpuntTSHD=tel1
-      tmax_inVpuntTSHD=tel2
-
-      !! Search for W:
-      tel1=tmax_inWpuntTSHD
-      do j=0,j1 
-       do i=0,i1  
-	in=.false.
-        do k=0,k1 ! one extra in vertical direction for W  
-	  IF (k.le.kbed3(i,j).and.kbed3(i,j).gt.kbed(i,j)) THEN ! new obstacle:
-		inout=1
-	  ELSE 
-	 	inout=0
-	  ENDIF
-	  if (inout.eq.1) then
-	      tel1=tel1+1
-	      i_inWpuntTSHD(tel1)=i ! Wpunt
-	      j_inWpuntTSHD(tel1)=j
-  	      k_inWpuntTSHD(tel1)=k
-	      in=.true.
-!	      kbed(i,j)=MAX(kbed(i,j),FLOOR(ob(n)%height/dz)) !zero without obstacle, otherwise max of all obstacles at i,j
-!	      zbed(i,j)=MAX(zbed(i,j),ob(n)%height) !zero without obstacle, otherwise max of all obstacles at i,j  
-	  endif
-	enddo
-       enddo
-      enddo
-      tmax_inWpuntTSHD=tel1
-
-      !! Search for U: (search in i-dir)
-      tel2=tmax_inUpuntTSHD
-      do k=0,k1
-       do j=0,j1
-	in=.false.
-        do i=i1,0,-1 
-	  IF (k.le.kbed3(i,j).and.kbed3(i,j).gt.kbed(i,j)) THEN ! new obstacle:
-		inout=1
-	  ELSE 
-	 	inout=0
-	  ENDIF
-	  if (inout.eq.1) then
-	    	tel2=tel2+1
-		i_inUpuntTSHD(tel2)=i  ! Upunt is U
-		j_inUpuntTSHD(tel2)=j
-		k_inUpuntTSHD(tel2)=k
-                in=.true.
-	  endif
-	enddo
-!	add one Upunt extra because staggered:
-	if (tel2>0) then
-		if (in.and.i_inUpuntTSHD(tel2)>0) then !always if a TSHD-point is found an extra Upunt must included
-		  tel2=tel2+1
-		  i_inUpuntTSHD(tel2)=i_inUpuntTSHD(tel2-1)-1
-		  j_inUpuntTSHD(tel2)=j_inUpuntTSHD(tel2-1)
-		  k_inUpuntTSHD(tel2)=k_inUpuntTSHD(tel2-1)
-		endif
-	endif
-       enddo
-      enddo
-      tmax_inUpuntTSHD=tel2
-	ENDIF ! endif (.false.) ! 11-2-2017 adjusted; bedlevelfile is now immersed boundary via kbed not via TSHD arrays
-		!! update kbed on each proc (j=0,j1) with kbed3 (used for deposition and bc in solver [adjusted for ob(n)%zbottom])
-		do j=0,j1 
-			do i=0,i1 !imax !including i1 strangely gives crash (13/4/15) !1,imax !0,i1
-				kbed(i,j)=MAX(kbed(i,j),kbed3(i,j)) !zero without obstacle, otherwise max of all obstacles at i,j  
 			enddo
-		enddo
-	endif
-	else ! 1st order IBM with facIBM scaling with percentage volume of grid cell captured in immersed object
-!	if (bedlevelfile.ne.'') then
-!
-!       	status2 = nf90_open(bedlevelfile, nf90_NoWrite, ncid) 
-!	IF (status2/= nf90_noerr) THEN
-!		write(*,*),'bedlevelfile =',bedlevelfile
-!		CALL writeerror(606)
-!	ENDIF
-!	call check( nf90_inq_varid(ncid, "zbed",rhVarid) )
-!	call check( nf90_get_var(ncid,rhVarid,zbed3(1:imax,0:j1),start=(/1,rank*jmax+1/),count=(/imax,jmax+2/)) )
-!	call check( nf90_close(ncid) )
-!	
-!	!write(*,*),'rank,zbed3(1,0:j1)',rank,zbed3(1,0:j1)
-!	
-!	! bedlevel file obstacles have no i=0 or i=i1 in zbed3, but do have j=0 and j=j1
-!	kbed3=0
-!	!! search for zbed and kbed on each proc (j=0,j1): (used for deposition and bc in solver [adjusted for ob(n)%zbottom])
-!	      do j=0,j1 
-!	       do i=0,imax  !including i1 strangely gives crash (13/4/15) !1,imax !0,i1
-!				kbed3(i,j)=FLOOR(zbed3(i,j)/dz)
-!				kbed3(i,j)=MAX(0,kbed3(i,j))
-!				kbed3(i,j)=MIN(kmax,kbed3(i,j))
-!				zbed(i,j)=MAX(zbed(i,j),zbed3(i,j)) !zero without obstacle, otherwise max of all obstacles at i,j  
-!		enddo
-!	       enddo
-!		facIBMu=0. !initialise all facIBM zero because for all ibm cells velocity must be zero
-!		facIBMv=0.
-!		facIBMw=0.
-!!c get stuff from other CPU's
-!
-!	zbed4(0:i1,0:j1)=zbed(0:i1,0:j1)	  
-!	!call shiftf_l2(zbed4,cbf) 
-!	call shiftb_l2(zbed4(0:i1,0:j1),cbb) 
-!	if (periodicy.eq.0.or.periodicy.eq.2) then
-!		if (rank.eq.0) then ! boundaries in j-direction
-!		   do i=1,imax
-!		   !zbed4(i,-1) = zbed4(i,1) !cbf(i,k)
-!		   zbed4(i,j1+1) =cbb(i) 
-!		   enddo
-!		elseif (rank.eq.px-1) then
-!		   do i=1,imax
-!		   !zbed4(i,-1) = cbf(i)
-!		   zbed4(i,j1+1) =zbed4(i,jmax) !cbb(i,k) 
-!		   enddo
-!		else
-!		   do i=1,imax
-!		   !zbed4(i,-1) = cbf(i)
-!		   zbed4(i,j1+1) =cbb(i) 
-!		   enddo
-!		endif
-!	else
-!	   do i=1,imax
-!		   !zbed4(i,-1) = cbf(i)
-!		   zbed4(i,j1+1) =cbb(i) 
-!	   enddo
-!	endif
-!	if (periodicx.eq.1) then
-!		zbed4(0,0:j1)=zbed4(imax,0:j1)
-!		zbed4(i1,0:j1)=zbed4(1,0:j1)
-!		zbed4(i1+1,0:j1)=zbed4(2,0:j1)
-!	else
-!		zbed4(0,0:j1)=zbed4(1,0:j1)
-!		zbed4(i1,0:j1)=zbed4(imax,0:j1)
-!		zbed4(i1+1,0:j1)=zbed4(i1,0:j1)
-!	endif
-!	!write(*,*),'rank,zbed4(0:i1+1,0:j1)',rank,zbed4(0:i1+1,0:j1)
-!	
-!		
-!      !! Search for P:
-!      tel1=tmax_inPpuntTSHD
-!      do k=0,k1
-!       do i=0,i1  
-!	in=.false.
-!        do j=j1,0,-1       
-!	  IF (k.le.kbed3(i,j).and.kbed3(i,j).gt.kbed(i,j)) THEN ! new obstacle:
-!		inout=1
-!	  ELSE 
-!	 	inout=0
-!	  ENDIF
-!	  if (inout.eq.1) then
-!	      tel1=tel1+1
-!	      i_inPpuntTSHD(tel1)=i ! Ppunt
-!	      j_inPpuntTSHD(tel1)=j
-!  	      k_inPpuntTSHD(tel1)=k
-!	    in=.true.
-!	  endif
-!	enddo
-!       enddo
-!      enddo	
-!	
-!      !! Search for V:
-!      tel2=tmax_inVpuntTSHD
-!      do k=0,k1
-!       do i=0,i1  
-!	in=.false.
-!        do j=j1,0,-1       
-!	  IF (k-3.le.kbed3(i,j).and.kbed3(i,j).gt.kbed(i,j)) THEN ! new obstacle:
-!		inout=1
-!	  ELSE 
-!	 	inout=0
-!	  ENDIF
-!	  if (inout.eq.1) then
-!      	      tel2=tel2+1
-!	      i_inVpuntTSHD(tel2)=i ! Vpunt
-!	      j_inVpuntTSHD(tel2)=j
-!	      k_inVpuntTSHD(tel2)=k
-!		  zbotcell=(k-1)*dz+0.5*dz
-!		  zbedcell=0.5*(zbed4(i,j)+zbed4(i,j+1))
-!		  facIBMv(tel2)=max(min((zbotcell-zbedcell)/dz,1.),0.)
-!	    in=.true.
-!	  endif
-!	enddo
-!
-!	
-!!	add one Vpunt extra because staggered: !not needed because each individual point is being checked with 1st or 2nd order ibm
-!!	if (in.and.j_inVpuntTSHD_dummy(tel2)>0) then !always if a jet-point is found an extra Vpunt must be included
-!!	  tel2=tel2+1
-!!	  i_inVpuntTSHD(tel2)=i_inVpuntTSHD(tel2-1)
-!!	  j_inVpuntTSHD(tel2)=j_inVpuntTSHD(tel2-1)-1
-!!	  k_inVpuntTSHD(tel2)=k_inVpuntTSHD(tel2-1)
-!!		  zbotcell=(k-1)*dz+0.5*dz
-!!		  zbedcell=0.5*(zbed4(i,j-1)+zbed4(i,j))
-!!		  facIBMv(tel2)=max(min((zbotcell-zbedcell)/dz,1.),0.)
-!!	endif
-!       enddo
-!      enddo
-!      tmax_inPpuntTSHD=tel1
-!      tmax_inVpuntTSHD=tel2
-!
-!      !! Search for W:
-!      tel1=tmax_inWpuntTSHD
-!      do j=0,j1 
-!       do i=0,i1  
-!	in=.false.
-!        do k=0,k1 ! one extra in vertical direction for W  
-!	  IF (k-3.le.kbed3(i,j).and.kbed3(i,j).gt.kbed(i,j)) THEN ! new obstacle:
-!		inout=1
-!	  ELSE 
-!	 	inout=0
-!	  ENDIF
-!	  if (inout.eq.1) then
-!	      tel1=tel1+1
-!	      i_inWpuntTSHD(tel1)=i ! Wpunt
-!	      j_inWpuntTSHD(tel1)=j
-!  	      k_inWpuntTSHD(tel1)=k
-!		  zbotcell=k*dz
-!		  zbedcell=zbed4(i,j)
-!		  facIBMw(tel1)=max(min((zbotcell-zbedcell)/dz,1.),0.)
-!		  
-!		!  write(*,*),'i,j,k,zbed4(i,j),zbotcell,facIBMw(tel1)',i,j,k,zbed4(i,j),zbotcell,facIBMw(tel1)
-!		  
-!	      in=.true.
-!!	      kbed(i,j)=MAX(kbed(i,j),FLOOR(ob(n)%height/dz)) !zero without obstacle, otherwise max of all obstacles at i,j
-!!	      zbed(i,j)=MAX(zbed(i,j),ob(n)%height) !zero without obstacle, otherwise max of all obstacles at i,j  
-!	  endif
-!	enddo
-!       enddo
-!      enddo
-!      tmax_inWpuntTSHD=tel1
-!
-!      !! Search for U: (search in i-dir)
-!      tel2=tmax_inUpuntTSHD
-!      do k=0,k1
-!       do j=0,j1
-!	in=.false.
-!        do i=i1,0,-1 
-!	  IF (k-3.le.kbed3(i,j).and.kbed3(i,j).gt.kbed(i,j)) THEN ! new obstacle:
-!		inout=1
-!	  ELSE 
-!	 	inout=0
-!		
-!	  ENDIF
-!	  if (inout.eq.1) then
-!	    	tel2=tel2+1
-!		i_inUpuntTSHD(tel2)=i  ! Upunt is U
-!		j_inUpuntTSHD(tel2)=j
-!		k_inUpuntTSHD(tel2)=k
-!		  zbotcell=(k-1)*dz+0.5*dz
-!		  zbedcell=0.5*(zbed4(i,j)+zbed4(i+1,j))
-!		  facIBMu(tel2)=max(min((zbotcell-zbedcell)/dz,1.),0.)		
-!                in=.true.
-!			!	write(*,*),'i,j,k,zbedcell,zbotcell,facIBMu(tel2)',i,j,k,zbedcell,zbotcell,facIBMu(tel2)
-!	  endif
-!	enddo
-!!	add one Upunt extra because staggered: ! not needed with 1st or 2nd order ibm, then each individual point is checked
-!!	if (in.and.i_inUpuntTSHD(tel2)>0) then !always if a TSHD-point is found an extra Upunt must included
-!!	  tel2=tel2+1
-!!	  i_inUpuntTSHD(tel2)=i_inUpuntTSHD(tel2-1)-1
-!!	  j_inUpuntTSHD(tel2)=j_inUpuntTSHD(tel2-1)
-!!	  k_inUpuntTSHD(tel2)=k_inUpuntTSHD(tel2-1)
-!!		  zbotcell=(k-1)*dz+0.5*dz
-!!		  zbedcell=0.5*(zbed4(i_inUpuntTSHD(tel2), j_inUpuntTSHD(tel2))+zbed4( i_inUpuntTSHD(tel2)+1, j_inUpuntTSHD(tel2)))
-!!		  facIBMu(tel2)=max(min((zbotcell-zbedcell)/dz,1.),0.)			  
-!!		  write(*,*),'i,j,k,zbedcell,zbotcell,facIBMu(tel2)', i_inUpuntTSHD(tel2), j_inUpuntTSHD(tel2),k,zbedcell,zbotcell,facIBMu(tel2)
-!!	endif
-!       enddo
-!      enddo
-!      tmax_inUpuntTSHD=tel2
-!	  
-!	
-!		!! update kbed on each proc (j=0,j1) with kbed3 (used for deposition and bc in solver [adjusted for ob(n)%zbottom])
-!	      do j=0,j1 
-!	       do i=0,imax !including i1 strangely gives crash (13/4/15) !1,imax !0,i1
-!	          kbed(i,j)=MAX(kbed(i,j),kbed3(i,j)) !zero without obstacle, otherwise max of all obstacles at i,j  
-!		enddo
-!	       enddo
-!	endif
-	endif !endif 1st order ibm	
+	       enddo
+
+			!! update kbed on each proc (j=0,j1) with kbed3 (used for deposition and bc in solver [adjusted for ob(n)%zbottom])
+			do j=0,j1 
+				do i=0,i1 !imax !including i1 strangely gives crash (13/4/15) !1,imax !0,i1
+					kbed(i,j)=MAX(kbed(i,j),kbed3(i,j)) !zero without obstacle, otherwise max of all obstacles at i,j  
+				enddo
+			enddo
+	endif !endif bedlevelfile
 	
 	      do j=0,j1 
 	       do i=0,imax 

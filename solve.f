@@ -4105,6 +4105,7 @@ c
 	ENDIF
 	ENDDO ! bedplume loop
 
+
       return
       end
 
@@ -5384,7 +5385,7 @@ C.. All other variables
       real      time1,time0
       integer   tel,tel2,tel3,tel4,ind
       real      dzi
-      integer   knd,nnz
+      integer   knd,nnz,rank_target
 	  real      bbrr(imax,jmax*px,kmax/px)
 	  
 	  
@@ -5406,7 +5407,7 @@ C.. All other variables
 		ccr(1:imax)=cr(1:imax)
 		if (periodicx.eq.0.or.periodicx.eq.2) then
 		  if (Poutflow.eq.1) then !Poutflow zero at just 1 location
-		    br(imax)=br(imax)+cr(imax) !! p(imax+1)=p(imax); default: dpdn=0 at full bc; 
+		    br(imax)=br(imax)+cr(imax) !! p(imax+1)=p(imax); dpdn=0 at full bc; 
 		  else 
 			br(imax)=br(imax)-cr(imax) !! p(imax+1)=-p(imax); p=0 at full bc; 
 		  endif 
@@ -5425,8 +5426,9 @@ C.. All other variables
 		  enddo 
 		enddo 
 		if (Poutflow.eq.1) then !Poutflow zero at just 1 location
-		 if (rank.eq.0.and.(periodicx.eq.0.or.periodicx.eq.2)) then 
-		  bbrr(imax,1,1)=bbrr(imax,1,1)-2*ccr(imax) !get p=0 at only one outflow gridpoint (first b+c; now -2c to arrive at b-c)
+		 rank_target = FLOOR(REAL(k_pzero)/REAL(kmax/px))
+		 if (rank.eq.rank_target.and.(periodicx.eq.0.or.periodicx.eq.2)) then 
+		  bbrr(imax,1,k_pzero-rank_target*kmax/px)=bbrr(imax,1,k_pzero-rank_target*kmax/px)-2*ccr(imax) !get p=0 at only one outflow gridpoint (first b+c; now -2c to arrive at b-c)
 		 endif 
 		endif
 		
@@ -5570,8 +5572,8 @@ C..
         iparm(5) = 0 ! no user fill-in reducing permutation
         iparm(6) = 0 ! =0 solution on the first n components of x
         iparm(8) = 2 ! numbers of iterative refinement steps
-        iparm(10) = 8 !13 ! perturb the pivot elements with 1E-13; 8 default for symmetric matrix according to https://software.intel.com/en-us/node/470298
-        iparm(11) = 0 !0 !1 ! use nonsymmetric permutation and scaling MPS; 0 default for symmetric matrix according to https://software.intel.com/en-us/node/470298
+        iparm(10) = 13 !13 ! perturb the pivot elements with 1E-13; 8 default for symmetric matrix according to https://software.intel.com/en-us/node/470298 !3-9-2020 switch to 13 for k_pzero>1
+        iparm(11) = 1 !0 !1 ! use nonsymmetric permutation and scaling MPS; 0 default for symmetric matrix according to https://software.intel.com/en-us/node/470298 !3-9-2020 switch to 1 for k_pzero>1
         iparm(13) = 1 ! maximum weighted matching algorithm is switched-off (default for symmetric). Try iparm(13) = 1 in case of inappropriate accuracy
         iparm(14) = 0 ! Output: number of perturbed pivots
         iparm(18) = -1 ! Output: number of nonzeros in the factor LU
@@ -5579,7 +5581,7 @@ C..
         iparm(20) = 0 ! Output: Numbers of CG Iterations
         error = 0 ! initialize error flag
         msglvl = 0 !1 ! print statistical information
-        mtype = 1 !11 !1=Real and structurally symmetric; 11=Real and nonsymmetric matrix both work; 1 uses 10% less memory and is 10% faster for large problems
+        mtype = 11 !1 !11 !1=Real and structurally symmetric; 11=Real and nonsymmetric matrix both work; 1 uses 10% less memory and is 10% faster for large problems !3-9-2020 switch to 11 nonsymmetric for k_pzero>1
 
 		
 !.. Initialize the internal solver memory pointer. This is only
@@ -5697,7 +5699,7 @@ C.. Fill all arrays containing matrix data.
 
         error = 0 ! initialize error flag
         msglvl = 0 !1 ! print statistical information
-        mtype = 1 !11 !1 !11 !-2 ! symmetric, indefinite
+        mtype = 11 !11 !1 !11 !-2 ! symmetric, indefinite !3-9-2020 switch to 11 nonsymmetric for k_pzero>1
 		
 		
 	!   set up lookup tables
@@ -5786,7 +5788,7 @@ C.. Fill all arrays containing matrix data.
 	!!    Only b(imax)-c(imax) in matrix is not sufficient to make pressure exactly zero in (imax,1,1)
 	!!    Some small drift is occuring without following lines:
 		if (rank.eq.0) then
-		  rhs_ref=rhs(imax,1,1)
+		  rhs_ref=rhs(imax,1,k_pzero)
 		endif
 		call mpi_bcast(rhs_ref,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
 		rhs=rhs-rhs_ref
@@ -6179,7 +6181,7 @@ c   generate tridiagonal systems
 	 if (periodicx.eq.0.or.periodicx.eq.2) then
 	  if (Poutflow.eq.1) then !Poutflow zero at just 1 location 
  	   if (rank==0) then
-	     bbbb(imax,1,1)=b(imax)-2.*c(imax)     !! p(imax+1)=-p(imax) --> bc p=0 at 1 loc in mesh (first +c(imax) so now -2c(imax) to arrive at b-c)
+	     bbbb(imax,1,k_pzero)=b(imax)-2.*c(imax)     !! p(imax+1)=-p(imax) --> bc p=0 at 1 loc in mesh (first +c(imax) so now -2c(imax) to arrive at b-c)
 	   endif
 	  endif	   
 	   c(imax)=0.
@@ -6367,7 +6369,7 @@ c  J --> direction      (yrt)
 	!!    Only b(imax)-c(imax) in matrix is not sufficient to make pressure exactly zero in (imax,1,1)
 	!!    Some small drift is occuring without following lines:
 		if (rank.eq.0) then
-		  rhs_ref=rhs(imax,1,1)
+		  rhs_ref=rhs(imax,1,k_pzero)
 		endif
 		call mpi_bcast(rhs_ref,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
 		rhs=rhs-rhs_ref

@@ -533,7 +533,6 @@
        !call check( nf90_put_var(ncid, varid7, p(1:imax,1:jmax,1:kmax)+pold(1:imax,1:jmax,1:kmax)) )
 	   !!!call check( nf90_put_var(ncid, varid7, p(1:imax,1:jmax,1:kmax)) ) !! changed for exact solver output,
 	   if (sgs_model.eq.'DSmag') then
-	     Csgrid=sqrt(Csgrid)
 	     call check( nf90_put_var(ncid, varid9, Csgrid(1:imax,1:jmax,1:kmax)) )
 	   endif
 	   if (sgs_model.eq.'ReaKE') then

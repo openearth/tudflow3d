@@ -2904,6 +2904,19 @@ c 	influence of waves on lateral boundaries:
 				ENDDO 
 			ENDDO
 		ENDDO
+	 IF (dUVdn_IBMbed.eq.0) THEN 
+		DO i=1,imax
+			DO j=1,jmax
+				k=kbed(i,j) 
+				IF (kbed(i+1,j).eq.k) Ubound(i,j,k)=Ubound(i,j,MIN(k+1,k1))
+				IF (kbed(i,j+1).eq.k) Vbound(i,j,k)=Vbound(i,j,MIN(k+1,k1))
+				im=MAX(i-1,0)
+				jm=MAX(j-1,0)
+				IF (kbed(i-1,j).eq.k) Ubound(im,j,k)=Ubound(im,j,MIN(k+1,k1))
+				IF (kbed(i,j-1).eq.k) Vbound(i,jm,k)=Vbound(i,jm,MIN(k+1,k1))				
+			ENDDO
+		ENDDO	 
+	 ENDIF 
 	ENDIF	
 	
 

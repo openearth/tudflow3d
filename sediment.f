@@ -350,11 +350,13 @@
 	      ENDDO
 		  ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
 	      DO n=1,nfrac
-			wsed(n,i,j,k)=Wcfd(i,j,k)+sum_c_ws-ws(n) ! wsed is positive upward
+			!wsed(n,i,j,k)=Wcfd(i,j,k)+sum_c_ws-ws(n) ! wsed is positive upward
+			wsed(n,i,j,k)=sum_c_ws-ws(n) ! wsed is positive upward at bed Wcfd is zero
 	      ENDDO
 		  W_km_sum=0.
 		  do n=1,nfrac
-			W_km_sum=W_km_sum+ccc(n)*frac(n)%rho*(wsed(n,i,j,k)-Wcfd(i,j,k)) 
+			!W_km_sum=W_km_sum+ccc(n)*frac(n)%rho*(wsed(n,i,j,k)-Wcfd(i,j,k)) 
+			W_km_sum=W_km_sum+ccc(n)*frac(n)%rho*(wsed(n,i,j,k)) !at bed Wcfd is zero
 		  enddo 
 		  W_km_sum=W_km_sum+(1.-ctot)*rho_b*sum_c_ws !sum_c_ws=fluid return velocity --> slipvelocity of fluid relative to mixture-velocity
 		  sumWkm(i,j,k)=W_km_sum !NEW 2-10-2018: contains sum of all fractions and fluid phase drift velocity for correct determination driftflux-force
@@ -386,11 +388,13 @@
 		! therefore an extra frac(n)%rho/rho_mix is included
 	      ENDDO
 	      DO n=1,nfrac
-		wsed(n,i,j,k)=Wcfd(i,j,k)+sum_c_ws-ws(n) ! wsed is positive upward 
+			!wsed(n,i,j,k)=Wcfd(i,j,k)+sum_c_ws-ws(n) ! wsed is positive upward 
+			wsed(n,i,j,k)=sum_c_ws-ws(n) ! wsed is positive upward at bed Wcfd must be zero
 	      ENDDO
 			 W_km_sum=0.
 		  	 do n=1,nfrac
-				W_km_sum=W_km_sum+ccc(n)*frac(n)%rho*(wsed(n,i,j,k)-Wcfd(i,j,k)) 
+				!W_km_sum=W_km_sum+ccc(n)*frac(n)%rho*(wsed(n,i,j,k)-Wcfd(i,j,k)) 
+				W_km_sum=W_km_sum+ccc(n)*frac(n)%rho*(wsed(n,i,j,k)) !at bed Wcfd is zero
 			 enddo 
 			 W_km_sum=W_km_sum+(1.-ctot)*rho_b*sum_c_ws !sum_c_ws=fluid return velocity --> slipvelocity of fluid relative to mixture-velocity
 		     sumWkm(i,j,k)=W_km_sum !NEW 2-10-2018: contains sum of all fractions and fluid phase drift velocity for correct determination driftflux-force
