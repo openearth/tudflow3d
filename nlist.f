@@ -64,8 +64,9 @@
       REAL Q_j,plumeQseries(1:10000),plumeQtseries(1:10000),plumectseries(1:10000),plumecseries(30,1:10000) !c(30) matches with size frac_init
       REAL Aplume,driftfluxforce_calfac
 	  REAL vwal,delta_nsed,nl,permeability_kl,pickup_fluctuations_ampl,z_tau_sed,kn_d50_multiplier_bl,bl_relax
-	  INTEGER pickup_fluctuations,cbed_method,k_layer_pickup,nu_minimum_wall,pickup_bedslope_geo,wbed_correction
+	  INTEGER pickup_fluctuations,cbed_method,k_layer_pickup,nu_minimum_wall,pickup_bedslope_geo,wbed_correction,bedslope_effect
 	  REAL Const1eps,Const2,Sc_k,Sc_eps,Cal_buoyancy_k,Cal_buoyancy_eps,Cs_relax
+	  REAL bedslope_mu_s,alfabs_bl,alfabn_bl,phi_sediment
 	  
 	  
       CHARACTER*4 convection,diffusion
@@ -249,7 +250,7 @@
      &	av_slope_z,calibfac_Shields_cr,reduction_sedimentation_shields,morfac,morfac2,avalanche_until_done,avfile,
      & settling_along_gvector,vwal,nl,permeability_kl,pickup_fluctuations_ampl,pickup_fluctuations,pickup_correction,cbed_method,
      & z_tau_sed,k_layer_pickup,pickup_bedslope_geo,bedload_formula,kn_d50_multiplier_bl,calibfac_sand_bedload,bl_relax,fcor,
-     & wbed_correction
+     & wbed_correction,bedslope_effect,bedslope_mu_s,alfabs_bl,alfabn_bl,phi_sediment
 	NAMELIST /fractions_in_plume/fract
 	NAMELIST /ship/U_TSHD,LOA,Lfront,Breadth,Draught,Lback,Hback,xfront,yfront,kn_TSHD,nprop,Dprop,xprop,yprop,zprop,
      &   Pprop,rudder,rot_prop,draghead,Dsp,xdh,perc_dh_suction,softnose,Hfront,cutter
@@ -552,6 +553,11 @@
 	z_tau_sed = -999.
 	pickup_bedslope_geo=0
 	bl_relax=0.01 
+	bedslope_effect=0
+	bedslope_mu_s=0.63 
+	alfabs_bl=1.0 
+	alfabn_bl=1.5 
+	phi_sediment=30.
 	!! ship
 	U_TSHD=-999.
 	LOA=-999.
@@ -1352,7 +1358,13 @@
 	ENDIF
 	IF (k_layer_pickup<1) CALL writeerror(106)
 	IF (bl_relax>1.or.bl_relax<0.) CALL writeerror(107)
-
+	IF (bedload_formula.ne.'vanrijn2007'.and.bedload_formula.ne.'vanrijn2003'.and.bedload_formula.ne.'MeyPeMu1947'
+     & .and.bedload_formula.ne.'nonenon0000')   CALL writeerror(109)
+	IF (bedslope_effect.ne.0.and.bedslope_effect.ne.1.and.bedslope_effect.ne.2.and.bedslope_effect.ne.3)
+     &	CALL writeerror(143) 
+	IF (phi_sediment.lt.(4.0 * atan(1.0))) CALL writeerror(144)
+	phi_sediment = phi_sediment/180.*4.0 * atan(1.0) !change from degrees to rad 
+	 
 	READ (UNIT=1,NML=ship,IOSTAT=ios)
 	!! check input constants
 	IF(LOA>0.and.U_TSHD<-998.) CALL writeerror(301)

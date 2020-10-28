@@ -256,6 +256,11 @@ bedload_formula = 'nonenon0000' !options are 'vanrijn2003'; 'vanrijn2007'; 'MeyP
 kn_d50_multiplier_bl = 2. 	! Defines Nikuradse bedroughness for sand bedload function (not for flow shear stress), default 2.; kn=d90~2*d50
 calibfac_sand_bedload = 1. ! Calibration factor for sand bedload, default 1. [-].
 bl_relax = 0.01 			! Relaxation factor for bedload applied to near bed velocity to calculate bedload (default 0.01), needed for stable bedload results
+bedslope_effect=0			! 0 (default) no bedslope effect; 1 = adjust Shields_cr following Roulund,Fredsoe etal. 2004 for suspension and bedload; 2 = like 1 but only for bedload; 3 = bed-slope influence on bedload D3D style (Bagnold (1966) for longitudinal slope and Ikeda (1982, 1988) for transverse slope)
+bedslope_mu_s=0.63 			! static friction coefficient used in bedslope_effect = 1 or 2; bedslope_mu_s=0.63 used in Roulund,Fredsoe etal. 2004
+alfabs_bl=1.0 				! calibration factor longitudinal slope used in bedslope_effect = 3; default 1.0
+alfabn_bl=1.5 				! calibration factor transverse slope used in bedslope_effect = 3; default 1.5
+phi_sediment=30. 	! internal angle of friction of bed material (deg); default 30. degrees
 /
 
 &ship

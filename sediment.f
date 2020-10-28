@@ -438,6 +438,7 @@
       integer clock,nnn,k_maxU
       INTEGER, DIMENSION(:), ALLOCATABLE :: seed	
 	  INTEGER kbedp(0:i1,0:j1),ibeg,iend 
+	  REAL dzbed_dx,dzbed_dy,dzbed_dn,dzbed_ds,bedslope_angle,bedslope_alpha,Shields_cr_bl,fnorm,dzbed_dl
 	
 	erosion=0.
 	deposition=0.
@@ -849,6 +850,36 @@
 				Dstar = d50 * ((delta*gvector)/nu_mol**2)**(0.333333333333333)
 				Shields_cr = 0.3/(1.+1.2*Dstar)+0.055*(1.-exp(-0.02*Dstar))  !Soulsby and Whitehouse 1997 curve through original Shields for threshold of motion sediment particles, Soulsy book Eq. SC(77)	
 				Shields_cr = Shields_cr*calibfac_Shields_cr
+				Shields_cr_bl=Shields_cr 
+				! Bed slope effect on Shields_critical following Roulund Sumer Fredsoe Michelsen, 2004, Numerical and experimental investigation of flow and scour around a circular pile
+				IF (bedslope_effect.eq.1) THEN !Shields_cr and Shields_cr_bl adjusted for slope effect 
+					dzbed_dx=-(zbed(i+1,j)-zbed(i-1,j))/(Rp(i+1)-Rp(i-1)) !defined with z positive down
+					dzbed_dy=-(zbed(i,j+1)-zbed(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1))) !defined with z positive down
+					dzbed_dl=sqrt(dzbed_dx**2+dzbed_dy**2)
+					dzbed_dl=MIN(dzbed_dl,0.9*tan(phi_sediment)) !for stability limit bed slope, otherwise NaN may occur
+					bedslope_angle=atan(dzbed_dl)
+					!assuming bedslope_effect is dominant for bedload uuRrel and vvLrel are used which are relaxated values used for determining bedload (suspension load pickup is based on instantaneous U,V values):
+					dzbed_ds=dzbed_dx*0.5*(uuRrel+uuLrel)+dzbed_dy*0.5*(vvRrel+vvLrel) 
+					dzbed_dn=-dzbed_dx*0.5*(vvRrel+vvLrel)+dzbed_dy*0.5*(uuRrel+uuLrel) 
+					bedslope_alpha = atan(dzbed_dn/(MAX(ABS(dzbed_ds),1.e-12)*SIGN(1.,dzbed_ds)))
+					Shields_cr = Shields_cr*(cos(bedslope_angle)*sqrt(1.-(sin(bedslope_alpha))**2*(tan(bedslope_angle))**2/
+     &					bedslope_mu_s**2)-cos(bedslope_alpha)*sin(bedslope_angle)/bedslope_mu_s)
+					Shields_cr_bl=Shields_cr 
+				ELSEIF (bedslope_effect.eq.2) THEN !only Shields_cr_bl adjusted for slope effect and Shields_cr for sus. pickup not adjusted for slope effect
+					dzbed_dx=-(zbed(i+1,j)-zbed(i-1,j))/(Rp(i+1)-Rp(i-1)) !defined with z positive down
+					dzbed_dy=-(zbed(i,j+1)-zbed(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1))) !defined with z positive down
+					dzbed_dl=sqrt(dzbed_dx**2+dzbed_dy**2)
+					dzbed_dl=MIN(dzbed_dl,0.9*tan(phi_sediment)) !for stability limit bed slope, otherwise NaN may occur
+					bedslope_angle=atan(dzbed_dl)
+					!assuming bedslope_effect is dominant for bedload uuRrel and vvLrel are used which are relaxated values used for determining bedload (suspension load pickup is based on instantaneous U,V values):
+					dzbed_ds=dzbed_dx*0.5*(uuRrel+uuLrel)+dzbed_dy*0.5*(vvRrel+vvLrel) 
+					dzbed_dn=-dzbed_dx*0.5*(vvRrel+vvLrel)+dzbed_dy*0.5*(uuRrel+uuLrel)
+					bedslope_alpha = atan(dzbed_dn/(MAX(ABS(dzbed_ds),1.e-12)*SIGN(1.,dzbed_ds)))
+					Shields_cr_bl = Shields_cr*(cos(bedslope_angle)*sqrt(1.-(sin(bedslope_alpha))**2*(tan(bedslope_angle))**2/
+     &					bedslope_mu_s**2)-cos(bedslope_alpha)*sin(bedslope_angle)/bedslope_mu_s)
+				ENDIF 
+					
+					
 				kn_sed_avg=kn_d50_multiplier*d50 !  kn=2*d50 is mentioned in VanRijn1984 paper, the pickup function which is applied here, however elsewhere vanRijn mentions larger kn_sed like 6*d50...)
 				ust=0.1*absU
 				do tel=1,10 ! 10 iter is more than enough
@@ -963,15 +994,9 @@
 						z0=kn_sed_avg/30.+0.11*nu_mol/MAX(ust,1.e-9) 
 						ust=absUbl/MAX(1./kappa*log(distance_to_bed/z0),2.) !ust maximal 0.5*absU
 					enddo	
-					ustc2 = Shields_cr * gvector*delta*d50
+					ustc2 = Shields_cr_bl * gvector*delta*d50
 					MME = MAX(0.,(ust*ust-ustc2)/ustc2)
 					qb = calibfac_sand_bedload*0.5*rho_sand*d50*Dstar**(-0.3)*ust*MME ! [kg/m/s]	
-!!		IF (ABS(SUM(cbotnew(1:nfrac,i,j)))>0.5*cfixedbed) write(*,'(a,i6.1,i6.1,i6.1,f11.6,f11.6,f11.6,f11.6,f11.6,f11.6,f11.6)'),
-!!     & 'rank,i,j,qb,absU,uuR,uuL,vvR,vvL,cbotnew'
-!!     & ,rank,i,j,qb,absUbl,uuR_relax(i,j),uuL_relax(i,j),vvR_relax(i,j),vvL_relax(i,j),SUM(cbotnew(1:nfrac,i,j))
-!		IF ((rank.eq.1.or.rank.eq.0).and.i>96.and.i<100.and.j>1.and.j<8) write
-!     & (*,'(a,i6.1,i6.1,i6.1,i6.1,f11.6,f11.6,f11.6,f11.6,f11.6,f11.6,f11.6)'),'istep,rank,i,j,qb,absU,uuR,uuL,vvR,vvL,cbotnew'
-!     & ,istep,rank,i,j,qb,absUbl,uuR_relax(i,j),uuL_relax(i,j),vvR_relax(i,j),vvL_relax(i,j),SUM(cbotnew(1:nfrac,i,j))	 
 					qb = qb*bednotfixed(i,j,kbed(i,j))*morfac*morfac2 !kg/m/s				
 				ELSEIF (bedload_formula.eq.'vanrijn2003'.and.time_n.ge.tstart_morf2) THEN !as taken from D3D manual
 					kn_sed_avg=kn_d50_multiplier_bl*d50 
@@ -980,7 +1005,7 @@
 						z0=kn_sed_avg/30.+0.11*nu_mol/MAX(ust,1.e-9) 
 						ust=absUbl/MAX(1./kappa*log(distance_to_bed/z0),2.) !ust maximal 0.5*absU
 					enddo	
-					ucr = sqrt(Shields_cr * gvector*delta*d50)*log(distance_to_bed/z0)/kappa
+					ucr = sqrt(Shields_cr_bl * gvector*delta*d50)*log(distance_to_bed/z0)/kappa
 					MMM = absUbl**2/(delta*gvector*d50)
 					MME = (MAX(absUbl-ucr,0.))**2/(delta*gvector*d50)
 					qb = calibfac_sand_bedload*0.006*rho_sand*ws_sand*d50*MMM**0.5*MME**0.7 ! [kg/m/s] 
@@ -992,11 +1017,42 @@
 						z0=kn_sed_avg/30.+0.11*nu_mol/MAX(ust,1.e-9) 
 						ust=absUbl/MAX(1./kappa*log(distance_to_bed/z0),2.) !ust maximal 0.5*absU
 					enddo	
-					MME = (MAX(Shields-Shields_cr,0.))**1.5
+					MME = (MAX(Shields-Shields_cr_bl,0.))**1.5
 					qb = calibfac_sand_bedload*8.*rho_sand*d50*sqrt(gvector*delta*d50)*MME ! [kg/m/s] 
 					qb = qb*bednotfixed(i,j,kbed(i,j))*morfac*morfac2 !kg/m/s
 				ENDIF 
-	
+				fnorm=0. !default no bedslope 
+				IF ((bedload_formula.ne.'nonenon0000').and.time_n.ge.tstart_morf2) THEN
+				! Bed slope effect on bedload D3D style using Bagnold (1966) for longitudinal slope and Ikeda (1982, 1988) as presented by Van Rijn (1993) for transverse slope
+				  IF (bedslope_effect.eq.3) THEN !longitudinal and transverse slope corrected
+					dzbed_dx=-(zbed(i+1,j)-zbed(i-1,j))/(Rp(i+1)-Rp(i-1)) !defined with z positive down
+					dzbed_dy=-(zbed(i,j+1)-zbed(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1))) !defined with z positive down
+					!assuming bedslope_effect is dominant for bedload uuRrel and vvLrel are used which are relaxated values used for determining bedload (suspension load pickup is based on instantaneous U,V values):
+					dzbed_ds=dzbed_dx*0.5*(uuRrel+uuLrel)+dzbed_dy*0.5*(vvRrel+vvLrel) 
+					dzbed_dn=-dzbed_dx*0.5*(vvRrel+vvLrel)+dzbed_dy*0.5*(uuRrel+uuLrel)
+					dzbed_ds=MIN(dzbed_ds,0.9*tan(phi_sediment))
+					dzbed_ds=MAX(dzbed_ds,-0.9*tan(phi_sediment))
+					qb=qb*(1.+alfabs_bl*(tan(phi_sediment)/(cos(atan(dzbed_ds))*(tan(phi_sediment)-dzbed_ds))-1.))
+					ustc2 = Shields_cr_bl * gvector*delta*d50
+					fnorm=alfabn_bl*sqrt(ustc2/MAX(1.e-9,ust*ust))*dzbed_dn  
+				  ENDIF
+				ENDIF 
+				!temporary write statements to check bedslope parameters:
+				wf(i,j,1)=dzbed_dx
+				wf(i,j,2)=dzbed_dy
+				wf(i,j,3)=dzbed_ds
+				wf(i,j,4)=dzbed_dn
+				wf(i,j,5)=bedslope_angle 
+				wf(i,j,6)=Shields_cr
+				wf(i,j,7)=Shields_cr_bl
+				wf(i,j,8)=bedslope_alpha
+				wf(i,j,9)=(1.+alfabs_bl*(tan(phi_sediment)/(cos(atan(dzbed_ds))*(tan(phi_sediment)-dzbed_ds))-1.))
+				wf(i,j,10)=fnorm 
+				wf(i,j,11)=0.5*(uuRrel+uuLrel)
+				wf(i,j,12)=0.5*(vvRrel+vvLrel)
+				wf(i,j,13)=sqrt((0.5*(uuRrel+uuLrel))**2+(0.5*(vvRrel+vvLrel))**2)
+				
+				
 				DO n1=1,nfr_sand
 					n=nfrac_sand(n1)			
 					erosion_avg(n) = phipp * (delta*gvector*d50)**0.5*ddt*bednotfixed(i,j,kbed(i,j))*morfac*bs_geo  !*rho_sand/rho_sand ! erosion flux in kg/m2/(kg/m3)= m3/m2=m
@@ -1026,8 +1082,8 @@
 						erosionf(n) = 0.
 						qbf(n) = qb * (c_bed(n)/cfixedbed) !don't make qb zero this is not robust 
 					ENDIF
-					qbU(n,i,j) = qbf(n)*uuRrel
-					qbV(n,i,j) = qbf(n)*vvRrel	
+					qbU(n,i,j) = qbf(n)*uuRrel-qbf(n)*vvRrel*fnorm
+					qbV(n,i,j) = qbf(n)*vvRrel+qbf(n)*uuRrel*fnorm	
 					cctot=0.
 					DO k=kplus,kbed(i,j)+k_layer_pickup 
 						cctot=cctot+MAX(ccfd(n,i,j,k),0.)
@@ -1060,26 +1116,22 @@
 					ctot_firstcel=ccnew(n,i,j,kplus)+ctot_firstcel
 					ENDIF
 					IF ((bedload_formula.ne.'nonenon0000').and.time_n.ge.tstart_morf2) THEN
-						flux = uuRrel*qbf(n)*Ru(i)*dphi2(j)*ddt ![kg] change in mass over this edge
-				!write(*,*),'i,j,kbed(i,j),flux,uuRrel,qbf(n),Ru(i)*dphi2(j)',i,j,kbed(i,j),flux,uuRrel,qbf(n),Ru(i)*dphi2(j)
-						IF (flux>0.) THEN
+						flux = (uuRrel*qbf(n)-qbf(n)*vvRrel*fnorm)*Ru(i)*dphi2(j)*ddt ![kg] change in mass over this edge
+						IF (flux>0.) THEN !upwind 
 							d_cbotnew(n,i,j) = d_cbotnew(n,i,j) - flux/(rho_sand*dr(i)*Rp(i)*dphi2(j)*dz)
 							d_cbotnew(n,i+1,j) = d_cbotnew(n,i+1,j) + flux/(rho_sand*dr(i+1)*Rp(i+1)*dphi2(j)*dz)
 						ENDIF 
-						flux = uuLrel*qbf(n)*Ru(i-1)*dphi2(j)*ddt ![kg] change in mass over this edge
-				!write(*,*),'i,j,kbed(i,j),flux,uuLrel,qbf(n),Ru(i-1)*dphi2(j)',i,j,kbed(i,j),flux,uuLrel,qbf(n),Ru(i-1)*dphi2(j)
+						flux = (uuLrel*qbf(n)-qbf(n)*vvRrel*fnorm)*Ru(i-1)*dphi2(j)*ddt ![kg] change in mass over this edge
 						IF (flux<0.) THEN
 							d_cbotnew(n,i,j) = d_cbotnew(n,i,j) + flux/(rho_sand*dr(i)*Rp(i)*dphi2(j)*dz)
 							d_cbotnew(n,i-1,j) = d_cbotnew(n,i-1,j) - flux/(rho_sand*dr(i-1)*Rp(i-1)*dphi2(j)*dz)
 						ENDIF 						
-						flux = vvRrel*qbf(n)*dr(i)*ddt ![kg] change in mass over this edge
-				!write(*,*),'i,j,kbed(i,j),flux,vvRrel,qbf(n),dr(i)',i,j,kbed(i,j),flux,vvRrel,qbf(n),dr(i)
+						flux = (vvRrel*qbf(n)+qbf(n)*uuRrel*fnorm)*dr(i)*ddt ![kg] change in mass over this edge
 						IF (flux>0.) THEN 
 							d_cbotnew(n,i,j) = d_cbotnew(n,i,j) - flux/(rho_sand*dr(i)*Rp(i)*dphi2(j)*dz)
 							d_cbotnew(n,i,j+1) = d_cbotnew(n,i,j+1) + flux/(rho_sand*dr(i)*Rp(i)*dphi2(j+1)*dz)
 						ENDIF 
-						flux = vvLrel*qbf(n)*dr(i)*ddt ![kg] change in mass over this edge
-				!write(*,*),'i,j,kbed(i,j),flux,vvLrel,qbf(n),dr(i)',i,j,kbed(i,j),flux,vvLrel,qbf(n),dr(i)
+						flux = (vvLrel*qbf(n)+qbf(n)*uuRrel*fnorm)*dr(i)*ddt ![kg] change in mass over this edge
 						IF (flux<0.) THEN 
 							d_cbotnew(n,i,j) = d_cbotnew(n,i,j) + flux/(rho_sand*dr(i)*Rp(i)*dphi2(j)*dz)
 							d_cbotnew(n,i,j-1) = d_cbotnew(n,i,j-1) - flux/(rho_sand*dr(i)*Rp(i)*dphi2(j-1)*dz)

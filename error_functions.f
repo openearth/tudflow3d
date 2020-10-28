@@ -337,7 +337,12 @@
 		write(*,*) '# bl_relax must be between 0 and 1               #'		
 	CASE(108)
 		write(*,*) '# namelist &constants                            #'			
-		write(*,*) '# fcor must be >=0.                              #'			
+		write(*,*) '# fcor must be >=0.                              #'	
+	CASE(109)
+		write(*,*) '# namelist &constants                            #'			
+		write(*,*) '# bedload_formula is defined incorrectly         #'
+		write(*,*) '# choose ''vanrijn2007'',or ''vanrijn2003'',or ''MeyPeMu1947'' #'	
+		write(*,*) '# or comment the line and do not define a bedload_formula #'	
 	CASE(110)
 		write(*,*) '# i history > imax                               #'			
 		write(*,*) '#                                                #'
@@ -363,7 +368,20 @@
 	CASE(142)
 		write(*,*) '# namelist &constants                            #'			
 		write(*,*) '# avalanche_slope series must be >0 and as long  #'		
-		write(*,*) '# av_slope_z                                     #'				
+		write(*,*) '# av_slope_z                                     #'		
+	CASE(143)
+		write(*,*) '# namelist &constants                            #'			
+		write(*,*) '# bedslope_effect must be 0,1,2,3                #'		
+		write(*,*) '# 0 (default) no bedslope effect                 #'		
+		write(*,*) '# 1 = adjust Shields_cr following Roulund,       #'		
+		write(*,*) '# Fredsoe etal. 2004 for suspension and bedload  #'			
+		write(*,*) '# 2 = like 1 but only for bedload                #'		
+		write(*,*) '# 3 = bed-slope influence on bedload D3D style   #'		
+		write(*,*) '# Bagnold (1966) for longitudinal slope and Ikeda (1982, 1988) for transverse slope   #'	
+	CASE(144)
+		write(*,*) '# namelist &constants                            #'			
+		write(*,*) '# phi_sediment must be >0. and in degrees        #'		
+		write(*,*) '# default phi_sediment=30.                       #'		
 	CASE(171)
 		write(*,*) '# namelist &fractions_in_plume                   #'			
 		write(*,*) '# type must be 1 (default),2,3 or -1             #'	
