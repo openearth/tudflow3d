@@ -328,7 +328,7 @@
 !	real y(1:imax,1:jmax,1:kmax)
 !	real z(1:imax,1:jmax,1:kmax)
 	real uu(1:imax,1:jmax,1:kmax),obstacle(1:imax,1:jmax,1:kmax)
-	real vv(1:imax,1:jmax,1:kmax),zzbed(1:imax,1:jmax)
+	real vv(1:imax,1:jmax,1:kmax),zzbed(1:imax,1:jmax),zzbed2(1:imax,1:jmax)
 	real mass_bed(1:nfrac,1:imax,1:jmax)
 	real tt
 	integer tel,istap,n
@@ -351,7 +351,8 @@
        integer :: ncid, varid1,varid2,varid3, varid4, varid5, varid6, varid7, varid8, varid9, varid10,varid11
 	   integer :: dimids(NDIMS), dimids2(NDIMS2),dimids3(NDIMS3),dimids5(NDIMS5)
        integer :: x_dimid, y_dimid, z_dimid, nfrac_dimid, par_dimid
-	integer :: dimids4(NDIMS),varid20,varid21,varid22,varid12,varid13,varid14,varid15,varid16,varid23
+	   integer :: dimids4(NDIMS),varid20,varid21,varid22,varid12,varid13,varid14,varid15,varid16,varid23
+	   integer :: varid24,varid25,varid26,varid27,varid28,varid29
 	character(1024) :: svnversion
 	character(1024) :: svnurl
       include 'version.inc'
@@ -370,7 +371,9 @@
 			mass_bed(n,i,j) = Cnewbot(n,i,j)*dz*frac(n)%rho ! Cnewbot(n,i,j)*dz*dr(i)*Rp(i)*dphi*frac(n)%rho
 			enddo		
 			IF (interaction_bed.ge.4) THEN
-			  zzbed(i,j) = REAL(MAX(kbed(i,j)-1,0))*dz+ SUM(Clivebed(1:nfrac,i,j,kbed(i,j)))/cfixedbed*dz 
+			  zzbed(i,j) = REAL(MAX(kbed(i,j)-1,0))*dz+ SUM(Clivebed(1:nfrac,i,j,kbed(i,j)))/cfixedbed*dz  !bed level without buffer in Cnewbot
+			  zzbed2(i,j) = REAL(MAX(kbed(i,j)-1,0))*dz+ (SUM(Cnewbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
+			  ! total bed level 
 			ENDIF			
 	   enddo
 	enddo
@@ -430,23 +433,42 @@
        call check( nf90_def_var(ncid, "mass_bed", NF90_REAL, dimids4, varid20) )
        call check( nf90_put_att(ncid, varid20, 'units', 'kg/m2') )
        call check( nf90_put_att(ncid, varid20, 'long_name', 'Mass per m2 sediment fractions in bed') )
+	   	call check( nf90_def_var(ncid, "tau_flow", NF90_REAL, dimids5, varid25) )
+		call check( nf90_put_att(ncid, varid25, 'units', 'N/m2') )
+		call check( nf90_put_att(ncid, varid25, 'long_name', 'Flow bed shear stress') )
+	   	call check( nf90_def_var(ncid, "tau_mud", NF90_REAL, dimids5, varid26) )
+		call check( nf90_put_att(ncid, varid26, 'units', 'N/m2') )
+		call check( nf90_put_att(ncid, varid26, 'long_name', 'Mud bed shear stress') )	
+	   	call check( nf90_def_var(ncid, "tau_susload", NF90_REAL, dimids5, varid27) )
+		call check( nf90_put_att(ncid, varid27, 'units', 'N/m2') )
+		call check( nf90_put_att(ncid, varid27, 'long_name', 'Sand bed shear stress for suspension load pickup') )	
+	   	call check( nf90_def_var(ncid, "tau_bedload", NF90_REAL, dimids5, varid28) )
+		call check( nf90_put_att(ncid, varid28, 'units', 'N/m2') )
+		call check( nf90_put_att(ncid, varid28, 'long_name', 'Sand bed shear stress for bedload') )
+	   	call check( nf90_def_var(ncid, "tau_frac", NF90_REAL, dimids4, varid29) )
+		call check( nf90_put_att(ncid, varid29, 'units', 'N/m2') )
+		call check( nf90_put_att(ncid, varid29, 'long_name', 
+     &  'Sediment shear stress per fraction based on characteristics individual fractions') )		
 		if (interaction_bed.ge.4) then
 			call check( nf90_def_var(ncid, "zbed", NF90_REAL, dimids5, varid21) )
 			call check( nf90_put_att(ncid, varid21, 'units', 'm') )
-			call check( nf90_put_att(ncid, varid21, 'long_name', 'Bed level height of dynamic morphological bed') )
-		   call check( nf90_def_var(ncid, "Cbed", NF90_REAL, dimids2, varid22) )
-		   call check( nf90_put_att(ncid, varid22, 'units', '-') )
-		   call check( nf90_put_att(ncid, varid22, 'long_name', 'Volume concentration for each fraction inside bed') )		
-       call check( nf90_def_var(ncid, "kbed", NF90_SHORT, dimids5, varid11) )
-       call check( nf90_put_att(ncid, varid11, 'units', '-') )
-       call check( nf90_put_att(ncid, varid11, 'long_name', '2D index of highest bed cell') )
+			call check( nf90_put_att(ncid, varid21, 'long_name', 'Bed level excl. buffer in mass_bed (actual zbed IMB0)') )
+			call check( nf90_def_var(ncid, "zbed_total", NF90_REAL, dimids5, varid24) )
+			call check( nf90_put_att(ncid, varid24, 'units', 'm') )
+			call check( nf90_put_att(ncid, varid24, 'long_name', 'Total bed level incl. buffer in mass_bed (actual zbed IBM2)') )			
+			call check( nf90_def_var(ncid, "Cbed", NF90_REAL, dimids2, varid22) )
+			call check( nf90_put_att(ncid, varid22, 'units', '-') )
+			call check( nf90_put_att(ncid, varid22, 'long_name', 'Volume concentration for each fraction inside bed') )		
+			call check( nf90_def_var(ncid, "kbed", NF90_SHORT, dimids5, varid11) )
+			call check( nf90_put_att(ncid, varid11, 'units', '-') )
+			call check( nf90_put_att(ncid, varid11, 'long_name', '2D index of highest bed cell') )
 
-       call check( nf90_def_var(ncid, "Sbedload_u", NF90_REAL, dimids4, varid12) )
-       call check( nf90_put_att(ncid, varid12, 'units', 'kg/m/s') )
-       call check( nf90_put_att(ncid, varid12, 'long_name', 'U-bedload flux for each fraction (multiplied by morfac)') )	
-       call check( nf90_def_var(ncid, "Sbedload_v", NF90_REAL, dimids4, varid13) )
-       call check( nf90_put_att(ncid, varid13, 'units', 'kg/m/s') )
-       call check( nf90_put_att(ncid, varid13, 'long_name', 'V-bedload flux for each fraction (multiplied by morfac)') )	   
+			call check( nf90_def_var(ncid, "Sbedload_u", NF90_REAL, dimids4, varid12) )
+			call check( nf90_put_att(ncid, varid12, 'units', 'kg/m/s') )
+			call check( nf90_put_att(ncid, varid12, 'long_name', 'U-bedload flux for each fraction (multiplied by morfac)') )	
+			call check( nf90_def_var(ncid, "Sbedload_v", NF90_REAL, dimids4, varid13) )
+			call check( nf90_put_att(ncid, varid13, 'units', 'kg/m/s') )
+			call check( nf90_put_att(ncid, varid13, 'long_name', 'V-bedload flux for each fraction (multiplied by morfac)') )	   
 		endif
 	endif
        call check( nf90_def_var(ncid, "rho", NF90_REAL, dimids, varid5) )
@@ -515,12 +537,19 @@
 		call check( nf90_put_var(ncid, varid20, mass_bed(1:nfrac,1:imax,1:jmax)) ) 
 		if (interaction_bed.ge.4) then
 		  call check( nf90_put_var(ncid, varid21, zzbed(1:imax,1:jmax) ))
+		  call check( nf90_put_var(ncid, varid24, zzbed2(1:imax,1:jmax) ))
 		  call check( nf90_put_var(ncid, varid22, Clivebed(1:nfrac,1:imax,1:jmax,1:kmax)) )
 		  call check( nf90_put_var(ncid, varid11, kbed(1:imax,1:jmax) ))
 		  call check( nf90_put_var(ncid, varid12, qbU(1:nfrac,1:imax,1:jmax) ))
 		  call check( nf90_put_var(ncid, varid13, qbV(1:nfrac,1:imax,1:jmax) ))
 		endif
-		  
+		zzbed=sqrt((0.5*(tau_fl_Unew(1:imax,1:jmax)+tau_fl_Unew(0:imax-1,1:jmax)))**2
+     &   +(0.5*(tau_fl_Vnew(1:imax,1:jmax)+tau_fl_Vnew(1:imax,0:jmax-1)))**2)
+		call check( nf90_put_var(ncid, varid25,zzbed  ))
+		call check( nf90_put_var(ncid, varid26,ust_mud_new(1:imax,1:jmax)*ust_mud_new(1:imax,1:jmax)*rho_b  ))
+		call check( nf90_put_var(ncid, varid27,ust_sl_new(1:imax,1:jmax)*ust_sl_new(1:imax,1:jmax)*rho_b  ))		
+		call check( nf90_put_var(ncid, varid28,ust_bl_new(1:imax,1:jmax)*ust_bl_new(1:imax,1:jmax)*rho_b  ))
+		call check( nf90_put_var(ncid, varid29,ust_frac_new(1:nfrac,1:imax,1:jmax)*ust_frac_new(1:nfrac,1:imax,1:jmax)*rho_b  ))		
 	endif
 		uu=rnew(1:imax,1:jmax,1:kmax)
 		call check( nf90_put_var(ncid, varid5, uu(1:imax,1:jmax,1:kmax)) )

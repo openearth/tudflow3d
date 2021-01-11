@@ -18,7 +18,7 @@
 
 
       subroutine advecu_HYB6(putout,Uvel,Vvel,Wvel,RHO,rhu,rhv,rhw,Ru,Rp,dr,phiv,dz,
-     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy,kbed,wf,wd)
+     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy,kbed,wf,wd,nd2)
       implicit none
 c
 c********************************************************************
@@ -55,7 +55,7 @@ c********************************************************************
       real     putout(0:i1,0:j1,0:k1),Uvel(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
      +         dr(0:i1),phiv(0:j1),dz,Ru(0:i1),Rp(0:i1)
-      real rho(0:i1,0:j1,0:k1),numdif
+      real rho(0:i1,0:j1,0:k1),numdif,nd2
       real rhoip,rhoim,rhojp,rhojm,rhokp,rhokm
 	real uuR,uuL,vvR,vvL,wwR,wwL
 	integer kpp,kppp,kmm,kmmm,jpp,jppp,jmm,jmmm,ipp,ippp,imm,immm,rank,px,periodicx,periodicy,wd
@@ -362,7 +362,7 @@ c********************************************************************
 			IF (MAXVAL(wwdd).gt.1.e-12) THEN
 				wf(i,j,k)=MIN(1.,wf(i,j,k)+0.001) !wf(i,j,k)=1. 
 			ELSE
-				wf(i,j,k)=MAX(0.,wf(i,j,k)-0.001) !wf(i,j,k)=0.
+				wf(i,j,k)=MAX(nd2,wf(i,j,k)-0.001) !wf(i,j,k)=0.
 			ENDIF
 		  enddo
 	    enddo

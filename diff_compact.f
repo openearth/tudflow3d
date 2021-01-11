@@ -737,16 +737,16 @@ c*****************************************************************
 	  
       eppo = 0.25 * (
      +   ekm(i,j,k) + ekm(ip,j,k) + ekm(ip,jp,k) + ekm(i,jp,k)  )
-     + * MIN(fc_global(i,j+rank*jmax,k),fc_global(ip,j+rank*jmax,k),fc_global(ip,jp+rank*jmax,k),fc_global(i,jp+rank*jmax,k))	 
+!     + * MIN(fc_global(i,j+rank*jmax,k),fc_global(ip,j+rank*jmax,k),fc_global(ip,jp+rank*jmax,k),fc_global(i,jp+rank*jmax,k))	 
       epmo = 0.25 * (
      +   ekm(i,j,k) + ekm(ip,j,k) + ekm(ip,jm,k) + ekm(i,jm,k)  )
-     + * MIN(fc_global(i,j+rank*jmax,k),fc_global(ip,j+rank*jmax,k),fc_global(ip,jm+rank*jmax,k),fc_global(i,jm+rank*jmax,k))	 
+!     + * MIN(fc_global(i,j+rank*jmax,k),fc_global(ip,j+rank*jmax,k),fc_global(ip,jm+rank*jmax,k),fc_global(i,jm+rank*jmax,k))	 
       epop = 0.25 * (
      +   ekm(i,j,k) + ekm(ip,j,k) + ekm(ip,j,kp) + ekm(i,j,kp)  )
-     + * MIN(fc_global(i,j+rank*jmax,k),fc_global(ip,j+rank*jmax,k),fc_global(ip,j+rank*jmax,kp),fc_global(i,j+rank*jmax,kp))	 
+!     + * MIN(fc_global(i,j+rank*jmax,k),fc_global(ip,j+rank*jmax,k),fc_global(ip,j+rank*jmax,kp),fc_global(i,j+rank*jmax,kp))	 
       epom = 0.25 * (
      +   ekm(i,j,k) + ekm(ip,j,k) + ekm(ip,j,km) + ekm(i,j,km)  )
-     + * MIN(fc_global(i,j+rank*jmax,k),fc_global(ip,j+rank*jmax,k),fc_global(ip,j+rank*jmax,km),fc_global(i,j+rank*jmax,km))	 
+!     + * MIN(fc_global(i,j+rank*jmax,k),fc_global(ip,j+rank*jmax,k),fc_global(ip,j+rank*jmax,km),fc_global(i,j+rank*jmax,km))	 
 
       divvL= ( Ru(i)*Uvel(i,j,k) - Ru(i-1)*Uvel(i-1,j,k) ) / ( Rp(i)*dr(i) )
      +              +
@@ -760,9 +760,11 @@ c*****************************************************************
      3  (       Wvel(ip,j,k) -         Wvel(ip,j,k-1) ) * dzi   
 
       putout(i,j,k) = putout(i,j,k) +
-     1 (  Rp(ip) * ekm(ip,j,k) * fc_global(ip,j+rank*jmax,k) *
+!     1 (  Rp(ip) * ekm(ip,j,k) * fc_global(ip,j+rank*jmax,k) *
+     1 (  Rp(ip) * ekm(ip,j,k)  *	 
      1            ((Uvel(ip,j,k) - Uvel(i,j,k) ) / ( dr(ip) ) - 1./3.*divvR) -
-     1    Rp(i ) * ekm(i,j,k) * fc_global(i,j+rank*jmax,k) *
+!     1    Rp(i ) * ekm(i,j,k) * fc_global(i,j+rank*jmax,k) *
+     1    Rp(i ) * ekm(i,j,k) * 	 
      1            ((Uvel(i,j,k)  - Uvel(im,j,k)) / ( dr(i)  ) - 1./3.*divvL) )  /
      1 ( 0.5 * Ru(i) * ( drp ) )
      +              +
@@ -782,7 +784,8 @@ c*****************************************************************
      3            + (Wvel(ip,j,km) - Wvel(i,j,km)) / (Rp(ip) - Rp(i))
      3          ) ) * dzi
      +              -
-     4   (ekm(i,j,k) + ekm(ip,j,k)) * MIN(fc_global(i,j+rank*jmax,k),fc_global(ip,j+rank*jmax,k)) * ( Uvel(i,j,k) +
+!     4   (ekm(i,j,k) + ekm(ip,j,k)) * MIN(fc_global(i,j+rank*jmax,k),fc_global(ip,j+rank*jmax,k)) * ( Uvel(i,j,k) +
+     4   (ekm(i,j,k) + ekm(ip,j,k)) * ( Uvel(i,j,k) +	 
      4   (Vvel(ip,j,k) + Vvel(i,j,k) - Vvel(ip,jm,k) - Vvel(i,jm,k)) /
      4   (2.0 * (phiv(j)-phiv(jm))) )/ ( Ru(i) * Ru(i) )
             enddo
@@ -879,16 +882,16 @@ c*****************************************************************
 
       eppo = 0.25 * (
      +   ekm(i,j,k) + ekm(ip,j,k) + ekm(ip,jp,k) + ekm(i,jp,k)  )
-     + * MIN(fc_global(i,j+rank*jmax,k),fc_global(ip,j+rank*jmax,k),fc_global(ip,jp+rank*jmax,k),fc_global(i,jp+rank*jmax,k))	 
+!     + * MIN(fc_global(i,j+rank*jmax,k),fc_global(ip,j+rank*jmax,k),fc_global(ip,jp+rank*jmax,k),fc_global(i,jp+rank*jmax,k))	 
       empo = 0.25 * (
      +   ekm(i,j,k) + ekm(im,j,k) + ekm(i,jp,k)  + ekm(im,jp,k) )
-     + * MIN(fc_global(i,j+rank*jmax,k),fc_global(im,j+rank*jmax,k),fc_global(i,jp+rank*jmax,k),fc_global(im,jp+rank*jmax,k))	 
+!     + * MIN(fc_global(i,j+rank*jmax,k),fc_global(im,j+rank*jmax,k),fc_global(i,jp+rank*jmax,k),fc_global(im,jp+rank*jmax,k))	 
       eopp = 0.25 * (
      +   ekm(i,j,k) + ekm(i,j,kp) + ekm(i,jp,k)  + ekm(i,jp,kp) )
-     + * MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,kp),fc_global(i,jp+rank*jmax,k),fc_global(i,jp+rank*jmax,kp))	 
+!     + * MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,kp),fc_global(i,jp+rank*jmax,k),fc_global(i,jp+rank*jmax,kp))	 
       eopm = 0.25 * (
      +   ekm(i,j,k) + ekm(i,j,km) + ekm(i,jp,k)  + ekm(i,jp,km) )
-     + * MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,km),fc_global(i,jp+rank*jmax,k),fc_global(i,jp+rank*jmax,km))	 
+!     + * MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,km),fc_global(i,jp+rank*jmax,k),fc_global(i,jp+rank*jmax,km))	 
 
       divvL= ( Ru(i)*Uvel(i,j,k) - Ru(i-1)*Uvel(i-1,j,k) ) / ( Rp(i)*dr(i) )
      +              +
@@ -919,11 +922,13 @@ c*****************************************************************
 !     1        + (Uvel(im,jp,k) - Uvel(im,j,k)) / (Ru(im)*dphi)
 !     1        ) * Ru(im) ) / ( Rp(i) * dr(i) )
      +              +
-     2 ( ekm(i,jp,k)*fc_global(i,jp+jmax*rank,k) * (   (Uvel(i,jp,k) + Uvel(im,jp,k)) / 2.0
+!     2 ( ekm(i,jp,k)*fc_global(i,jp+jmax*rank,k) * (   (Uvel(i,jp,k) + Uvel(im,jp,k)) / 2.0
+     2 ( ekm(i,jp,k) * (   (Uvel(i,jp,k) + Uvel(im,jp,k)) / 2.0	 
      2                   + (Vvel(i,jp,k) - Vvel(i,j,k)  ) / (phiv(jp)-phiv(j))
      2                   - 1./3.*divvR*Rp(i)
      2                 )             -
-     2   ekm(i,j,k)*fc_global(i,j+jmax*rank,k)  * (   (Uvel(i,j,k)  + Uvel(im,j,k) ) / 2.0
+!     2   ekm(i,j,k)*fc_global(i,j+jmax*rank,k)  * (   (Uvel(i,j,k)  + Uvel(im,j,k) ) / 2.0
+     2   ekm(i,j,k)  * (   (Uvel(i,j,k)  + Uvel(im,j,k) ) / 2.0	 
      2                   + (Vvel(i,j,k)  - Vvel(i,jm,k) ) / (phiv(j)-phiv(jm))
      2			 - 1./3.*divvL*Rp(i)
      2                 ) ) / ( 0.5 * Rp(i) * Rp(i) * (phip(jp)-phip(j)))
@@ -1013,16 +1018,16 @@ c*****************************************************************
 	      km=k-1
       epop = 0.25 * (
      +   ekm(i,j,k) + ekm(i,j,kp) + ekm(ip,j,k) + ekm(ip,j,kp) )
-     + * MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,kp),fc_global(ip,j+rank*jmax,k),fc_global(ip,j+rank*jmax,kp))
+!     + * MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,kp),fc_global(ip,j+rank*jmax,k),fc_global(ip,j+rank*jmax,kp))
       emop = 0.25 * (
      +   ekm(i,j,k) + ekm(i,j,kp) + ekm(im,j,k) + ekm(im,j,kp) )
-     + * MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,kp),fc_global(im,j+rank*jmax,k),fc_global(im,j+rank*jmax,kp))	 
+!     + * MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,kp),fc_global(im,j+rank*jmax,k),fc_global(im,j+rank*jmax,kp))	 
       eopp = 0.25 * (
      +   ekm(i,j,k) + ekm(i,j,kp) + ekm(i,jp,k) + ekm(i,jp,kp) )
-     + * MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,kp),fc_global(i,jp+rank*jmax,k),fc_global(i,jp+rank*jmax,kp))	 
+!     + * MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,kp),fc_global(i,jp+rank*jmax,k),fc_global(i,jp+rank*jmax,kp))	 
       eomp = 0.25 * (
      +   ekm(i,j,k) + ekm(i,j,kp) + ekm(i,jm,k) + ekm(i,jm,kp) )
-     + * MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,kp),fc_global(i,jm+rank*jmax,k),fc_global(i,jm+rank*jmax,kp))	 
+!     + * MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,kp),fc_global(i,jm+rank*jmax,k),fc_global(i,jm+rank*jmax,kp))	 
 
       divvL= ( Ru(i)*Uvel(i,j,k) - Ru(i-1)*Uvel(i-1,j,k) ) / ( Rp(i)*dr(i) )
      +              +
@@ -1050,8 +1055,10 @@ c*****************************************************************
      2             +(Wvel(i,j,k)   - Wvel(i,jm,k) )/( Rp(i) * (phip(j)-phip(jm)) )
      2           ) ) / ( Rp(i) * (phiv(j)-phiv(jm)) )
      +             +
-     3 ( ekm(i,j,kp)*fc_global(i,j+rank*jmax,kp) * (CNz*(Wvel(i,j,kp) - Wvel(i,j,k ))*dzi - 1./3.*divvR ) -
-     3   ekm(i,j,k )*fc_global(i,j+rank*jmax,k) * (CNz*(Wvel(i,j,k)  - Wvel(i,j,km))*dzi - 1./3.*divvL )
+!     3 ( ekm(i,j,kp)*fc_global(i,j+rank*jmax,kp) * (CNz*(Wvel(i,j,kp) - Wvel(i,j,k ))*dzi - 1./3.*divvR ) -
+!     3   ekm(i,j,k )*fc_global(i,j+rank*jmax,k) * (CNz*(Wvel(i,j,k)  - Wvel(i,j,km))*dzi - 1./3.*divvL )	 
+     3 ( ekm(i,j,kp)* (CNz*(Wvel(i,j,kp) - Wvel(i,j,k ))*dzi - 1./3.*divvR ) -
+     3   ekm(i,j,k )* (CNz*(Wvel(i,j,k)  - Wvel(i,j,km))*dzi - 1./3.*divvL )
      3  	 ) *2.*dzi 
            enddo
         enddo

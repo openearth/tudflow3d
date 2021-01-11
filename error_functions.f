@@ -382,6 +382,13 @@
 		write(*,*) '# namelist &constants                            #'			
 		write(*,*) '# phi_sediment must be >0. and in degrees        #'		
 		write(*,*) '# default phi_sediment=30.                       #'		
+	CASE(145)
+		write(*,*) '# namelist &constants                            #'			
+		write(*,*) '# wallmodel_tau_sed must be 1,3,4,5 or 11        #'		
+		write(*,*) '# default wallmodel_tau_sed = 1                  #'		
+		
+		
+		
 	CASE(171)
 		write(*,*) '# namelist &fractions_in_plume                   #'			
 		write(*,*) '# type must be 1 (default),2,3 or -1             #'	

@@ -17,7 +17,7 @@
 !    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
       subroutine advecu_CDS6(putout,Uvel,Vvel,Wvel,RHO,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,
-     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy,wf,wd)
+     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy,wf,wd,nd2)
       implicit none
 c
 c********************************************************************
@@ -54,7 +54,7 @@ c********************************************************************
       real     putout(0:i1,0:j1,0:k1),Uvel(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
      +         dr(0:i1),phiv(0:j1),dz,Ru(0:i1),Rp(0:i1)
-      real rho(0:i1,0:j1,0:k1),numdif,dzi
+      real rho(0:i1,0:j1,0:k1),numdif,dzi,nd2
       real rhoip,rhoim,rhojp,rhojm,rhokp,rhokm
 
 	real Ax,Bx,Cx,DDx
@@ -365,7 +365,7 @@ c********************************************************************
 			IF (MAXVAL(wwdd).gt.1.e-12) THEN
 				wf(i,j,k)=MIN(1.,wf(i,j,k)+0.001) !wf(i,j,k)=1. 
 			ELSE
-				wf(i,j,k)=MAX(0.,wf(i,j,k)-0.001) !wf(i,j,k)=0.
+				wf(i,j,k)=MAX(nd2,wf(i,j,k)-0.001) !wf(i,j,k)=0.
 			ENDIF
 		  enddo
 	    enddo

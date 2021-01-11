@@ -38,7 +38,7 @@
       INTEGER tmax_inPpuntTSHD,tmax_inUpuntTSHD,tmax_inVpuntTSHD,tmax_inWpuntTSHD
       INTEGER tmax_inUpunt_tauTSHD,tmax_inVpunt_tauTSHD,tmax_inVpunt_rudder
       INTEGER tmax_inWpunt2,tmax_inVpunt2,tmax_inPpunt2,tmax_inWpunt_suction
-      INTEGER nfrac,slipvel,interaction_bed,nobst,kbed_bc,nbedplume,continuity_solver,hindered_settling,settling_along_gvector
+      INTEGER nfrac,slipvel,interaction_bed,nobst,nbedplume,continuity_solver,hindered_settling,settling_along_gvector
       INTEGER nfr_silt,nfr_sand,nfr_air
       CHARACTER*256 hisfile,restart_dir,inpfile,plumetseriesfile,bcfile,plumetseriesfile2,bedlevelfile,initconditionsfile
       CHARACTER*3 time_int,advec_conc,cutter,split_rho_cont
@@ -65,12 +65,13 @@
       REAL Aplume,driftfluxforce_calfac
 	  REAL vwal,delta_nsed,nl,permeability_kl,pickup_fluctuations_ampl,z_tau_sed,kn_d50_multiplier_bl,bl_relax
 	  INTEGER pickup_fluctuations,cbed_method,k_layer_pickup,nu_minimum_wall,pickup_bedslope_geo,wbed_correction,bedslope_effect
+	  INTEGER wallmodel_tau_sed,ndtbed,nrmsbed,telUVWbed
 	  REAL Const1eps,Const2,Sc_k,Sc_eps,Cal_buoyancy_k,Cal_buoyancy_eps,Cs_relax
 	  REAL bedslope_mu_s,alfabs_bl,alfabn_bl,phi_sediment
 	  
 	  
       CHARACTER*4 convection,diffusion
-      REAL numdiff,comp_filter_a
+      REAL numdiff,comp_filter_a,numdiff2
       INTEGER comp_filter_n,pres_in_predictor_step,pres_in_predictor_step_internal
 
       INTEGER nprop,rudder,softnose
@@ -103,7 +104,7 @@
 
       INTEGER*2, DIMENSION(:,:,:),ALLOCATABLE :: llist1,llist2,llist3
       INTEGER*2, DIMENSION(:,:),ALLOCATABLE :: llmax1,llmax2,llmax3 !,kbed,kbedt,kbed2
-      INTEGER*8, DIMENSION(:,:),ALLOCATABLE :: kbed,kbedt,kbed2,kbed22
+      INTEGER*8, DIMENSION(:,:),ALLOCATABLE :: kbed,kbedt,kbed2,kbed22,kbed0
       INTEGER, DIMENSION(:,:),ALLOCATABLE :: Xkk,Tii
       INTEGER, DIMENSION(:),ALLOCATABLE :: Xii,Tkk,nfrac_air,nfrac_silt,nfrac_sand,nfrac_air2
 	  INTEGER*8, DIMENSION(:),ALLOCATABLE :: kbedin
@@ -130,7 +131,7 @@
       REAL, DIMENSION(:),ALLOCATABLE :: LUB,LHS2 
       REAL, DIMENSION(:,:),ALLOCATABLE, TARGET :: lhs,LUBs,ubot
       INTEGER, DIMENSION(:),ALLOCATABLE, TARGET :: jco3,iro3,beg3,di3 
-      REAL, DIMENSION(:),ALLOCATABLE, TARGET :: lhs3
+      REAL, DIMENSION(:),ALLOCATABLE, TARGET :: lhs3,sigtbed 
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: rhs3
 	  REAL, DIMENSION(:,:,:),ALLOCATABLE :: rhU,rhV,rhW
 	  REAL, DIMENSION(:,:,:,:),ALLOCATABLE :: cU,cV,cW
@@ -139,7 +140,9 @@
 	  REAL, DIMENSION(:,:),ALLOCATABLE :: Uhisbp,Vhisbp,Whisbp
 	  REAL*8, DIMENSION(:,:,:),ALLOCATABLE :: fc_global
 	  REAL, DIMENSION(:,:),ALLOCATABLE :: uuR_relax,uuL_relax,vvR_relax,vvL_relax,tau2Vold,tau2Vnew,tau2Wold,tau2Wnew,qb_relax
-	  REAL, DIMENSION(:,:,:),ALLOCATABLE :: qbU,qbV
+	  REAL, DIMENSION(:,:),ALLOCATABLE :: tau_fl_Uold,tau_fl_Vold,tau_fl_Unew,tau_fl_Vnew,ust_sl_new,ust_sl_old,ust_bl_new,ust_bl_old
+	  REAL, DIMENSION(:,:),ALLOCATABLE :: ust_mud_new,ust_mud_old
+	  REAL, DIMENSION(:,:,:),ALLOCATABLE :: qbU,qbV,ust_frac_old,ust_frac_new,sigUWbed,sigVWbed,sigUbed,sigVbed,sigWbed
 
  !     REAL, DIMENSION(:,:,:),ALLOCATABLE :: Uf,Vf,Wf
 
@@ -237,7 +240,7 @@
      & t0_output_movie,dt_output_movie,te_output_movie,tstart_morf,te_rms,tstart_morf2
 	NAMELIST /num_scheme/convection,numdiff,wiggle_detector,diffusion,comp_filter_a,comp_filter_n,CNdiffz,npresIBM,advec_conc,
      & continuity_solver,transporteq_fracs,split_rho_cont,driftfluxforce_calfac,depo_implicit,IBMorder,npresPRHO,
-     & pres_in_predictor_step,Poutflow,oPRHO,applyVOF,k_ust_tau,Uoutflow,dUVdn_IBMbed,k_pzero
+     & pres_in_predictor_step,Poutflow,oPRHO,applyVOF,k_ust_tau,Uoutflow,dUVdn_IBMbed,k_pzero,numdiff2
 	NAMELIST /ambient/U_b,V_b,W_b,bcfile,rho_b,SEM,nmax2,nmax1,nmax3,lm_min,lm_min3,slip_bot,kn,interaction_bed,
      & periodicx,periodicy,dpdx,dpdy,W_ox,Hs,Tp,nx_w,ny_w,obst,bc_obst_h,U_b3,V_b3,surf_layer,wallup,bedlevelfile,
      & U_bSEM,V_bSEM,U_w,V_w,c_bed,cfixedbed,U_init,V_init,initconditionsfile,rho_b2,monopile,kn_mp,kn_sidewalls,obstfile
@@ -250,7 +253,7 @@
      &	av_slope_z,calibfac_Shields_cr,reduction_sedimentation_shields,morfac,morfac2,avalanche_until_done,avfile,
      & settling_along_gvector,vwal,nl,permeability_kl,pickup_fluctuations_ampl,pickup_fluctuations,pickup_correction,cbed_method,
      & z_tau_sed,k_layer_pickup,pickup_bedslope_geo,bedload_formula,kn_d50_multiplier_bl,calibfac_sand_bedload,bl_relax,fcor,
-     & wbed_correction,bedslope_effect,bedslope_mu_s,alfabs_bl,alfabn_bl,phi_sediment
+     & wbed_correction,bedslope_effect,bedslope_mu_s,alfabs_bl,alfabn_bl,phi_sediment,wallmodel_tau_sed,nrmsbed,ndtbed
 	NAMELIST /fractions_in_plume/fract
 	NAMELIST /ship/U_TSHD,LOA,Lfront,Breadth,Draught,Lback,Hback,xfront,yfront,kn_TSHD,nprop,Dprop,xprop,yprop,zprop,
      &   Pprop,rudder,rot_prop,draghead,Dsp,xdh,perc_dh_suction,softnose,Hfront,cutter
@@ -298,6 +301,7 @@
 	!! num_scheme
 	convection = 'ARGH'
 	numdiff = 0.
+	numdiff2 = 0.
 	wiggle_detector = 0
 	diffusion = 'ARGH'
 	comp_filter_a = 0.5
@@ -550,6 +554,9 @@
 	pickup_fluctuations=0
 	cbed_method = 1
 	k_layer_pickup = 1
+	wallmodel_tau_sed = 1
+	ndtbed = 10
+	nrmsbed = 100 
 	z_tau_sed = -999.
 	pickup_bedslope_geo=0
 	bl_relax=0.01 
@@ -647,6 +654,11 @@
 	IF (diffusion.ne.'CDS2'.AND.diffusion.ne.'COM4') CALL writeerror(403) 
 	IF (comp_filter_a<0.or.comp_filter_a>0.5) CALL writeerror(404)
 	IF (comp_filter_n<0) CALL writeerror(405)
+	if (numdiff>0.and.numdiff2<numdiff) then 
+		numdiff2=numdiff2/numdiff !used as minimum for wf
+	else 
+		numdiff2=0.
+	endif 
 	if (convection.eq.'C2Bl'.or.convection.eq.'C4Bl') then 
 	  numdiff = numdiff   !no hidden factor 
 	else
@@ -1364,6 +1376,10 @@
      &	CALL writeerror(143) 
 	IF (phi_sediment.lt.(4.0 * atan(1.0))) CALL writeerror(144)
 	phi_sediment = phi_sediment/180.*4.0 * atan(1.0) !change from degrees to rad 
+	IF (wallmodel_tau_sed.ne.1.and.wallmodel_tau_sed.ne.3.and.wallmodel_tau_sed.ne.4.and.wallmodel_tau_sed.ne.5.
+     &	and.wallmodel_tau_sed.ne.11) THEN 
+		CALL writeerror(145)
+	ENDIF 
 	 
 	READ (UNIT=1,NML=ship,IOSTAT=ios)
 	!! check input constants
@@ -1533,6 +1549,7 @@
 	ALLOCATE(vol_V(1:imax,1:jmax*px))
 	ALLOCATE(vol_Vp(0:i1,0:j1))
 	ALLOCATE(kbed(0:i1,0:j1))
+	ALLOCATE(kbed0(0:i1,0:j1))
 	ALLOCATE(kbedin(0:j1))
 	ALLOCATE(kbed2(0:i1,0:px*jmax+1))
 	ALLOCATE(kbedt(0:i1,0:j1))
@@ -1791,6 +1808,46 @@
 		tau2Vnew = 0.
 		tau2Wnew = 0.
 	endif 
+	ALLOCATE(tau_fl_Vold(0:i1,0:j1))
+	ALLOCATE(tau_fl_Uold(0:i1,0:j1))
+	ALLOCATE(tau_fl_Vnew(0:i1,0:j1))
+	ALLOCATE(tau_fl_Unew(0:i1,0:j1))
+	tau_fl_Vold = 0.
+	tau_fl_Uold = 0.
+	tau_fl_Vnew = 0.
+	tau_fl_Unew = 0.
+	ALLOCATE(ust_sl_new(0:i1,0:j1))
+	ALLOCATE(ust_sl_old(0:i1,0:j1))
+	ALLOCATE(ust_bl_new(0:i1,0:j1))
+	ALLOCATE(ust_bl_old(0:i1,0:j1))
+	ALLOCATE(ust_mud_new(0:i1,0:j1))
+	ALLOCATE(ust_mud_old(0:i1,0:j1))
+	ALLOCATE(ust_frac_new(1:nfrac,0:i1,0:j1))
+	ALLOCATE(ust_frac_old(1:nfrac,0:i1,0:j1))	
+	ust_sl_new=0.
+	ust_sl_old=0.
+	ust_bl_new=0.
+	ust_bl_old=0.
+	ust_mud_new=0.
+	ust_mud_old=0.
+	ust_frac_new=0.
+	ust_frac_old=0.	
+	
+	IF (wallmodel_tau_sed.eq.11) THEN 
+		ALLOCATE(sigUWbed(1:nrmsbed,0:i1,0:j1))
+		ALLOCATE(sigVWbed(1:nrmsbed,0:i1,0:j1))
+		ALLOCATE(sigUbed(1:nrmsbed,0:i1,0:j1))
+		ALLOCATE(sigVbed(1:nrmsbed,0:i1,0:j1))
+		ALLOCATE(sigWbed(1:nrmsbed,0:i1,0:j1))
+		ALLOCATE(sigtbed(1:nrmsbed))
+		sigUWbed=0.
+		sigVWbed=0.
+		sigUbed=0.
+		sigVbed=0.
+		sigWbed=0.
+		sigtbed=1e-6 !start with not zero, otherwise maybe divide by zero
+	ENDIF
+	
 	! init at zero (when no bcfile it stays zero)
 	Ubcoarse1=0.
 	Ubcoarse2=0.

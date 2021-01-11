@@ -324,7 +324,7 @@
 
 	real ekm2(0:i1,0:j1,0:k1)
 	integer im,ip,jm,jp,km,kp
-	real ctot,cref,pwr
+	real ctot,cref,pwr,tauu,tauv
 	integer fracs_included(nfr_sand+nfr_silt)	
 
 !	real shr(1:imax,1:jmax,1:kmax),ekm1(1:imax,1:jmax,1:kmax),ekm2(1:imax,1:jmax,1:kmax)
@@ -417,22 +417,28 @@ c*************************************************************
 
 
 
- 	if (slip_bot.eq.1) then
+ 	if (slip_bot.ge.1) then
 	ekm2=ekm
  	  do i=1,imax
  	    do j=1,jmax
   	      uu=0.5*(Uvel(i,j,1)+Uvel(i-1,j,1))
   	      vv=0.5*(Vvel(i,j,1)+Vvel(i,j-1,1))
   	      absU=sqrt(uu*uu+vv*vv)
-  	      ust=0.1*absU
-  	      do tel=1,10 ! 10 iter is more than enough
-  		  z0=kn/30+0.11*nu_mol/MAX(ust,1.e-6)
-  		  ust=absU/MAX(1./kappa*log(0.5*dz/z0),2.) !ust maximal 0.5*absU
-  	      enddo
-  	      yplus=MAX(0.5*dz*ust/nu_mol,1e-12)
-  	      if (yplus<11.225) then	!viscous sublayer uplus=yplus
-  		  ust=sqrt(absU*nu_mol/(0.5*dz))
-  	      endif
+		  IF (slip_bot.ge.3) THEN 
+			  tauu=0.5*(tau_fl_Uold(i,j)+tau_fl_Uold(i-1,j))
+			  tauv=0.5*(tau_fl_Vold(i,j)+tau_fl_Vold(i,j-1))			   
+			  ust = ((tauu/rr(i,j,kp))**2+(tauv/rr(i,j,kp))**2)**0.25
+		  ELSE 		  
+  	        ust=0.1*absU
+  	        do tel=1,10 ! 10 iter is more than enough
+  		    z0=kn/30+0.11*nu_mol/MAX(ust,1.e-6)
+  		    ust=absU/MAX(1./kappa*log(0.5*dz/z0),2.) !ust maximal 0.5*absU
+  	        enddo
+  	        yplus=MAX(0.5*dz*ust/nu_mol,1e-12)
+  	        if (yplus<11.225) then	!viscous sublayer uplus=yplus
+  		    ust=sqrt(absU*nu_mol/(0.5*dz))
+  	        endif
+		  ENDIF 
   ! 	      write(*,*) 'ust van Driest damping',ust
  	      do k=1,10 ! first 10 grid layers from wall are adjusted
  		  yplus=MAX((REAL(k)-0.5)*dz*ust/nu_mol,1e-12)		  
@@ -638,7 +644,7 @@ c*************************************************************
 !       include 'common.txt'
       !include 'mpif.h'
 	real shear
-      real xx,yy,f,dzi,uu,vv,absU,ust,z0,yplus,ww,tauw,tauv
+      real xx,yy,f,dzi,uu,vv,absU,ust,z0,yplus,ww,tauw,tauv,tauu
       integer n,t,tel,kt,n2
       real ebb(0:i1,0:k1)
       real ebf(0:i1,0:k1)
@@ -778,7 +784,7 @@ c*************************************************************
 		ELSE
 			ekm=ekm+ekm_mol
 		ENDIF
-		if ((slip_bot.eq.1.or.slip_bot.eq.2).and.nu_minimum_wall.ge.1) then
+		if (slip_bot.ge.1.and.nu_minimum_wall.ge.1) then
 		  do i=1,imax
 			do j=1,jmax
 				IF (IBMorder.eq.2) THEN
@@ -800,13 +806,18 @@ c*************************************************************
 				uu=0.5*(Uvel(i,j,kp)+Uvel(i-1,j,kp))
 				vv=0.5*(Vvel(i,j,kp)+Vvel(i,j-1,kp))
 				absU=sqrt(uu*uu+vv*vv)
-				ust=0.1*absU
-				if (kn>0.) then !walls with rougness (log-law used which can be hydr smooth or hydr rough):
+				IF (slip_bot.ge.3) THEN 
+				  tauu=0.5*(tau_fl_Uold(i,j)+tau_fl_Uold(i-1,j))
+				  tauv=0.5*(tau_fl_Vold(i,j)+tau_fl_Vold(i,j-1))			   
+				  ust = ((tauu/rr(i,j,kp))**2+(tauv/rr(i,j,kp))**2)**0.25
+				ELSE 				
+				  ust=0.1*absU
+				  if (kn>0.) then !walls with rougness (log-law used which can be hydr smooth or hydr rough):
 					do tel=1,10 ! 10 iter is more than enough
 						z0=kn/30.+0.11*nu_mol/MAX(ust,1.e-9)
 						ust=absU/MAX(1./kappa*log(distance_to_bed/z0),2.) !ust maximal 0.5*absU
 					enddo
-				else
+				  else
 					do tel=1,10 ! 10 iter is more than enough
 						yplus=MAX(distance_to_bed*ust/nu_mol,1e-12)
 						ust=absU/MAX((2.5*log(yplus)+5.5),2.) !ust maximal 0.5*absU			
@@ -820,7 +831,8 @@ c*************************************************************
 					if (yplus<5.) then !viscous sublayer uplus=yplus
 						ust=sqrt(absU*nu_mol/(distance_to_bed))
 					endif
-				endif
+				  endif
+				ENDIF 
 				IF (nu_minimum_wall.eq.1) THEN
 					yplus = distance_to_bed*ust/nu_mol
 					ekm(i,j,kp) = MAX(ekm(i,j,kp),nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2) 
@@ -1332,7 +1344,7 @@ c*************************************************************
       implicit none
       !include 'mpif.h'
 	real SijSij,SdijSdij
-      real xx,yy,f,dzi,uu,vv,absU,ust,z0,yplus,ww,tauw,tauv
+      real xx,yy,f,dzi,uu,vv,absU,ust,z0,yplus,ww,tauw,tauv,tauu
       integer n,t,tel,n2
       real ebb(0:i1,0:k1)
       real ebf(0:i1,0:k1)
@@ -1464,7 +1476,7 @@ c*************************************************************
 		ENDIF
 
 
-		if ((slip_bot.eq.1.or.slip_bot.eq.2).and.nu_minimum_wall.ge.1) then
+		if (slip_bot.ge.1.and.nu_minimum_wall.ge.1) then
 		  do i=1,imax
 			do j=1,jmax
 				IF (IBMorder.eq.2) THEN
@@ -1486,13 +1498,18 @@ c*************************************************************
 				uu=0.5*(Uvel(i,j,kp)+Uvel(i-1,j,kp))
 				vv=0.5*(Vvel(i,j,kp)+Vvel(i,j-1,kp))
 				absU=sqrt(uu*uu+vv*vv)
-				ust=0.1*absU
-				if (kn>0.) then !walls with rougness (log-law used which can be hydr smooth or hydr rough):
+				IF (slip_bot.ge.3) THEN 
+				  tauu=0.5*(tau_fl_Uold(i,j)+tau_fl_Uold(i-1,j))
+				  tauv=0.5*(tau_fl_Vold(i,j)+tau_fl_Vold(i,j-1))			   
+				  ust = ((tauu/rr(i,j,kp))**2+(tauv/rr(i,j,kp))**2)**0.25
+				ELSE 				
+				  ust=0.1*absU
+				  if (kn>0.) then !walls with rougness (log-law used which can be hydr smooth or hydr rough):
 					do tel=1,10 ! 10 iter is more than enough
 						z0=kn/30.+0.11*nu_mol/MAX(ust,1.e-9)
 						ust=absU/MAX(1./kappa*log(distance_to_bed/z0),2.) !ust maximal 0.5*absU
 					enddo
-				else
+				  else
 					do tel=1,10 ! 10 iter is more than enough
 						yplus=MAX(distance_to_bed*ust/nu_mol,1e-12)
 						ust=absU/MAX((2.5*log(yplus)+5.5),2.) !ust maximal 0.5*absU			
@@ -1506,7 +1523,8 @@ c*************************************************************
 					if (yplus<5.) then !viscous sublayer uplus=yplus
 						ust=sqrt(absU*nu_mol/(distance_to_bed))
 					endif
-				endif
+				  endif
+				ENDIF 
 				IF (nu_minimum_wall.eq.1) THEN
 					yplus = distance_to_bed*ust/nu_mol
 					ekm(i,j,kp) = MAX(ekm(i,j,kp),nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2) 
@@ -1945,6 +1963,7 @@ c*************************************************************
 	integer im,ip,jm,jp,km,kp
 	real ctot,cref,pwr
 	integer fracs_included(nfr_sand+nfr_silt)	
+	real zb_C,distance_to_bed,nu_t,factor,absU2,tauu,tauv,tauw,uu,vv,ww,absU,ust,z0,yplus
 
 
 	dzi=1./dz
@@ -2089,6 +2108,361 @@ c*************************************************************
 		ELSE
 			ekm=ekm+ekm_mol
 		ENDIF
+
+		if (slip_bot.ge.1.and.nu_minimum_wall.ge.1) then
+		  do i=1,imax
+			do j=1,jmax
+				IF (IBMorder.eq.2) THEN
+					IF (interaction_bed.ge.4) THEN
+					  zb_C=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(dcdtbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
+					ELSE 
+					  zb_C=zbed(i,j)
+					ENDIF
+					kp=MIN(CEILING(zb_C/dz+0.5)+1,k1)	!location velocity which must be adjusted 2nd order IBM -->(0-1)*dz distance from bed
+					distance_to_bed=(REAL(kp)-0.5)*dz-zb_C
+					IF (distance_to_bed<0.1*dz) THEN 
+						kp = MIN(k1,kp+1)
+						distance_to_bed=(REAL(kp)-0.5)*dz-zb_C
+					ENDIF 
+				ELSE 
+					kp = MIN(k1,kbedt(i,j)+1)
+					distance_to_bed = 0.5*dz 
+				ENDIF 
+				uu=0.5*(Uvel(i,j,kp)+Uvel(i-1,j,kp))
+				vv=0.5*(Vvel(i,j,kp)+Vvel(i,j-1,kp))
+				absU=sqrt(uu*uu+vv*vv)
+				IF (slip_bot.ge.3) THEN 
+				  tauu=0.5*(tau_fl_Uold(i,j)+tau_fl_Uold(i-1,j))
+				  tauv=0.5*(tau_fl_Vold(i,j)+tau_fl_Vold(i,j-1))			   
+				  ust = ((tauu/rr(i,j,kp))**2+(tauv/rr(i,j,kp))**2)**0.25
+				ELSE 				
+				  ust=0.1*absU
+				  if (kn>0.) then !walls with rougness (log-law used which can be hydr smooth or hydr rough):
+					do tel=1,10 ! 10 iter is more than enough
+						z0=kn/30.+0.11*nu_mol/MAX(ust,1.e-9)
+						ust=absU/MAX(1./kappa*log(distance_to_bed/z0),2.) !ust maximal 0.5*absU
+					enddo
+				  else
+					do tel=1,10 ! 10 iter is more than enough
+						yplus=MAX(distance_to_bed*ust/nu_mol,1e-12)
+						ust=absU/MAX((2.5*log(yplus)+5.5),2.) !ust maximal 0.5*absU			
+					enddo
+					if (yplus<30.) then
+					  do tel=1,10 ! 10 iter is more than enough
+						yplus=MAX(distance_to_bed*ust/nu_mol,1e-12)
+						ust=absU/MAX((5.*log(yplus)-3.05),2.) !ust maximal 0.5*absU			
+					  enddo	
+					endif
+					if (yplus<5.) then !viscous sublayer uplus=yplus
+						ust=sqrt(absU*nu_mol/(distance_to_bed))
+					endif
+				  endif
+				ENDIF 
+				IF (nu_minimum_wall.eq.1) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(i,j,kp) = MAX(ekm(i,j,kp),nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2) 
+				!minimum eddy viscosity is Prandtl mixing length theory including Van Driest damping (factor A=19 and power 2 is found in Van Balen 2010 dissertation p15 and Catalano et al. 2010 circular cylinder flow)
+				ELSEIF (nu_minimum_wall.eq.2) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(i,j,kp) = MAX(ekm(i,j,kp),nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2) 				
+					distance_to_bed=distance_to_bed+dz 
+					kp=MIN(kp+1,k1) 
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(i,j,kp) = MAX(ekm(i,j,kp),nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2) 	
+				ELSEIF (nu_minimum_wall.eq.3) THEN 
+					kp=MIN(kp+1,k1) 
+					uu=0.5*(Uvel(i,j,kp)+Uvel(i-1,j,kp))
+					vv=0.5*(Vvel(i,j,kp)+Vvel(i,j-1,kp))
+					absU2=sqrt(uu*uu+vv*vv)
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					IF (absU2>1.1*absU) THEN
+						nu_t = ust*ust/((absU2-absU)/dz)
+						factor = nu_t/(0.5*(ekm(i,j,kp)/rr(i,j,kp)+ekm(i,j,kp-1)/rr(i,j,kp-1)))
+						factor = MAX(factor,1.) 
+						ekm(i,j,kp)=factor*ekm(i,j,kp)
+						ekm(i,j,kp-1)=factor*ekm(i,j,kp-1)
+					ELSE 
+						kp=kp-1 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(i,j,kp) = MAX(ekm(i,j,kp),nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2) 				
+						distance_to_bed=distance_to_bed+dz 
+						kp=MIN(kp+1,k1) 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(i,j,kp) = MAX(ekm(i,j,kp),nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2)					
+					ENDIF  
+				ELSEIF (nu_minimum_wall.eq.4) THEN 
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					nu_t = ust*ust/(MAX(absU,1.e-9)/distance_to_bed)
+					factor = nu_t/(ekm(i,j,kp)/rr(i,j,kp))
+					factor = MAX(factor,1.) 
+					ekm(i,j,kp)=factor*ekm(i,j,kp)
+				ELSEIF (nu_minimum_wall.eq.5) THEN 
+					! OpenFOAM manner: tau = rho*ust*ust and ust=absU/Uplus and tau=nu_t*dUdz combined:
+					nu_t = ust*distance_to_bed / (MAX(absU,1.e-9)/MAX(ust,1.e-9)) 
+					factor = nu_t/(ekm(i,j,kp)/rr(i,j,kp))
+					factor = MAX(factor,1.) 
+					ekm(i,j,kp)=factor*ekm(i,j,kp)
+				ELSEIF (nu_minimum_wall.eq.11) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(i,j,kp) = nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2 
+				!minimum eddy viscosity is Prandtl mixing length theory including Van Driest damping (factor A=19 and power 2 is found in Van Balen 2010 dissertation p15 and Catalano et al. 2010 circular cylinder flow)
+				ELSEIF (nu_minimum_wall.eq.12) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(i,j,kp) = nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2 				
+					distance_to_bed=distance_to_bed+dz 
+					kp=MIN(kp+1,k1) 
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(i,j,kp) = nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2 	
+				ELSEIF (nu_minimum_wall.eq.13) THEN 
+					kp=MIN(kp+1,k1) 
+					uu=0.5*(Uvel(i,j,kp)+Uvel(i-1,j,kp))
+					vv=0.5*(Vvel(i,j,kp)+Vvel(i,j-1,kp))
+					absU2=sqrt(uu*uu+vv*vv)
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					IF (absU2>1.1*absU) THEN
+						nu_t = ust*ust/((absU2-absU)/dz)
+						factor = nu_t/(0.5*(ekm(i,j,kp)/rr(i,j,kp)+ekm(i,j,kp-1)/rr(i,j,kp-1)))
+						!factor = MAX(factor,1.) 
+						ekm(i,j,kp)=factor*ekm(i,j,kp)
+						ekm(i,j,kp-1)=factor*ekm(i,j,kp-1)
+					ELSE 
+						kp=kp-1 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(i,j,kp) = nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2 				
+						distance_to_bed=distance_to_bed+dz 
+						kp=MIN(kp+1,k1) 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(i,j,kp) = nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2					
+					ENDIF  
+				ELSEIF (nu_minimum_wall.eq.14) THEN 
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					nu_t = ust*ust/(MAX(absU,1.e-9)/distance_to_bed)
+					factor = nu_t/(ekm(i,j,kp)/rr(i,j,kp))
+					!factor = MAX(factor,1.) 
+					ekm(i,j,kp)=factor*ekm(i,j,kp)
+				ELSEIF (nu_minimum_wall.eq.15) THEN 
+					! OpenFOAM manner: tau = rho*ust*ust and ust=absU/Uplus and tau=nu_t*dUdz combined:
+					nu_t = ust*distance_to_bed / (MAX(absU,1.e-9)/MAX(ust,1.e-9)) 
+					factor = nu_t/(ekm(i,j,kp)/rr(i,j,kp))
+					!factor = MAX(factor,1.) 
+					ekm(i,j,kp)=factor*ekm(i,j,kp)					
+				ENDIF					
+			enddo
+		  enddo
+		endif		
+		IF (monopile.eq.1.and.nu_minimum_wall.ge.1) then ! partial slip tau based on log-wall 
+			 do k=1,kmax 
+			   do j=1,jmax
+				distance_to_bed = (Rp(1)-Ru(0))
+				ww=0.5*(Wvel(1,j,k)+Wvel(1,j,k-1))
+				vv=0.5*(Vvel(1,j,k)+Vvel(1,j-1,k))				
+				absU=sqrt(ww*ww+vv*vv)
+				ust=0.1*absU
+				if (kn_mp>0.) then !walls with rougness (log-law used which can be hydr smooth or hydr rough):
+					do tel=1,10 ! 10 iter is more than enough
+						z0=kn_mp/30.+0.11*nu_mol/MAX(ust,1.e-9)
+						ust=absU/MAX(1./kappa*log(distance_to_bed/z0),2.) !ust maximal 0.5*absU
+					enddo
+				else
+					do tel=1,10 ! 10 iter is more than enough
+						yplus=MAX(distance_to_bed*ust/nu_mol,1e-12)
+						ust=absU/MAX((2.5*log(yplus)+5.5),2.) !ust maximal 0.5*absU			
+					enddo
+					if (yplus<30.) then
+					  do tel=1,10 ! 10 iter is more than enough
+						yplus=MAX(distance_to_bed*ust/nu_mol,1e-12)
+						ust=absU/MAX((5.*log(yplus)-3.05),2.) !ust maximal 0.5*absU			
+					  enddo	
+					endif
+					if (yplus<5.) then !viscous sublayer uplus=yplus
+						ust=sqrt(absU*nu_mol/(distance_to_bed))
+					endif
+				endif
+				IF (nu_minimum_wall.eq.1) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = MAX(ekm(1,j,k),nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 
+				!minimum eddy viscosity is Prandtl mixing length theory including Van Driest damping (factor A=19 and power 2 is found in Van Balen 2010 dissertation p15 and Catalano et al. 2010 circular cylinder flow)
+				ELSEIF (nu_minimum_wall.eq.2) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = MAX(ekm(1,j,k),nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 				
+					distance_to_bed=Rp(2)-Ru(0) 
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(2,j,k) = MAX(ekm(2,j,k),nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 	
+				ELSEIF (nu_minimum_wall.eq.3) THEN 
+					kp=MIN(kp+1,k1) 
+					ww=0.5*(Wvel(2,j,k)+Wvel(2,j,k-1))
+					vv=0.5*(Vvel(2,j,k)+Vvel(2,j-1,k))				
+					absU2=sqrt(ww*ww+vv*vv)
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					IF (absU2>1.1*absU) THEN
+						nu_t = ust*ust/((absU2-absU)/(Rp(2)-Rp(1)))
+						factor = nu_t/(0.5*(ekm(1,j,k)/rr(1,j,k)+ekm(2,j,k)/rr(2,j,k)))
+						factor = MAX(factor,1.) 
+						ekm(1,j,k)=factor*ekm(1,j,k)
+						ekm(2,j,k)=factor*ekm(2,j,k)
+					ELSE 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(1,j,k) = MAX(ekm(1,j,k),nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 				
+						distance_to_bed=Rp(2)-Ru(0) 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(2,j,k) = MAX(ekm(2,j,k),nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2)				
+					ENDIF  
+				ELSEIF (nu_minimum_wall.eq.4) THEN 
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					nu_t = ust*ust/(MAX(absU,1.e-9)/distance_to_bed)
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)
+				ELSEIF (nu_minimum_wall.eq.5) THEN 
+					! OpenFOAM manner: tau = rho*ust*ust and ust=absU/Uplus and tau=nu_t*dUdz combined:
+					nu_t = ust*distance_to_bed / (MAX(absU,1.e-9)/MAX(ust,1.e-9)) 
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)
+				ELSEIF (nu_minimum_wall.eq.11) THEN 
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2 
+				!minimum eddy viscosity is Prandtl mixing length theory including Van Driest damping (factor A=19 and power 2 is found in Van Balen 2010 dissertation p15 and Catalano et al. 2010 circular cylinder flow)
+				ELSEIF (nu_minimum_wall.eq.12) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2 				
+					distance_to_bed=Rp(2)-Ru(0) 
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(2,j,k) = nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2	
+				ELSEIF (nu_minimum_wall.eq.13) THEN 
+					kp=MIN(kp+1,k1) 
+					ww=0.5*(Wvel(2,j,k)+Wvel(2,j,k-1))
+					vv=0.5*(Vvel(2,j,k)+Vvel(2,j-1,k))				
+					absU2=sqrt(ww*ww+vv*vv)
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					IF (absU2>1.1*absU) THEN
+						nu_t = ust*ust/((absU2-absU)/(Rp(2)-Rp(1)))
+						factor = nu_t/(0.5*(ekm(1,j,k)/rr(1,j,k)+ekm(2,j,k)/rr(2,j,k)))
+						!factor = MAX(factor,1.) 
+						ekm(1,j,k)=factor*ekm(1,j,k)
+						ekm(2,j,k)=factor*ekm(2,j,k)
+					ELSE 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(1,j,k) = nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2 				
+						distance_to_bed=Rp(2)-Ru(0) 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(2,j,k) = nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2				
+					ENDIF  
+				ELSEIF (nu_minimum_wall.eq.14) THEN 
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					nu_t = ust*ust/(MAX(absU,1.e-9)/distance_to_bed)
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					!factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)
+				ELSEIF (nu_minimum_wall.eq.15) THEN 
+					! OpenFOAM manner: tau = rho*ust*ust and ust=absU/Uplus and tau=nu_t*dUdz combined:
+					nu_t = ust*distance_to_bed / (MAX(absU,1.e-9)/MAX(ust,1.e-9)) 
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					!factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)					
+				ENDIF
+				
+			  enddo
+			 enddo 
+		ELSEIF (monopile.eq.3.and.nu_minimum_wall.ge.1) then ! partial slip tau based on simplified TBL wall-law taking pressure gradient into account
+			 do k=1,kmax 
+			   do j=1,jmax
+			    distance_to_bed = (Rp(1)-Ru(0))
+				tauw=0.5*(tau2Wold(j,k)+tau2Wold(j,k-1))
+				tauv=0.5*(tau2Vold(j,k)+tau2Vold(j-1,k))			   
+				ust = ((tauw/rr(1,j,k))**2+(tauv/rr(1,j,k))**2)**0.25								!at W-gridpoint
+				ww=0.5*(Wvel(1,j,k)+Wvel(1,j,k-1))
+				vv=0.5*(Vvel(1,j,k)+Vvel(1,j-1,k))				
+				absU=sqrt(ww*ww+vv*vv)								
+				IF (nu_minimum_wall.eq.1) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = MAX(ekm(1,j,k),nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 
+				!minimum eddy viscosity is Prandtl mixing length theory including Van Driest damping (factor A=19 and power 2 is found in Van Balen 2010 dissertation p15 and Catalano et al. 2010 circular cylinder flow)
+				ELSEIF (nu_minimum_wall.eq.2) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = MAX(ekm(1,j,k),nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 				
+					distance_to_bed=Rp(2)-Ru(0) 
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(2,j,k) = MAX(ekm(2,j,k),nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 	
+				ELSEIF (nu_minimum_wall.eq.3) THEN 
+					kp=MIN(kp+1,k1) 
+					ww=0.5*(Wvel(2,j,k)+Wvel(2,j,k-1))
+					vv=0.5*(Vvel(2,j,k)+Vvel(2,j-1,k))				
+					absU2=sqrt(ww*ww+vv*vv)
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					IF (absU2>1.1*absU) THEN
+						nu_t = ust*ust/((absU2-absU)/(Rp(2)-Rp(1)))
+						factor = nu_t/(0.5*(ekm(1,j,k)/rr(1,j,k)+ekm(2,j,k)/rr(2,j,k)))
+						factor = MAX(factor,1.) 
+						ekm(1,j,k)=factor*ekm(1,j,k)
+						ekm(2,j,k)=factor*ekm(2,j,k)
+					ELSE 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(1,j,k) = MAX(ekm(1,j,k),nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 				
+						distance_to_bed=Rp(2)-Ru(0) 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(2,j,k) = MAX(ekm(2,j,k),nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2)				
+					ENDIF  
+				ELSEIF (nu_minimum_wall.eq.4) THEN 
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					nu_t = ust*ust/(MAX(absU,1.e-9)/distance_to_bed)
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					IF (ust>0.5*absU) factor=1. !with monopile.eq.3 ust can be >0 with absU=0 because due to dPdx there can be tau without absU 
+					!factor = MIN(factor,100.) 
+					factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)
+				ELSEIF (nu_minimum_wall.eq.5) THEN 
+					! OpenFOAM manner: tau = rho*ust*ust and ust=absU/Uplus and tau=nu_t*dUdz combined:
+					nu_t = ust*distance_to_bed / (MAX(absU,1.e-9)/MAX(ust,1.e-9)) 
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					IF (ust>0.5*absU) factor=1. !with monopile.eq.3 ust can be >0 with absU=0 because due to dPdx there can be tau without absU 
+					factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)
+				ELSEIF (nu_minimum_wall.eq.11) THEN 
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2 
+				!minimum eddy viscosity is Prandtl mixing length theory including Van Driest damping (factor A=19 and power 2 is found in Van Balen 2010 dissertation p15 and Catalano et al. 2010 circular cylinder flow)
+				ELSEIF (nu_minimum_wall.eq.12) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2 				
+					distance_to_bed=Rp(2)-Ru(0) 
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(2,j,k) = nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2	
+				ELSEIF (nu_minimum_wall.eq.13) THEN 
+					kp=MIN(kp+1,k1) 
+					ww=0.5*(Wvel(2,j,k)+Wvel(2,j,k-1))
+					vv=0.5*(Vvel(2,j,k)+Vvel(2,j-1,k))				
+					absU2=sqrt(ww*ww+vv*vv)
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					IF (absU2>1.1*absU) THEN
+						nu_t = ust*ust/((absU2-absU)/(Rp(2)-Rp(1)))
+						factor = nu_t/(0.5*(ekm(1,j,k)/rr(1,j,k)+ekm(2,j,k)/rr(2,j,k)))
+						!factor = MAX(factor,1.) 
+						ekm(1,j,k)=factor*ekm(1,j,k)
+						ekm(2,j,k)=factor*ekm(2,j,k)
+					ELSE 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(1,j,k) = nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2 				
+						distance_to_bed=Rp(2)-Ru(0) 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(2,j,k) = nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2				
+					ENDIF  
+				ELSEIF (nu_minimum_wall.eq.14) THEN 
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					nu_t = ust*ust/(MAX(absU,1.e-9)/distance_to_bed)
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					!factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)
+				ELSEIF (nu_minimum_wall.eq.15) THEN 
+					! OpenFOAM manner: tau = rho*ust*ust and ust=absU/Uplus and tau=nu_t*dUdz combined:
+					nu_t = ust*distance_to_bed / (MAX(absU,1.e-9)/MAX(ust,1.e-9)) 
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					!factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)					
+				ENDIF		
+			  enddo
+			 enddo 
+		ENDIF
 		
 !!      Boundary conditions Neumann
         call shiftf(ekm,ebf) 
@@ -2206,7 +2580,7 @@ c*************************************************************
       implicit none
       !include 'mpif.h'
 	real SijSij,SdijSdij
-      real xx,yy,f,dzi,uu,vv,absU,ust,z0,yplus
+      real xx,yy,f,dzi
       integer n,t,tel,n2
       real ebb(0:i1,0:k1)
       real ebf(0:i1,0:k1)
@@ -2239,6 +2613,7 @@ c*************************************************************
 	integer im,ip,jm,jp,km,kp
 	real ctot,cref,pwr
 	integer fracs_included(nfr_sand+nfr_silt)	
+	real zb_C,distance_to_bed,nu_t,factor,absU2,tauu,tauv,tauw,uu,vv,ww,absU,ust,z0,yplus
 	
 
 	inv27=1./27.
@@ -2682,7 +3057,363 @@ c*************************************************************
 			ENDDO
 		ELSE
 			ekm=ekm+ekm_mol
-		ENDIF	
+		ENDIF
+
+		if (slip_bot.ge.1.and.nu_minimum_wall.ge.1) then
+		  do i=1,imax
+			do j=1,jmax
+				IF (IBMorder.eq.2) THEN
+					IF (interaction_bed.ge.4) THEN
+					  zb_C=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(dcdtbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
+					ELSE 
+					  zb_C=zbed(i,j)
+					ENDIF
+					kp=MIN(CEILING(zb_C/dz+0.5)+1,k1)	!location velocity which must be adjusted 2nd order IBM -->(0-1)*dz distance from bed
+					distance_to_bed=(REAL(kp)-0.5)*dz-zb_C
+					IF (distance_to_bed<0.1*dz) THEN 
+						kp = MIN(k1,kp+1)
+						distance_to_bed=(REAL(kp)-0.5)*dz-zb_C
+					ENDIF 
+				ELSE 
+					kp = MIN(k1,kbedt(i,j)+1)
+					distance_to_bed = 0.5*dz 
+				ENDIF 
+				uu=0.5*(Uvel(i,j,kp)+Uvel(i-1,j,kp))
+				vv=0.5*(Vvel(i,j,kp)+Vvel(i,j-1,kp))
+				absU=sqrt(uu*uu+vv*vv)
+				IF (slip_bot.ge.3) THEN 
+				  tauu=0.5*(tau_fl_Uold(i,j)+tau_fl_Uold(i-1,j))
+				  tauv=0.5*(tau_fl_Vold(i,j)+tau_fl_Vold(i,j-1))			   
+				  ust = ((tauu/rr(i,j,kp))**2+(tauv/rr(i,j,kp))**2)**0.25
+				ELSE 				
+				  ust=0.1*absU
+				  if (kn>0.) then !walls with rougness (log-law used which can be hydr smooth or hydr rough):
+					do tel=1,10 ! 10 iter is more than enough
+						z0=kn/30.+0.11*nu_mol/MAX(ust,1.e-9)
+						ust=absU/MAX(1./kappa*log(distance_to_bed/z0),2.) !ust maximal 0.5*absU
+					enddo
+				  else
+					do tel=1,10 ! 10 iter is more than enough
+						yplus=MAX(distance_to_bed*ust/nu_mol,1e-12)
+						ust=absU/MAX((2.5*log(yplus)+5.5),2.) !ust maximal 0.5*absU			
+					enddo
+					if (yplus<30.) then
+					  do tel=1,10 ! 10 iter is more than enough
+						yplus=MAX(distance_to_bed*ust/nu_mol,1e-12)
+						ust=absU/MAX((5.*log(yplus)-3.05),2.) !ust maximal 0.5*absU			
+					  enddo	
+					endif
+					if (yplus<5.) then !viscous sublayer uplus=yplus
+						ust=sqrt(absU*nu_mol/(distance_to_bed))
+					endif
+				  endif
+				ENDIF 
+				IF (nu_minimum_wall.eq.1) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(i,j,kp) = MAX(ekm(i,j,kp),nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2) 
+				!minimum eddy viscosity is Prandtl mixing length theory including Van Driest damping (factor A=19 and power 2 is found in Van Balen 2010 dissertation p15 and Catalano et al. 2010 circular cylinder flow)
+				ELSEIF (nu_minimum_wall.eq.2) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(i,j,kp) = MAX(ekm(i,j,kp),nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2) 				
+					distance_to_bed=distance_to_bed+dz 
+					kp=MIN(kp+1,k1) 
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(i,j,kp) = MAX(ekm(i,j,kp),nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2) 	
+				ELSEIF (nu_minimum_wall.eq.3) THEN 
+					kp=MIN(kp+1,k1) 
+					uu=0.5*(Uvel(i,j,kp)+Uvel(i-1,j,kp))
+					vv=0.5*(Vvel(i,j,kp)+Vvel(i,j-1,kp))
+					absU2=sqrt(uu*uu+vv*vv)
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					IF (absU2>1.1*absU) THEN
+						nu_t = ust*ust/((absU2-absU)/dz)
+						factor = nu_t/(0.5*(ekm(i,j,kp)/rr(i,j,kp)+ekm(i,j,kp-1)/rr(i,j,kp-1)))
+						factor = MAX(factor,1.) 
+						ekm(i,j,kp)=factor*ekm(i,j,kp)
+						ekm(i,j,kp-1)=factor*ekm(i,j,kp-1)
+					ELSE 
+						kp=kp-1 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(i,j,kp) = MAX(ekm(i,j,kp),nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2) 				
+						distance_to_bed=distance_to_bed+dz 
+						kp=MIN(kp+1,k1) 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(i,j,kp) = MAX(ekm(i,j,kp),nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2)					
+					ENDIF  
+				ELSEIF (nu_minimum_wall.eq.4) THEN 
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					nu_t = ust*ust/(MAX(absU,1.e-9)/distance_to_bed)
+					factor = nu_t/(ekm(i,j,kp)/rr(i,j,kp))
+					factor = MAX(factor,1.) 
+					ekm(i,j,kp)=factor*ekm(i,j,kp)
+				ELSEIF (nu_minimum_wall.eq.5) THEN 
+					! OpenFOAM manner: tau = rho*ust*ust and ust=absU/Uplus and tau=nu_t*dUdz combined:
+					nu_t = ust*distance_to_bed / (MAX(absU,1.e-9)/MAX(ust,1.e-9)) 
+					factor = nu_t/(ekm(i,j,kp)/rr(i,j,kp))
+					factor = MAX(factor,1.) 
+					ekm(i,j,kp)=factor*ekm(i,j,kp)
+				ELSEIF (nu_minimum_wall.eq.11) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(i,j,kp) = nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2 
+				!minimum eddy viscosity is Prandtl mixing length theory including Van Driest damping (factor A=19 and power 2 is found in Van Balen 2010 dissertation p15 and Catalano et al. 2010 circular cylinder flow)
+				ELSEIF (nu_minimum_wall.eq.12) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(i,j,kp) = nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2 				
+					distance_to_bed=distance_to_bed+dz 
+					kp=MIN(kp+1,k1) 
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(i,j,kp) = nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2 	
+				ELSEIF (nu_minimum_wall.eq.13) THEN 
+					kp=MIN(kp+1,k1) 
+					uu=0.5*(Uvel(i,j,kp)+Uvel(i-1,j,kp))
+					vv=0.5*(Vvel(i,j,kp)+Vvel(i,j-1,kp))
+					absU2=sqrt(uu*uu+vv*vv)
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					IF (absU2>1.1*absU) THEN
+						nu_t = ust*ust/((absU2-absU)/dz)
+						factor = nu_t/(0.5*(ekm(i,j,kp)/rr(i,j,kp)+ekm(i,j,kp-1)/rr(i,j,kp-1)))
+						!factor = MAX(factor,1.) 
+						ekm(i,j,kp)=factor*ekm(i,j,kp)
+						ekm(i,j,kp-1)=factor*ekm(i,j,kp-1)
+					ELSE 
+						kp=kp-1 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(i,j,kp) = nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2 				
+						distance_to_bed=distance_to_bed+dz 
+						kp=MIN(kp+1,k1) 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(i,j,kp) = nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2					
+					ENDIF  
+				ELSEIF (nu_minimum_wall.eq.14) THEN 
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					nu_t = ust*ust/(MAX(absU,1.e-9)/distance_to_bed)
+					factor = nu_t/(ekm(i,j,kp)/rr(i,j,kp))
+					!factor = MAX(factor,1.) 
+					ekm(i,j,kp)=factor*ekm(i,j,kp)
+				ELSEIF (nu_minimum_wall.eq.15) THEN 
+					! OpenFOAM manner: tau = rho*ust*ust and ust=absU/Uplus and tau=nu_t*dUdz combined:
+					nu_t = ust*distance_to_bed / (MAX(absU,1.e-9)/MAX(ust,1.e-9)) 
+					factor = nu_t/(ekm(i,j,kp)/rr(i,j,kp))
+					!factor = MAX(factor,1.) 
+					ekm(i,j,kp)=factor*ekm(i,j,kp)					
+				ENDIF					
+			enddo
+		  enddo
+		endif		
+		IF (monopile.eq.1.and.nu_minimum_wall.ge.1) then ! partial slip tau based on log-wall 
+			 do k=1,kmax 
+			   do j=1,jmax
+				distance_to_bed = (Rp(1)-Ru(0))
+				ww=0.5*(Wvel(1,j,k)+Wvel(1,j,k-1))
+				vv=0.5*(Vvel(1,j,k)+Vvel(1,j-1,k))				
+				absU=sqrt(ww*ww+vv*vv)
+				ust=0.1*absU
+				if (kn_mp>0.) then !walls with rougness (log-law used which can be hydr smooth or hydr rough):
+					do tel=1,10 ! 10 iter is more than enough
+						z0=kn_mp/30.+0.11*nu_mol/MAX(ust,1.e-9)
+						ust=absU/MAX(1./kappa*log(distance_to_bed/z0),2.) !ust maximal 0.5*absU
+					enddo
+				else
+					do tel=1,10 ! 10 iter is more than enough
+						yplus=MAX(distance_to_bed*ust/nu_mol,1e-12)
+						ust=absU/MAX((2.5*log(yplus)+5.5),2.) !ust maximal 0.5*absU			
+					enddo
+					if (yplus<30.) then
+					  do tel=1,10 ! 10 iter is more than enough
+						yplus=MAX(distance_to_bed*ust/nu_mol,1e-12)
+						ust=absU/MAX((5.*log(yplus)-3.05),2.) !ust maximal 0.5*absU			
+					  enddo	
+					endif
+					if (yplus<5.) then !viscous sublayer uplus=yplus
+						ust=sqrt(absU*nu_mol/(distance_to_bed))
+					endif
+				endif
+				IF (nu_minimum_wall.eq.1) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = MAX(ekm(1,j,k),nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 
+				!minimum eddy viscosity is Prandtl mixing length theory including Van Driest damping (factor A=19 and power 2 is found in Van Balen 2010 dissertation p15 and Catalano et al. 2010 circular cylinder flow)
+				ELSEIF (nu_minimum_wall.eq.2) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = MAX(ekm(1,j,k),nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 				
+					distance_to_bed=Rp(2)-Ru(0) 
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(2,j,k) = MAX(ekm(2,j,k),nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 	
+				ELSEIF (nu_minimum_wall.eq.3) THEN 
+					kp=MIN(kp+1,k1) 
+					ww=0.5*(Wvel(2,j,k)+Wvel(2,j,k-1))
+					vv=0.5*(Vvel(2,j,k)+Vvel(2,j-1,k))				
+					absU2=sqrt(ww*ww+vv*vv)
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					IF (absU2>1.1*absU) THEN
+						nu_t = ust*ust/((absU2-absU)/(Rp(2)-Rp(1)))
+						factor = nu_t/(0.5*(ekm(1,j,k)/rr(1,j,k)+ekm(2,j,k)/rr(2,j,k)))
+						factor = MAX(factor,1.) 
+						ekm(1,j,k)=factor*ekm(1,j,k)
+						ekm(2,j,k)=factor*ekm(2,j,k)
+					ELSE 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(1,j,k) = MAX(ekm(1,j,k),nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 				
+						distance_to_bed=Rp(2)-Ru(0) 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(2,j,k) = MAX(ekm(2,j,k),nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2)				
+					ENDIF  
+				ELSEIF (nu_minimum_wall.eq.4) THEN 
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					nu_t = ust*ust/(MAX(absU,1.e-9)/distance_to_bed)
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)
+				ELSEIF (nu_minimum_wall.eq.5) THEN 
+					! OpenFOAM manner: tau = rho*ust*ust and ust=absU/Uplus and tau=nu_t*dUdz combined:
+					nu_t = ust*distance_to_bed / (MAX(absU,1.e-9)/MAX(ust,1.e-9)) 
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)
+				ELSEIF (nu_minimum_wall.eq.11) THEN 
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2 
+				!minimum eddy viscosity is Prandtl mixing length theory including Van Driest damping (factor A=19 and power 2 is found in Van Balen 2010 dissertation p15 and Catalano et al. 2010 circular cylinder flow)
+				ELSEIF (nu_minimum_wall.eq.12) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2 				
+					distance_to_bed=Rp(2)-Ru(0) 
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(2,j,k) = nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2	
+				ELSEIF (nu_minimum_wall.eq.13) THEN 
+					kp=MIN(kp+1,k1) 
+					ww=0.5*(Wvel(2,j,k)+Wvel(2,j,k-1))
+					vv=0.5*(Vvel(2,j,k)+Vvel(2,j-1,k))				
+					absU2=sqrt(ww*ww+vv*vv)
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					IF (absU2>1.1*absU) THEN
+						nu_t = ust*ust/((absU2-absU)/(Rp(2)-Rp(1)))
+						factor = nu_t/(0.5*(ekm(1,j,k)/rr(1,j,k)+ekm(2,j,k)/rr(2,j,k)))
+						!factor = MAX(factor,1.) 
+						ekm(1,j,k)=factor*ekm(1,j,k)
+						ekm(2,j,k)=factor*ekm(2,j,k)
+					ELSE 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(1,j,k) = nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2 				
+						distance_to_bed=Rp(2)-Ru(0) 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(2,j,k) = nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2				
+					ENDIF  
+				ELSEIF (nu_minimum_wall.eq.14) THEN 
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					nu_t = ust*ust/(MAX(absU,1.e-9)/distance_to_bed)
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					!factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)
+				ELSEIF (nu_minimum_wall.eq.15) THEN 
+					! OpenFOAM manner: tau = rho*ust*ust and ust=absU/Uplus and tau=nu_t*dUdz combined:
+					nu_t = ust*distance_to_bed / (MAX(absU,1.e-9)/MAX(ust,1.e-9)) 
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					!factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)					
+				ENDIF
+				
+			  enddo
+			 enddo 
+		ELSEIF (monopile.eq.3.and.nu_minimum_wall.ge.1) then ! partial slip tau based on simplified TBL wall-law taking pressure gradient into account
+			 do k=1,kmax 
+			   do j=1,jmax
+			    distance_to_bed = (Rp(1)-Ru(0))
+				tauw=0.5*(tau2Wold(j,k)+tau2Wold(j,k-1))
+				tauv=0.5*(tau2Vold(j,k)+tau2Vold(j-1,k))			   
+				ust = ((tauw/rr(1,j,k))**2+(tauv/rr(1,j,k))**2)**0.25								!at W-gridpoint
+				ww=0.5*(Wvel(1,j,k)+Wvel(1,j,k-1))
+				vv=0.5*(Vvel(1,j,k)+Vvel(1,j-1,k))				
+				absU=sqrt(ww*ww+vv*vv)								
+				IF (nu_minimum_wall.eq.1) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = MAX(ekm(1,j,k),nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 
+				!minimum eddy viscosity is Prandtl mixing length theory including Van Driest damping (factor A=19 and power 2 is found in Van Balen 2010 dissertation p15 and Catalano et al. 2010 circular cylinder flow)
+				ELSEIF (nu_minimum_wall.eq.2) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = MAX(ekm(1,j,k),nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 				
+					distance_to_bed=Rp(2)-Ru(0) 
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(2,j,k) = MAX(ekm(2,j,k),nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 	
+				ELSEIF (nu_minimum_wall.eq.3) THEN 
+					kp=MIN(kp+1,k1) 
+					ww=0.5*(Wvel(2,j,k)+Wvel(2,j,k-1))
+					vv=0.5*(Vvel(2,j,k)+Vvel(2,j-1,k))				
+					absU2=sqrt(ww*ww+vv*vv)
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					IF (absU2>1.1*absU) THEN
+						nu_t = ust*ust/((absU2-absU)/(Rp(2)-Rp(1)))
+						factor = nu_t/(0.5*(ekm(1,j,k)/rr(1,j,k)+ekm(2,j,k)/rr(2,j,k)))
+						factor = MAX(factor,1.) 
+						ekm(1,j,k)=factor*ekm(1,j,k)
+						ekm(2,j,k)=factor*ekm(2,j,k)
+					ELSE 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(1,j,k) = MAX(ekm(1,j,k),nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 				
+						distance_to_bed=Rp(2)-Ru(0) 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(2,j,k) = MAX(ekm(2,j,k),nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2)				
+					ENDIF  
+				ELSEIF (nu_minimum_wall.eq.4) THEN 
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					nu_t = ust*ust/(MAX(absU,1.e-9)/distance_to_bed)
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					IF (ust>0.5*absU) factor=1. !with monopile.eq.3 ust can be >0 with absU=0 because due to dPdx there can be tau without absU 
+					!factor = MIN(factor,100.) 
+					factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)
+				ELSEIF (nu_minimum_wall.eq.5) THEN 
+					! OpenFOAM manner: tau = rho*ust*ust and ust=absU/Uplus and tau=nu_t*dUdz combined:
+					nu_t = ust*distance_to_bed / (MAX(absU,1.e-9)/MAX(ust,1.e-9)) 
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					IF (ust>0.5*absU) factor=1. !with monopile.eq.3 ust can be >0 with absU=0 because due to dPdx there can be tau without absU 
+					factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)
+				ELSEIF (nu_minimum_wall.eq.11) THEN 
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2 
+				!minimum eddy viscosity is Prandtl mixing length theory including Van Driest damping (factor A=19 and power 2 is found in Van Balen 2010 dissertation p15 and Catalano et al. 2010 circular cylinder flow)
+				ELSEIF (nu_minimum_wall.eq.12) THEN
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(1,j,k) = nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2 				
+					distance_to_bed=Rp(2)-Ru(0) 
+					yplus = distance_to_bed*ust/nu_mol
+					ekm(2,j,k) = nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2	
+				ELSEIF (nu_minimum_wall.eq.13) THEN 
+					kp=MIN(kp+1,k1) 
+					ww=0.5*(Wvel(2,j,k)+Wvel(2,j,k-1))
+					vv=0.5*(Vvel(2,j,k)+Vvel(2,j-1,k))				
+					absU2=sqrt(ww*ww+vv*vv)
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					IF (absU2>1.1*absU) THEN
+						nu_t = ust*ust/((absU2-absU)/(Rp(2)-Rp(1)))
+						factor = nu_t/(0.5*(ekm(1,j,k)/rr(1,j,k)+ekm(2,j,k)/rr(2,j,k)))
+						!factor = MAX(factor,1.) 
+						ekm(1,j,k)=factor*ekm(1,j,k)
+						ekm(2,j,k)=factor*ekm(2,j,k)
+					ELSE 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(1,j,k) = nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2 				
+						distance_to_bed=Rp(2)-Ru(0) 
+						yplus = distance_to_bed*ust/nu_mol
+						ekm(2,j,k) = nu_mol*rr(2,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2				
+					ENDIF  
+				ELSEIF (nu_minimum_wall.eq.14) THEN 
+					! ust*ust = nu_t*dUdz --> nu_t = ust*ust/dUdz 
+					nu_t = ust*ust/(MAX(absU,1.e-9)/distance_to_bed)
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					!factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)
+				ELSEIF (nu_minimum_wall.eq.15) THEN 
+					! OpenFOAM manner: tau = rho*ust*ust and ust=absU/Uplus and tau=nu_t*dUdz combined:
+					nu_t = ust*distance_to_bed / (MAX(absU,1.e-9)/MAX(ust,1.e-9)) 
+					factor = nu_t/(ekm(1,j,k)/rr(1,j,k))
+					!factor = MAX(factor,1.) 
+					ekm(1,j,k)=factor*ekm(1,j,k)					
+				ENDIF		
+			  enddo
+			 enddo 
+		ENDIF
+		
 !!      Boundary conditions Neumann
         call shiftf(ekm,ebf) 
         call shiftb(ekm,ebb) 
@@ -2799,7 +3530,7 @@ c*************************************************************
       USE nlist
       implicit none
       !include 'mpif.h'
-      real xx,yy,f,dzi,uu,vv,absU,ust,z0,yplus,uu2,vv2,bed_slope
+      real xx,yy,f,dzi,uu,vv,absU,ust,z0,yplus,uu2,vv2,bed_slope,tauu
       integer n,t,tel,n2,kbedp(0:i1,0:j1)
       real ebb(0:i1,0:k1)
       real ebf(0:i1,0:k1)
@@ -2820,6 +3551,8 @@ c*************************************************************
 	real ctot,cref,pwr,zb_C,distance_to_bed,nu_t,factor,absU2,LLL,III,ww
 	integer fracs_included(nfr_sand+nfr_silt)
 	real aaa(0:k1),bbb(0:k1),ccc(0:k1),ekm_min,ekm_plus,rhss(0:k1),CNz,zb_W,tauw,tauv
+	real ddzzE,ddzzW,ddzzN,ddzzS
+	integer kppE,kppW,kppN,kppS
 
 	sqrtsix=sqrt(6.)
 	
@@ -2956,7 +3689,7 @@ c*************************************************************
 		ELSE
 			ekm=ekm+ekm_mol
 		ENDIF
-		if ((slip_bot.eq.1.or.slip_bot.eq.2).and.nu_minimum_wall.ge.1) then
+		if (slip_bot.ge.1.and.nu_minimum_wall.ge.1) then
 		  do i=1,imax
 			do j=1,jmax
 				IF (IBMorder.eq.2) THEN
@@ -2978,13 +3711,18 @@ c*************************************************************
 				uu=0.5*(Uvel(i,j,kp)+Uvel(i-1,j,kp))
 				vv=0.5*(Vvel(i,j,kp)+Vvel(i,j-1,kp))
 				absU=sqrt(uu*uu+vv*vv)
-				ust=0.1*absU
-				if (kn>0.) then !walls with rougness (log-law used which can be hydr smooth or hydr rough):
+				IF (slip_bot.ge.3) THEN 
+				  tauu=0.5*(tau_fl_Uold(i,j)+tau_fl_Uold(i-1,j))
+				  tauv=0.5*(tau_fl_Vold(i,j)+tau_fl_Vold(i,j-1))			   
+				  ust = ((tauu/rr(i,j,kp))**2+(tauv/rr(i,j,kp))**2)**0.25
+				ELSE 				
+				  ust=0.1*absU
+				  if (kn>0.) then !walls with rougness (log-law used which can be hydr smooth or hydr rough):
 					do tel=1,10 ! 10 iter is more than enough
 						z0=kn/30.+0.11*nu_mol/MAX(ust,1.e-9)
 						ust=absU/MAX(1./kappa*log(distance_to_bed/z0),2.) !ust maximal 0.5*absU
 					enddo
-				else
+				  else
 					do tel=1,10 ! 10 iter is more than enough
 						yplus=MAX(distance_to_bed*ust/nu_mol,1e-12)
 						ust=absU/MAX((2.5*log(yplus)+5.5),2.) !ust maximal 0.5*absU			
@@ -2998,7 +3736,8 @@ c*************************************************************
 					if (yplus<5.) then !viscous sublayer uplus=yplus
 						ust=sqrt(absU*nu_mol/(distance_to_bed))
 					endif
-				endif
+				  endif
+				ENDIF 
 				IF (nu_minimum_wall.eq.1) THEN
 					yplus = distance_to_bed*ust/nu_mol
 					ekm(i,j,kp) = MAX(ekm(i,j,kp),nu_mol*rr(i,j,kp)*kappa*yplus*(1-exp(-yplus/19.))**2) 
@@ -3533,12 +4272,28 @@ c*************************************************************
 !		enddo
 !		ENDIF
 !		ENDDO ! bedplume loop		
-		if ((slip_bot.eq.1.or.slip_bot.eq.2).and.wallup.ne.1) then !partial slip wall below and free surface bc up 
-				DO i=0,i1
-				  DO j=0,j1
-					kbedp(i,j)=MIN(kbed(i,j)+k_ust_tau,k1) 
-				  ENDDO 
-				ENDDO 
+		if (slip_bot.ge.1.and.wallup.ne.1) then !partial slip wall below and free surface bc up 
+				IF (IBMorder.eq.2) THEN
+					DO i=0,i1
+					  DO j=0,j1
+						zb_W=zbed(i,j)
+						kpp=MIN(CEILING(zb_W/dz+0.5)-1+k_ust_tau,k1)		!for k_ust_tau=2 kpp is between 1*dz-2*dz distance from bed 	
+						!kpp=MIN(CEILING(zb_W/dz+0.5),k1)		!kpp is between 0-dz distance from bed 	
+						distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W !as start use first cell (0.5-1)*dz distance from bed 
+						IF (distance_to_bed<0.5*dz) THEN !first cell too close to bed, therefore use second cell (1-1.5)*dz distance from bed 
+							kpp=MIN(kpp+1,k1)		!kpp is in principle between 1*dz-2*dz distance from bed, but due to this if-statement only 1-1.5 from bed
+							distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W
+						ENDIF 
+						kbedp(i,j)=kpp
+					  ENDDO 
+					ENDDO 			
+				ELSE 
+					DO i=0,i1
+					  DO j=0,j1
+						kbedp(i,j)=MIN(kbed(i,j)+k_ust_tau,k1) 
+					  ENDDO 
+					ENDDO 		
+				ENDIF
 				IF (interaction_bed.ge.4) THEN
 				 DO i=1,imax
 				  DO j=1,jmax
@@ -3549,45 +4304,47 @@ c*************************************************************
 				ENDIF 		
 			  do i=1,imax
 				do j=1,jmax
-				IF (IBMorder.eq.2) THEN
-					zb_W=zbed(i,j)
-					kpp=MIN(CEILING(zb_W/dz+0.5)+k_ust_tau-1,k1)		!for k_ust_tau=2 kpp is between 1*dz-2*dz distance from bed 	
-					!kpp=MIN(CEILING(zb_W/dz+0.5),k1)		!kpp is between 0-dz distance from bed 	
-					distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W
-					IF (distance_to_bed<0.5*dz) THEN !first cell too close to bed, therefore use second cell (1-1.5)*dz distance from bed 
-					  kpp=MIN(kpp+1,k1)		!kpp is in principle between 1*dz-2*dz distance from bed, but due to this if-statement only 1-1.5 from bed
-					  distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W
-					ENDIF					
+				IF (slip_bot.ge.3) THEN 
+				  tauu=0.5*(tau_fl_Uold(i,j)+tau_fl_Uold(i-1,j))
+				  tauv=0.5*(tau_fl_Vold(i,j)+tau_fl_Vold(i,j-1))			   
+				  ust = ((tauu/rr(i,j,kpp))**2+(tauv/rr(i,j,kpp))**2)**0.25
 				ELSE 
-					kpp = MIN(kbedp(i,j),k1)                !for k_ust_tau=2 kpp is 1.5*dz from 0-order ibm bed
-					distance_to_bed=(REAL(k_ust_tau)-0.5)*dz
-				ENDIF
-				IF (kbedp(i,j)<kbedp(i+1,j).and.kbedp(i,j)<kbedp(i-1,j)) THEN ! pit
-					uu=0.5*(Uvel(i,j,kpp)+Uvel(i-1,j,kpp))-Ubot_TSHD(j)
-				ELSE 
-					uu=0.5*(Uvel(i,j,MAX(kbedp(i,j),kbedp(i+1,j),kpp))+Uvel(i-1,j,MAX(kbedp(i,j),kbedp(i-1,j),kpp)))-Ubot_TSHD(j) !choice to not alter distance_to_bed at slopes
-				ENDIF
-				IF (kbedp(i,j)<kbedp(i,j+1).and.kbedp(i,j)<kbedp(i,j-1)) THEN ! pit
-					vv=0.5*(Vvel(i,j,kpp)+Vvel(i,j-1,kpp))-Vbot_TSHD(j)
-				ELSE 
-					vv=0.5*(Vvel(i,j,MAX(kbedp(i,j),kbedp(i,j+1),kpp))+Vvel(i,j-1,MAX(kbedp(i,j),kbedp(i,j-1),kpp)))-Vbot_TSHD(j) !choice to not alter distance_to_bed at slopes
-				ENDIF
-				IF (pickup_bedslope_geo.eq.1) THEN 
-					bed_slope = atan((zbed(i+1,j)-zbed(i-1,j))/(Rp(i+1)-Rp(i-1)))
-					uu2 = uu*cos(bed_slope)+Wvel(i,j,kpp)*sin(bed_slope)
-					bed_slope = atan((zbed(i,j+1)-zbed(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1))))
-					vv2 = vv*cos(bed_slope)+Wvel(i,j,kpp)*sin(bed_slope)
-					absU = sqrt((uu2)**2+(vv2)**2)	
-				ELSE 
-					absU=sqrt((uu)**2+(vv)**2)	
-				ENDIF 
-				ust=0.1*absU
-				if (kn>0.) then !walls with rougness (log-law used which can be hydr smooth or hydr rough):
+					IF (IBMorder.eq.2) THEN
+						kppE=MIN(CEILING(0.5*(zbed(i,j)+zbed(i+1,j))/dz+k_ust_tau),k1) !between 0.5-1.5dz from bed 
+						kppW=MIN(CEILING(0.5*(zbed(i,j)+zbed(i-1,j))/dz+k_ust_tau),k1)
+						kppN=MIN(CEILING(0.5*(zbed(i,j)+zbed(i,j+1))/dz+k_ust_tau),k1)
+						kppS=MIN(CEILING(0.5*(zbed(i,j)+zbed(i,j-1))/dz+k_ust_tau),k1)
+						ddzzE=(REAL(kppE)-0.5)*dz-0.5*(zbed(i,j)+zbed(i+1,j))
+						ddzzW=(REAL(kppW)-0.5)*dz-0.5*(zbed(i,j)+zbed(i-1,j))
+						ddzzN=(REAL(kppN)-0.5)*dz-0.5*(zbed(i,j)+zbed(i,j+1))
+						ddzzS=(REAL(kppS)-0.5)*dz-0.5*(zbed(i,j)+zbed(i,j-1))
+						distance_to_bed=0.25*(ddzzE+ddzzW+ddzzN+ddzzS)
+					ELSE
+						kppE = MAX(kbed(i,j),kbed(i+1,j))+k_ust_tau
+						kppW = MAX(kbed(i,j),kbed(i-1,j))+k_ust_tau
+						kppS = MAX(kbed(i,j),kbed(i,j+1))+k_ust_tau
+						kppN = MAX(kbed(i,j),kbed(i,j-1))+k_ust_tau
+						distance_to_bed=(REAL(k_ust_tau)-0.5)*dz
+					ENDIF
+					uu=0.5*(Uvel(i,j,kppE)+Uvel(i-1,j,kppW))-Ubot_TSHD(j)
+					vv=0.5*(Vvel(i,j,kppN)+Vvel(i,j-1,kppS))-Vbot_TSHD(j)
+					
+					IF (pickup_bedslope_geo.eq.1) THEN
+						bed_slope = atan((zbed(i+1,j)-zbed(i-1,j))/(Rp(i+1)-Rp(i-1)))
+						uu2 = uu*cos(bed_slope)+Wvel(i,j,kbedp(i,j))*sin(bed_slope)
+						bed_slope = atan((zbed(i,j+1)-zbed(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1))))
+						vv2 = vv*cos(bed_slope)+Wvel(i,j,kbedp(i,j))*sin(bed_slope)
+						absU = sqrt((uu2)**2+(vv2)**2)					
+					ELSE 
+						absU=sqrt((uu)**2+(vv)**2)	
+					ENDIF
+				  ust=0.1*absU
+				  if (kn>0.) then !walls with rougness (log-law used which can be hydr smooth or hydr rough):
 					do tel=1,10 ! 10 iter is more than enough
 						z0=kn/30.+0.11*nu_mol/MAX(ust,1.e-9)
 						ust=absU/MAX(1./kappa*log(distance_to_bed/z0),2.) !ust maximal 0.5*absU
 					enddo
-				else
+				  else
 					do tel=1,10 ! 10 iter is more than enough
 						yplus=MAX(distance_to_bed*ust/nu_mol,1e-12)
 						ust=absU/MAX((2.5*log(yplus)+5.5),2.) !ust maximal 0.5*absU		
@@ -3601,7 +4358,8 @@ c*************************************************************
 					if (yplus<5.) then !viscous sublayer uplus=yplus
 						ust=sqrt(absU*nu_mol/(distance_to_bed))
 					endif
-				endif
+				  endif
+				ENDIF  
 				! apply bc for TKE and EEE on cell at least 0.1dz above bed:
 				IF (IBMorder.eq.2) THEN
 					kp=MIN(CEILING(zb_W/dz+0.5),kmax)		!kpp is between 0-dz distance from bed 
@@ -4158,8 +4916,8 @@ c*************************************************************
       !! boundary at i=0
 	      i=0
 		  do j=0,j1
-			do k=kbed(i,j)+kbed_bc+1,kmax
-			  z=(k-kbed_bc-kbed(i,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
+			do k=kbed0(i,j)+1,kmax
+			  z=(k-kbed0(i,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
 			  x=Ru(0)*cos_u(j)-schuif_x
 			  y=Ru(0)*sin_u(j)
 			  uu=0.
@@ -4206,8 +4964,8 @@ c*************************************************************
 	       if (rank.eq.0) then	      !! boundary at j=0
 	       j=0
 	 	do i=0,i1
-		  do k=kbed(i,j)+kbed_bc+1,kmax
-		    z=(k-kbed_bc-kbed(i,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
+		  do k=kbed0(i,j)+1,kmax
+		    z=(k-kbed0(i,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
 	 	    x=Rp(i)*cos_v(0)-schuif_x
 	 	    y=Rp(i)*sin_v(0)
 	 	    uu=0.
@@ -4238,8 +4996,8 @@ c*************************************************************
 	       elseif (rank.eq.px-1) then
 		j=jmax
 	 	  do i=0,i1
- 		   do k=kbed(i,j)+kbed_bc+1,kmax
-		    z=(k-kbed_bc-kbed(i,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
+ 		   do k=kbed0(i,j)+1,kmax
+		    z=(k-kbed0(i,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
 	 	    x=Rp(i)*cos_v(jmax)-schuif_x
 	 	    y=Rp(i)*sin_v(jmax)
 	 	    uu=0.
@@ -4347,7 +5105,7 @@ c*************************************************************
 
 
 	ust=sqrt(U_bSEM**2+V_bSEM**2)
-	if (slip_bot.eq.1) then
+	if (slip_bot.eq.1.or.slip_bot.ge.3) then
 	  do i=1,10
 	    z0=0.11*nu_mol/ust+kn/30
 	    ust=sqrt(U_bSEM**2+V_bSEM**2)*kappa/(log((depth-bc_obst_h)/z0)-1);
@@ -4414,8 +5172,8 @@ c*************************************************************
 	llmax2=0
 	i=0
 	do j=0,j1
- 	  do k=kbed_bc+1,kmax
-	    z=(k-kbed_bc-kbed(i,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
+ 	  do k=1,kmax
+	    z=(k-kbed0(i,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
 	    y=Ru(0)*sin_u(j)
 	    do ii=1,nmax2
 	      if(ABS(y-ySEM2(ii))/lmySEM2(ii).lt.1..and.ABS(z-zSEM2(ii))/lmzSEM2(ii).lt.1.and.llmax2(j,k)<1000) then
@@ -4463,8 +5221,8 @@ c*************************************************************
  	  llmax1=0
 	  j=0 
 	  do i=0,i1
- 	    do k=kbed_bc+1,kmax
-	      z=(k-kbed_bc-kbed(i,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
+ 	    do k=1,kmax
+	      z=(k-kbed0(i,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
  	      y=Rp(i)*sin_v(0)
  	      do ii=1,nmax1
  		if(ABS(y-ySEM1(ii))/lmySEM1(ii).lt.1..and.ABS(z-zSEM1(ii))/lmzSEM1(ii).lt.1.and.llmax1(i,k)<2000) then
@@ -4511,8 +5269,8 @@ c*************************************************************
  	  llmax1=0
 	  j=jmax
 	  do i=0,i1
-		do k=kbed_bc+1,kmax
-		  z=(k-kbed_bc-kbed(i,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
+		do k=1,kmax
+		  z=(k-kbed0(i,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
  	      y=Rp(i)*sin_v(jmax)
  	      do ii=1,nmax1
  		if(ABS(y-ySEM1(ii))/lmySEM1(ii).lt.1..and.ABS(z-zSEM1(ii))/lmzSEM1(ii).lt.1.and.llmax1(i,k)<2000) then
@@ -4616,13 +5374,13 @@ c*************************************************************
 	if (LOA<0.and.kjet>0) then
 	  do i=0,i1 
         do k=1,kmax-kjet
-			if(k.gt.kbed_bc+kbed(i,j)) then
+			if(k.gt.kbed0(i,j)) then
 				IF (wallup.eq.1) THEN
-					z=depth-((k-kbed_bc)*dz-0.5*dz)
+					z=depth-(k*dz-0.5*dz)
 			    ELSE
-					z=(k-kbed(i,j)-kbed_bc)*dz-0.5*dz
+					z=(k-kbed0(i,j))*dz-0.5*dz
 				ENDIF
-				call Chol_tensor_from_DNS_Ret395(z/(depth-(kbed(i,j)+kbed_bc)*dz),AAdummy(:,:))
+				call Chol_tensor_from_DNS_Ret395(z/(depth-kbed0(i,j)*dz),AAdummy(:,:))
 				AA1(:,:,i,k)=AAdummy(:,:)*ust ! scale back with ust
 			else 
 				AA1(:,:,i,k)=0.
@@ -4632,13 +5390,13 @@ c*************************************************************
 	else
 	  do i=0,i1
 		do k=1,kmax
-			if(k.gt.kbed_bc+kbed(i,j)) then
+			if(k.gt.kbed0(i,j)) then
 				IF (wallup.eq.1) THEN
-					z=depth-((k-kbed_bc)*dz-0.5*dz)
+					z=depth-((k)*dz-0.5*dz)
 				ELSE
-					z=(k-kbed(i,j)-kbed_bc)*dz-0.5*dz
+					z=(k-kbed0(i,j))*dz-0.5*dz
 				ENDIF
-				call Chol_tensor_from_DNS_Ret395(z/(depth-(kbed(i,j)+kbed_bc)*dz),AAdummy(:,:))
+				call Chol_tensor_from_DNS_Ret395(z/(depth-(kbed0(i,j))*dz),AAdummy(:,:))
 				AA1(:,:,i,k)=AAdummy(:,:)*ust ! scale back with ust
 			else 
 				AA1(:,:,i,k)=0. 
@@ -4651,13 +5409,13 @@ c*************************************************************
 	if (LOA<0.and.kjet>0) then
 	  do j=0,j1 
         do k=1,kmax-kjet
-			if(k.gt.kbed_bc+kbed(i,j)) then
+			if(k.gt.kbed0(i,j)) then
 				IF (wallup.eq.1) THEN
-					z=depth-((k-kbed_bc)*dz-0.5*dz)
+					z=depth-(k*dz-0.5*dz)
 			    ELSE
-					z=(k-kbed(i,j)-kbed_bc)*dz-0.5*dz
+					z=(k-kbed0(i,j))*dz-0.5*dz
 				ENDIF
-				call Chol_tensor_from_DNS_Ret395(z/(depth-(kbed(i,j)+kbed_bc)*dz),AAdummy(:,:))
+				call Chol_tensor_from_DNS_Ret395(z/(depth-kbed0(i,j)*dz),AAdummy(:,:))
 				AA2(:,:,j,k)=AAdummy(:,:)*ust ! scale back with ust
 			else 
 				AA2(:,:,j,k)=0.
@@ -4667,13 +5425,13 @@ c*************************************************************
 	else
 	  do j=0,j1
 		do k=1,kmax
-			if(k.gt.kbed_bc+kbed(i,j)) then
+			if(k.gt.kbed0(i,j)) then
 				IF (wallup.eq.1) THEN
-					z=depth-((k-kbed_bc)*dz-0.5*dz)
+					z=depth-(k*dz-0.5*dz)
 				ELSE
-					z=(k-kbed(i,j)-kbed_bc)*dz-0.5*dz
+					z=(k-kbed0(i,j))*dz-0.5*dz
 				ENDIF
-				call Chol_tensor_from_DNS_Ret395(z/(depth-(kbed(i,j)+kbed_bc)*dz),AAdummy(:,:))
+				call Chol_tensor_from_DNS_Ret395(z/(depth-kbed0(i,j)*dz),AAdummy(:,:))
 				AA2(:,:,j,k)=AAdummy(:,:)*ust ! scale back with ust
 			else 
 				AA2(:,:,j,k)=0. 
@@ -4719,7 +5477,7 @@ c*************************************************************
       fac=kappa*(depth-bc_obst_h)
 
 	ust=sqrt(U_bSEM**2+V_bSEM**2)
-	if (slip_bot.eq.1) then
+	if (slip_bot.eq.1.or.slip_bot.ge.3) then
 	  do i=1,10
 	    z0=0.11*nu_mol/ust+kn/30
 	    ust=sqrt(U_bSEM**2+V_bSEM**2)*kappa/(log((depth-bc_obst_h)/z0)-1);
@@ -4747,15 +5505,15 @@ c*************************************************************
 	  xxmax=-ySEM1(i)/tan(phi2)-schuif_x+boxside_x ! xxmax is positive
  	  if (xSEM1(i)>xxmax)  then  ! put on start line inflow Vbox:
 		!! first remove from linked list:
-		  kminSEM=INT(FLOOR((zSEM1(i)-lmzSEM1(i))/dz))+kbed_bc
-		  kmaxSEM=INT(CEILING((zSEM1(i)+lmzSEM1(i))/dz))+kbed_bc+MAXVAL(kbed) !add maximum kbed of this processor is sufficient; only interactions for grid-cells on this specific processor are needed
+		  kminSEM=INT(FLOOR((zSEM1(i)-lmzSEM1(i))/dz))
+		  kmaxSEM=INT(CEILING((zSEM1(i)+lmzSEM1(i))/dz))+MAXVAL(kbed0) !add maximum kbed of this processor is sufficient; only interactions for grid-cells on this specific processor are needed
 		  kminSEM=MAX(kminSEM,1)
 		  kminSEM=MIN(kminSEM,kmax)
 		  kmaxSEM=MAX(kmaxSEM,1)
 		  kmaxSEM=MIN(kmaxSEM,kmax)
 		  do k=kminSEM,kmaxSEM
 		    do ii=0,i1 
-			  z=(k-kbed_bc-kbed(ii,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
+			  z=(k-kbed0(ii,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
 		      y=Rp(ii)*sin_v(0)	
 		      if(ABS(y-ySEM1(i))/lmySEM1(i).lt.1..and.ABS(z-zSEM1(i))/lmzSEM1(i).lt.1.) then
 			do tel=1,llmax1_dummy(ii,k)
@@ -4786,15 +5544,15 @@ c*************************************************************
 		  lmzSEM1(i)=fac*zSEM1(i)/(depth-bc_obst_h)*sqrt(1.-zSEM1(i)/(depth-bc_obst_h))
 		  lmzSEM1(i)=max(lm_min,lmzSEM1(i))
 		!! make linked list for new SEM point:
-		  kminSEM=INT(FLOOR((zSEM1(i)-lmzSEM1(i))/dz))+kbed_bc
-		  kmaxSEM=INT(CEILING((zSEM1(i)+lmzSEM1(i))/dz))+kbed_bc+MAXVAL(kbed) !add maximum kbed of this processor is sufficient; only interactions for grid-cells on this specific processor are needed
+		  kminSEM=INT(FLOOR((zSEM1(i)-lmzSEM1(i))/dz))
+		  kmaxSEM=INT(CEILING((zSEM1(i)+lmzSEM1(i))/dz))+MAXVAL(kbed0) !add maximum kbed of this processor is sufficient; only interactions for grid-cells on this specific processor are needed
 		  kminSEM=MAX(kminSEM,1)
 		  kminSEM=MIN(kminSEM,kmax)
 		  kmaxSEM=MAX(kmaxSEM,1)
 		  kmaxSEM=MIN(kmaxSEM,kmax)
 	 	  do k=kminSEM,kmaxSEM
 	 	    do ii=0,i1
-			  z=(k-kbed_bc-kbed(ii,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
+			  z=(k-kbed0(ii,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
 	 	      y=Rp(ii)*sin_v(0)
 	 	      if(ABS(y-ySEM1(i))/lmySEM1(i).lt.1..and.ABS(z-zSEM1(i))/lmzSEM1(i).lt.1.and.llmax1(ii,k)<2000) then
 	 		  llmax1(ii,k)=llmax1(ii,k)+1
@@ -4814,15 +5572,15 @@ c*************************************************************
 	  xxmax=ySEM1(i)/tan(phi2)-schuif_x+boxside_x ! xxmax is positive
  	  if (xSEM1(i)>xxmax)  then  ! put on start line inflow Vbox:
 		!! first remove from linked list:
-		  kminSEM=INT(FLOOR((zSEM1(i)-lmzSEM1(i))/dz))+kbed_bc
-		  kmaxSEM=INT(CEILING((zSEM1(i)+lmzSEM1(i))/dz))+kbed_bc+MAXVAL(kbed) !add maximum kbed of this processor is sufficient; only interactions for grid-cells on this specific processor are needed
+		  kminSEM=INT(FLOOR((zSEM1(i)-lmzSEM1(i))/dz))
+		  kmaxSEM=INT(CEILING((zSEM1(i)+lmzSEM1(i))/dz))+MAXVAL(kbed0) !add maximum kbed of this processor is sufficient; only interactions for grid-cells on this specific processor are needed
 		  kminSEM=MAX(kminSEM,1)
 		  kminSEM=MIN(kminSEM,kmax)
 		  kmaxSEM=MAX(kmaxSEM,1)
 		  kmaxSEM=MIN(kmaxSEM,kmax)
 		  do k=kminSEM,kmaxSEM
 		    do ii=0,i1 
-			  z=(k-kbed_bc-kbed(ii,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
+			  z=(k-kbed0(ii,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
 		      y=Rp(ii)*sin_v(jmax)	
 		      if(ABS(y-ySEM1(i))/lmySEM1(i).lt.1..and.ABS(z-zSEM1(i))/lmzSEM1(i).lt.1.) then
 			do tel=1,llmax1_dummy(ii,k)
@@ -4852,15 +5610,15 @@ c*************************************************************
 		  lmzSEM1(i)=fac*zSEM1(i)/(depth-bc_obst_h)*sqrt(1.-zSEM1(i)/(depth-bc_obst_h))
 		  lmzSEM1(i)=max(lm_min,lmzSEM1(i))
 		!! make linked list for new SEM point:
-		  kminSEM=INT(FLOOR((zSEM1(i)-lmzSEM1(i))/dz))+kbed_bc
-		  kmaxSEM=INT(CEILING((zSEM1(i)+lmzSEM1(i))/dz))+kbed_bc+MAXVAL(kbed) !add maximum kbed of this processor is sufficient; only interactions for grid-cells on this specific processor are needed
+		  kminSEM=INT(FLOOR((zSEM1(i)-lmzSEM1(i))/dz))
+		  kmaxSEM=INT(CEILING((zSEM1(i)+lmzSEM1(i))/dz))+MAXVAL(kbed0) !add maximum kbed of this processor is sufficient; only interactions for grid-cells on this specific processor are needed
 		  kminSEM=MAX(kminSEM,1)
 		  kminSEM=MIN(kminSEM,kmax)
 		  kmaxSEM=MAX(kmaxSEM,1)
 		  kmaxSEM=MIN(kmaxSEM,kmax)
 	 	  do k=kminSEM,kmaxSEM
 	 	    do ii=0,i1
-			  z=(k-kbed_bc-kbed(ii,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
+			  z=(k-kbed0(ii,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
 	 	      y=Rp(ii)*sin_v(jmax)
 	 	      if(ABS(y-ySEM1(i))/lmySEM1(i).lt.1..and.ABS(z-zSEM1(i))/lmzSEM1(i).lt.1.and.llmax1(ii,k)<2000) then
 	 		  llmax1(ii,k)=llmax1(ii,k)+1
@@ -4924,8 +5682,8 @@ c*************************************************************
 	llmax2_dummy=llmax2
 	do iii=1,iimax
 	  ii=ind(iii)
-	  kminSEM=INT(FLOOR((zSEM2old(ii)-lmzSEM2old(ii))/dz))+kbed_bc
-	  kmaxSEM=INT(CEILING((zSEM2old(ii)+lmzSEM2old(ii))/dz))+kbed_bc+MAXVAL(kbed) !add maximum kbed of this processor is sufficient; only interactions for grid-cells on this specific processor are needed
+	  kminSEM=INT(FLOOR((zSEM2old(ii)-lmzSEM2old(ii))/dz))
+	  kmaxSEM=INT(CEILING((zSEM2old(ii)+lmzSEM2old(ii))/dz))+MAXVAL(kbed0) !add maximum kbed of this processor is sufficient; only interactions for grid-cells on this specific processor are needed
 	  kminSEM=MAX(kminSEM,1)
 	  kminSEM=MIN(kminSEM,kmax)
 	  kmaxSEM=MAX(kmaxSEM,1)
@@ -4951,7 +5709,7 @@ c*************************************************************
     
 	  do k=kminSEM,kmaxSEM
 	    do j=0,j1 !j=jminSEM,jmaxSEM
-		  z=(k-kbed_bc-kbed(i,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
+		  z=(k-kbed0(i,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
 	      y=Ru(0)*sin_u(j)	
 	      if(ABS(y-ySEM2old(ii))/lmySEM2old(ii).lt.1..and.ABS(z-zSEM2old(ii))/lmzSEM2old(ii).lt.1.) then
 		do tel=1,llmax2_dummy(j,k)
@@ -4978,8 +5736,8 @@ c*************************************************************
 	i=0
 	do iii=1,iimax
 	  ii=ind(iii)
-	  kminSEM=INT(FLOOR((zSEM2(ii)-lmzSEM2(ii))/dz))+kbed_bc
-	  kmaxSEM=INT(CEILING((zSEM2(ii)+lmzSEM2(ii))/dz))+kbed_bc+MAXVAL(kbed) !add maximum kbed of this processor is sufficient; only interactions for grid-cells on this specific processor are needed
+	  kminSEM=INT(FLOOR((zSEM2(ii)-lmzSEM2(ii))/dz))
+	  kmaxSEM=INT(CEILING((zSEM2(ii)+lmzSEM2(ii))/dz))+MAXVAL(kbed0) !add maximum kbed of this processor is sufficient; only interactions for grid-cells on this specific processor are needed
 	  kminSEM=MAX(kminSEM,1)
 	  kminSEM=MIN(kminSEM,kmax)
 	  kmaxSEM=MAX(kmaxSEM,1)
@@ -4995,7 +5753,7 @@ c*************************************************************
 ! 	  jmaxSEM=MIN(jmaxSEM,j1)
 	  do k=kminSEM,kmaxSEM
 	    do j=0,j1 !jminSEM,jmaxSEM
-		  z=(k-kbed_bc-kbed(i,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
+		  z=(k-kbed0(i,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
 	      y=Ru(0)*sin_u(j)	
 	      if(ABS(y-ySEM2(ii))/lmySEM2(ii).lt.1..and.ABS(z-zSEM2(ii))/lmzSEM2(ii).lt.1.and.llmax2(j,k)<1000) then
 		llmax2(j,k)=llmax2(j,k)+1

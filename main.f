@@ -123,7 +123,8 @@
       call state(dcdt,drdt)
       call bound(Uold,Vold,Wold,rold,MIN(0,slip_bot),0.,Ub1old,Vb1old,Wb1old,Ub2old,Vb2old,Wb2old,Ub3old,Vb3old,Wb3old)
       call bound(Unew,Vnew,Wnew,rnew,MIN(0,slip_bot),0.,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
-      call bound_rhoU(dUdt,dVdt,dWdt,drdt,slip_bot,monopile,0.,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
+      call bound_rhoU(dUdt,dVdt,dWdt,drdt,MIN(3,slip_bot),monopile,0.,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,
+     & Vb3new,Wb3new)
 	 
 !	call stress_terms(Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
 !	call diffu_com4(wx,Srr,Spr,Szr,Spp,Ru,Rp,dr,dphi,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
@@ -223,10 +224,10 @@
             call LES_DSmag(Unew,Vnew,Wnew,rnew)						
 		  elseif (sgs_model.eq.'FSmag') then
 			call LES_filteredSmagorinsky(Unew,Vnew,Wnew,rnew)
-                  elseif (sgs_model.eq.'SWALE') then
-                        call LES_WALE(Unew,Vnew,Wnew,rnew)
+          elseif (sgs_model.eq.'SWALE') then
+            call LES_WALE(Unew,Vnew,Wnew,rnew)
 		  elseif (sgs_model.eq.'Sigma') then
-		    	call LES_Sigma(Unew,Vnew,Wnew,rnew)
+		    call LES_Sigma(Unew,Vnew,Wnew,rnew)
 		  elseif (sgs_model.eq.'MixLe') then
 		    call LES_mixinglengthdamped(Unew,Vnew,Wnew,rnew)
 		elseif (sgs_model.eq.'ReaKE') then
@@ -254,7 +255,7 @@
 			call RK3(ib,ie,jb,je,kb,ke)
 		endif
 
-		call bound_rhoU(dUdt,dVdt,dWdt,drdt,slip_bot,monopile,time_np,
+		call bound_rhoU(dUdt,dVdt,dWdt,drdt,MIN(3,slip_bot),monopile,time_np,
      & Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new) !bound_rhoU on rhou^*
 		call update_QSc_bedplume(time_np)
 		call update_Qc_plume(time_np)

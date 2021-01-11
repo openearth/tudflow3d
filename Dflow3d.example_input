@@ -42,6 +42,7 @@ tstart_morf2 = 1.	! Start time bedupdate [s] (default 0), before tstart_morf2 th
 convection = 'HYB6'		! Numerical scheme for convection term, options: 'CDS2','CDS4','CDS6','HYB6','C4A6','uTVD','C2Bl','C4Bl','COM4'
 numdiff = 0.001953125		! Amount of extra 6th diffusion in case of 'CDS6','CDS4','HYB6','C4A6' ('CDS6' -> 1/60=UPW5, 0=CDS6); or blend slope for TVD-r<0 'C2Bl' and 'C4Bl' 
 wiggle_detector = 0			! Use wiggle detector to adjust amount of numdiff for each individual grid cell (default 0-->numdiff applied for all cells; optional 1)
+numdiff2 = 0.001953125		! Amount of minimum 6th diffusion in case of wiggle_detector=1 (default 0.), must be < numdiff
 diffusion = 'CDS2'		! Numerical scheme for diffusion term.
 CNdiffz = 0				! 1 is 2nd order CN treatment of diffusion in z-dir; 0 is explicit in z-dir (default 0); 2 is implicit 1st order Euler backward
 continuity_solver =36   !default is 1 (drdt+drudx=0). Optional:  35 (dudx=0 U-mix), 36 (dudx=0 U-vol); 36 is best option for mixture flow 
@@ -79,12 +80,12 @@ nmax1 = 5000			! Number of SEM eddies sides inflow
 lm_min = 0.02 			! Minimal Lm SEM eddies [m] (1/10*depth)
 nmax3= 0 			!Number of SEM eddies jet inflow
 lm_min3 = 0.03		! Minimal Lm SEM eddies jet pipe [m] (1/10*radius_j)
-slip_bot = 1			! 1 = partial slip (law of the wall) bottom with log-U inflow profile , 0 = free slip bottom, 2 partial slip with constant U profile over vertical, -1 is no slip bottom, -2 is no slip bottom and top
+slip_bot = 1			! 1 = partial slip (law of the wall) bottom with log-U inflow profile , 0 = free slip bottom, 2 partial slip with constant U profile over vertical, 3 is partial slip TBL wall-model including dpdx, 4 is partial slip TBL wall-model excluding dpdx, 5 is partial slip wall-model based on VanDriest U-profile, -1 is no slip bottom, -2 is no slip bottom and top
 kn = 0.1			! Nikkuradse roughness flow [m]
 interaction_bed = 4		! 0 no erosion/sedimentation, 1 only deposition, 2 deposition & unlimited erosion, 3 deposition & erosion previously deposited material, 4 depo&ero including bed-update, 5 depo&ero excluding bed-update, 6 depo&ero including bed-update & unlimited erosion base layer, 7 depo&ero excluding bed-update & unlimited erosion base layer
 periodicx = 0			! 1 periodic in x dir; 0 not periodic (default 0); 2 closed box (in and outflow in x-dir is zero)
 periodicy = 0			! 1 periodic in y dir; 0 not periodic; 2 is free slip lateral boundaries (default 0)
-monopile = -1			! -1 (default) no monopile; >0 is monopile : closed bc at i=0 and combined in/outflow at i=imax; 1=partial slip monopile wall log-law; 2=free slip monopile wall; 3=partial slip monopile wall-law including dpdx, 4=no-slip monopile wall
+monopile = -1			! -1 (default) no monopile; >0 is monopile : closed bc at i=0 and combined in/outflow at i=imax; 1=partial slip monopile wall log-law; 2=free slip monopile wall; 3=partial slip monopile TBL wall-model including dpdx, 4=no-slip monopile wall
 kn_mp = 0.01 			! must be defined icw monopile=1 and gives Nikkuradse monopile wall roughness is implemented 
 kn_sidewalls = 0.01		! when defined >0 icw periodicy=2 then side wall Nikkuradse roughness is implemented (default <0 no sidewall tau)
 dpdx = 0.0			! Driving pressure gradient in x dir in case periodic [Pa/m] (default 0)
@@ -250,6 +251,9 @@ pickup_fluctuations=0		!1 means white noise random fluctuations are added to cal
 pickup_fluctuations_ampl=0.	!determines amplitude of turbulent fluctuations --> pickup = pickup+pickup_fluctuations_ampl*random(range[-1 to 1])*pickup 
 cbed_method = 1				! 1 (default) = cbed is determined in lowest fluid cell above the bed; 2 = avg of all fluid cells above bed up to location of max horizontal velocity
 z_tau_sed = 0.1				! distance [m] from bed where Uflow is taken to calculate tau_sed (relevant when kn_sed differs from kn_flow), default 0.5*dz, but when comparing results with different dz define it as user input otherwise grid-dependent results as the calculation of tau_sed depends on distance from bed 
+wallmodel_tau_sed = 1 		! 1 (default) is log-law wall-model; 3 is TBL wall-model including dpdx, 4 is TBL wall-model excluding dpdx, 5 is wall-model based on VanDriest U-profile, 11 is tau based on U'W' and V'W'; this model choice is used for both suspended load pickup tau and bedload tau 
+nrmsbed = 100 				! # of realizations used to determine U'W' and V'W' in wallmodel_tau_sed=11
+ndtbed = 10 				! every ndtbed time steps a realization is made for U'W' and V'W' in wallmodel_tau_sed=11
 k_layer_pickup = 5		! number of grid cells over which pickup is spread out (default k_layer_pickup=1; everything in lowest cell)
 pickup_bedslope_geo = 1	!Default 0 no geometric correction for bedslopes on pickup (assuming nearly flat beds); 1 = geometric correction for bedslopes on near bed velocity and cell surface used to determine pickup and deposition
 bedload_formula = 'nonenon0000' !options are 'vanrijn2003'; 'vanrijn2007'; 'MeyPeMu1948' (default no bedload calculated)

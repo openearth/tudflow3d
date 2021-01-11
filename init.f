@@ -41,8 +41,7 @@ c******************************************************************
 	IF (z_tau_sed<0.) THEN 
 	  z_tau_sed = 0.5*dz
 	ENDIF 
-        kbed_bc=0 ! !FLOOR(bc_obst_h/dz) ! kbed_bc no longer needed now kbed(i,j) is used
-		
+
 	ksurf_bc=kmax-FLOOR(surf_layer/dz) ! if surf_layer is zero than ksurf_bc=kmax	
 
 	maxh_obst=0.
@@ -431,66 +430,6 @@ c******************************************************************
 	endif
 
 	IF (nbedplume>0) THEN
-
-	  ! start with Log-profile initial condition when bedplume:
-        IF (.false.) THEN ! next bit is not needed 3-11-2014
-	  DO k=0,k1
-	    ust_U_b=MAX(ABS(U_b),1.e-6)
-	    ust_V_b=MAX(ABS(V_b),1.e-6)
-	    IF (slip_bot.eq.1) THEN
-	      do ii=1,10
-	        z0_U=0.11*nu_mol/MAX(ABS(ust_U_b),1.e-9)+kn/30
-	        ust_U_b=ABS(U_b)*kappa/(log((depth)/z0_U)-1);
-	        z0_V=0.11*nu_mol/MAX(ABS(ust_V_b),1.e-9)+kn/30
-	        ust_V_b=ABS(V_b)*kappa/(log((depth)/z0_V)-1);
-	      enddo
-	      z=k*dz-0.5*dz
-	      IF (LOA>0.) THEN
-	        U2=-ust_U_b/kappa*log(z/z0_U)*signU_b*cos(phi)+ust_V_b/kappa*log(z/z0_V)*signV_b*sin(phi)+U_TSHD*cos(phi)
-	        V2=-ust_V_b/kappa*log(z/z0_V)*signV_b*cos(phi)-ust_U_b/kappa*log(z/z0_U)*signU_b*sin(phi)+U_TSHD*sin(phi)
-	      ELSE
-	        U2=ust_U_b/kappa*log(z/z0_U)*signU_b
-	        V2=ust_V_b/kappa*log(z/z0_V)*signV_b
-	      ENDIF
-	      DO j=0,j1 
-		  DO i=0,i1		
-		  	Unew(i,j,k)=U2*cos_u(j)+V2*sin_u(j)
-		  	Vnew(i,j,k)=-U2*sin_v(j)+V2*cos_v(j) 
-		  	Uold(i,j,k)=U2*cos_u(j)+V2*sin_u(j)
-		  	Vold(i,j,k)=-U2*sin_v(j)+V2*cos_v(j) 
-		  	dUdt(i,j,k)=(U2*cos_u(j)+V2*sin_u(j) ) *rnew(i,j,k)
-		  	dVdt(i,j,k)=(-U2*sin_v(j)+V2*cos_v(j)) *rnew(i,j,k)
-			Wnew(i,j,k)=W_b
-			Wold(i,j,k)=W_b
-			dWdt(i,j,k)=W_b*rnew(i,j,k)
-		  ENDDO
-		ENDDO
-	    ELSE
-		IF (LOA>0.) THEN
-	    	  U2=-U_b*cos(phi)+V_b*sin(phi)+U_TSHD*cos(phi)
-	    	  V2=-V_b*cos(phi)-U_b*sin(phi)+U_TSHD*sin(phi)
-		ELSE
-	    	  U2=U_b
-	    	  V2=V_b
-		ENDIF
-		DO j=0,j1 
-		  DO i=0,i1		
-		  	Unew(i,j,k)=U2*cos_u(j)+V2*sin_u(j)
-		  	Vnew(i,j,k)=-U2*sin_v(j)+V2*cos_v(j) 
-		  	Uold(i,j,k)=U2*cos_u(j)+V2*sin_u(j)
-		  	Vold(i,j,k)=-U2*sin_v(j)+V2*cos_v(j) 
-		  	dUdt(i,j,k)=(U2*cos_u(j)+V2*sin_u(j) )*rnew(i,j,k)
-		  	dVdt(i,j,k)=(-U2*sin_v(j)+V2*cos_v(j))*rnew(i,j,k)
-			Wnew(i,j,k)=W_b
-			Wold(i,j,k)=W_b
-			dWdt(i,j,k)=W_b*rnew(i,j,k)
-		  ENDDO
-		ENDDO
-	    ENDIF
-	  ENDDO
-	ENDIF ! this bit is not needed 3-11-2014	  
-
-
 	DO n=1,nbedplume
       !! Search for P,V:
       do k=0,k1
@@ -2940,7 +2879,9 @@ C ...  Locals
 			Coldbot = Cnewbot 
 			dCdtbot = Cnewbot
 		ENDIF	
-
+		call bound_cbot_integer(kbed)
+		kbedt=kbed
+		kbed0=kbed !original kbed saved to be used in SEM for example for sims with bed update in which kbed changes during a simulation  
 		IF (U_TSHD>0.) THEN
 			kbedin(0:j1)=kbed(1,0:j1)
 		ENDIF
@@ -2997,7 +2938,7 @@ C ...  Locals
 		  if (LOA>0.) then !ship:
 		   ust_U_b=MAX(ABS(U_b),1.e-6)
 		   ust_V_b=MAX(ABS(V_b),1.e-6)
-		   if (slip_bot.eq.1) then
+		   if (slip_bot.eq.1.or.slip_bot.ge.3) then
 			    do ii=1,10
 			      z0_U=0.11*nu_mol/MAX(ust_U_b,1.e-9)+kn/30
 			      ust_U_b=correction*ABS(U_b)*kappa/(log(MAX(depth-zbed(i,j),1.e-12)/z0_U)-1);
@@ -3006,7 +2947,7 @@ C ...  Locals
 			    enddo
 		   endif
 		    if (k.gt.kbed(i,j)) then
-		      if (slip_bot.eq.1) then
+		      if (slip_bot.eq.1.or.slip_bot.ge.3) then
 				if (wallup.eq.1) then
 					  z=depth-((k-kbed(i,j))*dz-0.5*dz)
 				else
@@ -3032,7 +2973,7 @@ C ...  Locals
 		  else ! no ship, then plate:
 		    ust_U_b=MAX(ABS(U_b),1.e-6)
 		    ust_V_b=MAX(ABS(V_b),1.e-6)
-		    if (slip_bot.eq.1) then
+		    if (slip_bot.eq.1.or.slip_bot.ge.3) then
 			    do ii=1,10
 			      z0_U=0.11*nu_mol/MAX(ABS(ust_U_b),1.e-9)+kn/30
 			      ust_U_b=correction*U_b*kappa/(log(MAX(depth-zbed(i,j),1.e-12)/z0_U)-1);
@@ -3041,7 +2982,7 @@ C ...  Locals
 			    enddo
 		    endif
 		      if (k.le.(kmax-kjet).and.k.gt.kbed(i,j)) then
-			    if (slip_bot.eq.1) then
+			    if (slip_bot.eq.1.or.slip_bot.ge.3) then
 				  if (wallup.eq.1) then
 					z=depth-((k-kbed(i,j))*dz-0.5*dz)
 				  else
@@ -3077,7 +3018,7 @@ C ...  Locals
 		  if (LOA>0.) then !ship:
 		   ust_U_b=MAX(ABS(U_b),1.e-6)
 		   ust_V_b=MAX(ABS(V_b),1.e-6)
-		   if (slip_bot.eq.1) then
+		   if (slip_bot.eq.1.or.slip_bot.ge.3) then
 		    do ii=1,10
 		      z0_U=0.11*nu_mol/MAX(ust_U_b,1.e-9)+kn/30
 		      ust_U_b=correction*ABS(U_b)*kappa/(log(MAX(depth-zbed(i,j),1.e-12)/z0_U)-1);
@@ -3086,7 +3027,7 @@ C ...  Locals
 		    enddo
 		   endif
 		    if (k.gt.kbed(i,j)) then
-		     if (slip_bot.eq.1) then
+		     if (slip_bot.eq.1.or.slip_bot.ge.3) then
 				if (wallup.eq.1) then
 				  z=depth-((k-kbed(i,j))*dz-0.5*dz)
 				else
@@ -3112,7 +3053,7 @@ C ...  Locals
 		  else ! no ship, then plate:
 		   ust_U_b=MAX(ABS(U_b),1.e-6)
 		   ust_V_b=MAX(ABS(V_b),1.e-6)
-		   if (slip_bot.eq.1) then
+		   if (slip_bot.eq.1.or.slip_bot.ge.3) then
 		    do ii=1,10
 		      z0_U=0.11*nu_mol/MAX(ABS(ust_U_b),1.e-9)+kn/30
 		      ust_U_b=correction*U_b*kappa/(log(MAX(depth-zbed(i,j),1.e-12)/z0_U)-1);
@@ -3121,7 +3062,7 @@ C ...  Locals
 		    enddo
 		   endif
 		      if (k.le.(kmax-kjet).and.k.gt.kbed(i,j)) then
-			    if (slip_bot.eq.1) then
+			    if (slip_bot.eq.1.or.slip_bot.ge.3) then
                         	if (wallup.eq.1) then
                           	  z=depth-((k-kbed(i,j))*dz-0.5*dz)
                         	else
@@ -3143,7 +3084,7 @@ C ...  Locals
 
 	
 	
-	call bound_cbot_integer(kbed)
+	
 	! called as last therefore now kbedt (used to apply tau wall) can be defined:
 	IF (wallup.eq.1) THEN
 	  kbedt=kmax-1 ! apply tau wall at upper boundary kmax

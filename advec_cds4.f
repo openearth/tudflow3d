@@ -17,7 +17,7 @@
 !    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
       subroutine advecu_CDS4(putout,Uvel,Vvel,Wvel,RHO,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,
-     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy,wf,wd)
+     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy,wf,wd,nd2)
       implicit none
 c
 c********************************************************************
@@ -63,7 +63,7 @@ c********************************************************************
 	real uuR,uuL,vvR,vvL,wwR,wwL
 	integer kpp,kppp,kmm,kmmm,jpp,jppp,jmm,jmmm,ipp,ippp,imm,immm,rank,px,periodicx,periodicy,wd
 	real*8 ubb(0:i1,0:k1),ubf(0:i1,0:k1),Uvel2(-2:i1+2,-2:j1+2,-2:k1+2)
-	real wwdd(1:3),wf(0:i1,0:j1,0:k1),numdif2,u4mag
+	real wwdd(1:3),wf(0:i1,0:j1,0:k1),numdif2,u4mag,nd2
 	real rhU(0:i1,0:j1,0:k1),rhV(0:i1,0:j1,0:k1),rhW(0:i1,0:j1,0:k1)
 	real Vvel2(-2:i1+2,-2:j1+2,-2:k1+2),Wvel2(-2:i1+2,-2:j1+2,-2:k1+2)
 
@@ -365,7 +365,7 @@ c********************************************************************
 			IF (MAXVAL(wwdd).gt.1.e-12) THEN
 				wf(i,j,k)=MIN(1.,wf(i,j,k)+0.001) !wf(i,j,k)=1. 
 			ELSE
-				wf(i,j,k)=MAX(0.,wf(i,j,k)-0.001) !wf(i,j,k)=0.
+				wf(i,j,k)=MAX(nd2,wf(i,j,k)-0.001) !wf(i,j,k)=0.
 			ENDIF
 		  enddo
 	    enddo
