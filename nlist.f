@@ -27,7 +27,7 @@
       INTEGER Lmix_type,slip_bot,SEM,azi_n,outflow_overflow_down,azi_n2,wiggle_detector,wd,applyVOF,Poutflow,k_ust_tau,Uoutflow
       REAL ekm_mol,nu_mol,pi,kappa,gx,gy,gz,Cs,Sc,calibfac_sand_pickup,calibfac_Shields_cr,morfac,morfac2,calibfac_sand_bedload
       REAL dt,time_nm,time_n,time_np,t_end,t0_output,dt_output,te_output,dt_max,tstart_rms,CFL,dt_ini,tstart_morf,trestart,dt_old
-      REAL dt_output_movie,t0_output_movie,te_output_movie,te_rms,time_nm2,b_update,tstart_morf2,fcor
+      REAL dt_output_movie,t0_output_movie,te_output_movie,te_rms,time_nm2,tstart_morf2,fcor
       REAL U_b,V_b,W_b,rho_b,W_j,Awjet,Aujet,Avjet,Strouhal,radius_j,kn,W_ox,U_bSEM,V_bSEM,U_w,V_w,U_init,V_init
       REAL U_j2,Awjet2,Aujet2,Avjet2,Strouhal2,radius_j2,zjet2,rho_b2
       REAL xj(4),yj(4),radius_inner_j,W_j_powerlaw,plume_z_outflow_belowsurf
@@ -39,7 +39,7 @@
       INTEGER tmax_inUpunt_tauTSHD,tmax_inVpunt_tauTSHD,tmax_inVpunt_rudder
       INTEGER tmax_inWpunt2,tmax_inVpunt2,tmax_inPpunt2,tmax_inWpunt_suction
       INTEGER nfrac,slipvel,interaction_bed,nobst,nbedplume,continuity_solver,hindered_settling,settling_along_gvector
-      INTEGER nfr_silt,nfr_sand,nfr_air
+      INTEGER nfr_silt,nfr_sand,nfr_air,istart_morf2,i_periodicx
       CHARACTER*256 hisfile,restart_dir,inpfile,plumetseriesfile,bcfile,plumetseriesfile2,bedlevelfile,initconditionsfile
       CHARACTER*3 time_int,advec_conc,cutter,split_rho_cont
       CHARACTER*5 sgs_model
@@ -109,7 +109,7 @@
       INTEGER, DIMENSION(:),ALLOCATABLE :: Xii,Tkk,nfrac_air,nfrac_silt,nfrac_sand,nfrac_air2
 	  INTEGER*8, DIMENSION(:),ALLOCATABLE :: kbedin
       REAL, DIMENSION(:),ALLOCATABLE :: cos_u,cos_v,sin_u,sin_v,cos_ut,sin_ut,cos_vt,sin_vt
-      REAL, DIMENSION(:),ALLOCATABLE :: Ru,Rp,dr,phivt,phipt,dphi2t,phiv,phip,dphi2
+      REAL, DIMENSION(:),ALLOCATABLE :: Ru,Rp,dr,phivt,phipt,dphi2t,phiv,phip,dphi2,b_update
       REAL*8, DIMENSION(:),ALLOCATABLE :: xSEM1,ySEM1,zSEM1,uSEM1
       REAL*8, DIMENSION(:),ALLOCATABLE :: lmxSEM1,lmySEM1,lmzSEM1
       REAL*8, DIMENSION(:),ALLOCATABLE :: xSEM2,ySEM2,zSEM2,uSEM2 
@@ -118,7 +118,7 @@
 	  REAL*8, DIMENSION(:),ALLOCATABLE :: rSEM3,thetaSEM3,zSEM3,wSEM3,xSEM3,ySEM3
 	  REAL, DIMENSION(:,:,:,:),ALLOCATABLE :: AA1,AA2,AA3
       REAL*8, DIMENSION(:),ALLOCATABLE :: lmrSEM3,lmzSEM3
-      REAL, DIMENSION(:,:),ALLOCATABLE :: azi_angle_p,azi_angle_u,azi_angle_v,zbed,Ubc1,Vbc1,Ubc2,Vbc2,rhocorr_air_z,Wbed
+      REAL, DIMENSION(:,:),ALLOCATABLE :: azi_angle_p,azi_angle_u,azi_angle_v,zbed,Ubc1,Vbc1,Ubc2,Vbc2,rhocorr_air_z,Wbed,wscorr_z
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: ekm,Diffcof,bednotfixed,bednotfixed_depo
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: Uold,Vold,Wold,Rold
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: Unew,Vnew,Wnew,Rnew
@@ -170,7 +170,7 @@
 	REAL stat_time_count	
 
 	type fractions
-	    REAL ::	ws,rho,c,dpart,dfloc,n,tau_d,tau_e,M,kn_sed,ws_dep,zair_ref_belowsurf
+	    REAL ::	ws,rho,c,dpart,dfloc,n,tau_d,tau_e,M,kn_sed,ws_dep,zair_ref_belowsurf,CD
 	    INTEGER :: type
 	end type fractions
 	type bed_obstacles
@@ -185,7 +185,7 @@
 		INTEGER :: u_seriesloc,v_seriesloc,w_seriesloc,istep_bphis_output
 		CHARACTER*256 :: h_tseriesfile,zb_tseriesfile,Q_tseriesfile,S_tseriesfile,c_tseriesfile
 		CHARACTER*256 :: u_tseriesfile,v_tseriesfile,w_tseriesfile
-		REAL :: move_u,move_v,move_w,radius
+		REAL :: move_u,move_v,move_w,radius,radius2
 	end type bed_plumes
 	type bed_plumes2
 	    REAL ::	x(4),y(4),height,u,v,w,c(30),t0,t_end,zbottom,Q,sedflux(30),volncells,changesedsuction !c(30) matches with size frac_init
@@ -201,7 +201,7 @@
 		CHARACTER*256 :: h_tseriesfile,zb_tseriesfile,Q_tseriesfile,S_tseriesfile,c_tseriesfile
 		CHARACTER*256 :: u_tseriesfile,v_tseriesfile,w_tseriesfile
 !		INTEGER :: tmax_iP,tmax_iU,iP_inbp(10000),jP_inbp(10000),kP_inbp(10000),iU_inbp(10000),jU_inbp(10000),kU_inbp(10000)
-		REAL :: move_u,move_v,move_w,radius
+		REAL :: move_u,move_v,move_w,radius,radius2
 		INTEGER*2 :: i(10000),j(10000) 
 	end type bed_plumes2
 	
@@ -225,7 +225,7 @@
 
 	integer ios,n,n1,n2,n3
 	type frac_init
-	  real :: ws,c,rho,dpart,dfloc,tau_d,tau_e,M,kn_sed,ws_dep,zair_ref_belowsurf
+	  real :: ws,c,rho,dpart,dfloc,tau_d,tau_e,M,kn_sed,ws_dep,zair_ref_belowsurf,CD
 	  integer :: type
 	end type frac_init
 	TYPE(frac_init), DIMENSION(30) :: fract
@@ -244,6 +244,7 @@
 	NAMELIST /ambient/U_b,V_b,W_b,bcfile,rho_b,SEM,nmax2,nmax1,nmax3,lm_min,lm_min3,slip_bot,kn,interaction_bed,
      & periodicx,periodicy,dpdx,dpdy,W_ox,Hs,Tp,nx_w,ny_w,obst,bc_obst_h,U_b3,V_b3,surf_layer,wallup,bedlevelfile,
      & U_bSEM,V_bSEM,U_w,V_w,c_bed,cfixedbed,U_init,V_init,initconditionsfile,rho_b2,monopile,kn_mp,kn_sidewalls,obstfile
+     & ,istart_morf2,i_periodicx
 	NAMELIST /plume/W_j,plumetseriesfile,Awjet,Aujet,Avjet,Strouhal,azi_n,kjet,radius_j,Sc,slipvel,outflow_overflow_down,
      & U_j2,plumetseriesfile2,Awjet2,Aujet2,Avjet2,Strouhal2,azi_n2,radius_j2,zjet2,bedplume,radius_inner_j,xj,yj,W_j_powerlaw,
      & plume_z_outflow_belowsurf,hindered_settling,Q_j,plumeQtseriesfile,plumectseriesfile
@@ -324,7 +325,8 @@
 	Uoutflow=0 !0 (default) Neumann outflow dUdn=0 (for U,V,W); 2 means Convective outflow condition dUdt+U_normal*dUdn=0 (for U,V,W)
 	applyVOF=0
 	k_ust_tau=1
-	dUVdn_IBMbed=-1 !default no correction, but with 0 then dUdn and dVdn is made zero over immersed bed 
+	dUVdn_IBMbed=-1 !default no correction, but with 0 then dUdn and dVdn is made zero over immersed bed and with -2  to apply UV(1:kbed)=0 also for IBM2
+
 	!! ambient:
 	U_b = -999.
 	V_b = -999.
@@ -381,6 +383,9 @@
 	surf_layer=0.
 	wallup=0
 	obstfile = ''
+	i_periodicx=0
+	istart_morf2=0
+	
 	!! plume
 	W_j = -999.
 	plumetseriesfile=''
@@ -462,6 +467,7 @@
 	bedplume(:)%move_v=0.
 	bedplume(:)%move_w=0.
 	bedplume(:)%radius=-9.
+	bedplume(:)%radius2=-9.
 	
 	
 	DO i=1,30
@@ -493,6 +499,7 @@
 	fract(:)%ws_dep=-999.
 	fract(:)%zair_ref_belowsurf=-999.
 	fract(:)%type=1
+	fract(:)%CD=0.
 	nfrac=0
 	nfr_silt=0
 	nfr_sand=0
@@ -638,11 +645,6 @@
 		write(*,*),' use ABv for a fully supported time integration scheme.'
 	ENDIF
 	IF (CFL<0.) CALL writeerror(35)
-	IF (tstart_morf2.gt.1e-6) THEN 
-		b_update=0. 
-	ELSE 
-		b_update=1.
-	ENDIF 
 	READ (UNIT=1,NML=num_scheme,IOSTAT=ios)
 	!! check input num_scheme
 	IF (convection.ne.'CDS2'.AND.convection.ne.'CDS6'.AND.convection.ne.'COM4'.AND.convection.ne.'CDS4'
@@ -755,7 +757,7 @@
 	IF (bc_obst_h<0.or.bc_obst_h>depth) CALL writeerror(601)
 	IF (wallup.ne.0.and.wallup.ne.1.and.wallup.ne.2) CALL writeerror(605)
 	IF (cfixedbed<0.or.cfixedbed>1.) CALL writeerror(607)
-
+	IF (i_periodicx<0.or.istart_morf2<0.or.i_periodicx>imax.or.istart_morf2>imax) CALL writeerror(613)
 	DEALLOCATE(obst)
 
 	READ (UNIT=1,NML=plume,IOSTAT=ios)
@@ -811,6 +813,7 @@
 	  frac(n)%ws_dep=fract(n)%ws_dep
 	  frac(n)%zair_ref_belowsurf=fract(n)%zair_ref_belowsurf	  
 	  frac(n)%type = fract(n)%type
+	  frac(n)%CD=fract(n)%CD	
 	!! check input fractions_in_plume
 	  IF (frac(n)%ws.eq.-999.) THEN
 		write(*,*)'Fraction:',n
@@ -860,6 +863,10 @@
 		nfrac_air(i)=n
 		write(*,*),'air fraction found: ',n
 	  ENDIF
+	  IF (frac(n)%CD<0.) THEN
+		write(*,*)'Fraction:',n
+		CALL writeerror(175)
+	  ENDIF	  
 	  IF (frac(n)%type.eq.1) THEN
 		n1=n1+1
 		nfrac_silt(n1)=n
@@ -1050,7 +1057,10 @@
 	  ENDIF
 	  IF (bp(n)%y2(1).eq.-99999.or.bp(n)%y2(2).eq.-99999.or.bp(n)%y2(3).eq.-99999.or.bp(n)%y2(4).eq.-99999.) THEN 
 	    bp(n)%y2=bp(n)%y
-	  ENDIF	  
+	  ENDIF	 
+	  IF (bp(n)%radius2<0.) THEN 
+		bp(n)%radius2=bp(n)%radius
+	  ENDIF 
 	  
 	  DO i=1,10000
 	  	bp(n)%h_tseries(i)=-99999.
@@ -1557,7 +1567,7 @@
 	ALLOCATE(zbed(0:i1,0:j1))
 	ALLOCATE(rhocorr_air_z(1:nfrac,0:k1))
 	ALLOCATE(av_slope(1:imax,1:jmax,0:k1))
-	
+	ALLOCATE(wscorr_z(1:nfrac,0:k1))
 	
 	IF (SEM.eq.1) THEN
 	IF (nmax1.gt.0.or.nmax2.gt.0) THEN
@@ -1667,7 +1677,12 @@
 			Coldbot=0.
 			Cnewbot=0.
 			dCdtbot=0.
-
+	ALLOCATE(b_update(0:i1))
+	IF (tstart_morf2.gt.1e-6) THEN 
+		b_update=0. 
+	ELSE 
+		b_update(istart_morf2:i1)=1.
+	ENDIF 	
 	
 	ALLOCATE(Ppropx(0:i1,0:j1,0:k1))
 	ALLOCATE(Ppropy(0:i1,0:j1,0:k1))

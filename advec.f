@@ -6267,7 +6267,8 @@ c
 	 !limiter4=MAX(0.,MIN(2.*r,1.),MIN(r,2.)) ! Superbee
 	 !limiter4=MAX(0.,MIN(2.*r,1.),MIN(r,1.99/(1.-cfl)))	! Superbee limiter loosened CFL-dependent restrictions --> almost equal to HyperBEE (difference 2*r vs 2/cfl*r) because less strange sharp edges
 	 !limiter4=MAX(0.,MIN(2.*r/MAX(cfl,1e-12),1.),MIN(r,1.99/(1.-cfl)))	! Hyperbee limiter loosened CFL-dependent restrictions --> very aggresively sharpening edges 
-	 limiter4=(r+ABS(r))/MAX(1.+r,1.)  !Van Leer limiter
+	 !limiter4=(r+ABS(r))/MAX(1.+r,1.)  !Van Leer limiter
+	 limiter4=0. !upw1 for testing purpose
       return
       end	  
 	  

@@ -596,68 +596,101 @@
 !       include 'common.txt'
       include 'mpif.h'
 	real tt,add_offset,scale_factor,data_range
-	integer tel,istap
+	integer tel,istap,n
 	character*60 FILE_NAME
 	character*60 strng
 	character*3 varname
 	logical(4) res
 	real uu(1:imax,1:jmax,1:kmax)
-	real vv(1:imax,1:jmax,1:kmax)
+	real vv(1:imax,1:jmax,1:kmax),zzbed(1:imax,1:jmax),zzbed2(1:imax,1:jmax)
+	real mass_bed(1:nfrac,1:imax,1:jmax)
 !	integer(4) ps
 
        ! We are writing 3D data, a nx x ny x nz grid.
        integer, parameter :: NDIMS = 3
        integer, parameter :: NDIMS2 = 4
        integer, parameter :: NDIMS3 = 1
+	   integer, parameter :: NDIMS5 = 2
 !       integer, parameter :: NX = imax, NY = jmax, NZ = kmax
      
        ! When we create netCDF files, variables and dimensions, we get back
        ! an ID for each one.
        integer :: ncid, varid9,varid10,varid4,varid8, dimids(NDIMS), dimids2(NDIMS2),dimids3(NDIMS3)
+	   integer :: dimids5(NDIMS5),dimids4(NDIMS)	   
        integer :: varid11,varid12,varid13,varid14,varid15,varid16,varid17,varid18,varid19
+	   integer :: varid20,varid21,varid22,varid23,varid24,varid25,varid26,varid27
        integer :: x_dimid, y_dimid, z_dimid, nfrac_dimid, par_dimid
-	character(1024) :: svnversion
-	character(1024) :: svnurl
+		character(1024) :: svnversion
+		character(1024) :: svnurl
       include 'version.inc'       
 
-	WRITE(FILE_NAME,'(a,i9.9,a,i4.4,a)')'movie3D_',INT(istap),'_',INT(rank),'.nc'
+		WRITE(FILE_NAME,'(a,i9.9,a,i4.4,a)')'movie3D_',INT(istap),'_',INT(rank),'.nc'
 	!WRITE(*,'(a,i9.9,a,i4.4,a)')'movie3D_',INT(istap),'_',INT(rank),'.nc'
 	
        ! Create the netCDF file. The nf90_clobber parameter tells netCDF to
        ! overwrite this file, if it already exists.
-       call check( nf90_create(FILE_NAME, NF90_CLOBBER, ncid) )
+		call check( nf90_create(FILE_NAME, NF90_CLOBBER, ncid) )
      
        ! Define the dimensions. NetCDF will hand back an ID for each.
-       call check( nf90_def_dim(ncid, "xdim", imax, x_dimid) )
-       call check( nf90_def_dim(ncid, "ydim", jmax, y_dimid) )
-       call check( nf90_def_dim(ncid, "zdim", kmax, z_dimid) )
-       if (nfrac>0) then
-       call check( nf90_def_dim(ncid, "nfracdim", nfrac, nfrac_dimid) )
-	endif
-       call check( nf90_def_dim(ncid, "pardim", 1, par_dimid) )
+		call check( nf90_def_dim(ncid, "xdim", imax, x_dimid) )
+		call check( nf90_def_dim(ncid, "ydim", jmax, y_dimid) )
+		call check( nf90_def_dim(ncid, "zdim", kmax, z_dimid) )
+		if (nfrac>0) then
+			call check( nf90_def_dim(ncid, "nfracdim", nfrac, nfrac_dimid) )
+		endif
+		call check( nf90_def_dim(ncid, "pardim", 1, par_dimid) )
      
        ! The dimids array is used to pass the IDs of the dimensions of
        ! the variables. Note that in fortran arrays are stored in
        ! column-major format.
        dimids =  (/ x_dimid, y_dimid, z_dimid /)
-       if (nfrac>0) then
-       dimids2 =  (/ nfrac_dimid, x_dimid, y_dimid, z_dimid /)
-	endif
-       dimids3 =  (/ par_dimid  /) 
-    
+		if (nfrac>0) then
+			dimids2 =  (/ nfrac_dimid, x_dimid, y_dimid, z_dimid /)
+			dimids4 =  (/ nfrac_dimid, x_dimid, y_dimid /)
+			dimids5 =  (/ x_dimid, y_dimid  /) 	   
+		endif
+		dimids3 =  (/ par_dimid  /) 
+   
+	
+	
        ! Define the variable. The type of the variable in this case is
        ! NF90_SHORT (2-byte 16bit var).
        if (nfrac>0) then
-       call check( nf90_def_var(ncid, "C", NF90_SHORT, dimids2, varid4) )
-       call check( nf90_put_att(ncid, varid4, 'units', '-') )
-       call check( nf90_put_att(ncid, varid4, 'long_name', 'Volume concentration for each fraction') )
-       call check( nf90_def_var(ncid, "scale_factor_c", NF90_REAL, dimids3, varid9) )
-       call check( nf90_put_att(ncid, varid9, 'units', '-') )
-       call check( nf90_put_att(ncid, varid9, 'long_name', 'unpacked_value = packed_value * scale_factor + add_offset') )
-       call check( nf90_def_var(ncid, "add_offset_c", NF90_REAL, dimids3, varid10) )
-       call check( nf90_put_att(ncid, varid10, 'units', '-') )
-       call check( nf90_put_att(ncid, varid10, 'long_name', 'unpacked_value = packed_value * scale_factor + add_offset') )
-	endif
+		   call check( nf90_def_var(ncid, "C", NF90_SHORT, dimids2, varid4) )
+		   call check( nf90_put_att(ncid, varid4, 'units', '-') )
+		   call check( nf90_put_att(ncid, varid4, 'long_name', 'Volume concentration for each fraction') )
+		   call check( nf90_def_var(ncid, "scale_factor_c", NF90_REAL, dimids3, varid9) )
+		   call check( nf90_put_att(ncid, varid9, 'units', '-') )
+		   call check( nf90_put_att(ncid, varid9, 'long_name', 'unpacked_value = packed_value * scale_factor + add_offset') )
+		   call check( nf90_def_var(ncid, "add_offset_c", NF90_REAL, dimids3, varid10) )
+		   call check( nf90_put_att(ncid, varid10, 'units', '-') )
+		   call check( nf90_put_att(ncid, varid10, 'long_name', 'unpacked_value = packed_value * scale_factor + add_offset') )
+
+		   call check( nf90_def_var(ncid, "mass_bed", NF90_REAL, dimids4, varid20) )
+		   call check( nf90_put_att(ncid, varid20, 'units', 'kg/m2') )
+		   call check( nf90_put_att(ncid, varid20, 'long_name', 'Mass per m2 sediment fractions in bed') )
+			if (interaction_bed.ge.4) then
+				call check( nf90_def_var(ncid, "zbed", NF90_REAL, dimids5, varid21) )
+				call check( nf90_put_att(ncid, varid21, 'units', 'm') )
+				call check( nf90_put_att(ncid, varid21, 'long_name', 'Bed level excl. buffer in mass_bed (actual zbed IMB0)') )
+				call check( nf90_def_var(ncid, "zbed_total", NF90_REAL, dimids5, varid24) )
+				call check( nf90_put_att(ncid, varid24, 'units', 'm') )
+				call check( nf90_put_att(ncid, varid24, 'long_name', 'Total bed level incl. buffer in mass_bed (actual zbed IBM2)') )			
+				call check( nf90_def_var(ncid, "Cbed", NF90_SHORT, dimids2, varid22) )
+				call check( nf90_put_att(ncid, varid22, 'units', '-') )
+				call check( nf90_put_att(ncid, varid22, 'long_name', 'Volume concentration for each fraction inside bed') )		
+				call check( nf90_def_var(ncid, "scale_factor_cb", NF90_REAL, dimids3, varid26) )
+				call check( nf90_put_att(ncid, varid26, 'units', '-') )
+				call check( nf90_put_att(ncid, varid26, 'long_name', 'unpacked_value = packed_value * scale_factor + add_offset') )
+				call check( nf90_def_var(ncid, "add_offset_cb", NF90_REAL, dimids3, varid27) )
+				call check( nf90_put_att(ncid, varid27, 'units', '-') )
+				call check( nf90_put_att(ncid, varid27, 'long_name', 'unpacked_value = packed_value * scale_factor + add_offset') )
+		   
+				call check( nf90_def_var(ncid, "kbed", NF90_SHORT, dimids5, varid25) )
+				call check( nf90_put_att(ncid, varid25, 'units', '-') )
+				call check( nf90_put_att(ncid, varid25, 'long_name', '2D index of highest bed cell') )
+			endif 
+		endif
 
        call check( nf90_def_var(ncid, "U", NF90_SHORT, dimids, varid11) )
        call check( nf90_put_att(ncid, varid11, 'units', 'm/s') )
@@ -702,72 +735,104 @@
        ! reading and writing subsets of data, in this case we write all the
        ! data in one operation.
 
+		do i=1,imax
+		   do j=1,jmax
+				do n=1,nfrac
+				mass_bed(n,i,j) = Cnewbot(n,i,j)*dz*frac(n)%rho ! Cnewbot(n,i,j)*dz*dr(i)*Rp(i)*dphi*frac(n)%rho
+				enddo		
+				IF (interaction_bed.ge.4) THEN
+				  zzbed(i,j) = REAL(MAX(kbed(i,j)-1,0))*dz+ SUM(Clivebed(1:nfrac,i,j,kbed(i,j)))/cfixedbed*dz  !bed level without buffer in Cnewbot
+				  zzbed2(i,j) = REAL(MAX(kbed(i,j)-1,0))*dz+ (SUM(Cnewbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
+				  ! total bed level 
+				ENDIF			
+		   enddo
+		enddo
+	
        if (nfrac>0) then
-	add_offset = MINVAL(Cnew(1:nfrac,1:imax,1:jmax,1:kmax))
-	data_range = MAXVAL(Cnew(1:nfrac,1:imax,1:jmax,1:kmax))-MINVAL(Cnew(1:nfrac,1:imax,1:jmax,1:kmax))
-	if (data_range > 0.) then
-	  scale_factor = data_range/(2.**15-1.)
+		call check( nf90_put_var(ncid, varid20, mass_bed(1:nfrac,1:imax,1:jmax)) )
+		add_offset = MINVAL(Cnew(1:nfrac,1:imax,1:jmax,1:kmax))
+		data_range = MAXVAL(Cnew(1:nfrac,1:imax,1:jmax,1:kmax))-MINVAL(Cnew(1:nfrac,1:imax,1:jmax,1:kmax))
+		if (data_range > 0.) then
+		  scale_factor = data_range/(2.**15-1.)
           call check( nf90_put_var(ncid, varid4, nint((Cnew(1:nfrac,1:imax,1:jmax,1:kmax)-add_offset)/scale_factor) ))
           call check( nf90_put_var(ncid, varid9, scale_factor) )
           call check( nf90_put_var(ncid, varid10, add_offset) )
-	else
-	  scale_factor = data_range/(2.**15-1.) ! scale_factor is zero, prevent division by zero:
-          call check( nf90_put_var(ncid, varid4, nint(0.*Cnew(1:nfrac,1:imax,1:jmax,1:kmax)) ))
-          call check( nf90_put_var(ncid, varid9, scale_factor) )
-          call check( nf90_put_var(ncid, varid10, add_offset) )
+		else
+		  scale_factor = data_range/(2.**15-1.) ! scale_factor is zero, prevent division by zero:
+		  call check( nf90_put_var(ncid, varid4, nint(0.*Cnew(1:nfrac,1:imax,1:jmax,1:kmax)) ))
+		  call check( nf90_put_var(ncid, varid9, scale_factor) )
+		  call check( nf90_put_var(ncid, varid10, add_offset) )
         endif
+		if (interaction_bed.ge.4) then 
+			add_offset = MINVAL(Clivebed(1:nfrac,1:imax,1:jmax,1:kmax))
+			data_range = MAXVAL(Clivebed(1:nfrac,1:imax,1:jmax,1:kmax))-MINVAL(Clivebed(1:nfrac,1:imax,1:jmax,1:kmax))
+			if (data_range > 0.) then
+			  scale_factor = data_range/(2.**15-1.)
+				  call check( nf90_put_var(ncid, varid22, nint((Clivebed(1:nfrac,1:imax,1:jmax,1:kmax)-add_offset)/scale_factor) ))
+				  call check( nf90_put_var(ncid, varid26, scale_factor) )
+				  call check( nf90_put_var(ncid, varid27, add_offset) )
+			else
+			  scale_factor = data_range/(2.**15-1.) ! scale_factor is zero, prevent division by zero:
+				  call check( nf90_put_var(ncid, varid22, nint(0.*Clivebed(1:nfrac,1:imax,1:jmax,1:kmax)) ))
+				  call check( nf90_put_var(ncid, varid26, scale_factor) )
+				  call check( nf90_put_var(ncid, varid27, add_offset) )
+			endif	
+		    call check( nf90_put_var(ncid, varid21, zzbed(1:imax,1:jmax) ))
+		    call check( nf90_put_var(ncid, varid24, zzbed2(1:imax,1:jmax) ))
+		    call check( nf90_put_var(ncid, varid25, kbed(1:imax,1:jmax) ))
+		endif 
        endif
-
+		
         do k=1,kmax
-		do j=1,jmax
-			do i=1,imax
-				uu(i,j,k)=unew(i,j,k)*cos_u(j)-vnew(i,j,k)*sin_v(j) !unew(i,j,k)
-				vv(i,j,k)=vnew(i,j,k)*cos_v(j)+unew(i,j,k)*sin_u(j) !vnew(i,j,k)
+			do j=1,jmax
+				do i=1,imax
+					uu(i,j,k)=unew(i,j,k)*cos_u(j)-vnew(i,j,k)*sin_v(j) !unew(i,j,k)
+					vv(i,j,k)=vnew(i,j,k)*cos_v(j)+unew(i,j,k)*sin_u(j) !vnew(i,j,k)
+				enddo
 			enddo
 		enddo
-	enddo
 
-	add_offset = MINVAL(uu(1:imax,1:jmax,1:kmax))
-	data_range = MAXVAL(uu(1:imax,1:jmax,1:kmax))-MINVAL(uu(1:imax,1:jmax,1:kmax))
-	if (data_range > 0.) then
-	  scale_factor = data_range/(2.**15-1.)
-          call check( nf90_put_var(ncid, varid11, nint((uu(1:imax,1:jmax,1:kmax)-add_offset)/scale_factor) ))
-          call check( nf90_put_var(ncid, varid12, scale_factor) )
-          call check( nf90_put_var(ncid, varid13, add_offset) )
-	else
-	  scale_factor = data_range/(2.**15-1.) ! scale_factor is zero, prevent division by zero:
-          call check( nf90_put_var(ncid, varid11, nint(0.*uu(1:imax,1:jmax,1:kmax)) ))
-          call check( nf90_put_var(ncid, varid12, scale_factor) )
-          call check( nf90_put_var(ncid, varid13, add_offset) )
-        endif
+		add_offset = MINVAL(uu(1:imax,1:jmax,1:kmax))
+		data_range = MAXVAL(uu(1:imax,1:jmax,1:kmax))-MINVAL(uu(1:imax,1:jmax,1:kmax))
+		if (data_range > 0.) then
+			  scale_factor = data_range/(2.**15-1.)
+			  call check( nf90_put_var(ncid, varid11, nint((uu(1:imax,1:jmax,1:kmax)-add_offset)/scale_factor) ))
+			  call check( nf90_put_var(ncid, varid12, scale_factor) )
+			  call check( nf90_put_var(ncid, varid13, add_offset) )
+		else
+			  scale_factor = data_range/(2.**15-1.) ! scale_factor is zero, prevent division by zero:
+			  call check( nf90_put_var(ncid, varid11, nint(0.*uu(1:imax,1:jmax,1:kmax)) ))
+			  call check( nf90_put_var(ncid, varid12, scale_factor) )
+			  call check( nf90_put_var(ncid, varid13, add_offset) )
+		endif
 
-	add_offset = MINVAL(vv(1:imax,1:jmax,1:kmax))
-	data_range = MAXVAL(vv(1:imax,1:jmax,1:kmax))-MINVAL(vv(1:imax,1:jmax,1:kmax))
-	if (data_range > 0.) then
-	  scale_factor = data_range/(2.**15-1.)
-          call check( nf90_put_var(ncid, varid14, nint((vv(1:imax,1:jmax,1:kmax)-add_offset)/scale_factor) ))
-          call check( nf90_put_var(ncid, varid15, scale_factor) )
-          call check( nf90_put_var(ncid, varid16, add_offset) )
-	else
-	  scale_factor = data_range/(2.**15-1.) ! scale_factor is zero, prevent division by zero:
-          call check( nf90_put_var(ncid, varid14, nint(0.*vv(1:imax,1:jmax,1:kmax)) ))
-          call check( nf90_put_var(ncid, varid15, scale_factor) )
-          call check( nf90_put_var(ncid, varid16, add_offset) )
-        endif
+		add_offset = MINVAL(vv(1:imax,1:jmax,1:kmax))
+		data_range = MAXVAL(vv(1:imax,1:jmax,1:kmax))-MINVAL(vv(1:imax,1:jmax,1:kmax))
+		if (data_range > 0.) then
+		  scale_factor = data_range/(2.**15-1.)
+			  call check( nf90_put_var(ncid, varid14, nint((vv(1:imax,1:jmax,1:kmax)-add_offset)/scale_factor) ))
+			  call check( nf90_put_var(ncid, varid15, scale_factor) )
+			  call check( nf90_put_var(ncid, varid16, add_offset) )
+		else
+		  scale_factor = data_range/(2.**15-1.) ! scale_factor is zero, prevent division by zero:
+			  call check( nf90_put_var(ncid, varid14, nint(0.*vv(1:imax,1:jmax,1:kmax)) ))
+			  call check( nf90_put_var(ncid, varid15, scale_factor) )
+			  call check( nf90_put_var(ncid, varid16, add_offset) )
+		endif
 
-	add_offset = MINVAL(wnew(1:imax,1:jmax,1:kmax))
-	data_range = MAXVAL(wnew(1:imax,1:jmax,1:kmax))-MINVAL(wnew(1:imax,1:jmax,1:kmax))
-	if (data_range > 0.) then
-	  scale_factor = data_range/(2.**15-1.)
-          call check( nf90_put_var(ncid, varid17, nint((wnew(1:imax,1:jmax,1:kmax)-add_offset)/scale_factor) ))
-          call check( nf90_put_var(ncid, varid18, scale_factor) )
-          call check( nf90_put_var(ncid, varid19, add_offset) )
-	else
-	  scale_factor = data_range/(2.**15-1.) ! scale_factor is zero, prevent division by zero:
-          call check( nf90_put_var(ncid, varid17, nint(0.*wnew(1:imax,1:jmax,1:kmax)) ))
-          call check( nf90_put_var(ncid, varid18, scale_factor) )
-          call check( nf90_put_var(ncid, varid19, add_offset) )
-        endif
+		add_offset = MINVAL(wnew(1:imax,1:jmax,1:kmax))
+		data_range = MAXVAL(wnew(1:imax,1:jmax,1:kmax))-MINVAL(wnew(1:imax,1:jmax,1:kmax))
+		if (data_range > 0.) then
+		  scale_factor = data_range/(2.**15-1.)
+			  call check( nf90_put_var(ncid, varid17, nint((wnew(1:imax,1:jmax,1:kmax)-add_offset)/scale_factor) ))
+			  call check( nf90_put_var(ncid, varid18, scale_factor) )
+			  call check( nf90_put_var(ncid, varid19, add_offset) )
+		else
+		  scale_factor = data_range/(2.**15-1.) ! scale_factor is zero, prevent division by zero:
+			  call check( nf90_put_var(ncid, varid17, nint(0.*wnew(1:imax,1:jmax,1:kmax)) ))
+			  call check( nf90_put_var(ncid, varid18, scale_factor) )
+			  call check( nf90_put_var(ncid, varid19, add_offset) )
+		endif
 
        call check( nf90_put_var(ncid, varid8, tt) )
      

@@ -2774,6 +2774,9 @@ C ...  Locals
 					  bednotfixed(i,j,k)=obb_ero(i,j,k) ! obstacle in bed cannot be avalanched or eroded if 0. (default) user can choose to have erosion: 1.
 					  bednotfixed_depo(i,j,k)=obb_depo(i,j,k) ! obstacle in bed cannot have deposition if 0. (default)
 				  endif 
+				  if (kbed(i,j).eq.k-1) then  !obstacle is connected to floor so include in kbed + this works only for k=0,k1 upward counting inner loop in i,j loop
+					kbed(i,j)=k
+				  endif 
 				  tel1=tel1+1
 				  i_inPpuntTSHD(tel1)=i 
 				  j_inPpuntTSHD(tel1)=j
@@ -2886,9 +2889,9 @@ C ...  Locals
 			kbedin(0:j1)=kbed(1,0:j1)
 		ENDIF
 		
-!		  IF (IBMorder.ne.2) THEN 
-!		    kbed22=kbed 
-!		  ELSE 
+		  IF (IBMorder.ne.2) THEN 
+		    kbed22=kbed 
+		  ELSE 
 		  	do j=1,jmax 
 				do i=1,imax 
 					IF (interaction_bed.ge.4) THEN 
@@ -2900,7 +2903,7 @@ C ...  Locals
 				ENDDO
 			ENDDO 
 			call bound_cbot_integer(kbed22) 
-!		  ENDIF 
+		  ENDIF 
       end
 
 	subroutine bedroughness_init

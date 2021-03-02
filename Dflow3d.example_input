@@ -61,7 +61,8 @@ depo_implicit = 0			! 1=calculate deposition at the bed implicit; 0=explicit wit
 IBMorder = 2 				! 0 (default) = normal staircase manner bed immersed boundary, 2 = 2nd order immersed boundary of bed, obstacles and TSHD higher in water are still staircase manner
 applyVOF = 0 	!Beta option, default 0 take variable rho fully in account in momentum eq.; 1 = only take variable density in account in gravity term, not in rest of momentum eq.
 k_ust_tau = 1 	! defines which k-layer from bed is used to determine ust/tau for sediment pickup and K-Eps bed-bc, default 1 (first cell from bed is used) and sometimes for IBM bed k_ust_tau=2 is recommended because 2nd cell is less influenced by nearby immersed bed grid cells with zero velocity 
-dUVdn_IBMbed=-1 ! -1 = default no correction, but when 0 then dUdn and dVdn is made zero over immersed bed
+dUVdn_IBMbed=-1 ! -1 = default no correction, 0 gives dUdn and dVdn is zero over immersed bed, -2 to apply UV(1:kbed)=0 also for IBM2
+
 /
 
 &ambient
@@ -85,6 +86,8 @@ kn = 0.1			! Nikkuradse roughness flow [m]
 interaction_bed = 4		! 0 no erosion/sedimentation, 1 only deposition, 2 deposition & unlimited erosion, 3 deposition & erosion previously deposited material, 4 depo&ero including bed-update, 5 depo&ero excluding bed-update, 6 depo&ero including bed-update & unlimited erosion base layer, 7 depo&ero excluding bed-update & unlimited erosion base layer
 periodicx = 0			! 1 periodic in x dir; 0 not periodic (default 0); 2 closed box (in and outflow in x-dir is zero)
 periodicy = 0			! 1 periodic in y dir; 0 not periodic; 2 is free slip lateral boundaries (default 0)
+i_periodicx = 0 		! beta option (default 0; not used) when >1 then internal periodic x-dir bc is applied UVWC(0)=UVWC(i_periodicx)
+istart_morf2 = 0 ! (default 0, not used) start i-index where bedupdate is applied, for i<istart_morf2 there is exchange of sediment between bed and fluid, but no bedupdate (all changes to bed are annihilated) 
 monopile = -1			! -1 (default) no monopile; >0 is monopile : closed bc at i=0 and combined in/outflow at i=imax; 1=partial slip monopile wall log-law; 2=free slip monopile wall; 3=partial slip monopile TBL wall-model including dpdx, 4=no-slip monopile wall
 kn_mp = 0.01 			! must be defined icw monopile=1 and gives Nikkuradse monopile wall roughness is implemented 
 kn_sidewalls = 0.01		! when defined >0 icw periodicy=2 then side wall Nikkuradse roughness is implemented (default <0 no sidewall tau)
@@ -199,6 +202,7 @@ fract(1)%tau_d =  0.1		! Critical shear stress for deposition of mud [N/m2], not
 fract(1)%M = 1.e-4		! Erosion rate mud [kg/sm2] VanRijn proposes 1e-5 - 5e-4 kg/sm2, not used for sand
 fract(1)%kn_sed = 80.		! Nikkuradse roughness for shear stress acting on this sediment fraction (advised as dfloc for mud, for sand with interaction_bed=4 kn_sed is not used, but 2*d50 is used in line with Van Rijn 1984) [10^-6 m] (Elsewhere van Rijn proposes kn_sed=3*d90=6*d50=6*dpart for sand...) 
 fract(1)%zair_ref_belowsurf = 0.		! Optional reference level used to make air_fraction semi-compressible; fract(1)%rho is defined at zair_ref_belowsurf [m]
+fract(1)%CD = 0.		! (default 0.) [-] Optional define CD to make simplified correction in start up of settling velocity as function of distance to zair_ref_belowsurf (sqrt(1-exp(-1.5*CD/dpart*rho_b/rho_s*zzz)))
 fract(1)%type = 1			! 1 = silt/mud (default), 2=sand, 3=air, -1=VOF (VOF is nerd option)
 /
 

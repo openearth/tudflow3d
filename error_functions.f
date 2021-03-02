@@ -409,7 +409,10 @@
 		write(*,*) '# of move_dx_series, or length zero              #'
 		write(*,*) '# when length zero then always a outputfile is   #'
 		write(*,*) '# generated when bedplume is moved               #'
-
+	CASE(175)
+		write(*,*) '# namelist &fractions_in_plume                   #'			
+		write(*,*) '# CD must be >0 or 0. for not using it           #'	
+		
 	CASE(200)
 		write(*,*) '#                                                #'			
 		write(*,*) '# input file not found                           #'
@@ -639,7 +642,10 @@
 	CASE(612)
 		write(*,*) '# namelist &ambient                              #'			
 		write(*,*) '# input V_w must be defined if Hs>0              #'					
-		write(*,*) '# please note that unlike V_b, V_w is defined in earth fixed x,y coordinate system !    #'		
+		write(*,*) '# please note that unlike V_b, V_w is defined in earth fixed x,y coordinate system !    #'	
+	CASE(613)
+		write(*,*) '# namelist &ambient                              #'			
+		write(*,*) '# istart_morf2, i_periodicx must be >0 and <imax  #'			
 	CASE(620)
 		write(*,*) '# namelist &ambient                              #'			
 		write(*,*) '# nmax3 is not defined                           #'			

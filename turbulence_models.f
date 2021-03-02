@@ -4318,12 +4318,12 @@ c*************************************************************
 						ddzzW=(REAL(kppW)-0.5)*dz-0.5*(zbed(i,j)+zbed(i-1,j))
 						ddzzN=(REAL(kppN)-0.5)*dz-0.5*(zbed(i,j)+zbed(i,j+1))
 						ddzzS=(REAL(kppS)-0.5)*dz-0.5*(zbed(i,j)+zbed(i,j-1))
-						distance_to_bed=0.25*(ddzzE+ddzzW+ddzzN+ddzzS)
+						distance_to_bed=MIN(0.5*dz,0.25*(ddzzE+ddzzW+ddzzN+ddzzS))
 					ELSE
-						kppE = MAX(kbed(i,j),kbed(i+1,j))+k_ust_tau
-						kppW = MAX(kbed(i,j),kbed(i-1,j))+k_ust_tau
-						kppS = MAX(kbed(i,j),kbed(i,j+1))+k_ust_tau
-						kppN = MAX(kbed(i,j),kbed(i,j-1))+k_ust_tau
+						kppE = MIN(MAX(kbed(i,j),kbed(i+1,j))+k_ust_tau,k1)
+						kppW = MIN(MAX(kbed(i,j),kbed(i-1,j))+k_ust_tau,k1)
+						kppS = MIN(MAX(kbed(i,j),kbed(i,j+1))+k_ust_tau,k1)
+						kppN = MIN(MAX(kbed(i,j),kbed(i,j-1))+k_ust_tau,k1)
 						distance_to_bed=(REAL(k_ust_tau)-0.5)*dz
 					ENDIF
 					uu=0.5*(Uvel(i,j,kppE)+Uvel(i-1,j,kppW))-Ubot_TSHD(j)
@@ -4331,8 +4331,10 @@ c*************************************************************
 					
 					IF (pickup_bedslope_geo.eq.1) THEN
 						bed_slope = atan((zbed(i+1,j)-zbed(i-1,j))/(Rp(i+1)-Rp(i-1)))
+     &  *MIN(bednotfixed(i+1,j,kbed(i+1,j)),bednotfixed(i-1,j,kbed(i-1,j)))						
 						uu2 = uu*cos(bed_slope)+Wvel(i,j,kbedp(i,j))*sin(bed_slope)
 						bed_slope = atan((zbed(i,j+1)-zbed(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1))))
+     &  *MIN(bednotfixed(i,j+1,kbed(i,j+1)),bednotfixed(i,j-1,kbed(i,j-1)))						
 						vv2 = vv*cos(bed_slope)+Wvel(i,j,kbedp(i,j))*sin(bed_slope)
 						absU = sqrt((uu2)**2+(vv2)**2)					
 					ELSE 

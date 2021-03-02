@@ -72,6 +72,19 @@
 			rhocorr_air_z(nfrac_air(n),k) = frac(nfrac_air(n))%rho / rhoair_z
 		ENDDO
 	ENDDO
+
+	wscorr_z=1.
+	DO n=1,nfrac 
+	!simplified correction for startup settling velocity as function of initial vertical level, relevant for coarser rocks, correction Miedema 1981 as mentioned in TU Delft MSc thesis Ravelli 2012
+		IF (frac(n)%CD>0.) THEN
+			DO k=0,k1
+				zz=k*dz-0.5*dz
+				ddzz=-zz+(depth-frac(n)%zair_ref_belowsurf) !positive downward and defined wrt zair_ref_belowsurf
+				wscorr_z(n,k) = sqrt(1.-exp(-1.5*frac(n)%CD/frac(n)%dpart*rho_b/frac(n)%rho*MAX(0.,ddzz)))
+			ENDDO
+		ENDIF 
+	ENDDO
+	
 	
 	DO k=1,kmax
 		z_rks(k)=k*dz-0.5*dz
@@ -185,7 +198,7 @@
 	      DO n=1,nfrac
 	        ccc(n) = csed2(n,i,j,k) !0.5*(csed2(n,i,j,k) + csed2(n,i,j,kp))	
 			ctot=ccc(n)*frac(n)%dfloc/frac(n)%dpart*0.5*(rhocorr_air_z(n,k)+rhocorr_air_z(n,kp))+ctot
-	        ws(n)=ws_basis(n)
+	        ws(n)=ws_basis(n)*wscorr_z(n,k)
 		! ws is positive downward, wsed is positive upward 
 			sum_c_ws=sum_c_ws+ws(n)*ccc(n)*frac(n)%rho/rr2(i,j,k) !(0.5*(rr2(i,j,k)+rr2(i,j,kp)))
 !!		! According to drift velocity literature the drift flux is calculated using the mass-fraction in stead of volume-fraction,
@@ -220,7 +233,7 @@
 	      ENDDO
 	      ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
 	      DO n=1,nfrac
-	        ws(n)=ws_basis(n)*(1.-ctot)**(frac(n)%n) !frac(n)%n lowered with one already
+	        ws(n)=ws_basis(n)*(1.-ctot)**(frac(n)%n)*wscorr_z(n,k) !frac(n)%n lowered with one already
 		! ws is positive downward, wsed is positive upward 
 		! Ri_Za is defined with volume concentration ctot
   		sum_c_ws=sum_c_ws+ws(n)*ccc(n)*frac(n)%rho/rr2(i,j,k) !(0.5*(rr2(i,j,k)+rr2(i,j,kp)))
@@ -341,7 +354,7 @@
 	      DO n=1,nfrac
 	        ccc(n) = csed2(n,i,j,k) !0.5*(csed2(n,i,j,k) + csed2(n,i,j,kp))	
 			ctot=ccc(n)*frac(n)%dfloc/frac(n)%dpart*0.5*(rhocorr_air_z(n,k)+rhocorr_air_z(n,kp))+ctot
-	        ws(n)=ws_basis(n)
+	        ws(n)=ws_basis(n)*wscorr_z(n,k)
 		! ws is positive downward, wsed is positive upward 
 			sum_c_ws=sum_c_ws+ws(n)*ccc(n)*frac(n)%rho/rr2(i,j,k) !(0.5*(rr2(i,j,k)+rr2(i,j,kp)))
 !!		! According to drift velocity literature the drift flux is calculated using the mass-fraction in stead of volume-fraction,
@@ -379,7 +392,7 @@
 	      ENDDO
 	      ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
 	      DO n=1,nfrac
-	        ws(n)=ws_basis(n)*(1.-ctot)**(frac(n)%n) !frac(n)%n lowered with one already
+	        ws(n)=ws_basis(n)*(1.-ctot)**(frac(n)%n)*wscorr_z(n,k) !frac(n)%n lowered with one already
 		! ws is positive downward, wsed is positive upward 
 		! Ri_Za is defined with volume concentration ctot
   		sum_c_ws=sum_c_ws+ws(n)*ccc(n)*frac(n)%rho/rr2(i,j,k) !(0.5*(rr2(i,j,k)+rr2(i,j,kp)))
@@ -491,7 +504,12 @@
 		ENDIF 
 		call bound_p(ppp)	
 	ENDIF 
-			  
+	IF (wallmodel_tau_sed.eq.11) THEN 
+		IF (mod(istep,ndtbed).eq.0) THEN 
+			telUVWbed=telUVWbed+1
+			IF (telUVWbed>nrmsbed) telUVWbed=1
+		ENDIF
+	ENDIF 
 	d_cbotnew = 0.	  
 	IF (interaction_bed.le.3.and.time_n.ge.tstart_morf) THEN ! erosion sedimentation without bed update and for each sediment fraction independently
 		DO i=1,imax
@@ -507,12 +525,12 @@
 				ddzzW=(REAL(kppW)-0.5)*dz-0.5*(zbed(i,j)+zbed(i-1,j))
 				ddzzN=(REAL(kppN)-0.5)*dz-0.5*(zbed(i,j)+zbed(i,j+1))
 				ddzzS=(REAL(kppS)-0.5)*dz-0.5*(zbed(i,j)+zbed(i,j-1))
-				distance_to_bed=0.25*(ddzzE+ddzzW+ddzzN+ddzzS)
+				distance_to_bed=MIN(0.5*dz,0.25*(ddzzE+ddzzW+ddzzN+ddzzS))
 			ELSE
-				kppE = MAX(kbed(i,j),kbed(i+1,j))+k_ust_tau
-				kppW = MAX(kbed(i,j),kbed(i-1,j))+k_ust_tau
-				kppS = MAX(kbed(i,j),kbed(i,j+1))+k_ust_tau
-				kppN = MAX(kbed(i,j),kbed(i,j-1))+k_ust_tau
+				kppE = MIN(MAX(kbed(i,j),kbed(i+1,j))+k_ust_tau,k1)
+				kppW = MIN(MAX(kbed(i,j),kbed(i-1,j))+k_ust_tau,k1)
+				kppS = MIN(MAX(kbed(i,j),kbed(i,j+1))+k_ust_tau,k1)
+				kppN = MIN(MAX(kbed(i,j),kbed(i,j-1))+k_ust_tau,k1)
 				distance_to_bed=(REAL(k_ust_tau)-0.5)*dz
 			ENDIF
 			uu=0.5*(ucfd(i,j,kppE)+ucfd(i-1,j,kppW))-Ubot_TSHD(j)
@@ -520,9 +538,11 @@
 			
 			IF (pickup_bedslope_geo.eq.1) THEN
 				bed_slope = atan((zbed(i+1,j)-zbed(i-1,j))/(Rp(i+1)-Rp(i-1)))
+     &  *MIN(bednotfixed(i+1,j,kbed(i+1,j)),bednotfixed(i-1,j,kbed(i-1,j)))
 				uu2 = uu*cos(bed_slope)+wcfd(i,j,kbedp(i,j))*sin(bed_slope)
 				facx = 1./cos(bed_slope)
 				bed_slope = atan((zbed(i,j+1)-zbed(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1))))
+     &  *MIN(bednotfixed(i,j+1,kbed(i,j+1)),bednotfixed(i,j-1,kbed(i,j-1)))				
 				vv2 = vv*cos(bed_slope)+wcfd(i,j,kbedp(i,j))*sin(bed_slope)
 				facy = 1./cos(bed_slope)
 				bs_geo = facx*facy ! increase in dx and dy (area) over which pickup and deposition take place
@@ -634,7 +654,7 @@
 				ddzzW=(REAL(kppW)-0.5)*dz-0.5*(zbed(i,j)+zbed(i-1,j))
 				ddzzN=(REAL(kppN)-0.5)*dz-0.5*(zbed(i,j)+zbed(i,j+1))
 				ddzzS=(REAL(kppS)-0.5)*dz-0.5*(zbed(i,j)+zbed(i,j-1))
-				distance_to_bed=0.25*(ddzzE+ddzzW+ddzzN+ddzzS)
+				distance_to_bed=MIN(0.5*dz,0.25*(ddzzE+ddzzW+ddzzN+ddzzS))
 !				zb_W=zbed(i,j)
 !				kpp=MIN(CEILING(zb_W/dz+0.5)-1+k_ust_tau,k1)		!for k_ust_tau=2 kpp is between 1*dz-2*dz distance from bed 	
 !				!kpp=MIN(CEILING(zb_W/dz+0.5),k1)		!kpp is between 0-dz distance from bed 	
@@ -645,10 +665,10 @@
 !				  distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W
 !				ENDIF 
 			ELSE
-				kppE = MAX(kbed(i,j),kbed(i+1,j))+k_ust_tau
-				kppW = MAX(kbed(i,j),kbed(i-1,j))+k_ust_tau
-				kppS = MAX(kbed(i,j),kbed(i,j+1))+k_ust_tau
-				kppN = MAX(kbed(i,j),kbed(i,j-1))+k_ust_tau
+				kppE = MIN(MAX(kbed(i,j),kbed(i+1,j))+k_ust_tau,k1)
+				kppW = MIN(MAX(kbed(i,j),kbed(i-1,j))+k_ust_tau,k1)
+				kppS = MIN(MAX(kbed(i,j),kbed(i,j+1))+k_ust_tau,k1)
+				kppN = MIN(MAX(kbed(i,j),kbed(i,j-1))+k_ust_tau,k1)
 				distance_to_bed=(REAL(k_ust_tau)-0.5)*dz
 !				
 !				kpp = MIN(kbedp(i,j),k1)                !for k_ust_tau=2 kpp is 1.5*dz from 0-order ibm bed
@@ -704,16 +724,20 @@
 				!bedload near bed velocity:
 				uuRrel = ucfd(i  ,j,kppE)-Ubot_TSHD(j)  
 				bed_slope = atan((zbed(i+1,j)-zbed(i,j))/(Rp(i+1)-Rp(i)))
+     &  *MIN(bednotfixed(i+1,j,kbed(i+1,j)),bednotfixed(i,j,kbed(i,j)))				
 				uuRrel = uuRrel*cos(bed_slope)+0.5*(wcfd(i,j,kbedp(i,j))+wcfd(i+1,j,kbedp(i+1,j)))*sin(bed_slope)
 				!no correction for pit because uuR from cell i always needs to be same as uuL from i+1 in bedload otherwise interuption and pit may never fill up
 				uuLrel = ucfd(i-1,j,kppW)-Ubot_TSHD(j)	
 				bed_slope = atan((zbed(i,j)-zbed(i-1,j))/(Rp(i)-Rp(i-1)))
+     &  *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed(i-1,j,kbed(i-1,j)))				
 				uuLrel = uuLrel*cos(bed_slope)+0.5*(wcfd(i,j,kbedp(i,j))+wcfd(i-1,j,kbedp(i-1,j)))*sin(bed_slope)				
 				vvRrel = vcfd(i,j  ,kppN)-Vbot_TSHD(j)
 				bed_slope = atan((zbed(i,j+1)-zbed(i,j))/(Rp(i)*(phip(j+1)-phip(j))))
+     &  *MIN(bednotfixed(i,j+1,kbed(i,j+1)),bednotfixed(i,j,kbed(i,j)))				
 				vvRrel = vvRrel*cos(bed_slope)+0.5*(wcfd(i,j,kbedp(i,j))+wcfd(i,j+1,kbedp(i,j+1)))*sin(bed_slope)
 				vvLrel = vcfd(i,j-1,kppS)-Vbot_TSHD(j)
 				bed_slope = atan((zbed(i,j)-zbed(i,j-1))/(Rp(i)*(phip(j)-phip(j-1))))
+     &  *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed(i,j-1,kbed(i,j-1)))				
 				vvLrel = vvLrel*cos(bed_slope)+0.5*(wcfd(i,j,kbedp(i,j))+wcfd(i,j-1,kbedp(i,j-1)))*sin(bed_slope)				
 				uuR_relax(i,j)  = bl_relax*uuRrel+(1.-bl_relax)*uuR_relax(i,j)  	!needed for bedload-fluxes
 				uuL_relax(i,j)  = bl_relax*uuLrel+(1.-bl_relax)*uuL_relax(i,j)
@@ -726,9 +750,11 @@
 				vvLrel = vvL_relax(i,j)/absUbl			
 				!suspension load near bed velocity:
 				bed_slope = atan((zbed(i+1,j)-zbed(i-1,j))/(Rp(i+1)-Rp(i-1)))
+     &  *MIN(bednotfixed(i+1,j,kbed(i+1,j)),bednotfixed(i-1,j,kbed(i-1,j)))				
 				uu2 = uu*cos(bed_slope)+wcfd(i,j,kbedp(i,j))*sin(bed_slope)
 				facx = 1./cos(bed_slope)
 				bed_slope = atan((zbed(i,j+1)-zbed(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1))))
+     &  *MIN(bednotfixed(i,j+1,kbed(i,j+1)),bednotfixed(i,j-1,kbed(i,j-1)))				
 				vv2 = vv*cos(bed_slope)+wcfd(i,j,kbedp(i,j))*sin(bed_slope)
 				facy = 1./cos(bed_slope)
 				bs_geo = facx*facy ! increase in dx and dy (area) over which pickup and deposition take place
@@ -760,8 +786,6 @@
 			
 			IF (wallmodel_tau_sed.eq.11) THEN !for 11 use uu and vv not scaled back to z_tau_sed
 				IF (mod(istep,ndtbed).eq.0) THEN 
-					telUVWbed=telUVWbed+1
-					IF (telUVWbed>nrmsbed) telUVWbed=1
 					sigtbed(telUVWbed)=dt 
 					ww=wcfd(i,j,kbedp(i,j)) !need to adjust ww for pickup_bedslope_geo.eq.1 in a later stage when this approach proves to be usefull
 					sigUWbed(telUVWbed,i,j)=dt*uu*ww
@@ -885,9 +909,9 @@
 						CALL wall_fun_TBL_Ploc(uu/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,vv/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,
      & 				rho_b,2.*distance_to_bed,frac(n)%kn_sed,kappa,nu_mol,ust_frac_old(n,i,j),ust)	
 					ELSEIF (wallmodel_tau_sed.eq.11) THEN
-						ustu2=(SUM(sigUWbed(:,i,j))-SUM(sigUbed(:,i,j))*SUM(sigWbed(:,i,j))/SUM(sigtbed))/SUM(sigtbed)
-						ustv2=(SUM(sigVWbed(:,i,j))-SUM(sigVbed(:,i,j))*SUM(sigWbed(:,i,j))/SUM(sigtbed))/SUM(sigtbed)
-						ust = (ustu2**2+ustv2**2)**0.25	 
+					ustu2=(SUM(sigUWbed(:,i,j))-SUM(sigUbed(:,i,j))*SUM(sigWbed(:,i,j))/SUM(sigtbed))/SUM(sigtbed)
+					ustv2=(SUM(sigVWbed(:,i,j))-SUM(sigVbed(:,i,j))*SUM(sigWbed(:,i,j))/SUM(sigtbed))/SUM(sigtbed)
+					ust = (ustu2**2+ustv2**2)**0.25
 					ELSE 					
 					  ust=0.1*absU !re-calculate tau with kn_sed for deposition as it is not dependent on avg dpart in mixture
 					  do tel=1,10 ! 10 iter is more than enough
@@ -904,7 +928,7 @@
      &				(1.-MAX(0.,(1.-tau/frac(n)%tau_d))*MIN(0.,Wsed(n,i,j,kbed(i,j)))*ddt/dz*bednotfixed_depo(i,j,kbed(i,j))*morfac)
 					 depositionf(n) = MAX(0.,(1.-tau/frac(n)%tau_d))*ccnew(n,i,j,kplus)*MIN(0.,Wsed(n,i,j,kbed(i,j)))*ddt !ccfd
      & *bednotfixed_depo(i,j,kbed(i,j))*morfac				 ! m --> dep is negative due to negative wsed					 
-					 cbotnew(n,i,j)=cbotnew(n,i,j)-b_update*morfac2*(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-]  !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+					 cbotnew(n,i,j)=cbotnew(n,i,j)-b_update(i)*morfac2*(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-]  !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
 					 cbotnewtot=cbotnewtot+cbotnew(n,i,j)
 					 cbotnewtot_pos=cbotnewtot_pos+MAX(cbotnew(n,i,j),0.)
 					 ctot_firstcel=ccnew(n,i,j,kplus)+ctot_firstcel					
@@ -912,7 +936,7 @@
 					 depositionf(n) = MAX(0.,(1.-tau/frac(n)%tau_d))*ccnew(n,i,j,kplus)*MIN(0.,Wsed(n,i,j,kbed(i,j)))*ddt !ccfd
      & *bednotfixed_depo(i,j,kbed(i,j))*morfac			 ! m --> dep is negative due to negative wsed
 					 ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus)+(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-]
-					 cbotnew(n,i,j)=cbotnew(n,i,j)-b_update*morfac2*(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-]  !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+					 cbotnew(n,i,j)=cbotnew(n,i,j)-b_update(i)*morfac2*(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-]  !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
 					 cbotnewtot=cbotnewtot+cbotnew(n,i,j)
 					 cbotnewtot_pos=cbotnewtot_pos+MAX(cbotnew(n,i,j),0.)
 					 ctot_firstcel=ccnew(n,i,j,kplus)+ctot_firstcel
@@ -1023,7 +1047,9 @@
 				! Bed slope effect on Shields_critical following Roulund Sumer Fredsoe Michelsen, 2004, Numerical and experimental investigation of flow and scour around a circular pile
 				IF (bedslope_effect.eq.1) THEN !Shields_cr and Shields_cr_bl adjusted for slope effect 
 					dzbed_dx=-(zbed(i+1,j)-zbed(i-1,j))/(Rp(i+1)-Rp(i-1)) !defined with z positive down
+     &  *MIN(bednotfixed(i+1,j,kbed(i+1,j)),bednotfixed(i-1,j,kbed(i-1,j)))					
 					dzbed_dy=-(zbed(i,j+1)-zbed(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1))) !defined with z positive down
+     &  *MIN(bednotfixed(i,j+1,kbed(i,j+1)),bednotfixed(i,j-1,kbed(i,j-1)))					
 					dzbed_dl=sqrt(dzbed_dx**2+dzbed_dy**2)
 					dzbed_dl=MIN(dzbed_dl,0.9*tan(phi_sediment)) !for stability limit bed slope, otherwise NaN may occur
 					bedslope_angle=atan(dzbed_dl)
@@ -1043,7 +1069,9 @@
 					Shields_cr_bl=Shields_cr 
 				ELSEIF (bedslope_effect.eq.2) THEN !only Shields_cr_bl adjusted for slope effect and Shields_cr for sus. pickup not adjusted for slope effect
 					dzbed_dx=-(zbed(i+1,j)-zbed(i-1,j))/(Rp(i+1)-Rp(i-1)) !defined with z positive down
+     &  *MIN(bednotfixed(i+1,j,kbed(i+1,j)),bednotfixed(i-1,j,kbed(i-1,j)))						
 					dzbed_dy=-(zbed(i,j+1)-zbed(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1))) !defined with z positive down
+     &  *MIN(bednotfixed(i,j+1,kbed(i,j+1)),bednotfixed(i,j-1,kbed(i,j-1)))						
 					dzbed_dl=sqrt(dzbed_dx**2+dzbed_dy**2)
 					dzbed_dl=MIN(dzbed_dl,0.9*tan(phi_sediment)) !for stability limit bed slope, otherwise NaN may occur
 					bedslope_angle=atan(dzbed_dl)
@@ -1078,7 +1106,7 @@
 				ELSEIF (wallmodel_tau_sed.eq.11) THEN
 					ustu2=(SUM(sigUWbed(:,i,j))-SUM(sigUbed(:,i,j))*SUM(sigWbed(:,i,j))/SUM(sigtbed))/SUM(sigtbed)
 					ustv2=(SUM(sigVWbed(:,i,j))-SUM(sigVbed(:,i,j))*SUM(sigWbed(:,i,j))/SUM(sigtbed))/SUM(sigtbed)
-					ust = (ustu2**2+ustv2**2)**0.25	 
+					ust = (ustu2**2+ustv2**2)**0.25
 				ELSE				
 					ust=0.1*absU
 					do tel=1,10 ! 10 iter is more than enough
@@ -1205,7 +1233,7 @@
 				  ELSEIF (wallmodel_tau_sed.eq.11) THEN
 					ustu2=(SUM(sigUWbed(:,i,j))-SUM(sigUbed(:,i,j))*SUM(sigWbed(:,i,j))/SUM(sigtbed))/SUM(sigtbed)
 					ustv2=(SUM(sigVWbed(:,i,j))-SUM(sigVbed(:,i,j))*SUM(sigWbed(:,i,j))/SUM(sigtbed))/SUM(sigtbed)
-					ust = (ustu2**2+ustv2**2)**0.25	 
+					ust = (ustu2**2+ustv2**2)**0.25
 				  ELSE
 					ust=0.1*absUbl
 					do tel=1,10 ! 10 iter is more than enough
@@ -1235,7 +1263,9 @@
 				! Bed slope effect on bedload D3D style using Bagnold (1966) for longitudinal slope and Ikeda (1982, 1988) as presented by Van Rijn (1993) for transverse slope
 				  IF (bedslope_effect.eq.3) THEN !longitudinal and transverse slope corrected
 					dzbed_dx=-(zbed(i+1,j)-zbed(i-1,j))/(Rp(i+1)-Rp(i-1)) !defined with z positive down
+     &  *MIN(bednotfixed(i+1,j,kbed(i+1,j)),bednotfixed(i-1,j,kbed(i-1,j)))					
 					dzbed_dy=-(zbed(i,j+1)-zbed(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1))) !defined with z positive down
+     &  *MIN(bednotfixed(i,j+1,kbed(i,j+1)),bednotfixed(i,j-1,kbed(i,j-1)))						
 					!assuming bedslope_effect is dominant for bedload uuRrel and vvLrel are used which are relaxated values used for determining bedload (suspension load pickup is based on instantaneous U,V values):
 					dzbed_ds=dzbed_dx*0.5*(uuRrel+uuLrel)+dzbed_dy*0.5*(vvRrel+vvLrel) 
 					dzbed_dn=-dzbed_dx*0.5*(vvRrel+vvLrel)+dzbed_dy*0.5*(uuRrel+uuLrel)
@@ -1317,7 +1347,7 @@
      &      		(1.-(MIN(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))-wsedbed)*ddt/dz*bednotfixed_depo(i,j,kbed(i,j))*morfac)					
 					depositionf(n) = ccnew(n,i,j,kplus)*(MIN(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))-wsedbed)*ddt !ccfd
      &     *bednotfixed_depo(i,j,kbed(i,j))*morfac! m --> dep is negative due to negative wsed					
-					cbotnew(n,i,j)=cbotnew(n,i,j)-b_update*morfac2*(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-] !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+					cbotnew(n,i,j)=cbotnew(n,i,j)-b_update(i)*morfac2*(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-] !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
 					cbotnewtot=cbotnewtot+cbotnew(n,i,j)
 					cbotnewtot_pos=cbotnewtot_pos+MAX(cbotnew(n,i,j),0.)
 					ctot_firstcel=ccnew(n,i,j,kplus)+ctot_firstcel
@@ -1325,7 +1355,7 @@
 					depositionf(n) = ccnew(n,i,j,kplus)*(MIN(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))-wsedbed)*ddt !ccfd
      &     *bednotfixed_depo(i,j,kbed(i,j))*morfac ! m --> dep is negative due to negative wsed
 					ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus)+(erosionf(n)*ero_factor+depositionf(n))/(dz) ! vol conc. [-]
-					cbotnew(n,i,j)=cbotnew(n,i,j)-b_update*morfac2*(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-] !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+					cbotnew(n,i,j)=cbotnew(n,i,j)-b_update(i)*morfac2*(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-] !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
 					cbotnewtot=cbotnewtot+cbotnew(n,i,j)
 					cbotnewtot_pos=cbotnewtot_pos+MAX(cbotnew(n,i,j),0.)
 					ctot_firstcel=ccnew(n,i,j,kplus)+ctot_firstcel
@@ -1715,12 +1745,6 @@
 		ust_bl_old = ust_bl_new
 		ust_mud_old = ust_mud_new 
 		ust_frac_old = ust_frac_new
-		! kbed is updated, hence also zbed needs to be updated:
-		DO i=0,i1
-			DO j=0,j1
-				zbed(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(cbotnew(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
-			ENDDO
-		ENDDO		
 		IF (wbed_correction.eq.1) call bound_cbot(Wbed)
 	ENDIF		
 	
@@ -1804,12 +1828,6 @@
 		ENDIF	
 		call bound_cbot_integer(kbed) ! apply correct boundary conditions for updated kbed
 		kbedt=kbed		
-		DO i=0,i1
-			DO j=0,j1
-				zbed(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(cbotnew(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
-			ENDDO
-		ENDDO
-		
 			
 		
 		nav=0
@@ -1984,14 +2002,6 @@
 			have_avalanched_tmp=have_avalanched
 			call mpi_allreduce(have_avalanched_tmp,have_avalanched,1,mpi_double_precision,mpi_max,mpi_comm_world,ierr)
 			
-			call bound_cbot_integer(kbed) ! apply correct boundary conditions for updated kbed
-			kbedt=kbed
-			DO i=0,i1
-				DO j=0,j1
-					zbed(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(cbotnew(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
-				ENDDO
-			ENDDO			
-			
 !! mpi transfer sum d_cbotnew over edges:
 			call shiftf_lreverse(d_cbotnew,cbf) 
 			call shiftb_lreverse(d_cbotnew,cbb) 
@@ -2036,13 +2046,23 @@
 					ENDDO
 				ENDDO
 			ENDDO
+			call bound_cbot_integer(kbed) ! apply correct boundary conditions for updated kbed
+			kbedt=kbed
 		  ENDIF  ! end have_avalanched 
 		 ENDDO !# avalanche steps
-		 !write(*,*),'rank,have_avalanched:',rank,have_avalanched_tmp
-		 IF (rank.eq.0.and.MOD(istep,10).eq.0) THEN
-			write(*,*),'istep,avalanche steps:',istep,nav
-		 ENDIF		 
-		ENDIF
+			 !write(*,*),'rank,have_avalanched:',rank,have_avalanched_tmp
+			 IF (rank.eq.0.and.MOD(istep,10).eq.0) THEN
+				write(*,*),'istep,avalanche steps:',istep,nav
+			 ENDIF		 
+		ENDIF !ENDIF ((interaction_bed.eq.4.or.interaction_bed.eq.6).and.time_n.ge.tstart_morf.and.time_n.ge.tstart_morf2) THEN
+		call bound_cbot_integer(kbed) ! apply correct boundary conditions for updated kbed
+		kbedt=kbed		
+		DO i=1,imax
+		  DO j=1,jmax
+			zbed(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(cbotnew(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
+		  ENDDO 
+		ENDDO 
+		call bound_cbot(zbed)			
 			! update ibm2 kbed22 which is subtly different from kbed:
 		if (IBMorder.eq.2) then
 			DO i=1,imax
@@ -2184,11 +2204,12 @@
 		ENDDO
 		call bound_cbot_integer(kbed) ! apply correct boundary conditions for updated kbed	
 		kbedt=kbed
-		DO i=0,i1
-			DO j=0,j1
-				zbed(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(cbotnew(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
-			ENDDO
-		ENDDO		
+		 DO i=1,imax
+		  DO j=1,jmax
+			zbed(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(cbotnew(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
+		  ENDDO 
+		 ENDDO 
+		 call bound_cbot(zbed)		
 	 ENDIF	
 	 
 

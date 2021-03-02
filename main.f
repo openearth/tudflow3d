@@ -348,7 +348,7 @@
 		!only drawback is that it is not fully consistent with update C as this is based on c_edge based on direction U^n+1
 		
 		if (time_np.ge.tstart_morf2) then 
-			b_update=1. ! b_update=0. at start sim when tstart_morf2>0 --> before tstart_morf2 there is exchange of sediment between bed and fluid, but no bedupdate (all changes to bed are annihilated) 
+			b_update(istart_morf2:i1)=1. ! b_update=0. at start sim when tstart_morf2>0 --> before tstart_morf2 there is exchange of sediment between bed and fluid, but no bedupdate (all changes to bed are annihilated) 
 		endif 
 		if (mod(istep,100).eq.0) then
 			call chkdiv
