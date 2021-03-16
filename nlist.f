@@ -230,7 +230,7 @@
 	end type frac_init
 	TYPE(frac_init), DIMENSION(30) :: fract
 
-	ALLOCATE(bedplume(40)) !temporary array to read namelist with unknown size
+	ALLOCATE(bedplume(400)) !temporary array to read namelist with unknown size
 	ALLOCATE(obst(100000)) !temporary array to read namelist with unknown size
 ! 	TYPE(gridtype), DIMENSION(1) :: grid
 
