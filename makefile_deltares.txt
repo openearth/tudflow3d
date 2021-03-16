@@ -12,8 +12,12 @@ FLAGS =
 #FLAGS = -diag-disable:7712 -diag-disable:5194 -g -fpe0 -ftrapuv -check all 
 #FLAGS =  -fpe3 -ftrapuv -debug extended -check bounds
 
-netcdfdir = /opt/netcdf/v4.6.2_v4.4.4_intel_18.0.3
-LIBS2 = -L/opt/netcdf/v4.6.2_v4.4.4_intel_18.0.3/lib -lnetcdff -lnetcdf  
+
+#netcdfdir = /opt/netcdf/v4.6.2_v4.4.4_intel_18.0.3
+#LIBS2 = -L/opt/netcdf/v4.6.2_v4.4.4_intel_18.0.3/lib -lnetcdff -lnetcdf  
+netcdfdir = /opt/apps/netcdf/v4.7.4_v4.5.3_intel18.0.3/
+LIBS2 = -L/opt/apps/netcdf/v4.7.4_v4.5.3_intel18.0.3/lib -lnetcdff -lnetcdf
+
 
 #topdir = /usr/local/mumps/4.10.0
 #relict from past when mumps was linked, now only needed for sparse_matrix.f
@@ -25,24 +29,26 @@ LIBS2 = -L/opt/netcdf/v4.6.2_v4.4.4_intel_18.0.3/lib -lnetcdff -lnetcdf
 ###LIBDMUMPS = $(libdir)/libdmumps$(PLAT)$(LIBEXT) $(LIBMUMPS_COMMON)
 ### end mumps part....
 
+
 MKLROOT= /opt/intel/18.0.3/mkl
-#MKLPATH=$MKLROOT/lib/em64t
+##MKLPATH=$MKLROOT/lib/em64t
 MKLPATH=$MKLROOT/lib/intel64_lin/
 MKLINCLUDE=$MKLROOT/include
 LIBMKL = -L$MKLPATH -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread
  
 
-
-
 FC = $(F77) $(FLAGS)
 RM = rm -f
 
 # commandos to obtain github info in fortran program:
-VR1 = $(shell echo "      svnversion = '`git rev-parse --short HEAD`'" > version.inc)
-VR2 = #$(shell echo "      svnurl = https://github.com/openearth/tudflow3d.git" >> version.inc )
+#VR1 = $(shell echo "      svnversion = '`git rev-parse --short HEAD`'" > version.inc)
+#VR2 = #$(shell echo "      svnurl = https://github.com/openearth/tudflow3d.git" >> version.inc )
+#temporary switched off because this test is not in github path:
+VR1 = 
+VR2 = 
 
 
-PROGRAM = TUDflow3d_vg.exe
+PROGRAM = TUDflow3d_vg_h7.exe
 
 #SRCS    = error_functions.f nlist.f extra_functions.f sediment.f advec.f advec_compact4knikker.f advec_cds6.f advec_cds4.f advec_hybrid6.f advec_hybrid4.f advec_c4a6.f diff_compact.f bound.f init.f main.f sparse_matrix.f solve.f turbulence_models.f vfft.f output.f 
 

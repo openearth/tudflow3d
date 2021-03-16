@@ -1,5 +1,5 @@
 !    Part of Dflow3d a 3D Navier Stokes solver with variable density for 
-!    simulations of near field dredge plume mixing
+!    simulations of near field dredge plume mixing 
 
 !    Copyright (C) 2012  Lynyrd de Wit
 
