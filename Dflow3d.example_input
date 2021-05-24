@@ -31,6 +31,7 @@ dt_max = 0.04		! Max timestep [s]
 dt_ini = 0.01		! Max timestep [s] used the first 10 time steps for extra gentle startup
 time_int = 'ABv'		! Time integration options: 'ABv', 'EE1', 'RK3'
 CFL = 0.6			! CFL limit [-]
+n_dtavg = 1000 		! if n_dtavg>0 dt is determined as minimum of last n_dtavg timesteps to give dt not varying every timestep for extra stability (optional, default 0 and not used)
 t0_output_movie = 10.		! Start time for low-storage concentration output usable for movies [s]
 dt_output_movie = 10.		! Time interval for low-storage concentration output usable for movies [s]
 te_output_movie = 450.		! End time for low-storage concentration output usable for movies [s]
@@ -44,7 +45,7 @@ numdiff = 0.001953125		! Amount of extra 6th diffusion in case of 'CDS6','CDS4',
 wiggle_detector = 0			! Use wiggle detector to adjust amount of numdiff for each individual grid cell (default 0-->numdiff applied for all cells; optional 1)
 numdiff2 = 0.001953125		! Amount of minimum 6th diffusion in case of wiggle_detector=1 (default 0.), must be < numdiff
 diffusion = 'CDS2'		! Numerical scheme for diffusion term.
-CNdiffz = 0				! 1 is 2nd order CN treatment of diffusion in z-dir; 0 is explicit in z-dir (default 0); 2 is implicit 1st order Euler backward
+CNdiffz = 0				! 0 is explicit in z-dir (default 0); 1 is 2nd order CN treatment of diffusion in z-dir; 2 is implicit 1st order Euler backward in z-dir; 11 is 2nd order CN treatment of diffusion in x,y,z-dir; 12 is implicit 1st order Euler backward in x,y,z-dir;
 continuity_solver =36   !default is 1 (drdt+drudx=0). Optional:  35 (dudx=0 U-mix), 36 (dudx=0 U-vol); 36 is best option for mixture flow 
 npresIBM = 0			! number of extra pres-correction steps to make IBM objects better impermeable (default 0)
 npresPRHO = 0			! number of extra pres-correction steps to get predicted P^n+1 as input in variable-density-Poisson-solver more accurate (default 0)
@@ -172,6 +173,7 @@ bedplume(1)%c_tseriesfile = ''		! file containing timeseries of volume fractions
 bedplume(1)%sedflux = 6.625 59.625  ! Sediment flux [kg/s] (divided evenly over all cells within bedplume, length vector must be nfrac large)
 bedplume(1)%S_tseriesfile = './inputfiles/Inflow_S.asc'		! file containing timeseries of sediment flux [kg/s] (optional overrules bedplume(.)%sedflux, default '')
 bedplume(1)%move_zbed_criterium = 5.5	! criterium [m] to move this bedplume with move_dx,dy,dz once bed within x,y contour grows above this criterium: default one criterium full sim; optional series with length move_dx_series
+bedplume(1)%move_zbed_type = 1 			! switch [1 or 2] 1 (default) = use zbed_max for move_zbed_criterium and 2 = use zbed_mean for move_zbed_criterium: default one criterium full sim; optional series with length move_dx_series; when not defined zbed_max is used 
 bedplume(1)%move_dx_series = 			! series [m] to move bedplume in x direction every time bed grows above move_zbed_criterium within x,y contour bedplume
 bedplume(1)%move_dy_series = 			! series [m] to move bedplume in y direction every time bed grows above move_zbed_criterium within x,y contour bedplume
 bedplume(1)%move_dz_series = 			! series [m] to move bedplume in z direction (heigth and zbottom) every time bed grows above move_zbed_criterium within x,y contour bedplume
@@ -181,8 +183,8 @@ bedplume(1)%move_nx_series = 			! series [-] to have momentum sqrt(u^2,v^2) in d
 bedplume(1)%move_ny_series = 			! series [-] to have momentum sqrt(u^2,v^2) in desired direction when bedplume has moved (length 1 or length move_dx_series; when nx,ny both 0 no momentum)
 bedplume(1)%x2 = -500. 50. 50. -500. ! (optional) x coordinate 4 corners location where check on move_zbed_criterium is carried out [m] (default bedplume()%x is used)
 bedplume(1)%y2 = -500. -500. 500. 500. ! (optional) y coordinate 4 corners location where check on move_zbed_criterium is carried out [m] (default bedplume()%y is used)
-bedplume(1)%move_dx2_series =			! (optional) series [m] to move bedplume()%x2 
-bedplume(1)%move_dy2_series =			! (optional) series [m] to move bedplume()%y2
+bedplume(1)%move_dx2_series =			! (optional) series [m] to move bedplume()%x2; if not defined move_dx_series is used
+bedplume(1)%move_dy2_series =			! (optional) series [m] to move bedplume()%y2; if not defined move_dy_series is used
 bedplume(1)%dt_history= 				! (optional) time interval output [s]; when >0 a history is made of z-position and concentration of bedplume location 
 bedplume(1)%move_dz_height_factor =		! (optional) [-] factor to apply move_dz_series to bedplume height (e.g. make 0 to not apply move_dz_series to bedplume height)
 bedplume(1)%move_dz_zbottom_factor =		! (optional) [-] factor to apply move_dz_series to bedplume zbottom (e.g. make 0 to not apply move_dz_series to bedplume zbottom)

@@ -581,6 +581,8 @@
 		write(*,*) '# CNdiffz must be 0 (explicit diffusion in z dir)             #'
 		write(*,*) '# or 1 (Crank Nicolson semi-implicit diffusion in z dir)      #'
 		write(*,*) '# or 2 (Euler backward implicit diffusion in z dir)           #'
+		write(*,*) '# or 11 (Crank Nicolson semi-implicit diffusion in all dirs)  #'
+		write(*,*) '# or 12 (Euler backward implicit diffusion in all dirs)       #'		
 	CASE(407)
 		write(*,*) '# namelist &num_scheme                           #'		
 		write(*,*) '# npresIBM must be >0                            #'

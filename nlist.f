@@ -65,9 +65,11 @@
       REAL Aplume,driftfluxforce_calfac
 	  REAL vwal,delta_nsed,nl,permeability_kl,pickup_fluctuations_ampl,z_tau_sed,kn_d50_multiplier_bl,bl_relax
 	  INTEGER pickup_fluctuations,cbed_method,k_layer_pickup,nu_minimum_wall,pickup_bedslope_geo,wbed_correction,bedslope_effect
-	  INTEGER wallmodel_tau_sed,ndtbed,nrmsbed,telUVWbed
+	  INTEGER wallmodel_tau_sed,ndtbed,nrmsbed,telUVWbed,tel_dt
 	  REAL Const1eps,Const2,Sc_k,Sc_eps,Cal_buoyancy_k,Cal_buoyancy_eps,Cs_relax
 	  REAL bedslope_mu_s,alfabs_bl,alfabn_bl,phi_sediment
+	  REAL dt_factor_avg
+	  INTEGER n_dtavg
 	  
 	  
       CHARACTER*4 convection,diffusion
@@ -99,7 +101,7 @@
       INTEGER*2, DIMENSION(:),ALLOCATABLE :: i_inVpunt_tauTSHD,j_inVpunt_tauTSHD,k_inVpunt_tauTSHD
       INTEGER*2, DIMENSION(:),ALLOCATABLE :: i_inVpunt_rudder,j_inVpunt_rudder,k_inVpunt_rudder
       INTEGER*2, DIMENSION(:),ALLOCATABLE :: i_inWpunt_suction,j_inWpunt_suction,k_inWpunt_suction
-      REAL, DIMENSION(:),ALLOCATABLE :: Ubot_TSHD,Vbot_TSHD!,facIBMu,facIBMv,facIBMw
+      REAL, DIMENSION(:),ALLOCATABLE :: Ubot_TSHD,Vbot_TSHD,dt_series !,facIBMu,facIBMv,facIBMw,
       INTEGER*8, DIMENSION(:),ALLOCATABLE :: pt,pt3
 
       INTEGER*2, DIMENSION(:,:,:),ALLOCATABLE :: llist1,llist2,llist3
@@ -179,6 +181,7 @@
 	type bed_plumes
 	    REAL ::	x(4),y(4),height,u,v,w,c(30),t0,t_end,zbottom,Q,sedflux(30),volncells,changesedsuction !c(30) matches with size frac_init
 		REAL :: move_zbed_criterium(100000),move_dx_series(100000),move_dy_series(100000),move_dz_series(100000)
+		INTEGER :: move_zbed_type(100000)
 		REAL :: move_nx_series(100000),move_ny_series(100000),x2(4),y2(4),move_dx2_series(100000),move_dy2_series(100000)
 		REAL :: move_outputfile_series(100000),uinput,dt_history,t_bphis_output,move_dz_height_factor,move_dz_zbottom_factor
 	    INTEGER :: forever,h_seriesloc,zb_seriesloc,Q_seriesloc,S_seriesloc,c_seriesloc,velocity_force
@@ -192,6 +195,7 @@
 		REAL :: h_tseries(10000),h_series(10000),zb_tseries(10000),zb_series(10000)
 		REAL :: Q_tseries(10000),c_tseries(10000),S_tseries(10000),Q_series(10000),c_series(30,10000),S_series(30,10000)
 		REAL :: move_zbed_criterium(100000),move_dx_series(100000),move_dy_series(100000),move_dz_series(100000)
+		INTEGER :: move_zbed_type(100000)
 		REAL :: move_nx_series(100000),move_ny_series(100000),x2(4),y2(4),move_dx2_series(100000),move_dy2_series(100000)
 		REAL :: move_outputfile_series(100000),uinput,dt_history,t_bphis_output,move_dz_height_factor,move_dz_zbottom_factor
 		REAL :: u_tseries(10000),v_tseries(10000),w_tseries(10000)
@@ -223,7 +227,7 @@
 !      include 'param.txt'
 !      include 'common.txt'
 
-	integer ios,n,n1,n2,n3
+	integer ios,n,n1,n2,n3,n4
 	type frac_init
 	  real :: ws,c,rho,dpart,dfloc,tau_d,tau_e,M,kn_sed,ws_dep,zair_ref_belowsurf,CD
 	  integer :: type
@@ -237,7 +241,7 @@
 	NAMELIST /simulation/px,imax,jmax,kmax,imax_grid,dr_grid,Rmin,schuif_x,dy,depth,hisfile,restart_dir
      & ,lim_r_grid,fac_r_grid,jmax_grid,lim_y_grid,fac_y_grid,sym_grid_y,dy_grid
 	NAMELIST /times/t_end,t0_output,dt_output,te_output,tstart_rms,dt_max,dt_ini,time_int,CFL,
-     & t0_output_movie,dt_output_movie,te_output_movie,tstart_morf,te_rms,tstart_morf2
+     & t0_output_movie,dt_output_movie,te_output_movie,tstart_morf,te_rms,tstart_morf2,n_dtavg
 	NAMELIST /num_scheme/convection,numdiff,wiggle_detector,diffusion,comp_filter_a,comp_filter_n,CNdiffz,npresIBM,advec_conc,
      & continuity_solver,transporteq_fracs,split_rho_cont,driftfluxforce_calfac,depo_implicit,IBMorder,npresPRHO,
      & pres_in_predictor_step,Poutflow,oPRHO,applyVOF,k_ust_tau,Uoutflow,dUVdn_IBMbed,k_pzero,numdiff2
@@ -293,6 +297,7 @@
 	dt_ini = -999.
 	time_int=''
 	CFL = -999.
+	n_dtavg = -1
 	t0_output_movie = 9.e18
 	dt_output_movie = 9.e18
 	te_output_movie = 9.e18
@@ -479,6 +484,7 @@
 		bedplume(:)%move_dy_series(i)=-99999999.
 		bedplume(:)%move_dz_series(i)=-99999999.
 		bedplume(:)%move_zbed_criterium(i)=999999999.
+		bedplume(:)%move_zbed_type(i)=-9
 		bedplume(:)%move_outputfile_series(i)=-1
 		bedplume(:)%move_nx_series(i)=-99999999.
 		bedplume(:)%move_ny_series(i)=-99999999.
@@ -645,6 +651,9 @@
 		write(*,*),' use ABv for a fully supported time integration scheme.'
 	ENDIF
 	IF (CFL<0.) CALL writeerror(35)
+	IF (n_dtavg>0) THEN 
+		ALLOCATE(dt_series(n_dtavg))
+	ENDIF 
 	READ (UNIT=1,NML=num_scheme,IOSTAT=ios)
 	!! check input num_scheme
 	IF (convection.ne.'CDS2'.AND.convection.ne.'CDS6'.AND.convection.ne.'COM4'.AND.convection.ne.'CDS4'
@@ -666,7 +675,7 @@
 	else
 	  numdiff=numdiff*2.  !needed to get correct value (in advec is a 'hidden' factor 2/4)
 	endif
-	IF (CNdiffz.ne.0.and.CNdiffz.ne.1.and.CNdiffz.ne.2) CALL writeerror(406)
+	IF (CNdiffz.ne.0.and.CNdiffz.ne.1.and.CNdiffz.ne.2.and.CNdiffz.ne.11.and.CNdiffz.ne.12) CALL writeerror(406)
 	IF (npresIBM<0) CALL writeerror(407)
 	pres_in_predictor_step_internal = pres_in_predictor_step
 	IF (k_ust_tau<1.or.k_ust_tau>kmax) CALL writeerror(409)
@@ -949,6 +958,7 @@
 	  bp(n)%move_dz_zbottom_factor=bedplume(n)%move_dz_zbottom_factor
 	  
 	  bp(n)%move_zbed_criterium=bedplume(n)%move_zbed_criterium
+	  bp(n)%move_zbed_type=bedplume(n)%move_zbed_type
 	  bp(n)%move_dx_series=bedplume(n)%move_dx_series
 	  bp(n)%move_dy_series=bedplume(n)%move_dy_series
 	  bp(n)%move_dz_series=bedplume(n)%move_dz_series
@@ -1061,6 +1071,13 @@
 	  IF (bp(n)%radius2<0.) THEN 
 		bp(n)%radius2=bp(n)%radius
 	  ENDIF 
+	  n4=0
+	  DO WHILE (bp(n)%move_zbed_type(n4+1).NE.-9)
+		n4=n4+1
+	  END DO
+	  IF (n4.eq.1) THEN 
+	    bp(n)%move_zbed_type(1:100000)=bp(n)%move_zbed_type(1)
+	  ENDIF 	  
 	  
 	  DO i=1,10000
 	  	bp(n)%h_tseries(i)=-99999.

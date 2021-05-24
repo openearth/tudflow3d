@@ -661,19 +661,27 @@ c
       USE sediment
 
       implicit none
+	  
+	  include 'mpif.h'
 !       include 'param.txt'
 !       include 'common.txt'
-      integer  ib,ie,jb,je,kb,ke,n,t,kpp,kp,km
+      integer  ib,ie,jb,je,kb,ke,n,t,kpp,kp,km,ip,im,jp,jm
       real     doldc(nfrac,0:i1,0:j1,0:k1),dnewc(nfrac,0:i1,0:j1,0:k1)
-      real     dold(0:i1,0:j1,0:k1),dnew(0:i1,0:j1,0:k1)
+      real     dold(0:i1,0:j1,0:k1),dnew(0:i1,0:j1,0:k1),dnew2(0:i1,0:j1,0:k1)
       real     wsed(nfrac,0:i1,0:j1,0:k1),sumWkm(0:i1,0:j1,0:k1)
 	real*8 pplus(imax,kmax)
 	real fAB3_1,fAB3_2,fAB3_3,fAB3_4,facAB3_1,facAB3_2,facAB3_3,facAB3_4
 	real dist,timeAB_desired(1:4)
 	real dnewcbot(nfrac,0:i1,0:j1)	
-	real aaa(0:k1),bbb(0:k1),ccc(0:k1),ekm_min,ekm_plus,rhss(0:k1)
+	real aaa(0:k1),bbb(0:k1),ccc(0:k1),ekm_min,ekm_plus,rhss(0:k1),rho_min,rho_plus
+	real aaax(0:i1),bbbx(0:i1),cccx(0:i1),rhssx(0:i1)
+	real aaay(0:jmax*px+1),bbby(0:jmax*px+1),cccy(0:jmax*px+1),rhssy(0:jmax*px+1)
+	real ans_T(1:i1,0:jmax*px+1,1:kmax/px+1),ekm_T(1:i1,0:jmax*px+1,1:kmax/px+1)
+	real uu_T(1:imax,0:jmax*px+1,1:kmax/px),vv_T(1:imax,0:jmax*px+1,1:kmax/px),ww_T(1:imax,0:jmax*px+1,1:kmax/px)
+	real interface_T(1:i1,0:jmax*px+1)
 	real utr(0:i1,0:j1,0:k1),vtr(0:i1,0:j1,0:k1),wtr(0:i1,0:j1,0:k1)	
 	real ws(0:i1,0:j1,0:k1),gvector,CNz
+	integer ileng,ierr,itag,status(MPI_STATUS_SIZE),perx,pery 
 !		real dUdt1(0:i1,0:j1,0:k1),dVdt1(0:i1,0:j1,0:k1),dWdt1(0:i1,0:j1,0:k1)
 !	
 !	dUdt1=dudt
@@ -692,49 +700,82 @@ c********************************************************************
 		endif
 		timeAB_desired(i)=time_n-(i-1)*dt
 	enddo
-
-	if (istep.lt.5) then !start with standard AB3
-!	   facAB3_1=1.
-!	   facAB3_2=0.
-!	   facAB3_3=0.
-!	   facAB3_4=0.
-	   facAB3_1=23./12.
-	   facAB3_2=-4./3.
-	   facAB3_3=5./12.
-	   facAB3_4=0.
-	else
-
-		dist=timeAB_desired(2)-timeAB_real(2)
-		if (dist.lt.0) then
-			fAB3_2=(timeAB_real(2)-timeAB_real(3)+dist)/(timeAB_real(2)-timeAB_real(3))
-			fAB3_3=1.-(timeAB_real(2)-timeAB_real(3)+dist)/(timeAB_real(2)-timeAB_real(3))
-			fAB3_1=0.
+	
+	IF (CNdiffz.eq.11.or.CNdiffz.eq.12) THEN !switch to AB2 with variable time step:
+!	!	!EE1:
+!	!   facAB3_1=1. !1.5 !23./12.
+!	!   facAB3_2=0. !-0.5 !-4./3.
+!	!   facAB3_3=0. !5./12.
+!	!   facAB3_4=0.
+		if (istep.lt.5) then !start with standard AB2
+		   facAB3_1=1.5 !23./12.
+		   facAB3_2=-0.5 !-4./3.
+		   facAB3_3=0. !5./12.
+		   facAB3_4=0.
 		else
-			fAB3_2=(timeAB_real(1)-timeAB_real(2)-dist)/(timeAB_real(1)-timeAB_real(2))
-			fAB3_1=1.-(timeAB_real(1)-timeAB_real(2)-dist)/(timeAB_real(1)-timeAB_real(2))
-			fAB3_3=0.
+
+			dist=timeAB_desired(2)-timeAB_real(2)
+			if (dist.lt.0) then
+				fAB3_2=(timeAB_real(2)-timeAB_real(3)+dist)/(timeAB_real(2)-timeAB_real(3))
+				fAB3_3=1.-(timeAB_real(2)-timeAB_real(3)+dist)/(timeAB_real(2)-timeAB_real(3))
+				fAB3_1=0.
+			else
+				fAB3_2=(timeAB_real(1)-timeAB_real(2)-dist)/(timeAB_real(1)-timeAB_real(2))
+				fAB3_1=1.-(timeAB_real(1)-timeAB_real(2)-dist)/(timeAB_real(1)-timeAB_real(2))
+				fAB3_3=0.
+			endif
+
+			facAB3_1=1.5-fAB3_1*0.5 !23./12.-fAB3_1*4./3.
+			facAB3_2=-fAB3_2*0.5 !-fAB3_2*4./3.
+			facAB3_3=-fAB3_3*0.5 !-fAB3_3*4./3.
+
+			facAB3_4=0.
+
 		endif
-
-		facAB3_1=23./12.-fAB3_1*4./3.
-		facAB3_2=-fAB3_2*4./3.
-		facAB3_3=-fAB3_3*4./3.
-
-		dist=timeAB_desired(3)-timeAB_real(3)
-		if (dist.lt.0) then
-			fAB3_3=(timeAB_real(3)-timeAB_real(4)+dist)/(timeAB_real(3)-timeAB_real(4))
-			fAB3_4=1.-(timeAB_real(3)-timeAB_real(4)+dist)/(timeAB_real(3)-timeAB_real(4))
-			fAB3_2=0.
+	ELSE !AB3
+		if (istep.lt.5) then !start with standard AB3
+	!	   facAB3_1=1.
+	!	   facAB3_2=0.
+	!	   facAB3_3=0.
+	!	   facAB3_4=0.
+		   facAB3_1=23./12.
+		   facAB3_2=-4./3.
+		   facAB3_3=5./12.
+		   facAB3_4=0.
 		else
-			fAB3_3=(timeAB_real(2)-timeAB_real(3)-dist)/(timeAB_real(2)-timeAB_real(3))
-			fAB3_2=1.-(timeAB_real(2)-timeAB_real(3)-dist)/(timeAB_real(2)-timeAB_real(3))
-			fAB3_4=0.
-		endif
 
-		facAB3_2=facAB3_2+fAB3_2*5./12.
-		facAB3_3=facAB3_3+fAB3_3*5./12.
-		facAB3_4=fAB3_4*5./12.
+			dist=timeAB_desired(2)-timeAB_real(2)
+			if (dist.lt.0) then
+				fAB3_2=(timeAB_real(2)-timeAB_real(3)+dist)/(timeAB_real(2)-timeAB_real(3))
+				fAB3_3=1.-(timeAB_real(2)-timeAB_real(3)+dist)/(timeAB_real(2)-timeAB_real(3))
+				fAB3_1=0.
+			else
+				fAB3_2=(timeAB_real(1)-timeAB_real(2)-dist)/(timeAB_real(1)-timeAB_real(2))
+				fAB3_1=1.-(timeAB_real(1)-timeAB_real(2)-dist)/(timeAB_real(1)-timeAB_real(2))
+				fAB3_3=0.
+			endif
 
-	endif
+			facAB3_1=23./12.-fAB3_1*4./3.
+			facAB3_2=-fAB3_2*4./3.
+			facAB3_3=-fAB3_3*4./3.
+
+			dist=timeAB_desired(3)-timeAB_real(3)
+			if (dist.lt.0) then
+				fAB3_3=(timeAB_real(3)-timeAB_real(4)+dist)/(timeAB_real(3)-timeAB_real(4))
+				fAB3_4=1.-(timeAB_real(3)-timeAB_real(4)+dist)/(timeAB_real(3)-timeAB_real(4))
+				fAB3_2=0.
+			else
+				fAB3_3=(timeAB_real(2)-timeAB_real(3)-dist)/(timeAB_real(2)-timeAB_real(3))
+				fAB3_2=1.-(timeAB_real(2)-timeAB_real(3)-dist)/(timeAB_real(2)-timeAB_real(3))
+				fAB3_4=0.
+			endif
+
+			facAB3_2=facAB3_2+fAB3_2*5./12.
+			facAB3_3=facAB3_3+fAB3_3*5./12.
+			facAB3_4=fAB3_4*5./12.
+
+		endif	
+	ENDIF 
 
 	   if (applyVOF.eq.1) then ! VOF fraction apply real density for gravity and sediment settling related things
 		 CALL state(cnew,rnew)
@@ -742,6 +783,7 @@ c********************************************************************
 	dcdt = 0.
 	sumWkm = 0.
 	dnewc=0.
+	dnew2=0. !initialize as zero
 c********************************************************************
 c     CALCULATE slipvelocity
 c********************************************************************
@@ -856,43 +898,122 @@ c********************************************************************
 	      	    call adveccbot_TVD(dnewcbot(n,:,:),cnewbot(n,:,:),Ubot_TSHD,Vbot_TSHD,Ru,Rp,dr,phiv,phipt,dz,
      +            	i1,j1,ib,ie,jb,je,dt,rank,px,periodicx,periodicy)
 				dcdtbot(n,:,:)= cnewbot(n,:,:) + dt*dnewcbot(n,:,:) ! time update	
-           IF (CNdiffz.eq.1.or.CNdiffz.eq.2) THEN !CN semi implicit treatment diff-z:
-			IF (CNdiffz.eq.1) THEN 
-				CNz=0.5 
-			ELSE 
+			IF (CNdiffz.eq.1.or.CNdiffz.eq.2.or.CNdiffz.eq.11.or.CNdiffz.eq.12) THEN !CN semi implicit treatment diff-z:
+			 IF (CNdiffz.eq.1.or.CNdiffz.eq.11) THEN 
+				CNz=0.55
+			 ELSE 
 				CNz=1.
-			ENDIF 
-	     call bound_c(dcdt(n,:,:,:),frac(n)%c,n,0.) ! bc start CN-diffz ABv
-	     do k=k1,k1 !-kjet,k1
-	       do t=1,tmax_inPpunt
-	         i=i_inPpunt(t)
-	         j=j_inPpunt(t)
-	         dcdt(n,i,j,k) = dcdt(n,i,j,kmax) ! No diffusion over vertical inflow boundary, this line is needed for exact influx
-	       enddo
-	     enddo
+			 ENDIF 
+			 call bound_c(dcdt(n,:,:,:),frac(n)%c,n,0.) ! bc start CN-diffz ABv
+			 do k=k1,k1 !-kjet,k1
+			   do t=1,tmax_inPpunt
+				 i=i_inPpunt(t)
+				 j=j_inPpunt(t)
+				 dcdt(n,i,j,k) = dcdt(n,i,j,kmax) ! No diffusion over vertical inflow boundary, this line is needed for exact influx
+			   enddo
+			 enddo
              do j=1,jmax
                do i=1,imax
-                 do k=0,k1
-	           km=MAX(0,k-1)
-	           kp=MIN(k1,k+1)
-	           kpp=MIN(k1,k+2)
-	           ekm_min=0.5*(Diffcof(i,j,km)+Diffcof(i,j,k))*MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,km))
-	           ekm_plus=0.5*(Diffcof(i,j,kp)+Diffcof(i,j,k))*MIN(fc_global(i,j+rank*jmax,kp),fc_global(i,j+rank*jmax,k))
-	           aaa(k)=-CNz*ekm_min*dt/dz**2
-	           bbb(k)=1.+CNz*(ekm_min+ekm_plus)*dt/dz**2
-	           ccc(k)=-CNz*ekm_plus*dt/dz**2
+                 do k=1,kmax !0,k1
+				   km=k-1 !MAX(0,k-1)
+				   kp=k+1 !MIN(k1,k+1)
+				   !kpp=MIN(k1,k+2)
+				   ekm_min=0.5*(Diffcof(i,j,km)+Diffcof(i,j,k))*MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,km))
+				   ekm_plus=0.5*(Diffcof(i,j,kp)+Diffcof(i,j,k))*MIN(fc_global(i,j+rank*jmax,kp),fc_global(i,j+rank*jmax,k))
+				   aaa(k)=-CNz*ekm_min*dt/dz**2
+				   ccc(k)=-CNz*ekm_plus*dt/dz**2
+				   bbb(k)=1.-aaa(k)-ccc(k) 
                  enddo
-		 aaa(0)=0.
-		 aaa(k1)=0.
-		 ccc(0)=0.
-		 ccc(k1)=0.
-		 bbb(0)=1.
-		 bbb(k1)=1.
-	         rhss=dcdt(n,i,j,0:k1)
-	         CALL solve_tridiag(dcdt(n,i,j,0:k1),aaa,bbb,ccc,rhss,k1+1) 
+				 aaa(0)=0.
+				 aaa(k1)=0.
+				 ccc(0)=0.
+				 ccc(k1)=0.
+				 bbb(0)=1.
+				 bbb(k1)=1.
+				 rhss=dcdt(n,i,j,0:k1)
+				 CALL solve_tridiag(dcdt(n,i,j,0:k1),aaa,bbb,ccc,rhss,k1+1) 
                enddo
              enddo
-	   ENDIF
+			 IF (CNdiffz.eq.11.or.CNdiffz.eq.12) THEN 
+				 perx=0
+				 pery=0 
+				 IF (periodicx.eq.1) perx=1
+				 IF (periodicy.eq.1) pery=1
+				 do k=1,kmax !j=1,jmax
+				   do j=1,jmax 
+					 do i=1,imax !0,i1
+					   im=i-1 !MAX(0,i-1)
+					   ip=i+1 !MIN(i1,i+1)
+					   !ipp=MIN(i1,i+2)
+					   ekm_min=0.5*(Diffcof(im,j,k)+Diffcof(i,j,k))*MIN(fc_global(i,j+rank*jmax,k),fc_global(im,j+rank*jmax,k))
+					   ekm_plus=0.5*(Diffcof(ip,j,k)+Diffcof(i,j,k))*MIN(fc_global(ip,j+rank*jmax,k),fc_global(i,j+rank*jmax,k))
+					   aaax(i)=-CNz*ekm_min*Ru(im)*dt/((Rp(i)-Rp(im))*dr(i)*Rp(i))
+					   cccx(i)=-CNz*ekm_plus*Ru(i)*dt/((Rp(ip)-Rp(i))*dr(i)*Rp(i))
+					   bbbx(i)=1.-aaax(i)-cccx(i) 
+					 enddo
+					 aaax(0)=0.
+					 aaax(i1)=0.
+					 cccx(0)=0.
+					 cccx(i1)=0.
+					 bbbx(0)=1.
+					 bbbx(i1)=1.
+					 rhssx=dcdt(n,0:i1,j,k)
+					 CALL solve_tridiag_switchperiodic(dcdt(n,0:i1,j,k),aaax,bbbx,cccx,rhssx,i1+1,perx) 
+				   enddo
+				 enddo	
+				 call t2np(Diffcof(1:imax,1:jmax,1:kmax),ekm_T(1:imax,1:jmax*px,1:kmax/px))
+				 call t2np(dcdt(n,1:imax,1:jmax,1:kmax),ans_T(1:imax,1:jmax*px,1:kmax/px))
+				 !! also pass over boundaries at j=0 :
+				 IF (rank.eq.0) THEN
+				  do i=1,px-1
+				  call mpi_send(Diffcof(1:imax,0,i*kmax/px+1:(i+1)*kmax/px),imax*kmax/px,MPI_REAL8,i,i,MPI_COMM_WORLD,status,ierr)
+				  call mpi_send(dcdt(n,1:imax,0,i*kmax/px+1:(i+1)*kmax/px),imax*kmax/px,MPI_REAL8,i,i+100000,MPI_COMM_WORLD,status,ierr)
+				  enddo
+				  ekm_T(1:imax,0,1:kmax/px)=Diffcof(1:imax,0,1:kmax/px)
+				  ans_T(1:imax,0,1:kmax/px)=dcdt(n,1:imax,0,1:kmax/px)			
+				 ELSE
+					call mpi_recv(ekm_T(1:imax,0,1:kmax/px),imax*kmax/px,MPI_REAL8,0,rank,MPI_COMM_WORLD,status,ierr)
+					call mpi_recv(ans_T(1:imax,0,1:kmax/px),imax*kmax/px,MPI_REAL8,0,rank+100000,MPI_COMM_WORLD,status,ierr)
+				 ENDIF
+				 !! also pass over boundaries at j=jmax+1 :
+				 IF (rank.eq.px-1) THEN
+				  do i=0,px-2
+					call mpi_send(Diffcof(1:imax,jmax+1,i*kmax/px+1:(i+1)*kmax/px),imax*kmax/px,MPI_REAL8,i,i+200000,MPI_COMM_WORLD
+     &					,status,ierr)
+					call mpi_send(dcdt(n,1:imax,jmax+1,i*kmax/px+1:(i+1)*kmax/px),imax*kmax/px,MPI_REAL8,i,i+300000,MPI_COMM_WORLD
+     &					,status,ierr)	 
+				  enddo
+				  ekm_T(1:imax,jmax*px+1,1:kmax/px)=Diffcof(1:imax,jmax+1,rank*kmax/px+1:(rank+1)*kmax/px)
+				  ans_T(1:imax,jmax*px+1,1:kmax/px)=dcdt(n,1:imax,jmax+1,rank*kmax/px+1:(rank+1)*kmax/px)
+				 ELSE
+				  call mpi_recv(ekm_T(1:imax,jmax*px+1,1:kmax/px),imax*kmax/px,MPI_REAL8,px-1,rank+200000,MPI_COMM_WORLD,status,ierr)
+				  call mpi_recv(ans_T(1:imax,jmax*px+1,1:kmax/px),imax*kmax/px,MPI_REAL8,px-1,rank+300000,MPI_COMM_WORLD,status,ierr)
+				 ENDIF
+	
+				 do k=1,kmax/px 
+				   do i=1,imax 
+					 do j=1,px*jmax !0,px*jmax+1 
+					   jm=j-1 !MAX(0,j-1)
+					   jp=j+1 !MIN(px*jmax+1,j+1)
+					   ekm_min=0.5* (ekm_T(i,jm,k)+ekm_T(i,j,k))*MIN(fc_global(i,jm,k+rank*kmax/px),fc_global(i,j,k+rank*kmax/px))
+					   ekm_plus=0.5*(ekm_T(i,jp,k)+ekm_T(i,j,k))*MIN(fc_global(i,jp,k+rank*kmax/px),fc_global(i,j,k+rank*kmax/px))
+					   aaay(j)=-CNz*ekm_min*dt/((Rp(i)*(phipt(j)-phipt(jm)))*Rp(i)*dphi2t(j))
+					   cccy(j)=-CNz*ekm_plus*dt/((Rp(i)*(phipt(jp)-phipt(j)))*Rp(i)*dphi2t(j))
+					   bbby(j)=1.-aaay(j)-cccy(j) 				   
+					 enddo
+					 aaay(0)=0.
+					 aaay(px*jmax+1)=0.
+					 cccy(0)=0.
+					 cccy(px*jmax+1)=0.
+					 bbby(0)=1.
+					 bbby(px*jmax+1)=1.
+					 rhssy=ans_T(i,0:px*jmax+1,k)
+					 CALL solve_tridiag_switchperiodic(ans_T(i,0:px*jmax+1,k),aaay,bbby,cccy,rhssy,px*jmax+2,pery) 
+				   enddo
+				 enddo	
+				 call t2fp(ans_T(1:imax,1:jmax*px,1:kmax/px),dcdt(n,1:imax,1:jmax,1:kmax))
+			 ENDIF
+			ENDIF
           enddo !end nfrac
 		  call slipvelocity_bed(cnew,wnew,wsed,rnew,sumWkm,dt,dz) !driftflux_force must be calculated with settling velocity at bed
       	  if (interaction_bed>0) then
@@ -954,12 +1075,21 @@ c********************************************************************
      & rank,px,dt,periodicx,periodicy,numdiff)	 
 	endif
 
-	if (diffusion.eq.'CDS2') then
-      call diffu_CDS2 (dnew,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
-	elseif(diffusion.eq.'COM4') then
-      call diffu_com4(dnew,Srr,Spr,Szr,Spp,Ru,Rp,dr,phipt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
-	endif
-
+	if (CNdiffz.eq.1.or.CNdiffz.eq.2.or.CNdiffz.eq.11.or.CNdiffz.eq.12) then 
+		!dnew2=0. !already initialized above !initialize as zero because diff adds to existing dnew2 
+		if (diffusion.eq.'CDS2') then
+		  call diffu_CDS2 (dnew2,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
+		elseif(diffusion.eq.'COM4') then
+		  call diffu_com4(dnew2,Srr,Spr,Szr,Spp,Ru,Rp,dr,phipt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
+		endif
+	else
+		if (diffusion.eq.'CDS2') then
+		  call diffu_CDS2 (dnew,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
+		elseif(diffusion.eq.'COM4') then
+		  call diffu_com4(dnew,Srr,Spr,Szr,Spp,Ru,Rp,dr,phipt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
+		endif
+	endif 
+	
 	if (applyVOF.eq.1) then ! VOF fraction apply real density only here for correct determination gravity
       do k=1,kmax
          do j=1,jmax
@@ -971,7 +1101,8 @@ c********************************************************************
      1     dt*(     facAB3_1*dnew(i,j,k)+
      1              facAB3_2*wx(i,j,k)+
      1              facAB3_3*wxold(i,j,k)+
-     1              facAB3_4*wxolder(i,j,k))
+     1              facAB3_4*wxolder(i,j,k)+  
+     1              dnew2(i,j,k)	 ) !AB3v for advection and body forces, CN for diffusion when CNdiffz=1 or 2
               wxolder(i,j,k) = wxold(i,j,k)
               wxold(i,j,k)   = wx(i,j,k)
               wx(i,j,k)      = dnew(i,j,k)
@@ -988,7 +1119,8 @@ c********************************************************************
      1     dt*(     facAB3_1*dnew(i,j,k)+
      1              facAB3_2*wx(i,j,k)+
      1              facAB3_3*wxold(i,j,k)+
-     1              facAB3_4*wxolder(i,j,k))
+     1              facAB3_4*wxolder(i,j,k)+
+     1              dnew2(i,j,k)	 ) !AB3v for advection and body forces, CN for diffusion when CNdiffz=1 or 2	 
               wxolder(i,j,k) = wxold(i,j,k)
               wxold(i,j,k)   = wx(i,j,k)
               wx(i,j,k)      = dnew(i,j,k)
@@ -1030,12 +1162,21 @@ c********************************************************************
      & rank,px,dt,periodicx,periodicy,numdiff)	 
 	endif
 
-	if (diffusion.eq.'CDS2') then
-      call diffv_CDS2 (dnew,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
-	elseif(diffusion.eq.'COM4') then
-      call diffv_com4(dnew,Spr,Spp,Spz,Ru,Rp,dr,phipt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
-	endif
-
+	if (CNdiffz.eq.1.or.CNdiffz.eq.2.or.CNdiffz.eq.11.or.CNdiffz.eq.12) then 
+		dnew2=0. !initialize as zero because diff adds to existing dnew2 
+		if (diffusion.eq.'CDS2') then
+		  call diffv_CDS2 (dnew2,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
+		elseif(diffusion.eq.'COM4') then
+		  call diffv_com4(dnew2,Spr,Spp,Spz,Ru,Rp,dr,phipt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
+		endif
+	else 
+		if (diffusion.eq.'CDS2') then
+		  call diffv_CDS2 (dnew,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
+		elseif(diffusion.eq.'COM4') then
+		  call diffv_com4(dnew,Spr,Spp,Spz,Ru,Rp,dr,phipt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
+		endif
+	endif 
+	
 	if (applyVOF.eq.1) then ! VOF fraction apply real density only here for correct determination gravity
       do k=1,kmax
          do j=1,jmax
@@ -1047,7 +1188,8 @@ c********************************************************************
      1     dt*(      facAB3_1*dnew(i,j,k)+
      1               facAB3_2*wy(i,j,k)+
      1               facAB3_3*wyold(i,j,k)+
-     1               facAB3_4*wyolder(i,j,k))
+     1               facAB3_4*wyolder(i,j,k)+
+     1               dnew2(i,j,k)	 ) !AB3v for advection and body forces, CN for diffusion when CNdiffz=1 or 2	 
              wyolder(i,j,k) = wyold(i,j,k)
              wyold(i,j,k)   = wy(i,j,k)
              wy(i,j,k)      = dnew(i,j,k)
@@ -1064,7 +1206,8 @@ c********************************************************************
      1     dt*(      facAB3_1*dnew(i,j,k)+
      1               facAB3_2*wy(i,j,k)+
      1               facAB3_3*wyold(i,j,k)+
-     1               facAB3_4*wyolder(i,j,k))
+     1               facAB3_4*wyolder(i,j,k)+
+     1               dnew2(i,j,k)	 ) !AB3v for advection and body forces, CN for diffusion when CNdiffz=1 or 2	 
              wyolder(i,j,k) = wyold(i,j,k)
              wyold(i,j,k)   = wy(i,j,k)
              wy(i,j,k)      = dnew(i,j,k)
@@ -1105,11 +1248,22 @@ c********************************************************************
      & rank,px,dt,periodicx,periodicy,numdiff)
 	endif
 
-	if (diffusion.eq.'CDS2') then
-      call diffw_CDS2 (dnew,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
-	elseif(diffusion.eq.'COM4') then
-      call diffw_com4(dnew,Szr,Spz,Szz,Ru,Rp,dr,phipt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
-	endif
+	if (CNdiffz.eq.1.or.CNdiffz.eq.2.or.CNdiffz.eq.11.or.CNdiffz.eq.12) then 
+		dnew2=0. !initialize as zero because diff adds to existing dnew2 
+		if (diffusion.eq.'CDS2') then
+		  call diffw_CDS2 (dnew2,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
+		elseif(diffusion.eq.'COM4') then
+		  call diffw_com4(dnew2,Szr,Spz,Szz,Ru,Rp,dr,phipt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
+		endif
+	else
+		if (diffusion.eq.'CDS2') then
+		  call diffw_CDS2 (dnew,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
+		elseif(diffusion.eq.'COM4') then
+		  call diffw_com4(dnew,Szr,Spz,Szz,Ru,Rp,dr,phipt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
+		endif
+	endif 
+		
+		
 	if ((slipvel.eq.1.or.slipvel.eq.2).and.nfrac>0) then
 	 call advecw_driftfluxCDS2(dnew,driftfluxforce_calfac*sumWkm,
      &   rnew,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke)
@@ -1125,7 +1279,8 @@ c********************************************************************
      1     dt*(      facAB3_1*dnew(i,j,k)+
      1               facAB3_2*wz(i,j,k)+
      1               facAB3_3*wzold(i,j,k)+
-     1               facAB3_4*wzolder(i,j,k))
+     1               facAB3_4*wzolder(i,j,k)+
+     1               dnew2(i,j,k)	 ) !AB3v for advection and body forces, CN for diffusion when CNdiffz=1 or 2	 
 !     1          dt*(1.5*dnew(i,j,k)-0.5*wz(i,j,k)) -gz*dt*(0.75*(rnew(i,j,k)+rnew(i,j,k+1))-0.25*(rold(i,j,k)+rold(i,j,k+1))-rho_b)
 		    wzolder(i,j,k) = wzold(i,j,k)
 		    wzold(i,j,k)   = wz(i,j,k)
@@ -1143,7 +1298,8 @@ c********************************************************************
      1     dt*(      facAB3_1*dnew(i,j,k)+
      1               facAB3_2*wz(i,j,k)+
      1               facAB3_3*wzold(i,j,k)+
-     1               facAB3_4*wzolder(i,j,k))
+     1               facAB3_4*wzolder(i,j,k)+
+     1              dnew2(i,j,k)	 ) !AB3v for advection and body forces, CN for diffusion when CNdiffz=1 or 2	 
 !     1          dt*(1.5*dnew(i,j,k)-0.5*wz(i,j,k)) -gz*dt*(0.75*(rnew(i,j,k)+rnew(i,j,k+1))-0.25*(rold(i,j,k)+rold(i,j,k+1))-rho_b)
 		    wzolder(i,j,k) = wzold(i,j,k)
 		    wzold(i,j,k)   = wz(i,j,k)
@@ -1154,87 +1310,320 @@ c********************************************************************
 	   endif
   
 
-      IF (CNdiffz.eq.1.or.CNdiffz.eq.2) THEN !CN semi implicit treatment diff-z:
-			IF (CNdiffz.eq.1) THEN 
-				CNz=0.5 
+      IF (CNdiffz.eq.1.or.CNdiffz.eq.2.or.CNdiffz.eq.11.or.CNdiffz.eq.12) THEN !CN semi implicit treatment diff-z:
+			IF (CNdiffz.eq.1.or.CNdiffz.eq.11) THEN 
+				CNz=0.55  
 			ELSE 
 				CNz=1.
 			ENDIF 	  
-      call bound_rhoU(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
-     & Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
-       do j=1,jmax
+		call bound_rhoU(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+     & 	Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
+		do j=1,jmax
          do i=1,imax
-            do k=0,k1
-	    km=MAX(0,k-1)
-	    kp=MIN(k1,k+1)
-	    kpp=MIN(k1,k+2)
-	    ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i+1,j,k)+ekm(i+1,j,km))
-     & *MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,km),fc_global(i+1,j+rank*jmax,k),fc_global(i+1,j+rank*jmax,km))
-	    ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i+1,j,k)+ekm(i+1,j,kp))
-     & *MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,kp),fc_global(i+1,j+rank*jmax,k),fc_global(i+1,j+rank*jmax,kp))
-	    aaa(k)=-CNz*ekm_min*dt/dz**2/(0.5*(drdt(i,j,km)+drdt(i+1,j,km)))
-	    bbb(k)=1.+CNz*(ekm_min+ekm_plus)*dt/dz**2/(0.5*(drdt(i,j,k)+drdt(i+1,j,k)))
-	    ccc(k)=-CNz*ekm_plus*dt/dz**2/(0.5*(drdt(i,j,kp)+drdt(i+1,j,kp)))
+            do k=1,kmax !0,k1
+				km=k-1 !MAX(0,k-1)
+				kp=k+1 !MIN(k1,k+1)
+				!kpp=MIN(k1,k+2)
+				ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i+1,j,k)+ekm(i+1,j,km))!*MIN(fc_global(i,j+rank*jmax,k),
+!     & 			fc_global(i,j+rank*jmax,km),fc_global(i+1,j+rank*jmax,k),fc_global(i+1,j+rank*jmax,km))
+				ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i+1,j,k)+ekm(i+1,j,kp))!*MIN(fc_global(i,j+rank*jmax,k),
+!     & 			fc_global(i,j+rank*jmax,kp),fc_global(i+1,j+rank*jmax,k),fc_global(i+1,j+rank*jmax,kp))
+				rho_min=0.25*(drdt(i,j,k)+drdt(i,j,km)+drdt(i+1,j,k)+drdt(i+1,j,km))
+				rho_plus=0.25*(drdt(i,j,k)+drdt(i,j,kp)+drdt(i+1,j,k)+drdt(i+1,j,kp))
+				aaa(k)=-CNz*ekm_min*dt/dz**2/rho_min
+				ccc(k)=-CNz*ekm_plus*dt/dz**2/rho_plus
+				bbb(k)=1.-aaa(k)-ccc(k) 				
             enddo
-	    aaa(0)=0.
-	    aaa(k1)=0.
-	    ccc(0)=0.
-	    ccc(k1)=0.
-	    bbb(0)=1.
-	    bbb(k1)=1.
-	    rhss=dUdt(i,j,0:k1)
-	    CALL solve_tridiag(dUdt(i,j,0:k1),aaa,bbb,ccc,rhss,k1+1) 
+			aaa(0)=0.
+			aaa(k1)=0.
+			ccc(0)=0.
+			ccc(k1)=0.
+			bbb(0)=1.
+			bbb(k1)=1.
+			rhss=dUdt(i,j,0:k1)
+			CALL solve_tridiag(dUdt(i,j,0:k1),aaa,bbb,ccc,rhss,k1+1) 
          enddo
-      enddo
-       do j=1,jmax
+		enddo
+		do j=1,jmax
          do i=1,imax
-            do k=0,k1
-	    km=MAX(0,k-1)
-	    kp=MIN(k1,k+1)
-	    kpp=MIN(k1,k+2)
-	    ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i,j+1,k)+ekm(i,j+1,km))
-     & *MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,km),fc_global(i,j+1+rank*jmax,k),fc_global(i,j+1+rank*jmax,km))		
-	    ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i,j+1,k)+ekm(i,j+1,kp))
-     & *MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,kp),fc_global(i,j+1+rank*jmax,k),fc_global(i,j+1+rank*jmax,kp))		
-	    aaa(k)=-CNz*ekm_min*dt/dz**2/(0.5*(drdt(i,j,km)+drdt(i,j+1,km)))
-	    bbb(k)=1.+CNz*(ekm_min+ekm_plus)*dt/dz**2/(0.5*(drdt(i,j,k)+drdt(i,j+1,k)))
-	    ccc(k)=-CNz*ekm_plus*dt/dz**2/(0.5*(drdt(i,j,kp)+drdt(i,j+1,kp)))
-            enddo
-	    aaa(0)=0.
-	    aaa(k1)=0.
-	    ccc(0)=0.
-	    ccc(k1)=0.
-	    bbb(0)=1.
-	    bbb(k1)=1.
-	    rhss=dVdt(i,j,0:k1)
-	    CALL solve_tridiag(dVdt(i,j,0:k1),aaa,bbb,ccc,rhss,k1+1) 
+            do k=1,kmax !0,k1
+				km=k-1 !MAX(0,k-1)
+				kp=k+1 !MIN(k1,k+1)
+				!kpp=MIN(k1,k+2)
+				ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i,j+1,k)+ekm(i,j+1,km))!*MIN(fc_global(i,j+rank*jmax,k),
+!     & 			fc_global(i,j+rank*jmax,km),fc_global(i,j+1+rank*jmax,k),fc_global(i,j+1+rank*jmax,km))		
+				ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i,j+1,k)+ekm(i,j+1,kp))!*MIN(fc_global(i,j+rank*jmax,k),
+!     & 			fc_global(i,j+rank*jmax,kp),fc_global(i,j+1+rank*jmax,k),fc_global(i,j+1+rank*jmax,kp))		
+				rho_min=0.25*(drdt(i,j,k)+drdt(i,j,km)+drdt(i,j+1,k)+drdt(i,j+1,km))
+				rho_plus=0.25*(drdt(i,j,k)+drdt(i,j,kp)+drdt(i,j+1,k)+drdt(i,j+1,kp))
+				aaa(k)=-CNz*ekm_min*dt/dz**2/rho_min
+				ccc(k)=-CNz*ekm_plus*dt/dz**2/rho_plus
+				bbb(k)=1.-aaa(k)-ccc(k) 				
+			enddo
+			aaa(0)=0.
+			aaa(k1)=0.
+			ccc(0)=0.
+			ccc(k1)=0.
+			bbb(0)=1.
+			bbb(k1)=1.
+			rhss=dVdt(i,j,0:k1)
+			CALL solve_tridiag(dVdt(i,j,0:k1),aaa,bbb,ccc,rhss,k1+1) 
          enddo
-      enddo
-
-       do j=1,jmax
+		enddo
+		do j=1,jmax
          do i=1,imax
-            do k=0,k1
-	    km=MAX(0,k-1)
-	    kp=MIN(k1,k+1)
-	    kpp=MIN(k1,k+2)
-	    ekm_min=ekm(i,j,k)*fc_global(i,j+rank*jmax,k)
-	    ekm_plus=ekm(i,j,kp)*fc_global(i,j+rank*jmax,kp)
-	    aaa(k)=-CNz*ekm_min*dt/dz**2/(0.5*(drdt(i,j,km)+drdt(i+1,j,k)))
-	    bbb(k)=1.+CNz*(ekm_min+ekm_plus)*dt/dz**2/(0.5*(drdt(i,j,k)+drdt(i+1,j,kp)))
-	    ccc(k)=-CNz*ekm_plus*dt/dz**2/(0.5*(drdt(i,j,kp)+drdt(i+1,j,kpp)))
+            do k=1,kmax !0,k1
+				!km=k-1 !MAX(0,k-1)
+				kp=k+1 !MIN(k1,k+1)
+				!kpp=MIN(k1,k+2)
+				ekm_min=ekm(i,j,k)!*fc_global(i,j+rank*jmax,k)
+				ekm_plus=ekm(i,j,kp)!*fc_global(i,j+rank*jmax,kp)
+				aaa(k)=-CNz*ekm_min*dt/dz**2/drdt(i,j,k)
+				ccc(k)=-CNz*ekm_plus*dt/dz**2/drdt(i,j,kp)
+				bbb(k)=1.-aaa(k)-ccc(k) 
             enddo
-	    aaa(0)=0.
-	    aaa(k1)=0.
-	    ccc(0)=0.
-	    ccc(k1)=0.
-	    bbb(0)=1.
-	    bbb(k1)=1.
-	    rhss=dWdt(i,j,0:k1)
-	    CALL solve_tridiag(dWdt(i,j,0:k1),aaa,bbb,ccc,rhss,k1+1) 
+			aaa(0)=0.
+			aaa(k1)=0.
+			ccc(0)=0.
+			ccc(k1)=0.
+			bbb(0)=1.
+			bbb(k1)=1.
+			rhss=dWdt(i,j,0:k1)
+			CALL solve_tridiag(dWdt(i,j,0:k1),aaa,bbb,ccc,rhss,k1+1) 
          enddo
-       enddo
-       ENDIF
-		pold=p+pold    !what is called p here was dp in reality, now p is 			--> P^n 
+		enddo
+		IF (CNdiffz.eq.11.or.CNdiffz.eq.12) THEN
+		 perx=0
+		 pery=0 		
+		 IF (periodicx.eq.1) perx=1
+		 IF (periodicy.eq.1) pery=1	
+		  do k=1,kmax 
+           do j=1,jmax
+            do i=1,imax !0,i1
+				!im=MAX(0,i-1)
+				ip=i+1 !MIN(i1,i+1)
+				ekm_min=ekm(i,j,k)!*fc_global(i,j+rank*jmax,k)
+				ekm_plus=ekm(ip,j,k)!*fc_global(ip,j+rank*jmax,k)
+				aaax(i)=-CNz*ekm_min*Rp(i)*dt/(dr(i)*(Rp(ip)-Rp(i))*Ru(i))/drdt(i,j,k)
+				cccx(i)=-CNz*ekm_plus*Rp(ip)*dt/(dr(ip)*(Rp(ip)-Rp(i))*Ru(i))/drdt(ip,j,k)
+				bbbx(i)=1.-aaax(i)-cccx(i) 
+            enddo
+			aaax(0)=0.
+			aaax(i1)=0.
+			cccx(0)=0.
+			cccx(i1)=0.
+			bbbx(0)=1.
+			bbbx(i1)=1.
+			rhssx=dUdt(0:i1,j,k)
+			CALL solve_tridiag_switchperiodic(dUdt(0:i1,j,k),aaax,bbbx,cccx,rhssx,i1+1,perx) 
+           enddo
+		  enddo
+		  do k=1,kmax 
+           do j=1,jmax
+            do i=1,imax !0,i1
+				im=i-1 !MAX(0,i-1)
+				ip=i+1 !MIN(i1,i+1)
+				ekm_min=0.25*(ekm(i,j,k)+ekm(im,j,k)+ekm(i,j+1,k)+ekm(im,j+1,k))!*MIN(fc_global(i,j+rank*jmax,k),
+!     & 			fc_global(im,j+rank*jmax,k),fc_global(i,j+1+rank*jmax,k),fc_global(im,j+1+rank*jmax,k))		
+				ekm_plus=0.25*(ekm(i,j,k)+ekm(ip,j,k)+ekm(i,j+1,k)+ekm(ip,j+1,k))!*MIN(fc_global(i,j+rank*jmax,k),
+!     & 			fc_global(ip,j+rank*jmax,k),fc_global(i,j+1+rank*jmax,k),fc_global(ip,j+1+rank*jmax,k))	
+				rho_min=0.25*(drdt(i,j,k)+drdt(im,j,k)+drdt(i,j+1,k)+drdt(im,j+1,k))
+				rho_plus=0.25*(drdt(i,j,k)+drdt(ip,j,k)+drdt(i,j+1,k)+drdt(ip,j+1,k))
+				aaax(i)=-CNz*ekm_min*dt*Ru(im)/((Rp(i)-Rp(im))*dr(i)*Rp(i))/rho_min
+				cccx(i)=-CNz*ekm_plus*dt*Ru(i)/((Rp(ip)-Rp(i))*dr(i)*Rp(i))/rho_plus
+				bbbx(i)=1.-aaax(i)-cccx(i)
+			enddo
+			aaax(0)=0.
+			aaax(i1)=0.
+			cccx(0)=0.
+			cccx(i1)=0.
+			bbbx(0)=1.
+			bbbx(i1)=1.
+			rhssx=dVdt(0:i1,j,k)
+			CALL solve_tridiag_switchperiodic(dVdt(0:i1,j,k),aaax,bbbx,cccx,rhssx,i1+1,perx) 
+           enddo
+		  enddo
+		  do k=1,kmax 
+           do j=1,jmax
+            do i=1,imax !0,i1
+				im=i-1 !MAX(0,i-1)
+				ip=i+1 !MIN(i1,i+1)
+				ekm_min=0.25*(ekm(i,j,k)+ekm(im,j,k)+ekm(i,j,k+1)+ekm(im,j,k+1))!*MIN(fc_global(i,j+rank*jmax,k),
+!     & 			fc_global(im,j+rank*jmax,k),fc_global(i,j+rank*jmax,k+1),fc_global(im,j+rank*jmax,k+1))		
+				ekm_plus=0.25*(ekm(i,j,k)+ekm(ip,j,k)+ekm(i,j,k+1)+ekm(ip,j,k+1))!*MIN(fc_global(i,j+rank*jmax,k),
+!     & 			fc_global(ip,j+rank*jmax,k),fc_global(i,j+rank*jmax,k+1),fc_global(ip,j+rank*jmax,k+1))	
+				rho_min=0.25*(drdt(i,j,k)+drdt(im,j,k)+drdt(i,j,k+1)+drdt(im,j,k+1))
+				rho_plus=0.25*(drdt(i,j,k)+drdt(ip,j,k)+drdt(i,j,k+1)+drdt(ip,j,k+1))
+				aaax(i)=-CNz*ekm_min*dt*Ru(im)/((Rp(i)-Rp(im))*dr(i)*Rp(i))/rho_min
+				cccx(i)=-CNz*ekm_plus*dt*Ru(i)/((Rp(ip)-Rp(i))*dr(i)*Rp(i))/rho_plus
+				bbbx(i)=1.-aaax(i)-cccx(i)				
+            enddo
+			aaax(0)=0.
+			aaax(i1)=0.
+			cccx(0)=0.
+			cccx(i1)=0.
+			bbbx(0)=1.
+			bbbx(i1)=1.
+			rhssx=dWdt(0:i1,j,k)
+			CALL solve_tridiag_switchperiodic(dWdt(0:i1,j,k),aaax,bbbx,cccx,rhssx,i1+1,perx)  
+		   enddo
+		  enddo		
+		  call t2np_i1(ekm(1:i1,1:jmax,1:kmax),ekm_T(1:i1,1:jmax*px,1:kmax/px))
+		  call t2np_i1(drdt(1:i1,1:jmax,1:kmax),ans_T(1:i1,1:jmax*px,1:kmax/px))
+		  call t2np(dUdt(1:imax,1:jmax,1:kmax),uu_T(1:imax,1:jmax*px,1:kmax/px))
+		  call t2np(dVdt(1:imax,1:jmax,1:kmax),vv_T(1:imax,1:jmax*px,1:kmax/px))
+		  call t2np(dWdt(1:imax,1:jmax,1:kmax),ww_T(1:imax,1:jmax*px,1:kmax/px))
+		  !! also pass over boundaries at j=0 :
+		  IF (rank.eq.0) THEN
+			do i=1,px-1
+			  call mpi_send(ekm(1:i1,0,i*kmax/px+1:(i+1)*kmax/px),i1*kmax/px,MPI_REAL8,i,2*i,MPI_COMM_WORLD,status,ierr)
+			  call mpi_send(dUdt(1:imax,0,i*kmax/px+1:(i+1)*kmax/px),imax*kmax/px,MPI_REAL8,i,3*i,MPI_COMM_WORLD,status,ierr)
+			  call mpi_send(dVdt(1:imax,0,i*kmax/px+1:(i+1)*kmax/px),imax*kmax/px,MPI_REAL8,i,4*i,MPI_COMM_WORLD,status,ierr)
+			  call mpi_send(dWdt(1:imax,0,i*kmax/px+1:(i+1)*kmax/px),imax*kmax/px,MPI_REAL8,i,5*i,MPI_COMM_WORLD,status,ierr)
+			  call mpi_send(drdt(1:i1,0,i*kmax/px+1:(i+1)*kmax/px),i1*kmax/px,MPI_REAL8,i,6*i,MPI_COMM_WORLD,status,ierr)
+			enddo
+			ekm_T(1:i1,0,1:kmax/px)=ekm(1:i1,0,1:kmax/px)
+			uu_T(1:imax,0,1:kmax/px)=dUdt(1:imax,0,1:kmax/px)			
+			vv_T(1:imax,0,1:kmax/px)=dVdt(1:imax,0,1:kmax/px)			
+			ww_T(1:imax,0,1:kmax/px)=dWdt(1:imax,0,1:kmax/px)			
+			ans_T(1:i1,0,1:kmax/px)=drdt(1:i1,0,1:kmax/px)
+		  ELSE
+			call mpi_recv(ekm_T(1:i1,0,1:kmax/px),i1*kmax/px,MPI_REAL8,0,2*rank,MPI_COMM_WORLD,status,ierr)
+			call mpi_recv(uu_T(1:imax,0,1:kmax/px),imax*kmax/px,MPI_REAL8,0,3*rank,MPI_COMM_WORLD,status,ierr)
+			call mpi_recv(vv_T(1:imax,0,1:kmax/px),imax*kmax/px,MPI_REAL8,0,4*rank,MPI_COMM_WORLD,status,ierr)
+			call mpi_recv(ww_T(1:imax,0,1:kmax/px),imax*kmax/px,MPI_REAL8,0,5*rank,MPI_COMM_WORLD,status,ierr)
+			call mpi_recv(ans_T(1:i1,0,1:kmax/px),i1*kmax/px,MPI_REAL8,0,6*rank,MPI_COMM_WORLD,status,ierr)
+		  ENDIF
+		  !! also pass over boundaries at j=jmax+1 :
+		  IF (rank.eq.px-1) THEN
+		    do i=0,px-2
+		 call mpi_send(ekm (1:i1,jmax+1,i*kmax/px+1:(i+1)*kmax/px),i1*kmax/px,MPI_REAL8,i,2*(i+1),MPI_COMM_WORLD,status,ierr)
+		 call mpi_send(dUdt(1:imax,jmax+1,i*kmax/px+1:(i+1)*kmax/px),imax*kmax/px,MPI_REAL8,i,3*(i+1),MPI_COMM_WORLD,status,ierr)	 
+		 call mpi_send(dVdt(1:imax,jmax+1,i*kmax/px+1:(i+1)*kmax/px),imax*kmax/px,MPI_REAL8,i,4*(i+1),MPI_COMM_WORLD,status,ierr)
+		 call mpi_send(dWdt(1:imax,jmax+1,i*kmax/px+1:(i+1)*kmax/px),imax*kmax/px,MPI_REAL8,i,5*(i+1),MPI_COMM_WORLD,status,ierr)
+		 call mpi_send(drdt(1:i1,jmax+1,i*kmax/px+1:(i+1)*kmax/px),i1*kmax/px,MPI_REAL8,i,6*(i+1),MPI_COMM_WORLD,status,ierr)
+			enddo
+			  ekm_T(1:i1,jmax*px+1,1:kmax/px)=ekm(1:i1,jmax+1,rank*kmax/px+1:(rank+1)*kmax/px)
+			  uu_T(1:imax,jmax*px+1,1:kmax/px)=dUdt(1:imax,jmax+1,rank*kmax/px+1:(rank+1)*kmax/px)
+			  vv_T(1:imax,jmax*px+1,1:kmax/px)=dVdt(1:imax,jmax+1,rank*kmax/px+1:(rank+1)*kmax/px)
+			  ww_T(1:imax,jmax*px+1,1:kmax/px)=dWdt(1:imax,jmax+1,rank*kmax/px+1:(rank+1)*kmax/px)
+			  ans_T(1:i1,jmax*px+1,1:kmax/px)=drdt(1:i1,jmax+1,rank*kmax/px+1:(rank+1)*kmax/px)
+		  ELSE
+		    call mpi_recv(ekm_T(1:i1,jmax*px+1,1:kmax/px),i1*kmax/px,MPI_REAL8,px-1,2*(rank+1),MPI_COMM_WORLD,status,ierr)
+		    call mpi_recv(uu_T(1:imax,jmax*px+1,1:kmax/px),imax*kmax/px,MPI_REAL8,px-1,3*(rank+1),MPI_COMM_WORLD,status,ierr)
+			call mpi_recv(vv_T(1:imax,jmax*px+1,1:kmax/px),imax*kmax/px,MPI_REAL8,px-1,4*(rank+1),MPI_COMM_WORLD,status,ierr)
+			call mpi_recv(ww_T(1:imax,jmax*px+1,1:kmax/px),imax*kmax/px,MPI_REAL8,px-1,5*(rank+1),MPI_COMM_WORLD,status,ierr)
+			call mpi_recv(ans_T(1:i1,jmax*px+1,1:kmax/px),i1*kmax/px,MPI_REAL8,px-1,6*(rank+1),MPI_COMM_WORLD,status,ierr)
+		  ENDIF
+		  !! also pass over boundaries at k=kmax/px+1:
+		  call shiftb_T(ekm_T,interface_T)
+		  if (rank.eq.px-1) then 
+			ekm_T(1:i1,0:jmax*px+1,kmax/px+1)=ekm_T(1:i1,0:jmax*px+1,kmax/px)
+		  else 
+		    ekm_T(1:i1,0:jmax*px+1,kmax/px+1)=interface_T(1:i1,0:jmax*px+1)
+		  endif 
+		  call shiftb_T(ans_T,interface_T)
+		  if (rank.eq.px-1) then 
+			ans_T(1:i1,0:jmax*px+1,kmax/px+1)=ans_T(1:i1,0:jmax*px+1,kmax/px)
+		  else 
+		    ans_T(1:i1,0:jmax*px+1,kmax/px+1)=interface_T(1:i1,0:jmax*px+1)
+		  endif 
+		  
+		  do k=1,kmax/px 
+           do i=1,imax
+            do j=1,px*jmax !0,px*jmax+1
+				jm=j-1 !MAX(0,j-1)
+				jp=j+1 !MIN(px*jmax+1,j+1)
+				ekm_min=0.25*(ekm_T(i,j,k)+ekm_T(i,jm,k)+ekm_T(i+1,j,k)+ekm_T(i+1,jm,k))!*MIN(fc_global(i,j,k+rank*kmax/px),
+!     & 			fc_global(i,jm,k+rank*kmax/px),fc_global(i+1,j,k+rank*kmax/px),fc_global(i+1,jm,k+rank*kmax/px))		
+				ekm_plus=0.25*(ekm_T(i,j,k)+ekm_T(i,jp,k)+ekm_T(i+1,j,k)+ekm_T(i+1,jp,k))!*MIN(fc_global(i,j,k+rank*kmax/px),
+!     & 			fc_global(i,jp,k+rank*kmax/px),fc_global(i+1,j,k+rank*kmax/px),fc_global(i+1,jp,k+rank*kmax/px))
+				rho_min= 0.25*(ans_T(i,j,k)+ans_T(i,jm,k)+ans_T(i+1,j,k)+ans_T(i+1,jm,k))
+				rho_plus=0.25*(ans_T(i,j,k)+ans_T(i,jp,k)+ans_T(i+1,j,k)+ans_T(i+1,jp,k))
+				aaay(j)=-CNz*ekm_min*dt/(Ru(i)*(phipt(j)-phipt(jm))*Ru(i)*dphi2t(j))/rho_min
+				cccy(j)=-CNz*ekm_plus*dt/(Ru(i)*(phipt(jp)-phipt(j))*Ru(i)*dphi2t(j))/rho_plus
+				bbby(j)=1.-aaay(j)-cccy(j) 
+			enddo
+			aaay(0)=0.
+			aaay(px*jmax+1)=0.
+			cccy(0)=0.
+			cccy(px*jmax+1)=0.
+			bbby(0)=1.
+			bbby(px*jmax+1)=1.
+			rhssy=uu_T(i,0:px*jmax+1,k)
+			CALL solve_tridiag_switchperiodic(uu_T(i,0:px*jmax+1,k),aaay,bbby,cccy,rhssy,px*jmax+2,pery)
+           enddo
+		  enddo
+		  do k=1,kmax/px 
+           do i=1,imax
+            do j=1,px*jmax !0,px*jmax+1
+				jm=j-1 !MAX(0,j-1)
+				jp=j+1 !MIN(px*jmax+1,j+1)
+				ekm_min= ekm_T(i,j,k)!*fc_global(i,j,k+rank*kmax/px)		
+				ekm_plus=ekm_T(i,jp,k)!*fc_global(i,jp,k+rank*kmax/px)
+				rho_min= ans_T(i,j,k)
+				rho_plus=ans_T(i,jp,k)
+				aaay(j)=-CNz*ekm_min*dt/(Rp(i)*dphi2t(j)*Rp(i)*(phipt(jp)-phipt(j)))/rho_min
+				cccy(j)=-CNz*ekm_plus*dt/(Rp(i)*dphi2t(jp)*Rp(i)*(phipt(jp)-phipt(j)))/rho_plus
+				bbby(j)=1.-aaay(j)-cccy(j) 
+			enddo
+			aaay(0)=0.
+			aaay(px*jmax+1)=0.
+			cccy(0)=0.
+			cccy(px*jmax+1)=0.
+			bbby(0)=1.
+			bbby(px*jmax+1)=1.
+			rhssy=vv_T(i,0:px*jmax+1,k)
+			CALL solve_tridiag_switchperiodic(vv_T(i,0:px*jmax+1,k),aaay,bbby,cccy,rhssy,px*jmax+2,pery)
+           enddo
+		  enddo		  
+		  do k=1,kmax/px 
+           do i=1,imax
+            do j=1,px*jmax !0,px*jmax+1
+				jm=j-1 !MAX(0,j-1)
+				jp=j+1 !MIN(px*jmax+1,j+1)
+				ekm_min=0.25*(ekm_T(i,j,k)+ekm_T(i,jm,k)+ekm_T(i,j,k+1)+ekm_T(i,jm,k+1))!*MIN(fc_global(i,j,k+rank*kmax/px),
+!     & 			fc_global(i,jm,k+rank*kmax/px),fc_global(i,j,k+1+rank*kmax/px),fc_global(i,jm,k+1+rank*kmax/px))		
+				ekm_plus=0.25*(ekm_T(i,j,k)+ekm_T(i,jp,k)+ekm_T(i,j,k+1)+ekm_T(i,jp,k+1))!*MIN(fc_global(i,j,k+rank*kmax/px),
+!     & 			fc_global(i,jp,k+rank*kmax/px),fc_global(i,j,k+1+rank*kmax/px),fc_global(i,jp,k+1+rank*kmax/px))
+				rho_min= 0.25*(ans_T(i,j,k)+ans_T(i,jm,k)+ans_T(i,j,k+1)+ans_T(i,jm,k+1))
+				rho_plus=0.25*(ans_T(i,j,k)+ans_T(i,jp,k)+ans_T(i,j,k+1)+ans_T(i,jp,k+1))
+				aaay(j)=-CNz*ekm_min*dt/(Rp(i)*(phipt(j)-phipt(jm))*Rp(i)*dphi2t(j))/rho_min
+				cccy(j)=-CNz*ekm_plus*dt/(Rp(i)*(phipt(jp)-phipt(j))*Rp(i)*dphi2t(j))/rho_plus
+				bbby(j)=1.-aaay(j)-cccy(j) 				
+			enddo
+			aaay(0)=0.
+			aaay(px*jmax+1)=0.
+			cccy(0)=0.
+			cccy(px*jmax+1)=0.
+			bbby(0)=1.
+			bbby(px*jmax+1)=1.
+			rhssy=ww_T(i,0:px*jmax+1,k)
+			CALL solve_tridiag_switchperiodic(ww_T(i,0:px*jmax+1,k),aaay,bbby,cccy,rhssy,px*jmax+2,pery)
+           enddo
+		  enddo
+		 call t2fp(uu_T(1:imax,1:jmax*px,1:kmax/px),dUdt(1:imax,1:jmax,1:kmax))
+		 call t2fp(vv_T(1:imax,1:jmax*px,1:kmax/px),dVdt(1:imax,1:jmax,1:kmax))
+		 call t2fp(ww_T(1:imax,1:jmax*px,1:kmax/px),dWdt(1:imax,1:jmax,1:kmax))
+		  ! add source terms for cylindrical coordinate system (following PhD dissertation Pourgeui 1994 TU p. 82)
+		  ! --> LdW 24-5-2021 choice to do it explicitly at end to avoid issues with boundary conditions at 0,i1/0,j1
+		  ! --> in diff_compact.f the diffusion terms are discretised a bit differently (via the stress tensor), but the below source terms are included there as well
+		  do k=1,kmax ! add source term [-u/r^2 - 2/r^2*dvdphi] to U and [-v/r^2 - 2/r^2*dudphi] to V 
+           do i=1,imax
+            do j=1,jmax 
+				jm=j-1
+				jp=j+1 !MIN(px*jmax+1,j+1)
+				dUdt(i,j,k)=dUdt(i,j,k)-CNz*(0.5*(ekm(i,j,k)+ekm(ip,j,k)))*
+     &          (Unew(i,j,k)+2.*(Vnew(i,j,k)-Vnew(i,jm,k))/(phiv(j)-phiv(jm)))/(Ru(i)*Ru(i)) 				
+				dVdt(i,j,k)=dVdt(i,j,k)-CNz*(0.5*(ekm(i,j,k)+ekm(i,jp,k)))*
+     &          (Vnew(i,j,k)+2.*(Unew(i,jp,k)-Unew(i,j,k))/(phip(jp)-phip(j)))/(Rp(i)*Rp(i))   				
+			enddo
+           enddo
+		  enddo		
+		ENDIF 
+      ENDIF
+	  
+	  pold=p+pold    !what is called p here was dp in reality, now p is 			--> P^n 
 
 		  !IF (continuity_solver.eq.35) THEN
 			!pold1=pold2 !-->P^n-2
@@ -3021,7 +3410,7 @@ c********************************************************************
 	      	  !endif
            IF (CNdiffz.eq.1.or.CNdiffz.eq.2) THEN !CN semi implicit treatment diff-z:
 			IF (CNdiffz.eq.1) THEN 
-				CNz=0.5 
+				CNz=0.55 
 			ELSE 
 				CNz=1.
 			ENDIF 		   
@@ -3239,7 +3628,7 @@ c********************************************************************
 
       IF (CNdiffz.eq.1.or.CNdiffz.eq.2) THEN !CN semi implicit treatment diff-z:
 			IF (CNdiffz.eq.1) THEN 
-				CNz=0.5 
+				CNz=0.55 
 			ELSE 
 				CNz=1.
 			ENDIF 	  
@@ -6758,7 +7147,7 @@ C ... Performs data transform across the nodes.  The data
 C     starts out (i,j,k) node distributed in theta and is transformed
 C     to (j,k,i) node distributed in x.
 
-      SUBROUTINE t2np_0ie(Q,Qt)
+      SUBROUTINE t2np_i1(Q,Qt)
       USE nlist
 !         INCLUDE 'param.txt'
         INCLUDE 'mpif.h'
@@ -6811,3 +7200,4 @@ C ...  Globals
 
       RETURN
       END
+  

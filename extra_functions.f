@@ -26,6 +26,8 @@
       integer ierr
       real  dr2,dz2,df,df2,kcoeff,tmp1,tmp2,tmp3,Courant,dtmp,dtold
 	  double precision Tadapt,Uav,Vav,localsum,globalsum,du,duu,wsettlingmax,wsettlingmin
+	  real Wmaxx,tmp11,tmp12,tmp13,tmp4,tmp11global,tmp12global,tmp13global
+	  real dtnew
 
 	  
 !		IF (nobst>0.and.bp(1)%forever.eq.0.and.time_np+dt.gt.bp(1)%t0.and.counter<10) THEN
@@ -44,7 +46,10 @@
 		ENDIF 
 		dtold=dt
       IF (istep.le.10) THEN
-	dt = dt_ini
+		  dt = dt_ini
+		  IF (n_dtavg>0) THEN  
+			dt_series=dt_max 
+		  ENDIF 	
       ELSE
 	dt = dt_max
       ENDIF
@@ -54,7 +59,7 @@
 		IF (Uoutflow.eq.999) Uoutflow=2 !after 10 time steps use convective outflow 
       ENDIF	  
 !		write(*,*),'dt,rank voor',dt,rank
-      IF (CNdiffz.eq.1.or.CNdiffz.eq.2) THEN
+      IF (CNdiffz.eq.1.or.CNdiffz.eq.2.or.CNdiffz.eq.11.or.CNdiffz.eq.12) THEN
 	dz2 = 1.e9*dz*dz ! no dt restriction for vertical diff with CN implicit scheme
       ELSE
         dz2 = dz    * dz
@@ -66,33 +71,84 @@
 		wsettlingmax=0.
 		wsettlingmin=0.
 	  ENDIF
-      do k=1,kmax
-         do j=1,jmax
-            do i=1,imax
-            df = Rp(i)*(phiv(j)-phiv(j-1))
-      	    df2 = df * df
-            dr2 = dr(i) * dr(i)
-            kcoeff = ekm(i,j,k) /rnew(i,j,k)
-            tmp1 = ( abs(Unew(i,j,k)) / ( Rp(i+1)-Rp(i) ) ) +
+	  IF (CNdiffz.eq.11.or.CNdiffz.eq.12) THEN !AB3-CN, use stability limits viscosity from Wesseling for AB2-CN + standard CFD advection
+		  tmp11=dt/Courant
+		  tmp12=dt/Courant
+		  tmp13=dt/Courant
+		  do k=1,kmax
+			 do j=1,jmax
+				do i=1,imax
+				df = Rp(i)*(phiv(j)-phiv(j-1))
+				df2 = df * df 
+				dr2 = dr(i) * dr(i) 
+				kcoeff = ekm(i,j,k) /rnew(i,j,k)
+				Wmaxx = MAX(abs(Wnew(i,j,k)-wsettlingmax),abs(Wnew(i,j,k)-wsettlingmin))
+!				tmp1 = ( abs(Unew(i,j,k)) / ( Rp(i+1)-Rp(i) ) ) +
+!     &             ( abs(Vnew(i,j,k)) /         df        ) +
+!     &             ( Wmaxx /         dz        )             
+!				tmp3 = 1.0 / ( tmp1 + 1.e-12 )
+!				tmp3 =Courant *tmp3 !CFD advection criterium
+!				dt = min( dt , tmp3 )
+!				!dtmp = dt
+				
+				tmp11 = min(tmp11,1.33*kcoeff/(Unew(i,j,k)**2+Vnew(i,j,k)**2+Wmaxx**2+1.e-12))
+				tmp12 = min(tmp12,0.25/(kcoeff*(1./dr2+1./df2+1./dz2)))
+				tmp13 = min(tmp13,(3.*kcoeff)**0.333*(Unew(i,j,k)**4/dr2+Vnew(i,j,k)**4/df2+Wmaxx**4/dz2+1.e-12)**-0.333)
+				enddo
+			 enddo
+		  enddo	  
+		!dtmp=dt
+		!call mpi_allreduce(dtmp,dt,1,mpi_double_precision,mpi_min,mpi_comm_world,ierr)	
+		call mpi_allreduce(tmp11,tmp11global,1,mpi_double_precision,mpi_min,mpi_comm_world,ierr)			
+		call mpi_allreduce(tmp12,tmp12global,1,mpi_double_precision,mpi_min,mpi_comm_world,ierr)			
+		call mpi_allreduce(tmp13,tmp13global,1,mpi_double_precision,mpi_min,mpi_comm_world,ierr)	
+		dt = Courant*max(tmp11global,min(tmp12global,tmp13global))
+	  ELSE 
+		  do k=1,kmax
+			 do j=1,jmax
+				do i=1,imax
+				df = Rp(i)*(phiv(j)-phiv(j-1))
+				df2 = df * df 
+				dr2 = dr(i) * dr(i) 
+				kcoeff = ekm(i,j,k) /rnew(i,j,k)
+				tmp1 = ( abs(Unew(i,j,k)) / ( Rp(i+1)-Rp(i) ) ) +
      &             ( abs(Vnew(i,j,k)) /         df        ) +
      &             ( MAX(abs(Wnew(i,j,k)-wsettlingmax),abs(Wnew(i,j,k)-wsettlingmin)) /         dz        )             
-!			tmp1 = ( abs(Unew(i,j,k)) / ( Rp(i+1)-Rp(i) ) )              !2D TVD tests show that taking MAX of 3 dirs is not sufficient for stable results without overshoot/undershoot
-!			tmp1 = MAX(tmp1,( abs(Vnew(i,j,k)) /         df        ))
-!			tmp1 = MAX(tmp1,( abs(Wnew(i,j,k)) /         dz        ))
-            tmp2 = ( 1.0/dr2 + 1.0/df2 + 1.0/dz2 )
-            tmp3 = 1.0 / ( 1.0 * tmp2 * kcoeff + tmp1 + 1.e-12 )
-            tmp3 =Courant *tmp3 
-            dt = min( dt , tmp3 )
-            dtmp = dt
+	!			tmp1 = ( abs(Unew(i,j,k)) / ( Rp(i+1)-Rp(i) ) )              !2D TVD tests show that taking MAX of 3 dirs is not sufficient for stable results without overshoot/undershoot
+	!			tmp1 = MAX(tmp1,( abs(Vnew(i,j,k)) /         df        ))
+	!			tmp1 = MAX(tmp1,( abs(Wnew(i,j,k)) /         dz        ))
+				tmp2 = ( 1.0/dr2 + 1.0/df2 + 1.0/dz2 )
+				tmp3 = 1.0 / ( 1.0 * tmp2 * kcoeff + tmp1 + 1.e-12 )
+				tmp3 =Courant *tmp3 
+				dt = min( dt , tmp3 )
+				!dtmp = dt
 
-            enddo
-         enddo
-      enddo
-
-!	call mpi_allreduce(dtmp,dt,1,mpi_real8,mpi_min,mpi_comm_world,ierr)
-	!call mpi_allreduce(dtmp,dt,1,mpi_real,mpi_min,mpi_comm_world,ierr)
-	call mpi_allreduce(dtmp,dt,1,mpi_double_precision,mpi_min,mpi_comm_world,ierr)	
-
+				enddo
+			 enddo
+		  enddo
+		dtmp=dt
+		call mpi_allreduce(dtmp,dt,1,mpi_double_precision,mpi_min,mpi_comm_world,ierr)			  
+	  ENDIF 
+	
+	  IF (n_dtavg>0) THEN  
+		tel_dt=tel_dt+1 
+		!IF (tel_dt>100) tel_dt=1
+		!dt_series(tel_dt)=dt 
+		!IF (dt.lt.dt_factor_avg * SUM(dt_series)/100.) THEN
+		!	dt_series=dt/dt_factor_avg 
+		!ENDIF 
+		!dt = MIN(dt,dt_factor_avg * SUM(dt_series)/100.) !use minimum of avg_dt * factor or instantaneous dt
+		IF (tel_dt>n_dtavg) tel_dt=1
+		dt_series(tel_dt)=dt
+		dtnew = MINVAL(dt_series)
+		IF (dtnew/dtold>1.01) THEN !dtnew is growing
+			dt=MIN(0.5*(dtnew+dtold),dtold*1.1,dt) !dampen growth, but should always obey timestep restrictions present time step
+			dt_series(tel_dt)=dt
+		ELSE 
+			dt=dtnew
+		ENDIF 
+	  ENDIF 
+		
 	  dt=MIN(dt,dtold*1.1) !change in time step never more than +10% in one timestep for extra stability
 
 	  

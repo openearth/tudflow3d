@@ -4769,7 +4769,7 @@ c*************************************************************
 	include 'mpif.h'
 	
 	integer inout,n,ierr,tel
-	real xx,yy,phi,xTSHD(1:4),yTSHD(1:4),zbed_max,zbed_max_tot,zb,Utot
+	real xx,yy,phi,xTSHD(1:4),yTSHD(1:4),zbed_max,zbed_mean,Abed_bedplume,Abed_bedplume_tot,zbed_tot,zb,Utot
 	
 	DO n=1,nbedplume
 	  IF ((bp(n)%forever.eq.1.and.time_np.gt.bp(n)%t0.and.time_np.lt.bp(n)%t_end).and.
@@ -4780,32 +4780,66 @@ c*************************************************************
 		else
 		  phi=atan2(V_b,(U_TSHD-U_b))
 		endif
-		zbed_max=0.
-		do i=0,i1  
-		 do j=j1,0,-1       
-			xx=Rp(i)*cos_u(j)-schuif_x
-			yy=Rp(i)*sin_u(j)
-		    if (bp(n)%radius2.gt.0.) then !use bp()%x(1),y(1) and radius for zbed-check
-			  xTSHD(1:4)=bp(n)%x2*cos(phi)-bp(n)%y2*sin(phi)
-			  yTSHD(1:4)=bp(n)%x2*sin(phi)+bp(n)%y2*cos(phi)			
-			  inout=0
-		      IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n)%radius2)**2) THEN
-			    inout=1
-			  ENDIF
-			else 
-			  xTSHD(1:4)=bp(n)%x2*cos(phi)-bp(n)%y2*sin(phi)
-			  yTSHD(1:4)=bp(n)%x2*sin(phi)+bp(n)%y2*cos(phi)			
-			  CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
-			endif 			
-			if (inout.eq.1) then
-				!zb=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(dcdtbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
-				zb=REAL(MAX(kbed(i,j),0))*dz !use zb = kbed*dz as this corresponds with bed cells that are blocked in flow, buffer layer is not real bed but bookkeeping
-				zbed_max=MAX(zbed_max,zb)
-			endif
-		 enddo
-		enddo
-		call mpi_allreduce(zbed_max,zbed_max_tot,1,mpi_real8,mpi_max,mpi_comm_world,ierr)
-		IF(zbed_max_tot>bp(n)%move_zbed_criterium(MAX(bp(n)%nmove_present,1))) THEN
+		IF (bp(n)%move_zbed_type(MAX(bp(n)%nmove_present,1)).eq.2) THEN !check for avg bed level:
+			zbed_mean=0.
+			Abed_bedplume=0.
+			do i=1,imax !0,i1  
+			 do j=jmax,1,-1 !j1,0,-1       
+				xx=Rp(i)*cos_u(j)-schuif_x
+				yy=Rp(i)*sin_u(j)
+				if (bp(n)%radius2.gt.0.) then !use bp()%x(1),y(1) and radius for zbed-check
+				  xTSHD(1:4)=bp(n)%x2*cos(phi)-bp(n)%y2*sin(phi)
+				  yTSHD(1:4)=bp(n)%x2*sin(phi)+bp(n)%y2*cos(phi)			
+				  inout=0
+				  IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n)%radius2)**2) THEN
+					inout=1
+				  ENDIF
+				else 
+				  xTSHD(1:4)=bp(n)%x2*cos(phi)-bp(n)%y2*sin(phi)
+				  yTSHD(1:4)=bp(n)%x2*sin(phi)+bp(n)%y2*cos(phi)			
+				  CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+				endif 			
+				if (inout.eq.1) then
+					zb=MAX(REAL(kbed(i,j))*bednotfixed(i,j,kbed(i,j)),0.)*dz !use zb = kbed*dz as this corresponds with bed cells that are blocked in flow, buffer layer is not real bed but bookkeeping
+					! only count zb if top cell bed (kbed) is erodable				
+					zbed_mean=zbed_mean+zb*vol_V(i,j+rank*jmax)*bednotfixed(i,j,kbed(i,j)) 
+					Abed_bedplume=Abed_bedplume+vol_V(i,j+rank*jmax)*bednotfixed(i,j,kbed(i,j)) 
+				endif
+			 enddo
+			enddo
+			call mpi_allreduce(zbed_mean,zbed_tot,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+			call mpi_allreduce(Abed_bedplume,Abed_bedplume_tot,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+			zbed_tot=zbed_tot/Abed_bedplume_tot
+		ELSE !check for maximum bed level:
+			zbed_max=0.
+			do i=1,imax !0,i1  
+			 do j=jmax,1,-1 !j1,0,-1       
+				xx=Rp(i)*cos_u(j)-schuif_x
+				yy=Rp(i)*sin_u(j)
+				if (bp(n)%radius2.gt.0.) then !use bp()%x(1),y(1) and radius for zbed-check
+				  xTSHD(1:4)=bp(n)%x2*cos(phi)-bp(n)%y2*sin(phi)
+				  yTSHD(1:4)=bp(n)%x2*sin(phi)+bp(n)%y2*cos(phi)			
+				  inout=0
+				  IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n)%radius2)**2) THEN
+					inout=1
+				  ENDIF
+				else 
+				  xTSHD(1:4)=bp(n)%x2*cos(phi)-bp(n)%y2*sin(phi)
+				  yTSHD(1:4)=bp(n)%x2*sin(phi)+bp(n)%y2*cos(phi)			
+				  CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+				endif 			
+				if (inout.eq.1) then
+					!zb=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(dcdtbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
+					!zb=REAL(MAX(kbed(i,j),0))*dz !use zb = kbed*dz as this corresponds with bed cells that are blocked in flow, buffer layer is not real bed but bookkeeping
+					zb=MAX(REAL(kbed(i,j))*bednotfixed(i,j,kbed(i,j)),0.)*dz !use zb = kbed*dz as this corresponds with bed cells that are blocked in flow, buffer layer is not real bed but bookkeeping
+					! only count zb if top cell bed (kbed) is erodable				
+					zbed_max=MAX(zbed_max,zb)
+				endif
+			 enddo
+			enddo
+			call mpi_allreduce(zbed_max,zbed_tot,1,mpi_real8,mpi_max,mpi_comm_world,ierr)
+		ENDIF 
+		IF(zbed_tot>bp(n)%move_zbed_criterium(MAX(bp(n)%nmove_present,1))) THEN
 			bp(n)%nmove_present=bp(n)%nmove_present+1
 			istep_output_bpmove = istep_output_bpmove +1
 			IF ((bp(n)%nmove_present-bp(n)%nmove).eq.1) THEN
@@ -4832,13 +4866,20 @@ c*************************************************************
 				ENDIF
 				
 				IF (rank.eq.0) THEN
-				  write(*,'(a,i6,a,f8.4,f8.4,a,i4,a)'),'* Bedplume : ',n,' with max bedlevel and criterium: ',zbed_max_tot,
-     &			  bp(n)%move_zbed_criterium(MAX(bp(n)%nmove_present-1,1)),' has been moved for the ',bp(n)%nmove_present,' time.'
-				  write(*,'(a,f11.2,f11.2,f11.2,f11.2)'),'Location after move: x=',bp(n)%x
-				  write(*,'(a,f11.2,f11.2,f11.2,f11.2)'),'Location after move: y=',bp(n)%y
-				  write(*,'(a,f11.2,f11.2,a,f8.4)'),'Location after move: z=',bp(n)%zbottom,bp(n)%height,
+				  if (bp(n)%move_zbed_type(MAX(bp(n)%nmove_present-1,1)).eq.2) then 
+				    write(*,'(a,i6,a,f8.4,f8.4,a,i4,a)'),'* Bedplume : ',n,' with avg bedlevel and criterium: ',zbed_tot,
+     &			    bp(n)%move_zbed_criterium(MAX(bp(n)%nmove_present-1,1)),' has been moved for the ',bp(n)%nmove_present,' time.'
+				  else 
+					write(*,'(a,i6,a,f8.4,f8.4,a,i4,a)'),'* Bedplume : ',n,' with max bedlevel and criterium: ',zbed_tot,
+     &			    bp(n)%move_zbed_criterium(MAX(bp(n)%nmove_present-1,1)),' has been moved for the ',bp(n)%nmove_present,' time.'				  
+				  endif 
+				  write(*,'(a,f11.2,f11.2,f11.2,f11.2)'),'Location after move      : x=',bp(n)%x
+				  write(*,'(a,f11.2,f11.2,f11.2,f11.2)'),'Location after move      : y=',bp(n)%y
+				  write(*,'(a,f11.2,f11.2,a,f8.4,a,i4)'),'Location after move      : z=',bp(n)%zbottom,bp(n)%height,
      &			  '; z-criterium after move=',bp(n)%move_zbed_criterium(MAX(bp(n)%nmove_present,1))
-
+     & ,' and move_zbed_type after move=',bp(n)%move_zbed_type(MAX(bp(n)%nmove_present,1))
+				  write(*,'(a,f11.2,f11.2,f11.2,f11.2)'),'Check bedlevel after move: x2=',bp(n)%x2
+				  write(*,'(a,f11.2,f11.2,f11.2,f11.2)'),'Check bedlevel after move: y2=',bp(n)%y2
 				ENDIF
 				IF (bp(n)%move_outputfile_series(bp(n)%nmove_present).eq.1) THEN
 					call output_nc('mvbp3D_',istep_output_bpmove,time_np)
@@ -5620,3 +5661,36 @@ c      endif
 !      call mpi_sendrecv(utmp ,ileng,MPI_REAL,rankf,itag,
 !     $                  up   ,ileng,MPI_REAL,rankb,itag, MPI_COMM_WORLD,status,ierr)
 	end 
+
+
+	subroutine shiftb_T(UT,UP)
+
+      USE nlist
+
+
+      implicit none
+!       include 'param.txt'
+!       include 'common.txt'
+      integer ileng,rankb,rankf,ierr
+!       parameter (ileng= (k1+1)*(i1+1) )
+      include 'mpif.h'
+      integer itag,status(MPI_STATUS_SIZE),l
+      real*8 ut(1:i1,0:jmax*px+1,1:kmax/px+1)
+      real*8 up(1:i1,0:jmax*px+1),UTMP(1:I1,0:jmax*px+1)
+	!real up(0:i1,0:k1),UTMP(0:I1,0:K1)
+      do i=1,i1
+	 do j=0,jmax*px+1
+	  utmp(i,j) =UT(i,j,1)
+          enddo
+      enddo
+      itag = 10
+      ileng = (jmax*px+2)*(i1)
+      rankf=rank+1
+      rankb=rank-1
+           if(rank.eq.px-1)rankf=MPI_PROC_NULL
+           if(rank.eq.   0)rankb=MPI_PROC_NULL
+      call mpi_sendrecv(utmp ,ileng,MPI_REAL8,rankb,itag,
+     $                  up ,ileng,MPI_REAL8,rankf,itag, MPI_COMM_WORLD,status,ierr)
+
+      end
+	  

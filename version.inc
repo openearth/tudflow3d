@@ -1,1 +1,2 @@
-      svnversion = '690fe9a'
+      svnversion = 'Unversioned directory'
+      svnurl = ''

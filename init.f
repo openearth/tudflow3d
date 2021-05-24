@@ -769,11 +769,11 @@ c******************************************************************
 		Cold=Cnew
 		
 		IF (interaction_bed.ge.4.and.load_Cbed.eq.1) THEN
-			kbed=0
-			kbedt=0
+			!kbed=0
+			!kbedt=0
 			do i=1,imax
 			  do j=1,jmax
-				k=1
+				k=kbed(i,j)+1 !kbed either starts at 0 or already value from obstacles at bed
 				do WHILE (SUM(Clivebed(1:nfrac,i,j,k)).gt.0.)
 				  kbed(i,j)=k
 				  kbedt(i,j)=k

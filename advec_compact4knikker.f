@@ -394,8 +394,8 @@ c********************************************************************
 	ccx_1ie(ie)=0.	
 
 	!! swap rho -> rho_T & u -> u_T
-	call t2np_0ie(rho(0:ie,1:je,1:ke),rho_T(0:ie,1:je*px,1:ke/px))
-	call t2np_0ie(Uvel(0:ie,1:je,1:ke),u_T(0:ie,1:je*px,1:ke/px))
+	call t2np_i1(rho(0:ie,1:je,1:ke),rho_T(0:ie,1:je*px,1:ke/px))
+	call t2np_i1(Uvel(0:ie,1:je,1:ke),u_T(0:ie,1:je*px,1:ke/px))
 	!! also pass over boundaries at j=0 :
 	IF (rank.eq.0) THEN
 	  do i=1,px-1
@@ -1018,4 +1018,92 @@ c********************************************************************
       end subroutine solve_tridiag_periodic
 
 
+      subroutine solve_tridiag_switchperiodic(x,a,b,c,v,n,switch)
+      implicit none
+!	 a - sub-diagonal (means it is the diagonal below the main diagonal)
+!	 b - the main diagonal
+!	 c - sup-diagonal (means it is the diagonal above the main diagonal)
+!	 v - right part
+!	 x - the answer
+!	 n - number of equations
+!	 switch - 0 = non-periodic; 1 =  periodic 
+ 
+        integer,intent(in) :: n
+        real,dimension(n),intent(in) :: a,b,c,v
+        real,dimension(n),intent(out) :: x
+        real,dimension(n) :: bp,vp,bper,u,y,q,up
+        real :: m,corr
+        integer i,switch
+ 
+	IF (switch.eq.1) THEN ! periodic 
+	! Make new slightly adjusted diagonal to solve periodic system:
+		bper = b
+		bper(1) = b(1) + c(1)
+		bper(n) = b(n) + a(n)
+	! Make extra rhs:
+		u = 0.
+		u(1) = 1.
+		u(n) = -1.
+		
+
+	!! Solve first system: Aper*y=v
+	!! Make copies of the b and v variables so that they are unaltered by this sub
+		bp(1) = bper(1)
+		vp(1) = v(1)
+	 
+			!The first pass (setting coefficients):
+		do i = 2,n
+			 m = a(i)/bp(i-1)
+			 bp(i) = bper(i) - m*c(i-1)
+			 vp(i) = v(i) - m*vp(i-1)
+		end do 
+	 
+		y(n) = vp(n)/bp(n)
+			!The second pass (back-substition)
+		do i = n-1, 1, -1
+			 y(i) = (vp(i) - c(i)*y(i+1))/bp(i)
+		end do 
+	!! Solve second system: Aper*q=u
+	!! Make copies of the b and v variables so that they are unaltered by this sub
+		bp(1) = bper(1)
+		up(1) = u(1)
+	 
+			!The first pass (setting coefficients):
+		do i = 2,n
+			 m = a(i)/bp(i-1)
+			 bp(i) = bper(i) - m*c(i-1)
+			 up(i) = u(i) - m*up(i-1)
+		end do 
+	 
+		q(n) = up(n)/bp(n)
+			!The second pass (back-substition)
+		do i = n-1, 1, -1
+			  q(i) = (up(i) - c(i)*q(i+1))/bp(i)
+		end do  
+
+		!! correction: x=y + (vvT*y/(1-vvT*q))*q
+		!! vvt=[c(n),0,0,...,0,-a(1)]
+		corr=(c(n)*y(1)-a(1)*y(n))/(1.-c(n)*q(1)+a(1)*q(n))
+		x=y+corr*q	
+
+	ELSE ! non-periodic 
+! Make copies of the b and v variables so that they are unaltered by this sub
+        bp(1) = b(1)
+        vp(1) = v(1)
+ 
+        !The first pass (setting coefficients):
+		do i = 2,n
+         m = a(i)/bp(i-1)
+         bp(i) = b(i) - m*c(i-1)
+         vp(i) = v(i) - m*vp(i-1)
+        end do 
+ 
+         x(n) = vp(n)/bp(n)
+        !The second pass (back-substition)
+		do i = n-1, 1, -1
+          x(i) = (vp(i) - c(i)*x(i+1))/bp(i)
+        end do 
+	ENDIF 
+ 
+      end subroutine solve_tridiag_switchperiodic
 

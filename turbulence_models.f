@@ -3529,7 +3529,7 @@ c*************************************************************
       subroutine RealizibleKEps(Uvel,Vvel,Wvel,rr)
       USE nlist
       implicit none
-      !include 'mpif.h'
+      include 'mpif.h'
       real xx,yy,f,dzi,uu,vv,absU,ust,z0,yplus,uu2,vv2,bed_slope,tauu
       integer n,t,tel,n2,kbedp(0:i1,0:j1)
       real ebb(0:i1,0:k1)
@@ -3553,6 +3553,11 @@ c*************************************************************
 	real aaa(0:k1),bbb(0:k1),ccc(0:k1),ekm_min,ekm_plus,rhss(0:k1),CNz,zb_W,tauw,tauv
 	real ddzzE,ddzzW,ddzzN,ddzzS
 	integer kppE,kppW,kppN,kppS
+	real Diffcof3(0:i1,0:j1,0:k1) 
+	real aaax(0:i1),bbbx(0:i1),cccx(0:i1),rhssx(0:i1)
+	real aaay(0:jmax*px+1),bbby(0:jmax*px+1),cccy(0:jmax*px+1),rhssy(0:jmax*px+1)
+	real ans_T(1:imax,0:jmax*px+1,1:kmax/px),ekm_T(1:imax,0:jmax*px+1,1:kmax/px)
+	integer ileng,ierr,itag,status(MPI_STATUS_SIZE),perx,pery 
 
 	sqrtsix=sqrt(6.)
 	
@@ -4169,35 +4174,114 @@ c*************************************************************
      &  /TKE(1:imax,1:jmax,1:kmax))
 	 !implicit treatment negative epsilon term destruction of TKE, following Van Rhee 2002 p. 164, following Stelling2000
 	 !implicit treatment negative Pb term for stable stratification giving destruction of TKE 
-        IF (CNdiffz.eq.1.or.CNdiffz.eq.2) THEN !CN semi implicit treatment diff-z:
-			IF (CNdiffz.eq.1) THEN 
-				CNz=0.5 
-			ELSE 
-				CNz=1.
-			ENDIF 		   
-			call bound_p(TKEnew) ! bc start CN-diffz 
-            do j=1,jmax
-              do i=1,imax
-                do k=0,k1
-					km=MAX(0,k-1)
-					kp=MIN(k1,k+1)
-					kpp=MIN(k1,k+2)
-					ekm_min=0.5*(ekm(i,j,km)/rr(i,j,km)+ekm(i,j,k)/rr(i,j,k))/Sc_k
-					ekm_plus=0.5*(ekm(i,j,kp)/rr(i,j,kp)+ekm(i,j,k)/rr(i,j,k))/Sc_k
-					aaa(k)=-CNz*ekm_min*dt/dz**2
-					bbb(k)=1.+CNz*(ekm_min+ekm_plus)*dt/dz**2
-					ccc(k)=-CNz*ekm_plus*dt/dz**2
-                enddo
-				aaa(0)=0.
-				aaa(k1)=0.
-				ccc(0)=0.
-				ccc(k1)=0.
-				bbb(0)=1.
-				bbb(k1)=1.
-				rhss=TKEnew(i,j,0:k1)
-				CALL solve_tridiag(TKEnew(i,j,0:k1),aaa,bbb,ccc,rhss,k1+1) 
-              enddo
-            enddo
+        IF (CNdiffz.eq.1.or.CNdiffz.eq.2.or.CNdiffz.eq.11.or.CNdiffz.eq.12) THEN !CN semi implicit treatment diff-z:
+		 IF (CNdiffz.eq.1.or.CNdiffz.eq.11) THEN 
+			CNz=0.55 
+		 ELSE 
+			CNz=1.
+		 ENDIF 		   
+		 call bound_p(TKEnew) ! bc start CN-diffz 
+		 do j=1,jmax
+		  do i=1,imax
+			do k=1,kmax !0,k1
+				km=k-1 !MAX(0,k-1)
+				kp=k+1 !MIN(k1,k+1)
+				!kpp=MIN(k1,k+2)
+				ekm_min=0.5*(ekm(i,j,km)/rr(i,j,km)+ekm(i,j,k)/rr(i,j,k))/Sc_k
+				ekm_plus=0.5*(ekm(i,j,kp)/rr(i,j,kp)+ekm(i,j,k)/rr(i,j,k))/Sc_k
+			    aaa(k)=-CNz*ekm_min*dt/dz**2
+			    ccc(k)=-CNz*ekm_plus*dt/dz**2
+			    bbb(k)=1.-aaa(k)-ccc(k) 
+			enddo
+			aaa(0)=0.
+			aaa(k1)=0.
+			ccc(0)=0.
+			ccc(k1)=0.
+			bbb(0)=1.
+			bbb(k1)=1.
+			rhss=TKEnew(i,j,0:k1)
+			CALL solve_tridiag(TKEnew(i,j,0:k1),aaa,bbb,ccc,rhss,k1+1) 
+		  enddo
+		 enddo
+		 IF (CNdiffz.eq.11.or.CNdiffz.eq.12) THEN 
+			 perx=0
+			 pery=0 		 
+			 IF (periodicx.eq.1) perx=1
+			 IF (periodicy.eq.1) pery=1			 
+			 Diffcof3 = ekm/rr/Sc_k
+			 do k=1,kmax !j=1,jmax
+			   do j=1,jmax 
+				 do i=1,imax
+				   im=i-1 !MAX(0,i-1)
+				   ip=i+1 !MIN(i1,i+1)
+				   ekm_min=0.5*(Diffcof3(im,j,k)+Diffcof3(i,j,k))
+				   ekm_plus=0.5*(Diffcof3(ip,j,k)+Diffcof3(i,j,k))
+				   aaax(i)=-CNz*ekm_min*Ru(im)*dt/((Rp(i)-Rp(im))*dr(i)*Rp(i))
+				   cccx(i)=-CNz*ekm_plus*Ru(i)*dt/((Rp(ip)-Rp(i))*dr(i)*Rp(i))				   
+				   bbbx(i)=1.-aaax(i)-cccx(i)				   
+				 enddo
+				 aaax(0)=0.
+				 aaax(i1)=0.
+				 cccx(0)=0.
+				 cccx(i1)=0.
+				 bbbx(0)=1.
+				 bbbx(i1)=1.
+				 rhssx=TKEnew(0:i1,j,k)
+				 CALL solve_tridiag_switchperiodic(TKEnew(0:i1,j,k),aaax,bbbx,cccx,rhssx,i1+1,perx) 
+			   enddo
+			 enddo	
+			 call t2np(Diffcof3(1:imax,1:jmax,1:kmax),ekm_T(1:imax,1:jmax*px,1:kmax/px))
+			 call t2np(TKEnew(1:imax,1:jmax,1:kmax),ans_T(1:imax,1:jmax*px,1:kmax/px))
+			 !! also pass over boundaries at j=0 :
+			 IF (rank.eq.0) THEN
+			  do i=1,px-1
+			  call mpi_send(Diffcof3(1:imax,0,i*kmax/px+1:(i+1)*kmax/px),imax*kmax/px,MPI_REAL8,i,i,MPI_COMM_WORLD,status,ierr)
+			  call mpi_send(TKEnew(1:imax,0,i*kmax/px+1:(i+1)*kmax/px),imax*kmax/px,MPI_REAL8,i,i+100,MPI_COMM_WORLD,status,ierr)
+			  enddo
+			  ekm_T(1:imax,0,1:kmax/px)=Diffcof3(1:imax,0,1:kmax/px)
+			  ans_T(1:imax,0,1:kmax/px)=TKEnew(1:imax,0,1:kmax/px)			
+			 ELSE
+				call mpi_recv(ekm_T(1:imax,0,1:kmax/px),imax*kmax/px,MPI_REAL8,0,rank,MPI_COMM_WORLD,status,ierr)
+				call mpi_recv(ans_T(1:imax,0,1:kmax/px),imax*kmax/px,MPI_REAL8,0,rank+100,MPI_COMM_WORLD,status,ierr)
+			 ENDIF
+			 !! also pass over boundaries at j=jmax+1 :
+			 IF (rank.eq.px-1) THEN
+			  do i=0,px-2
+				call mpi_send(Diffcof3(1:imax,jmax+1,i*kmax/px+1:(i+1)*kmax/px),imax*kmax/px,MPI_REAL8,i,i+200,MPI_COMM_WORLD
+     &					,status,ierr)
+					call mpi_send(TKEnew(1:imax,jmax+1,i*kmax/px+1:(i+1)*kmax/px),imax*kmax/px,MPI_REAL8,i,i+300,MPI_COMM_WORLD
+     &					,status,ierr)	 
+				  enddo
+				  ekm_T(1:imax,jmax*px+1,1:kmax/px)=Diffcof3(1:imax,jmax+1,rank*kmax/px+1:(rank+1)*kmax/px)
+				  ans_T(1:imax,jmax*px+1,1:kmax/px)=TKEnew(1:imax,jmax+1,rank*kmax/px+1:(rank+1)*kmax/px)
+				 ELSE
+				  call mpi_recv(ekm_T(1:imax,jmax*px+1,1:kmax/px),imax*kmax/px,MPI_REAL8,px-1,rank+200,MPI_COMM_WORLD,status,ierr)
+				  call mpi_recv(ans_T(1:imax,jmax*px+1,1:kmax/px),imax*kmax/px,MPI_REAL8,px-1,rank+300,MPI_COMM_WORLD,status,ierr)
+				 ENDIF
+	
+				 do k=1,kmax/px 
+				   do i=1,imax 
+					 do j=1,px*jmax 
+					   jm=j-1 !MAX(0,j-1)
+					   jp=j+1 !MIN(px*jmax+1,j+1)
+					   ekm_min=0.5* (ekm_T(i,jm,k)+ekm_T(i,j,k))
+					   ekm_plus=0.5*(ekm_T(i,jp,k)+ekm_T(i,j,k))
+					   aaay(j)=-CNz*ekm_min*dt/((Rp(i)*(phipt(j)-phipt(jm)))*Rp(i)*dphi2t(j))
+					   cccy(j)=-CNz*ekm_plus*dt/((Rp(i)*(phipt(jp)-phipt(j)))*Rp(i)*dphi2t(j))
+					   bbby(j)=1.-aaay(j)-cccy(j) 					   
+					 enddo
+					 aaay(0)=0.
+					 aaay(px*jmax+1)=0.
+					 cccy(0)=0.
+					 cccy(px*jmax+1)=0.
+					 bbby(0)=1.
+					 bbby(px*jmax+1)=1.
+					 rhssy=ans_T(i,0:px*jmax+1,k)
+					 CALL solve_tridiag(ans_T(i,0:px*jmax+1,k),aaay,bbby,cccy,rhssy,px*jmax+2) 
+				   enddo
+				 enddo	
+				 call t2fp(ans_T(1:imax,1:jmax*px,1:kmax/px),TKEnew(1:imax,1:jmax,1:kmax))
+			 ENDIF
 		ENDIF	 
 		TKEnew=MAX(1.e-12,TKEnew) 
 		
@@ -4213,24 +4297,24 @@ c*************************************************************
      &  (1.+dt*Const2*EEE(1:imax,1:jmax,1:kmax)/(TKE(1:imax,1:jmax,1:kmax)+sqrt(nu_mol*EEE(1:imax,1:jmax,1:kmax))))
 	 ! implicit treatment sink term eps equation 
 	 
-        IF (CNdiffz.eq.1.or.CNdiffz.eq.2) THEN !CN semi implicit treatment diff-z:
-			IF (CNdiffz.eq.1) THEN 
-				CNz=0.5 
+        IF (CNdiffz.eq.1.or.CNdiffz.eq.2.or.CNdiffz.eq.11.or.CNdiffz.eq.12) THEN !CN semi implicit treatment diff-z:
+			IF (CNdiffz.eq.1.or.CNdiffz.eq.11) THEN 
+				CNz=0.55 
 			ELSE 
 				CNz=1.
 			ENDIF 		   
 			call bound_p(EEEnew) ! bc start CN-diffz 
             do j=1,jmax
               do i=1,imax
-                do k=0,k1
-					km=MAX(0,k-1)
-					kp=MIN(k1,k+1)
-					kpp=MIN(k1,k+2)
+                do k=1,kmax !0,k1
+					km=k-1 !MAX(0,k-1)
+					kp=k+1 !MIN(k1,k+1)
+					!kpp=MIN(k1,k+2)
 					ekm_min=0.5*(ekm(i,j,km)/rr(i,j,km)+ekm(i,j,k)/rr(i,j,k))/Sc_eps
 					ekm_plus=0.5*(ekm(i,j,kp)/rr(i,j,kp)+ekm(i,j,k)/rr(i,j,k))/Sc_eps
 					aaa(k)=-CNz*ekm_min*dt/dz**2
-					bbb(k)=1.+CNz*(ekm_min+ekm_plus)*dt/dz**2
 					ccc(k)=-CNz*ekm_plus*dt/dz**2
+					bbb(k)=1.-aaa(k)-ccc(k) 
                 enddo
 				aaa(0)=0.
 				aaa(k1)=0.
@@ -4242,6 +4326,85 @@ c*************************************************************
 				CALL solve_tridiag(EEEnew(i,j,0:k1),aaa,bbb,ccc,rhss,k1+1) 
               enddo
             enddo
+		    IF (CNdiffz.eq.11.or.CNdiffz.eq.12) THEN 
+			 perx=0
+			 pery=0 			
+			 IF (periodicx.eq.1) perx=1
+			 IF (periodicy.eq.1) pery=1			
+			 Diffcof3 = ekm/rr/Sc_eps
+			 do k=1,kmax !j=1,jmax
+			   do j=1,jmax 
+				 do i=1,imax
+				   im=i-1 !MAX(0,i-1)
+				   ip=i+1 !MIN(i1,i+1)
+				   ekm_min=0.5*(Diffcof3(im,j,k)+Diffcof3(i,j,k))
+				   ekm_plus=0.5*(Diffcof3(ip,j,k)+Diffcof3(i,j,k))
+				   aaax(i)=-CNz*ekm_min*Ru(im)*dt/((Rp(i)-Rp(im))*dr(i)*Rp(i))
+				   cccx(i)=-CNz*ekm_plus*Ru(i)*dt/((Rp(ip)-Rp(i))*dr(i)*Rp(i))				   
+				   bbbx(i)=1.-aaax(i)-cccx(i)				   
+				 enddo
+				 aaax(0)=0.
+				 aaax(i1)=0.
+				 cccx(0)=0.
+				 cccx(i1)=0.
+				 bbbx(0)=1.
+				 bbbx(i1)=1.
+				 rhssx=EEEnew(0:i1,j,k)
+				 CALL solve_tridiag_switchperiodic(EEEnew(0:i1,j,k),aaax,bbbx,cccx,rhssx,i1+1,perx) 
+			   enddo
+			 enddo	
+			 call t2np(Diffcof3(1:imax,1:jmax,1:kmax),ekm_T(1:imax,1:jmax*px,1:kmax/px))
+			 call t2np(EEEnew(1:imax,1:jmax,1:kmax),ans_T(1:imax,1:jmax*px,1:kmax/px))
+			 !! also pass over boundaries at j=0 :
+			 IF (rank.eq.0) THEN
+			  do i=1,px-1
+			  call mpi_send(Diffcof3(1:imax,0,i*kmax/px+1:(i+1)*kmax/px),imax*kmax/px,MPI_REAL8,i,i,MPI_COMM_WORLD,status,ierr)
+			  call mpi_send(EEEnew(1:imax,0,i*kmax/px+1:(i+1)*kmax/px),imax*kmax/px,MPI_REAL8,i,i+100,MPI_COMM_WORLD,status,ierr)
+			  enddo
+			  ekm_T(1:imax,0,1:kmax/px)=Diffcof3(1:imax,0,1:kmax/px)
+			  ans_T(1:imax,0,1:kmax/px)=EEEnew(1:imax,0,1:kmax/px)			
+			 ELSE
+				call mpi_recv(ekm_T(1:imax,0,1:kmax/px),imax*kmax/px,MPI_REAL8,0,rank,MPI_COMM_WORLD,status,ierr)
+				call mpi_recv(ans_T(1:imax,0,1:kmax/px),imax*kmax/px,MPI_REAL8,0,rank+100,MPI_COMM_WORLD,status,ierr)
+			 ENDIF
+			 !! also pass over boundaries at j=jmax+1 :
+			 IF (rank.eq.px-1) THEN
+			  do i=0,px-2
+				call mpi_send(Diffcof3(1:imax,jmax+1,i*kmax/px+1:(i+1)*kmax/px),imax*kmax/px,MPI_REAL8,i,i+200,MPI_COMM_WORLD
+     &					,status,ierr)
+					call mpi_send(EEEnew(1:imax,jmax+1,i*kmax/px+1:(i+1)*kmax/px),imax*kmax/px,MPI_REAL8,i,i+300,MPI_COMM_WORLD
+     &					,status,ierr)	 
+				  enddo
+				  ekm_T(1:imax,jmax*px+1,1:kmax/px)=Diffcof3(1:imax,jmax+1,rank*kmax/px+1:(rank+1)*kmax/px)
+				  ans_T(1:imax,jmax*px+1,1:kmax/px)=EEEnew(1:imax,jmax+1,rank*kmax/px+1:(rank+1)*kmax/px)
+				 ELSE
+				  call mpi_recv(ekm_T(1:imax,jmax*px+1,1:kmax/px),imax*kmax/px,MPI_REAL8,px-1,rank+200,MPI_COMM_WORLD,status,ierr)
+				  call mpi_recv(ans_T(1:imax,jmax*px+1,1:kmax/px),imax*kmax/px,MPI_REAL8,px-1,rank+300,MPI_COMM_WORLD,status,ierr)
+				 ENDIF
+	
+				 do k=1,kmax/px 
+				   do i=1,imax 
+					 do j=1,px*jmax 
+					   jm=j-1 !MAX(0,j-1)
+					   jp=j+1 !MIN(px*jmax+1,j+1)
+					   ekm_min=0.5* (ekm_T(i,jm,k)+ekm_T(i,j,k))
+					   ekm_plus=0.5*(ekm_T(i,jp,k)+ekm_T(i,j,k))
+					   aaay(j)=-CNz*ekm_min*dt/((Rp(i)*(phipt(j)-phipt(jm)))*Rp(i)*dphi2t(j))
+					   cccy(j)=-CNz*ekm_plus*dt/((Rp(i)*(phipt(jp)-phipt(j)))*Rp(i)*dphi2t(j))
+					   bbby(j)=1.-aaay(j)-cccy(j) 					   
+					 enddo
+					 aaay(0)=0.
+					 aaay(px*jmax+1)=0.
+					 cccy(0)=0.
+					 cccy(px*jmax+1)=0.
+					 bbby(0)=1.
+					 bbby(px*jmax+1)=1.
+					 rhssy=ans_T(i,0:px*jmax+1,k)
+					 CALL solve_tridiag_switchperiodic(ans_T(i,0:px*jmax+1,k),aaay,bbby,cccy,rhssy,px*jmax+2,pery) 
+				   enddo
+				 enddo	
+				 call t2fp(ans_T(1:imax,1:jmax*px,1:kmax/px),EEEnew(1:imax,1:jmax,1:kmax))
+			 ENDIF
 		ENDIF	 
 		EEEnew=MAX(1.e-12,EEEnew) 
 		

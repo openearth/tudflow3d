@@ -58,7 +58,7 @@ c*****************************************************************
         integer ileng,ierr,itag,status(MPI_STATUS_SIZE)
 
 	!! first swap u,v,w -> u_T,v_T,w_T 
-	call t2np_0ie(Uvel(0:ie,1:je,1:ke),Uvel_T(0:ie,1:je*px,1:ke/px))
+	call t2np_i1(Uvel(0:ie,1:je,1:ke),Uvel_T(0:ie,1:je*px,1:ke/px))
 	call t2np(Vvel(1:ie,1:je,1:ke),Vvel_T(1:ie,1:je*px,1:ke/px))
 	call t2np(Wvel(1:ie,1:je,1:ke),Wvel_T(1:ie,1:je*px,1:ke/px))
 	!! also pass over boundaries at j=0 :
@@ -203,7 +203,7 @@ c*****************************************************************
 	  enddo
 	enddo
 
-	call t2np_0ie(Spr(0:ie,1:je,1:ke),Spr_T(0:ie,1:je*px,1:ke/px))	
+	call t2np_i1(Spr(0:ie,1:je,1:ke),Spr_T(0:ie,1:je*px,1:ke/px))	
 	call t2np(Spz(1:ie,1:je,1:ke),Spz_T(1:ie,1:je*px,1:ke/px))
 	IF (rank.eq.0) THEN !! also pass over boundaries at j=0 :
 	  do i=1,px-1
@@ -713,16 +713,26 @@ c*****************************************************************
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
      +         eppo,epmo,epop,epom,drp,dzi,divergentie
       real xx,yy,f,fluc,Wjet
-      real divvR,divvL,CNz
+      real divvR,divvL,CNz,CNx,CNy
       integer n,t
 
-	IF (CNdiffz.eq.1) THEN !CN diff in z-dir is half old, half new timestep (this is half old timestep)
-	  CNz=0.5
-	ELSEIF (CNdiffz.eq.2) THEN !CN diff in z-dir is 100% new timestep (Euler backward)
+	IF (CNdiffz.eq.1.or.CNdiffz.eq.11) THEN !CN diff in z-dir is half old, half new timestep (this is half old timestep)
+	  CNz=0.45 !0.5
+	ELSEIF (CNdiffz.eq.2.or.CNdiffz.eq.12) THEN !CN diff in z-dir is 100% new timestep (Euler backward)
 	  CNz=0. 
 	ELSE
 	  CNz=1.
 	ENDIF
+	IF (CNdiffz.eq.11) THEN !CN diff in z-dir is half old, half new timestep (this is half old timestep)
+	  CNx=0.45 !0.5
+	  CNy=0.45 !0.5
+	ELSEIF (CNdiffz.eq.12) THEN !CN diff in z-dir is 100% new timestep (Euler backward)
+	  CNx=0. 
+	  CNy=0. 
+	ELSE
+	  CNx=1.
+	  CNy=1. 
+	ENDIF	
       dzi =1./dz
       do i=ib,ie
       ip=i+1
@@ -761,18 +771,18 @@ c*****************************************************************
 
       putout(i,j,k) = putout(i,j,k) +
 !     1 (  Rp(ip) * ekm(ip,j,k) * fc_global(ip,j+rank*jmax,k) *
-     1 (  Rp(ip) * ekm(ip,j,k)  *	 
+     1 (  Rp(ip) * ekm(ip,j,k)*CNx  *	 
      1            ((Uvel(ip,j,k) - Uvel(i,j,k) ) / ( dr(ip) ) - 1./3.*divvR) -
 !     1    Rp(i ) * ekm(i,j,k) * fc_global(i,j+rank*jmax,k) *
-     1    Rp(i ) * ekm(i,j,k) * 	 
+     1    Rp(i ) * ekm(i,j,k)*CNx * 	 
      1            ((Uvel(i,j,k)  - Uvel(im,j,k)) / ( dr(i)  ) - 1./3.*divvL) )  /
      1 ( 0.5 * Ru(i) * ( drp ) )
      +              +
-     2 ( eppo * ( Ru(i) * ( Vvel(ip,j,k)/Rp(ip)  - Vvel(i,j,k)/Rp(i) ) /
+     2 ( CNy*eppo * ( Ru(i) * ( Vvel(ip,j,k)/Rp(ip)  - Vvel(i,j,k)/Rp(i) ) /
      2                    ( Rp(ip) - Rp(i) )
      2            + (Uvel(i,jp,k)  - Uvel(i,j,k) ) / ( Ru(i) * (phip(jp)-phip(j)) )
      2          )             -
-     2   epmo * ( Ru(i) * ( Vvel(ip,jm,k)/Rp(ip) - Vvel(i,jm,k)/Rp(i))/
+     2   CNy*epmo * ( Ru(i) * ( Vvel(ip,jm,k)/Rp(ip) - Vvel(i,jm,k)/Rp(i))/
      2                    (drp )
      2            + (Uvel(i,j,k)   - Uvel(i,jm,k)) / ( Ru(i) * (phip(j)-phip(jm)) )
      2          ) ) / ( Ru(i) * (phiv(j)-phiv(jm)) )
@@ -785,7 +795,7 @@ c*****************************************************************
      3          ) ) * dzi
      +              -
 !     4   (ekm(i,j,k) + ekm(ip,j,k)) * MIN(fc_global(i,j+rank*jmax,k),fc_global(ip,j+rank*jmax,k)) * ( Uvel(i,j,k) +
-     4   (ekm(i,j,k) + ekm(ip,j,k)) * ( Uvel(i,j,k) +	 
+     4   CNy*(ekm(i,j,k) + ekm(ip,j,k)) * ( Uvel(i,j,k) +	 
      4   (Vvel(ip,j,k) + Vvel(i,j,k) - Vvel(ip,jm,k) - Vvel(i,jm,k)) /
      4   (2.0 * (phiv(j)-phiv(jm))) )/ ( Ru(i) * Ru(i) )
             enddo
@@ -859,15 +869,25 @@ c*****************************************************************
      +         eppo,empo,eopp,eopm,dzi
       real xx,yy,f,fluc,Wjet
       integer n,t
-	real divvL,divvR,CNz
+	real divvL,divvR,CNz,CNx,CNy
 
-	IF (CNdiffz.eq.1) THEN !CN diff in z-dir is half old, half new timestep (this is half old timestep)
-	  CNz=0.5
-	ELSEIF (CNdiffz.eq.2) THEN !CN diff in z-dir is 100% new timestep (Euler backward)
+	IF (CNdiffz.eq.1.or.CNdiffz.eq.11) THEN !CN diff in z-dir is half old, half new timestep (this is half old timestep)
+	  CNz=0.45 !0.5
+	ELSEIF (CNdiffz.eq.2.or.CNdiffz.eq.12) THEN !CN diff in z-dir is 100% new timestep (Euler backward)
 	  CNz=0. 
 	ELSE
 	  CNz=1.
 	ENDIF
+	IF (CNdiffz.eq.11) THEN !CN diff in z-dir is half old, half new timestep (this is half old timestep)
+	  CNx=0.45 !0.5
+	  CNy=0.45 !0.5
+	ELSEIF (CNdiffz.eq.12) THEN !CN diff in z-dir is 100% new timestep (Euler backward)
+	  CNx=0. 
+	  CNy=0. 
+	ELSE
+	  CNx=1.
+	  CNy=1. 
+	ENDIF	
 
       dzi=1./dz
 	do i=ib,ie
@@ -905,11 +925,11 @@ c*****************************************************************
      3  (       Wvel(i,jp,k) -         Wvel(i,jp,k-1) ) * dzi 
 
       putout(i,j,k) = putout(i,j,k) +
-     1 ( eppo*( Ru(i )*Ru(i )*(Vvel(ip,j,k)/Rp(ip) - Vvel(i,j,k)/Rp(i))/
+     1 ( eppo*CNx*( Ru(i )*Ru(i )*(Vvel(ip,j,k)/Rp(ip) - Vvel(i,j,k)/Rp(i))/
      1                      ( Rp(ip) - Rp(i) )
      1        + (Uvel(i,jp,k)  - Uvel(i,j,k) ) / ((phip(jp)-phip(j)))
      1        ) * Ru(i) -
-     1   empo*( Ru(im)*Ru(im)*(Vvel(i,j,k)/Rp(i) - Vvel(im,j,k)/Rp(im))/
+     1   empo*CNx*( Ru(im)*Ru(im)*(Vvel(i,j,k)/Rp(i) - Vvel(im,j,k)/Rp(im))/
      1                      ( Rp(i) - Rp(im) )
      1        + (Uvel(im,jp,k) - Uvel(im,j,k)) / ((phip(jp)-phip(j)))
      1        ) * Ru(im) ) / ( Rp(i) * Rp(i) * dr(i) )
@@ -923,12 +943,12 @@ c*****************************************************************
 !     1        ) * Ru(im) ) / ( Rp(i) * dr(i) )
      +              +
 !     2 ( ekm(i,jp,k)*fc_global(i,jp+jmax*rank,k) * (   (Uvel(i,jp,k) + Uvel(im,jp,k)) / 2.0
-     2 ( ekm(i,jp,k) * (   (Uvel(i,jp,k) + Uvel(im,jp,k)) / 2.0	 
+     2 ( CNy*ekm(i,jp,k) * (   (Uvel(i,jp,k) + Uvel(im,jp,k)) / 2.0	 
      2                   + (Vvel(i,jp,k) - Vvel(i,j,k)  ) / (phiv(jp)-phiv(j))
      2                   - 1./3.*divvR*Rp(i)
      2                 )             -
 !     2   ekm(i,j,k)*fc_global(i,j+jmax*rank,k)  * (   (Uvel(i,j,k)  + Uvel(im,j,k) ) / 2.0
-     2   ekm(i,j,k)  * (   (Uvel(i,j,k)  + Uvel(im,j,k) ) / 2.0	 
+     2   CNy*ekm(i,j,k)  * (   (Uvel(i,j,k)  + Uvel(im,j,k) ) / 2.0	 
      2                   + (Vvel(i,j,k)  - Vvel(i,jm,k) ) / (phiv(j)-phiv(jm))
      2			 - 1./3.*divvL*Rp(i)
      2                 ) ) / ( 0.5 * Rp(i) * Rp(i) * (phip(jp)-phip(j)))
@@ -997,15 +1017,25 @@ c*****************************************************************
      +         epop,emop,eopp,eomp
       real xx,yy,f,fluc,Wjet,dzi
       integer n,t
-	real divvR,divvL,CNz
+	real divvR,divvL,CNz,CNx,CNy
 
-	IF (CNdiffz.eq.1) THEN !CN diff in z-dir is half old, half new timestep (this is half old timestep)
-	  CNz=0.5
-	ELSEIF (CNdiffz.eq.2) THEN !CN diff in z-dir is 100% new timestep (Euler backward)
+	IF (CNdiffz.eq.1.or.CNdiffz.eq.11) THEN !CN diff in z-dir is half old, half new timestep (this is half old timestep)
+	  CNz=0.45 !0.5
+	ELSEIF (CNdiffz.eq.2.or.CNdiffz.eq.12) THEN !CN diff in z-dir is 100% new timestep (Euler backward)
 	  CNz=0. 
 	ELSE
 	  CNz=1.
 	ENDIF
+	IF (CNdiffz.eq.11) THEN !CN diff in z-dir is half old, half new timestep (this is half old timestep)
+	  CNx=0.45 !0.5
+	  CNy=0.45 !0.5
+	ELSEIF (CNdiffz.eq.12) THEN !CN diff in z-dir is 100% new timestep (Euler backward)
+	  CNx=0. 
+	  CNy=0. 
+	ELSE
+	  CNx=1.
+	  CNy=1. 
+	ENDIF	
 	dzi=1./dz
         do i=ib,ie
         ip=i+1
@@ -1041,17 +1071,17 @@ c*****************************************************************
      3  (       Wvel(i,j,kp) -         Wvel(i,j,kp-1) ) *dzi   
 
       putout(i,j,k) =  putout(i,j,k)+
-     1 (Ru(i )*epop*( (Uvel(i,j,kp)  - Uvel(i,j,k)  ) *dzi
+     1 (Ru(i )*epop*CNx*( (Uvel(i,j,kp)  - Uvel(i,j,k)  ) *dzi
      1               +(Wvel(ip,j,k)  - Wvel(i,j,k)  ) / (Rp(ip)-Rp(i))
      1              ) -
-     1  Ru(im)*emop*( (Uvel(im,j,kp) - Uvel(im,j,k) ) *dzi
+     1  Ru(im)*emop*CNx*( (Uvel(im,j,kp) - Uvel(im,j,k) ) *dzi
      1               +(Wvel(i,j,k)   - Wvel(im,j,k) ) / (Rp(i)-Rp(im))
      1              ) ) / ( Rp(i) * dr(i) )
      +             +
-     2 (  eopp * (  (Vvel(i,j,kp)  - Vvel(i,j,k)  ) *dzi
+     2 (  eopp *CNy* (  (Vvel(i,j,kp)  - Vvel(i,j,k)  ) *dzi
      2             +(Wvel(i,jp,k)  - Wvel(i,j,k)  ) /( Rp(i) * (phip(jp)-phip(j)) )
      2           ) -
-     2    eomp * (  (Vvel(i,jm,kp) - Vvel(i,jm,k) ) *dzi
+     2    eomp *CNy* (  (Vvel(i,jm,kp) - Vvel(i,jm,k) ) *dzi
      2             +(Wvel(i,j,k)   - Wvel(i,jm,k) )/( Rp(i) * (phip(j)-phip(jm)) )
      2           ) ) / ( Rp(i) * (phiv(j)-phiv(jm)) )
      +             +
@@ -1118,16 +1148,26 @@ c*****************************************************************
       integer  im,ip,jm,jp,km,kp,ib,ie,jb,je,kb,ke,t,kplus
       real     putout(0:i1,0:j1,0:k1),putin(0:i1,0:j1,0:k1),
      +         ekh(0:i1,0:j1,0:k1),putin2(0:i1,0:j1,0:k1)
-      real	dzdz_i,Rpdr_i,Rpdphi2_i,CNz
+      real	dzdz_i,Rpdr_i,Rpdphi2_i,CNz,CNx,CNy
 
 
-	IF (CNdiffz.eq.1) THEN !CN diff in z-dir is half old, half new timestep (this is half old timestep)
-	  CNz=0.5
-	ELSEIF (CNdiffz.eq.2) THEN !CN diff in z-dir is 100% new timestep (Euler backward)
+	IF (CNdiffz.eq.1.or.CNdiffz.eq.11) THEN !CN diff in z-dir is half old, half new timestep (this is half old timestep)
+	  CNz=0.45 !0.5
+	ELSEIF (CNdiffz.eq.2.or.CNdiffz.eq.12) THEN !CN diff in z-dir is 100% new timestep (Euler backward)
 	  CNz=0. 
 	ELSE
 	  CNz=1.
 	ENDIF
+	IF (CNdiffz.eq.11) THEN !CN diff in z-dir is half old, half new timestep (this is half old timestep)
+	  CNx=0.45 !0.5
+	  CNy=0.45 !0.5
+	ELSEIF (CNdiffz.eq.12) THEN !CN diff in z-dir is 100% new timestep (Euler backward)
+	  CNx=0. 
+	  CNy=0. 
+	ELSE
+	  CNx=1.
+	  CNy=1. 
+	ENDIF	
       putin2=putin
       do k=k1,k1 !-kjet,k1
 	do t=1,tmax_inPpunt
@@ -1171,15 +1211,15 @@ c
 
 c
       putout(i,j,k) = putout(i,j,k) +  0.5 * (
-     1 ( Ru(i)  * (ekh(i,j,k)+ekh(ip,j,k)) * MIN(fc_global(i,j+rank*jmax,k),fc_global(ip,j+rank*jmax,k)) *
+     1 ( CNx*Ru(i)  * (ekh(i,j,k)+ekh(ip,j,k)) * MIN(fc_global(i,j+rank*jmax,k),fc_global(ip,j+rank*jmax,k)) *
      1            (putin2(ip,j,k)-putin2(i,j,k) ) / (Rp(ip) - Rp(i))   -
-     1   Ru(im) * (ekh(i,j,k)+ekh(im,j,k)) * MIN(fc_global(i,j+rank*jmax,k),fc_global(im,j+rank*jmax,k)) *
+     1   CNx*Ru(im) * (ekh(i,j,k)+ekh(im,j,k)) * MIN(fc_global(i,j+rank*jmax,k),fc_global(im,j+rank*jmax,k)) *
      1            (putin2(i,j,k) -putin2(im,j,k)) / (Rp(i) - Rp(im))    )
      1 * Rpdr_i !/ ( Rp(i) * dr(i) )
      +              +
-     2 (    (ekh(i,j,k)+ekh(i,jp,k)) * MIN(fc_global(i,j+rank*jmax,k),fc_global(i,jp+rank*jmax,k)) 
+     2 (    CNy*(ekh(i,j,k)+ekh(i,jp,k)) * MIN(fc_global(i,j+rank*jmax,k),fc_global(i,jp+rank*jmax,k)) 
      2 * (putin2(i,jp,k)-putin2(i,j,k) )/(Rp(i)*(phip(jp)-phip(j ))) -
-     2      (ekh(i,j,k)+ekh(i,jm,k)) * MIN(fc_global(i,j+rank*jmax,k),fc_global(i,jm+rank*jmax,k))
+     2      CNy*(ekh(i,j,k)+ekh(i,jm,k)) * MIN(fc_global(i,j+rank*jmax,k),fc_global(i,jm+rank*jmax,k))
      2 * (putin2(i,j,k) -putin2(i,jm,k))/(Rp(i)*(phip(j )-phip(jm)))  )
      2 / ( Rp(i) *(phiv(j )-phiv(jm)) )
      +              +
