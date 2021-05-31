@@ -1605,7 +1605,7 @@ c********************************************************************
 		 call t2fp(uu_T(1:imax,1:jmax*px,1:kmax/px),dUdt(1:imax,1:jmax,1:kmax))
 		 call t2fp(vv_T(1:imax,1:jmax*px,1:kmax/px),dVdt(1:imax,1:jmax,1:kmax))
 		 call t2fp(ww_T(1:imax,1:jmax*px,1:kmax/px),dWdt(1:imax,1:jmax,1:kmax))
-		  ! add source terms for cylindrical coordinate system (following PhD dissertation Pourgeui 1994 TU p. 82)
+		  ! add source terms for cylindrical coordinate system (following PhD dissertation Pourqeui 1994 TU p. 82)
 		  ! --> LdW 24-5-2021 choice to do it explicitly at end to avoid issues with boundary conditions at 0,i1/0,j1
 		  ! --> in diff_compact.f the diffusion terms are discretised a bit differently (via the stress tensor), but the below source terms are included there as well
 		  do k=1,kmax ! add source term [-u/r^2 - 2/r^2*dvdphi] to U and [-v/r^2 - 2/r^2*dudphi] to V 
@@ -1616,7 +1616,7 @@ c********************************************************************
 				dUdt(i,j,k)=dUdt(i,j,k)-CNz*(0.5*(ekm(i,j,k)+ekm(ip,j,k)))*
      &          (Unew(i,j,k)+2.*(Vnew(i,j,k)-Vnew(i,jm,k))/(phiv(j)-phiv(jm)))/(Ru(i)*Ru(i)) 				
 				dVdt(i,j,k)=dVdt(i,j,k)-CNz*(0.5*(ekm(i,j,k)+ekm(i,jp,k)))*
-     &          (Vnew(i,j,k)+2.*(Unew(i,jp,k)-Unew(i,j,k))/(phip(jp)-phip(j)))/(Rp(i)*Rp(i))   				
+     &          (Vnew(i,j,k)-2.*(Unew(i,jp,k)-Unew(i,j,k))/(phip(jp)-phip(j)))/(Rp(i)*Rp(i))   				
 			enddo
            enddo
 		  enddo		

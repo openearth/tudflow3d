@@ -1,157 +1,156 @@
 &simulation
-px =32				! number of processors [-]
-imax = 450 			! imax can be chosen freely [-]
-jmax = 224 			! jmax must be multiple of px [-]
-kmax = 320 			! kmax must be multiple of px [-]
-imax_grid=50 170 450   	! end indices where dr_grid switches (must be compatable with imax) [-]
-dr_grid=0.006 0.00072 0.00072! various dr_grid (must be compatable with imax_grid) [m]
-fac_r_grid=0.96 1 1.008  ! various growth factor of dr_grid, each consequtive cell has dr(i)=dr(i-1)*fac_r_grid
-lim_r_grid=0.00072 0.00072 0.0063 ! various limit of dr, with fac_r_grid>1 it is the max dr, with fac_r_grid<1 it is the minimum dr
-jmax_grid=25 112    ! end indices where dy_grid switches (must be compatible with jmax; depening on sym_grid_y!) [-]
-dy_grid=0.00072 0.00072    ! various dy_grid (must be compatable with jmax_grid) [m]
-fac_y_grid=1.0 1.024  ! various growth factor of dy_grid, each consequtive cell has dr(j)=dr(j-1)*fac_y_grid [-]
-lim_y_grid=0.00072 100. ! various limit of dy, with fac_y_grid>1 it is the max dy, with fac_y_grid<1 it is the minimum dy [-]
-sym_grid_y=1    ! if 0 then no symmetry on dy_grid is applied [-]
-Rmin =0.4			! Radius where cylindrical grid starts [m]
-schuif_x = 0.57016                 ! Shift in x-coordinate to make (x,y) plume = (0,0) [m]
-dy = 0.00288			! width gridcell at (x,y)=(0,0) [m]
-depth = 0.558			! Depth [m] (dz=depth/kmax)
+px =32								! number of processors [-]
+imax = 450 							! imax can be chosen freely [-]
+jmax = 224 							! jmax must be multiple of px [-]
+kmax = 320 							! kmax must be multiple of px [-]
+imax_grid=50 170 450   				! end indices where dr_grid switches (must be compatable with imax) [-]
+dr_grid=0.006 0.00072 0.00072		! various dr_grid (must be compatable with imax_grid) [m]
+fac_r_grid=0.96 1 1.008  			! various growth factor of dr_grid, each consequtive cell has dr(i)=dr(i-1)*fac_r_grid
+lim_r_grid=0.00072 0.00072 0.0063 	! various limit of dr, with fac_r_grid>1 it is the max dr, with fac_r_grid<1 it is the minimum dr
+jmax_grid=25 112    				! end indices where dy_grid switches (must be compatible with jmax; depening on sym_grid_y!) [-]
+dy_grid=0.00072 0.00072    			! various dy_grid (must be compatable with jmax_grid) [m]
+fac_y_grid=1.0 1.024  				! various growth factor of dy_grid, each consequtive cell has dr(j)=dr(j-1)*fac_y_grid [-]
+lim_y_grid=0.00072 100. 			! various limit of dy, with fac_y_grid>1 it is the max dy, with fac_y_grid<1 it is the minimum dy [-]
+sym_grid_y=1    					! if 0 then no symmetry on dy_grid is applied [-]
+Rmin =0.4							! Radius where cylindrical grid starts [m]
+schuif_x = 0.57016                 	! Shift in x-coordinate to make (x,y) plume = (0,0) [m]
+dy = 0.00288						! width gridcell at (x,y)=(0,0) [m]
+depth = 0.558						! Depth [m] (dz=depth/kmax)
 hisfile = './inputfiles/his_jicf_Gal_ufvar04.inp'			! Input file for history points
-restart_dir =''			! Path restart netcdf-files influding start of filename e.g. '/data/.../flow3d_000000010_*.nc' containing (variables not provided are simply not used): U,V,W,C,Cbed,zbed,mass_bed 3D matrix (1:imax,1:jmax*px,1:kmax): U,V,W, 4D (1:nfrac,1:imax,1:jmax*px,1:kmax): C,Cbed, 2D matrix (1:imax,1:jmax*px): zbed, 3D(1:nfrac,1:imax,1:jmax*px): mass_bed
+restart_dir =''						! Path restart netcdf-files influding start of filename e.g. '/data/.../flow3d_000000010_*.nc' containing (variables not provided are simply not used): U,V,W,C,Cbed,zbed,mass_bed 3D matrix (1:imax,1:jmax*px,1:kmax): U,V,W, 4D (1:nfrac,1:imax,1:jmax*px,1:kmax): C,Cbed, 2D matrix (1:imax,1:jmax*px): zbed, 3D(1:nfrac,1:imax,1:jmax*px): mass_bed
 /
 
 &times
-t_end = 60.			! End time simulation from (re)start [s]
-t0_output = 60.			! Start time output [s] (default 0)
-dt_output = 60.			! Time interval output [s]
-te_output = 360.		! End time output [s] (default >t_end)
-tstart_rms = 240.		! Start time avg/rms calc [s]
-te_rms = 240.			! End time avg/rms calc [s] (optional, default t_end simulation)
-dt_max = 0.04		! Max timestep [s] 
-dt_ini = 0.01		! Max timestep [s] used the first 10 time steps for extra gentle startup
-time_int = 'ABv'		! Time integration options: 'ABv', 'EE1', 'RK3'
-CFL = 0.6			! CFL limit [-]
-n_dtavg = 1000 		! if n_dtavg>0 dt is determined as minimum of last n_dtavg timesteps to give dt not varying every timestep for extra stability (optional, default 0 and not used)
-t0_output_movie = 10.		! Start time for low-storage concentration output usable for movies [s]
-dt_output_movie = 10.		! Time interval for low-storage concentration output usable for movies [s]
-te_output_movie = 450.		! End time for low-storage concentration output usable for movies [s]
-tstart_morf = 1. 	! Start time interaction with bed [s] (default 0), before tstart_morf no exchange of sediment between bed and fluid
-tstart_morf2 = 1.	! Start time bedupdate [s] (default 0), before tstart_morf2 there is exchange of sediment between bed and fluid, but no bedupdate (all changes to bed are annihilated) 
+t_end = 60.							! End time simulation from (re)start [s]
+t0_output = 60.						! Start time output [s] (default 0)
+dt_output = 60.						! Time interval output [s]
+te_output = 360.					! End time output [s] (default t_end)
+tstart_rms = 240.					! Start time avg/rms calc [s]
+te_rms = 240.						! End time avg/rms calc [s] (optional, default t_end simulation)
+dt_max = 0.04						! Max timestep [s] 
+dt_ini = 0.01						! Max timestep [s] used the first 10 time steps for extra gentle startup
+time_int = 'ABv'					! Time integration options: 'ABv', 'EE1', 'RK3'
+CFL = 0.6							! CFL limit [-]
+n_dtavg = 1000 						! if n_dtavg>0 dt is determined as minimum of last n_dtavg timesteps to give dt not varying every timestep for extra stability (optional, default 0 and not used)
+t0_output_movie = 10.				! Start time for low-storage concentration output usable for movies [s]
+dt_output_movie = 10.				! Time interval for low-storage concentration output usable for movies [s]
+te_output_movie = 450.				! End time for low-storage concentration output usable for movies [s]
+tstart_morf = 1. 					! Start time interaction with bed [s] (default 0), before tstart_morf no exchange of sediment between bed and fluid
+tstart_morf2 = 1.					! Start time bedupdate [s] (default 0), before tstart_morf2 there is exchange of sediment between bed and fluid, but no bedupdate (all changes to bed are annihilated) 
 /
 
 &num_scheme
-convection = 'HYB6'		! Numerical scheme for convection term, options: 'CDS2','CDS4','CDS6','HYB6','C4A6','uTVD','C2Bl','C4Bl','COM4'
-numdiff = 0.001953125		! Amount of extra 6th diffusion in case of 'CDS6','CDS4','HYB6','C4A6' ('CDS6' -> 1/60=UPW5, 0=CDS6); or blend slope for TVD-r<0 'C2Bl' and 'C4Bl' 
-wiggle_detector = 0			! Use wiggle detector to adjust amount of numdiff for each individual grid cell (default 0-->numdiff applied for all cells; optional 1)
-numdiff2 = 0.001953125		! Amount of minimum 6th diffusion in case of wiggle_detector=1 (default 0.), must be < numdiff
-diffusion = 'CDS2'		! Numerical scheme for diffusion term.
-CNdiffz = 0				! 0 is explicit in z-dir (default 0); 1 is 2nd order CN treatment of diffusion in z-dir; 2 is implicit 1st order Euler backward in z-dir; 11 is 2nd order CN treatment of diffusion in x,y,z-dir; 12 is implicit 1st order Euler backward in x,y,z-dir;
-continuity_solver =36   !default is 1 (drdt+drudx=0). Optional:  35 (dudx=0 U-mix), 36 (dudx=0 U-vol); 36 is best option for mixture flow 
-npresIBM = 0			! number of extra pres-correction steps to make IBM objects better impermeable (default 0)
-npresPRHO = 0			! number of extra pres-correction steps to get predicted P^n+1 as input in variable-density-Poisson-solver more accurate (default 0)
-oPRHO = 2				! (default 2) 2 = linear extrapolation for predicted P*; 1 = predicted P* equal to P^n; 3 = linear extrapolation for predicted P* using 2dt before to reduce wiggles in time; 4 = high order extrapolation for dPdt to get predicted P*
-pres_in_predictor_step = 1 ! 1 (default) = apply P^n in predictor step and apply corrector step with dP; 0 = predictor step without pressure and apply corrector step with P^n+1; 2 = like 1, but every 100th timestep like 0
-Poutflow=0 				! 0 (default, most robust) Poutflow is zero for complete outflow crosssection at rmax; 1 (optional) Poutflow is zero at just one grid-location at rmax --> sometimes better but less robust
-k_pzero=1 				! default 1, defines vertical level where p=0 when Poutflow=1 is used
-Uoutflow=0 				! 0 (default) Neumann outflow dUdn=0 (for U,V,W); 2 means convective outflow condition dUdt+U_normal*dUdn=0 (for U,V,W)
-!advec_conc='VLE'		! optional advection scheme concentration, options: 'VLE' (default) 'VL2' 'ARO' 'SBE' SB2' 'NVD' :'VLE' VanLeer(via LW)(default) 'ARO' Arora(via LW) 'SBE' Superbee(via LW) 'VL2' VanLeer(via CDS2) or 'SB2' Superbee(via CDS2) TVD schemes or 'NVD' for NVD scheme 
-!transporteq_fracs = 'volufrac' !nerd option default volume fractions, but as option also 'massfrac' can be used internally (input/output still is volume frac!)
-!split_rho_cont = 'SB2'  ! optional 'VL2' or 'SB2' TVD scheme (via CDS2 without 1-cfl term) to split off rho from rho*U, default 'CDS' scheme
-driftfluxforce_calfac = 1. ! calibration factor for driftflux force (default 1.) 0. gives no force
-depo_implicit = 0			! 1=calculate deposition at the bed implicit; 0=explicit with old cfluid (default)
-IBMorder = 2 				! 0 (default) = normal staircase manner bed immersed boundary, 2 = 2nd order immersed boundary of bed, obstacles and TSHD higher in water are still staircase manner
-applyVOF = 0 	!Beta option, default 0 take variable rho fully in account in momentum eq.; 1 = only take variable density in account in gravity term, not in rest of momentum eq.
-k_ust_tau = 1 	! defines which k-layer from bed is used to determine ust/tau for sediment pickup and K-Eps bed-bc, default 1 (first cell from bed is used) and sometimes for IBM bed k_ust_tau=2 is recommended because 2nd cell is less influenced by nearby immersed bed grid cells with zero velocity 
-dUVdn_IBMbed=-1 ! -1 = default no correction, 0 gives dUdn and dVdn is zero over immersed bed, -2 to apply UV(1:kbed)=0 also for IBM2
+convection = 'HYB6'					! Numerical scheme for convection term, options: 'CDS2','CDS4','CDS6','HYB6','C4A6','uTVD','C2Bl','C4Bl','COM4'
+numdiff = 0.001953125				! Amount of extra 6th diffusion in case of 'CDS6','CDS4','HYB6','C4A6' ('CDS6' -> 1/60=UPW5, 0=CDS6); or blend slope for TVD-r<0 'C2Bl' and 'C4Bl' 
+wiggle_detector = 0					! Use wiggle detector to adjust amount of numdiff for each individual grid cell (default 0-->numdiff applied for all cells; optional 1)
+numdiff2 = 0.001953125				! Amount of minimum 6th diffusion in case of wiggle_detector=1 (default 0.), must be < numdiff
+diffusion = 'CDS2'					! Numerical scheme for diffusion term.
+CNdiffz = 0							! 0 is explicit in z-dir (default 0); 1 is 2nd order CN treatment of diffusion in z-dir; 2 is implicit 1st order Euler backward in z-dir; 11 is 2nd order CN treatment of diffusion in x,y,z-dir; 12 is implicit 1st order Euler backward in x,y,z-dir;
+continuity_solver =36   			!default is 1 (drdt+drudx=0). Optional:  35 (dudx=0 U-mix), 36 (dudx=0 U-vol); 36 is best option for mixture flow 
+npresIBM = 0						! number of extra pres-correction steps to make IBM objects better impermeable (default 0)
+npresPRHO = 0						! number of extra pres-correction steps to get predicted P^n+1 as input in variable-density-Poisson-solver more accurate (default 0)
+oPRHO = 2							! (default 2) 2 = linear extrapolation for predicted P*; 1 = predicted P* equal to P^n; 3 = linear extrapolation for predicted P* using 2dt before to reduce wiggles in time; 4 = high order extrapolation for dPdt to get predicted P*
+pres_in_predictor_step = 1 			! 1 (default) = apply P^n in predictor step and apply corrector step with dP; 0 = predictor step without pressure and apply corrector step with P^n+1; 2 = like 1, but every 100th timestep like 0
+Poutflow=0 							! 0 (default, most robust) Poutflow is zero for complete outflow crosssection at rmax; 1 (optional) Poutflow is zero at just one grid-location at rmax --> sometimes better but less robust
+k_pzero=1 							! default 1, defines vertical level where p=0 when Poutflow=1 is used
+Uoutflow=0 							! 0 (default) Neumann outflow dUdn=0 (for U,V,W); 2 means convective outflow condition dUdt+U_normal*dUdn=0 (for U,V,W)
+!advec_conc='VLE'					! optional advection scheme concentration, options: 'VLE' (default) 'VL2' 'ARO' 'SBE' SB2' 'NVD' :'VLE' VanLeer(via LW)(default) 'ARO' Arora(via LW) 'SBE' Superbee(via LW) 'VL2' VanLeer(via CDS2) or 'SB2' Superbee(via CDS2) TVD schemes or 'NVD' for NVD scheme 
+!transporteq_fracs = 'volufrac' 	!nerd option default volume fractions, but as option also 'massfrac' can be used internally (input/output still is volume frac!)
+!split_rho_cont = 'SB2'  			! optional 'VL2' or 'SB2' TVD scheme (via CDS2 without 1-cfl term) to split off rho from rho*U, default 'CDS' scheme
+driftfluxforce_calfac = 1. 			! calibration factor for driftflux force (default 1.) 0. gives no force
+depo_implicit = 0					! 1=calculate deposition at the bed implicit; 0=explicit with old cfluid (default)
+IBMorder = 2 						! 0 (default) = normal staircase manner bed immersed boundary, 2 = 2nd order immersed boundary of bed, obstacles and TSHD higher in water are still staircase manner
+applyVOF = 0 						!Beta option, default 0 take variable rho fully in account in momentum eq.; 1 = only take variable density in account in gravity term, not in rest of momentum eq.
+k_ust_tau = 1 						! defines which k-layer from bed is used to determine ust/tau for sediment pickup and K-Eps bed-bc, default 1 (first cell from bed is used) and sometimes for IBM bed k_ust_tau=2 is recommended because 2nd cell is less influenced by nearby immersed bed grid cells with zero velocity 
+dUVdn_IBMbed=-1 					! -1 = default no correction, 0 gives dUdn and dVdn is zero over immersed bed, -2 to apply UV(1:kbed)=0 also for IBM2
 
 /
 
 &ambient
-U_b = -1.			! Ambient bc U velocity [m/s] with respect to TSHD motion: negative means TSHD sailing against current (Utotal=U_TSHD-U_b), without TSHD positive is inward velocity
-V_b =.5			! Ambient bc V velocity [m/s] with respect to TSHD motion: positive means current from starboard  
-W_b = 0.0			! Ambient bc W velocity [m/s] (in x,y coordinates, not r,phi)
-bcfile = ''			! Input netcdf file for bc front & 2 sides (U_b,V_b and U_TSHD are still used for orientation ship hull!)
-U_bSEM = -1.			! Ambient bc U velocity [m/s] used for SEM (if not defined then U_b is used)
-V_bSEM =.5			! Ambient bc V velocity [m/s] used for SEM (if not defined then V_b is used)
-U_init = -1.			! Init U velocity [m/s] (if not defined then U_b is used)
-V_init = -1.			! Init V velocity [m/s] (if not defined then V_b is used)
-rho_b = 1025.			! Ambient density [kg/m3]
-SEM = 0				! 1 = SEM to generate turbulent fluctuations on top of inflow bc, 0 = laminar bc 
-nmax2 = 5000			! Number of SEM eddies front inflow 
-nmax1 = 5000			! Number of SEM eddies sides inflow
-lm_min = 0.02 			! Minimal Lm SEM eddies [m] (1/10*depth)
-nmax3= 0 			!Number of SEM eddies jet inflow
-lm_min3 = 0.03		! Minimal Lm SEM eddies jet pipe [m] (1/10*radius_j)
-slip_bot = 1			! 1 = partial slip (law of the wall) bottom with log-U inflow profile , 0 = free slip bottom, 2 partial slip with constant U profile over vertical, 3 is partial slip TBL wall-model including dpdx, 4 is partial slip TBL wall-model excluding dpdx, 5 is partial slip wall-model based on VanDriest U-profile, -1 is no slip bottom, -2 is no slip bottom and top
-kn = 0.1			! Nikkuradse roughness flow [m]
-interaction_bed = 4		! 0 no erosion/sedimentation, 1 only deposition, 2 deposition & unlimited erosion, 3 deposition & erosion previously deposited material, 4 depo&ero including bed-update, 5 depo&ero excluding bed-update, 6 depo&ero including bed-update & unlimited erosion base layer, 7 depo&ero excluding bed-update & unlimited erosion base layer
-periodicx = 0			! 1 periodic in x dir; 0 not periodic (default 0); 2 closed box (in and outflow in x-dir is zero)
-periodicy = 0			! 1 periodic in y dir; 0 not periodic; 2 is free slip lateral boundaries (default 0)
-i_periodicx = 0 		! beta option (default 0; not used) when >1 then internal periodic x-dir bc is applied UVWC(0)=UVWC(i_periodicx)
-istart_morf2 = 0 ! (default 0, not used) start i-index where bedupdate is applied, for i<istart_morf2 there is exchange of sediment between bed and fluid, but no bedupdate (all changes to bed are annihilated) 
-monopile = -1			! -1 (default) no monopile; >0 is monopile : closed bc at i=0 and combined in/outflow at i=imax; 1=partial slip monopile wall log-law; 2=free slip monopile wall; 3=partial slip monopile TBL wall-model including dpdx, 4=no-slip monopile wall
-kn_mp = 0.01 			! must be defined icw monopile=1 and gives Nikkuradse monopile wall roughness is implemented 
-kn_sidewalls = 0.01		! when defined >0 icw periodicy=2 then side wall Nikkuradse roughness is implemented (default <0 no sidewall tau)
-dpdx = 0.0			! Driving pressure gradient in x dir in case periodic [Pa/m] (default 0)
-dpdy = 0.0			! Driving pressure gradient in y dir in case periodic [Pa/m] (default 0)
-W_ox = 0.			! Vertical velocity at i=imax boundary in case periodicx=2 [m/s] (default 0)
-bc_obst_h = 0.                  ! Do not apply inflow bc at 0-bc_obst_h meters from bed, default 0 [m] (depth should be bc_obst_h extra!)
-obst(1)%x = -500. 50. 50. -500. ! x coordinate 4 corners obstacle
-obst(1)%y = -500. -500. 500. 500. ! y coordinate 4 corners obstacle
-obst(1)%height = 0.5            ! vertical height obstacle
-obst(1)%zbottom = 0.2            ! vertical bottom start height obstacle [m] (optional, default 0)
-obst(1)%ero = 0. 				! 0. = no erosion on top of obstacle, 1. = erosion possible  (optional, default 0)
-obst(1)%depo = 0. 				! 0. = no deposition on top of obstacle, 1. = deposition possible  (optional, default 0)
+U_b = -1.							! Ambient bc U velocity [m/s] with respect to TSHD motion: negative means TSHD sailing against current (Utotal=U_TSHD-U_b), without TSHD positive is inward velocity
+V_b =.5								! Ambient bc V velocity [m/s] with respect to TSHD motion: positive means current from starboard  
+W_b = 0.0							! Ambient bc W velocity [m/s] (in x,y coordinates, not r,phi)
+bcfile = ''							! Input netcdf file for bc front & 2 sides (U_b,V_b and U_TSHD are still used for orientation ship hull!)
+U_bSEM = -1.						! Ambient bc U velocity [m/s] used for SEM (if not defined then U_b is used)
+V_bSEM =.5							! Ambient bc V velocity [m/s] used for SEM (if not defined then V_b is used)
+U_init = -1.						! Init U velocity [m/s] (if not defined then U_b is used)
+V_init = -1.						! Init V velocity [m/s] (if not defined then V_b is used)
+rho_b = 1025.						! Ambient density [kg/m3]
+SEM = 0								! 1 = SEM to generate turbulent fluctuations on top of inflow bc, 0 = laminar bc 
+nmax2 = 5000						! Number of SEM eddies front inflow 
+nmax1 = 5000						! Number of SEM eddies sides inflow
+lm_min = 0.02 						! Minimal Lm SEM eddies [m] (1/10*depth)
+nmax3= 0 							!Number of SEM eddies jet inflow
+lm_min3 = 0.03						! Minimal Lm SEM eddies jet pipe [m] (1/10*radius_j)
+slip_bot = 1						! 1 = partial slip (law of the wall) bottom with log-U inflow profile , 0 = free slip bottom, 2 partial slip with constant U profile over vertical, 3 is partial slip TBL wall-model including dpdx, 4 is partial slip TBL wall-model excluding dpdx, 5 is partial slip wall-model based on VanDriest U-profile, -1 is no slip bottom, -2 is no slip bottom and top
+kn = 0.1							! Nikkuradse roughness flow [m]
+interaction_bed = 4					! 0 no erosion/sedimentation, 1 only deposition, 2 deposition & unlimited erosion, 3 deposition & erosion previously deposited material, 4 depo&ero including bed-update, 5 depo&ero excluding bed-update, 6 depo&ero including bed-update & unlimited erosion base layer, 7 depo&ero excluding bed-update & unlimited erosion base layer
+periodicx = 0						! 1 periodic in x dir; 0 not periodic (default 0); 2 closed box (in and outflow in x-dir is zero)
+periodicy = 0						! 1 periodic in y dir; 0 not periodic; 2 is free slip lateral boundaries (default 0)
+i_periodicx = 0 					! beta option (default 0; not used) when >1 then internal periodic x-dir bc is applied UVWC(0)=UVWC(i_periodicx)
+istart_morf2 = 0 					! (default 0, not used) start i-index where bedupdate is applied, for i<istart_morf2 there is exchange of sediment between bed and fluid, but no bedupdate (all changes to bed are annihilated) 
+monopile = -1						! -1 (default) no monopile; >0 is monopile : closed bc at i=0 and combined in/outflow at i=imax; 1=partial slip monopile wall log-law; 2=free slip monopile wall; 3=partial slip monopile TBL wall-model including dpdx, 4=no-slip monopile wall
+kn_mp = 0.01 						! must be defined icw monopile=1 and gives Nikkuradse monopile wall roughness is implemented 
+kn_sidewalls = 0.01					! when defined >0 icw periodicy=2 then side wall Nikkuradse roughness is implemented (default <0 no sidewall tau)
+dpdx = 0.0							! Driving pressure gradient in x dir in case periodic [Pa/m] (default 0)
+dpdy = 0.0							! Driving pressure gradient in y dir in case periodic [Pa/m] (default 0)
+W_ox = 0.							! Vertical velocity at i=imax boundary in case periodicx=2 [m/s] (default 0)
+bc_obst_h = 0.                  	! Do not apply inflow bc at 0-bc_obst_h meters from bed, default 0 [m] (depth should be bc_obst_h extra!)
+obst(1)%x = -500. 50. 50. -500. 	! x coordinate 4 corners obstacle
+obst(1)%y = -500. -500. 500. 500. 	! y coordinate 4 corners obstacle
+obst(1)%height = 0.5            	! vertical height obstacle
+obst(1)%zbottom = 0.2            	! vertical bottom start height obstacle [m] (optional, default 0)
+obst(1)%ero = 0. 					! 0. = no erosion on top of obstacle, 1. = erosion possible  (optional, default 0)
+obst(1)%depo = 0. 					! 0. = no deposition on top of obstacle, 1. = deposition possible  (optional, default 0)
 obstfile = './inputfiles/obstacles_v01.nc'         ! Input netcdf file 3D obstacles; must contain obstacle_Ploc (1=obst, 0=not), obstacle_ero, obstacle_depo (0:i1,0:jmax*px+1,0:k1) [-]) 
-U_b3 = -0.47			! Ambient bc U velocity [m/s] in surf_layer with respect to TSHD motion: negative means TSHD sailing against current (Utotal=U_TSHD-U_b), without TSHD positive is inward velocity
-V_b3 = -0.29			! Ambient bc V velocity [m/s] in surf_layer with respect to TSHD motion: positive means current from starboard  
-surf_layer = 0.			! Layer depth [m] from free surface with U_b3,V_b3 ambient current (default 0)
-wallup=0			! 0 wall is down; 1 wall is up; 2 wall both up and down (default 0)
-bedlevelfile = ''		! Input netcdf file for bedlevel which are simulated by IBM obstacles (filled with zbed(1:imax,0:jmax*px+1) [m])Input netcdf file for bedlevel which are simulated by IBM obstacles (filled with zbed(1:imax,0:jmax*px+1) [m])
-c_bed= 0.1 				! Initial volume fractions inside bed [-] (length vector must be nfrac large and sum must be equal to cfixedbed)
-cfixedbed = 0.6			! Volume concentration threshold for fixed bed (default 0.6)
-
-Hs=0.7				! Significant waveheigth [m] (using linear wave theory to mimic wave-orbital velocity)
-Tp=5.5				! Wave peak period [s] (using linear wave theory to mimic wave-orbital velocity)
-nx_w=1				! Wave direction normal vector [-] : positive means waves against TSHD (nx_w^2+ny_w^2=1)
-ny_w=0				! Wave direction normal vector [-] : positive means waves from starboard TSHD (nx_w^2+ny_w^2=1)
-U_w = 1.37			! U velocity [m/s] used for waves in fixed x,y coordinate system (positive means with x-dir) [for sim with rotated grid for V_b not zero then U_w=pyth(U_b,V_b) and V_w=0]
-V_w = 0.3			! V velocity [m/s] used for waves in fixed x,y coordinate system (positive means with y-dir) [for sim with rotated grid for V_b not zero then U_w=pyth(U_b,V_b) and V_w=0]
+U_b3 = -0.47						! Ambient bc U velocity [m/s] in surf_layer with respect to TSHD motion: negative means TSHD sailing against current (Utotal=U_TSHD-U_b), without TSHD positive is inward velocity
+V_b3 = -0.29						! Ambient bc V velocity [m/s] in surf_layer with respect to TSHD motion: positive means current from starboard  
+surf_layer = 0.						! Layer depth [m] from free surface with U_b3,V_b3 ambient current (default 0)
+wallup=0							! 0 wall is down; 1 wall is up; 2 wall both up and down (default 0)
+bedlevelfile = ''					! Input netcdf file for bedlevel which are simulated by IBM obstacles (filled with zbed(1:imax,0:jmax*px+1) [m])Input netcdf file for bedlevel which are simulated by IBM obstacles (filled with zbed(1:imax,0:jmax*px+1) [m])
+c_bed= 0.1 							! Initial volume fractions inside bed [-] (length vector must be nfrac large and sum must be equal to cfixedbed)
+cfixedbed = 0.6						! Volume concentration threshold for fixed bed (default 0.6)
+Hs=0.7								! Significant waveheigth [m] (using linear wave theory to mimic wave-orbital velocity)
+Tp=5.5								! Wave peak period [s] (using linear wave theory to mimic wave-orbital velocity)
+nx_w=1								! Wave direction normal vector [-] : positive means waves against TSHD (nx_w^2+ny_w^2=1)
+ny_w=0								! Wave direction normal vector [-] : positive means waves from starboard TSHD (nx_w^2+ny_w^2=1)
+U_w = 1.37							! U velocity [m/s] used for waves in fixed x,y coordinate system (positive means with x-dir) [for sim with rotated grid for V_b not zero then U_w=pyth(U_b,V_b) and V_w=0]
+V_w = 0.3							! V velocity [m/s] used for waves in fixed x,y coordinate system (positive means with y-dir) [for sim with rotated grid for V_b not zero then U_w=pyth(U_b,V_b) and V_w=0]
 /
 
 &plume
-W_j = -2.			! Inflow velocity plume (negative means inflow!) [m/s]
-plumetseriesfile='' 		! file with timeseries of W_j inflow velocity plume [m/s], overules W_j (default '')
-Q_j = 2.			! Inflow discharge plume (positive is inflow); determines correct inflow using velocity shape from W_j_powerlaw to arrive exactly at Q_j [m3/s] (Q_j overules W_j)
-plumeQtseriesfile='' 		! file containing timeseries of Q_j inflow Q plume [m3/s], overules W_j and Q_j (default '')
-plumectseriesfile='' 		! file containing timeseries of volume fractions inflow plume [-] (optional overrules fract(.)%c, default '')
-Awjet = 0.			! Azimuthal factor Wjet [-]
-Aujet = 0.			! Azimuthal factor Ujet [-]
-Avjet = 0.			! Azimuthal factor Vjet [-]
-Strouhal = 0.4			! Strouhal number for Azimuthal forcing (St= fD/U=0.3-0.6) [-]
-azi_n = 6			! Azimuthal sine components (2-6) [-]
-kjet = 0			! # cells above plume outflow [-] obsolete when ship is used
-radius_j = 1.			! radius plume [m]
-radius_inner_j = 0.		! inner radius plume where no influx is [m] (default 0.)
-xj = -2. -2. 2. 2.		! x coordinates 4 corners box where plume must be inside (default complete domain)
-yj = -2. -2. 2. 2.		! y coordinates 4 corners box where plume must be inside (default complete domain)
-W_j_powerlaw = 7.		! powerlaw for plume velocity profile (default 7. = 1/7 powerlaw; velocity is corrected to arrive at correct influx of pi*W_j*radius_j^2)
+W_j = -2.							! Inflow velocity plume (negative means inflow!) [m/s]
+plumetseriesfile='' 				! file with timeseries of W_j inflow velocity plume [m/s], overules W_j (default '')
+Q_j = 2.							! Inflow discharge plume (positive is inflow); determines correct inflow using velocity shape from W_j_powerlaw to arrive exactly at Q_j [m3/s] (Q_j overules W_j)
+plumeQtseriesfile='' 				! file containing timeseries of Q_j inflow Q plume [m3/s], overules W_j and Q_j (default '')
+plumectseriesfile='' 				! file containing timeseries of volume fractions inflow plume [-] (optional overrules fract(.)%c, default '')
+Awjet = 0.							! Azimuthal factor Wjet [-]
+Aujet = 0.							! Azimuthal factor Ujet [-]
+Avjet = 0.							! Azimuthal factor Vjet [-]
+Strouhal = 0.4						! Strouhal number for Azimuthal forcing (St= fD/U=0.3-0.6) [-]
+azi_n = 6							! Azimuthal sine components (2-6) [-]
+kjet = 0							! # cells above plume outflow [-] obsolete when ship is used
+radius_j = 1.						! radius plume [m]
+radius_inner_j = 0.					! inner radius plume where no influx is [m] (default 0.)
+xj = -2. -2. 2. 2.					! x coordinates 4 corners box where plume must be inside (default complete domain)
+yj = -2. -2. 2. 2.					! y coordinates 4 corners box where plume must be inside (default complete domain)
+W_j_powerlaw = 7.					! powerlaw for plume velocity profile (default 7. = 1/7 powerlaw; velocity is corrected to arrive at correct influx of pi*W_j*radius_j^2)
 plume_z_outflow_belowsurf = 6. ! depth flow surface at which plume flows downward, only need to define when different from Draught TSHD [m]
-Sc = 0.7			! Schmidt number used to determine Diff. coeff from viscosity [-]
-slipvel = 0			! 0 = no slip velocity, 1 = hindered settling RiZa, 2 = settling with frac(n)%ws
-hindered_settling = 1	!Hindered settling formula [-] 1=Rowe (1987) (smooth Ri-Za org) (default); 2=Garside (1977); 3=Di Felice (1999)
-outflow_overflow_down = 0       ! 1 = outflow velocity bc at keel TSHD 0 = outflow velocity bc at top overflow pipe (default 0)
-U_j2 = 2.			! Inflow velocity plume horizontal at i=0 [m/s]
-Aujet2 = 0.1			! Azimuthal factor Ujet2 [-]
-Avjet2 = 0.			! Azimuthal factor Vjet2 [-]
-Awjet2 = 0.			! Azimuthal factor Wjet2 [-]
-Strouhal2 = 0.4			! Strouhal number for Azimuthal forcing (St= fD/U=0.3-0.6) [-]
-azi_n2 = 6			! Azimuthal sine components (2-6) [-]
-radius_j2 = 1.			! radius horizontal plume [m]
-zjet2 = 0.5			! vertical position centre of horizontal plume [m]		
-bedplume(1)%x = -500. 50. 50. -500. ! x coordinate 4 corners bedplume [m]
-bedplume(1)%y = -500. -500. 500. 500. ! y coordinate 4 corners bedplume [m]
-bedplume(1)%radius = 					! (optional) radius [m] to define circle around bp()%x(1) and bp()%y(1) instead of square defined with bp()%x(1-4),bp()%y(1-4)
+Sc = 1.0							! Schmidt number used to determine Diff. coeff from viscosity [-]
+slipvel = 0							! 0 = no slip velocity, 1 = hindered settling RiZa, 2 = settling with frac(n)%ws
+hindered_settling = 1				!Hindered settling formula [-] 1=Rowe (1987) (smooth Ri-Za org) (default); 2=Garside (1977); 3=Di Felice (1999)
+outflow_overflow_down = 0       	! 1 = outflow velocity bc at keel TSHD 0 = outflow velocity bc at top overflow pipe (default 0)
+U_j2 = 2.							! Inflow velocity plume horizontal at i=0 [m/s]
+Aujet2 = 0.1						! Azimuthal factor Ujet2 [-]
+Avjet2 = 0.							! Azimuthal factor Vjet2 [-]
+Awjet2 = 0.							! Azimuthal factor Wjet2 [-]
+Strouhal2 = 0.4						! Strouhal number for Azimuthal forcing (St= fD/U=0.3-0.6) [-]
+azi_n2 = 6							! Azimuthal sine components (2-6) [-]
+radius_j2 = 1.						! radius horizontal plume [m]
+zjet2 = 0.5							! vertical position centre of horizontal plume [m]		
+bedplume(1)%x = -500. 50. 50. -500. 	! x coordinate 4 corners bedplume [m]
+bedplume(1)%y = -500. -500. 500. 500. 	! y coordinate 4 corners bedplume [m]
+bedplume(1)%radius = 				! (optional) radius [m] to define circle around bp()%x(1) and bp()%y(1) instead of square defined with bp()%x(1-4),bp()%y(1-4)
 bedplume(1)%height = 0.5            ! vertical height bedplume [m]
 bedplume(1)%h_tseriesfile = ''		! file containing timeseries of bedplume height [m] (optional overrules bedplume(.)%height, default '')
 bedplume(1)%zbottom= 0.2           	! vertical bottom start height bedplume [m] (optional, default 0)
@@ -167,49 +166,49 @@ bedplume(1)%v_tseriesfile = ''		! file containing timeseries of v [m/s] (optiona
 bedplume(1)%w_tseriesfile = ''		! file containing timeseries of w [m/s] (optional overrules bedplume(.)%w, default '')
 bedplume(1)%Q = 2.5 				! Fluid flux [m3/s] (divided evenly over all cells within bedplume) 
 bedplume(1)%Q_tseriesfile = './inputfiles/Inflow_Q.asc'		! file containing timeseries of Q [m3/s] (optional overrules bedplume(.)%Q, default '')
-bedplume(1)%changesedsuction = 1.   ! 0. is no sediment is removed from suction domain in case bedplume%Q negative (default 1.=sediment is sucked out of domain) 
-bedplume(1)%c = 0.1 0.1 0.1    		! Initial volume fractions inside bedplume [-] (length vector must be nfrac large)
-bedplume(1)%c_tseriesfile = ''		! file containing timeseries of volume fractions [-] (optional overrules bedplume(.)%c, default '')
-bedplume(1)%sedflux = 6.625 59.625  ! Sediment flux [kg/s] (divided evenly over all cells within bedplume, length vector must be nfrac large)
+bedplume(1)%changesedsuction = 1.   						! 0. is no sediment is removed from suction domain in case bedplume%Q negative (default 1.=sediment is sucked out of domain) 
+bedplume(1)%c = 0.1 0.1 0.1    								! Initial volume fractions inside bedplume [-] (length vector must be nfrac large)
+bedplume(1)%c_tseriesfile = ''								! file containing timeseries of volume fractions [-] (optional overrules bedplume(.)%c, default '')
+bedplume(1)%sedflux = 6.625 59.625  						! Sediment flux [kg/s] (divided evenly over all cells within bedplume, length vector must be nfrac large)
 bedplume(1)%S_tseriesfile = './inputfiles/Inflow_S.asc'		! file containing timeseries of sediment flux [kg/s] (optional overrules bedplume(.)%sedflux, default '')
-bedplume(1)%move_zbed_criterium = 5.5	! criterium [m] to move this bedplume with move_dx,dy,dz once bed within x,y contour grows above this criterium: default one criterium full sim; optional series with length move_dx_series
-bedplume(1)%move_zbed_type = 1 			! switch [1 or 2] 1 (default) = use zbed_max for move_zbed_criterium and 2 = use zbed_mean for move_zbed_criterium: default one criterium full sim; optional series with length move_dx_series; when not defined zbed_max is used 
-bedplume(1)%move_dx_series = 			! series [m] to move bedplume in x direction every time bed grows above move_zbed_criterium within x,y contour bedplume
-bedplume(1)%move_dy_series = 			! series [m] to move bedplume in y direction every time bed grows above move_zbed_criterium within x,y contour bedplume
-bedplume(1)%move_dz_series = 			! series [m] to move bedplume in z direction (heigth and zbottom) every time bed grows above move_zbed_criterium within x,y contour bedplume
-bedplume(1)%move_outputfile_series = 	! series 1/0 to create a output 'mvbp3D' file yes or no every time bedplume is moved: default every time 'mvbp3D' file is created
-bedplume(1)%velocity_force = 1 			! default 1 velocity is implemented with body force, when 0 then velocity is implemented as immersed velocity straightforward
-bedplume(1)%move_nx_series = 			! series [-] to have momentum sqrt(u^2,v^2) in desired direction when bedplume has moved (length 1 or length move_dx_series; when nx,ny both 0 no momentum)
-bedplume(1)%move_ny_series = 			! series [-] to have momentum sqrt(u^2,v^2) in desired direction when bedplume has moved (length 1 or length move_dx_series; when nx,ny both 0 no momentum)
-bedplume(1)%x2 = -500. 50. 50. -500. ! (optional) x coordinate 4 corners location where check on move_zbed_criterium is carried out [m] (default bedplume()%x is used)
-bedplume(1)%y2 = -500. -500. 500. 500. ! (optional) y coordinate 4 corners location where check on move_zbed_criterium is carried out [m] (default bedplume()%y is used)
-bedplume(1)%move_dx2_series =			! (optional) series [m] to move bedplume()%x2; if not defined move_dx_series is used
-bedplume(1)%move_dy2_series =			! (optional) series [m] to move bedplume()%y2; if not defined move_dy_series is used
-bedplume(1)%dt_history= 				! (optional) time interval output [s]; when >0 a history is made of z-position and concentration of bedplume location 
-bedplume(1)%move_dz_height_factor =		! (optional) [-] factor to apply move_dz_series to bedplume height (e.g. make 0 to not apply move_dz_series to bedplume height)
-bedplume(1)%move_dz_zbottom_factor =		! (optional) [-] factor to apply move_dz_series to bedplume zbottom (e.g. make 0 to not apply move_dz_series to bedplume zbottom)
-bedplume(1)%move_u = 					! (optional) velocity [m/s] to move bedplume in x direction (default 0)
-bedplume(1)%move_v = 					! (optional) velocity [m/s] to move bedplume in y direction (default 0)
-bedplume(1)%move_w = 					! (optional) velocity [m/s] to move bedplume in z direction: it adjusts both bp()heigth and bp()zbottom (default 0)
+bedplume(1)%move_zbed_criterium = 5.5						! criterium [m] to move this bedplume with move_dx,dy,dz once bed within x,y contour grows above this criterium: default one criterium full sim; optional series with length move_dx_series
+bedplume(1)%move_zbed_type = 1 								! switch [1 or 2] 1 (default) = use zbed_max for move_zbed_criterium and 2 = use zbed_mean for move_zbed_criterium: default one criterium full sim; optional series with length move_dx_series; when not defined zbed_max is used 
+bedplume(1)%move_dx_series = 								! series [m] to move bedplume in x direction every time bed grows above move_zbed_criterium within x,y contour bedplume
+bedplume(1)%move_dy_series = 								! series [m] to move bedplume in y direction every time bed grows above move_zbed_criterium within x,y contour bedplume
+bedplume(1)%move_dz_series = 								! series [m] to move bedplume in z direction (heigth and zbottom) every time bed grows above move_zbed_criterium within x,y contour bedplume
+bedplume(1)%move_outputfile_series = 						! series 1/0 to create a output 'mvbp3D' file yes or no every time bedplume is moved: default every time 'mvbp3D' file is created
+bedplume(1)%velocity_force = 1 								! default 1 velocity is implemented with body force, when 0 then velocity is implemented as immersed velocity straightforward
+bedplume(1)%move_nx_series = 								! series [-] to have momentum sqrt(u^2,v^2) in desired direction when bedplume has moved (length 1 or length move_dx_series; when nx,ny both 0 no momentum)
+bedplume(1)%move_ny_series = 								! series [-] to have momentum sqrt(u^2,v^2) in desired direction when bedplume has moved (length 1 or length move_dx_series; when nx,ny both 0 no momentum)
+bedplume(1)%x2 = -500. 50. 50. -500. 						! (optional) x coordinate 4 corners location where check on move_zbed_criterium is carried out [m] (default bedplume()%x is used)
+bedplume(1)%y2 = -500. -500. 500. 500. 						! (optional) y coordinate 4 corners location where check on move_zbed_criterium is carried out [m] (default bedplume()%y is used)
+bedplume(1)%move_dx2_series =								! (optional) series [m] to move bedplume()%x2; if not defined move_dx_series is used
+bedplume(1)%move_dy2_series =								! (optional) series [m] to move bedplume()%y2; if not defined move_dy_series is used
+bedplume(1)%dt_history= 									! (optional) time interval output [s]; when >0 a history is made of z-position and concentration of bedplume location 
+bedplume(1)%move_dz_height_factor =							! (optional) [-] factor to apply move_dz_series to bedplume height (e.g. make 0 to not apply move_dz_series to bedplume height)
+bedplume(1)%move_dz_zbottom_factor =						! (optional) [-] factor to apply move_dz_series to bedplume zbottom (e.g. make 0 to not apply move_dz_series to bedplume zbottom)
+bedplume(1)%move_u = 										! (optional) velocity [m/s] to move bedplume in x direction (default 0)
+bedplume(1)%move_v = 										! (optional) velocity [m/s] to move bedplume in y direction (default 0)
+bedplume(1)%move_w = 										! (optional) velocity [m/s] to move bedplume in z direction: it adjusts both bp()heigth and bp()zbottom (default 0)
 /
 
 &fractions_in_plume
-fract(1)%ws = 0.001		! Particle settling velocity [m/s] !! positive downwards !!
-fract(1)%c = 0.00234 		! Volume fraction of this particle fraction in source plume [-]
-fract(1)%rho = 2650.		! Particle density [kg/m3]
-fract(1)%dpart = 15.		! Particle diameter [10^-6 m]
-fract(1)%dfloc = 80.		! Floc diameter equal or more than dpart (for sand equal to dpart) [10^-6 m]
-fract(1)%tau_e = 0.15		! Critical shear stress for erosion of mud [N/m2], not used for sand
-fract(1)%tau_d =  0.1		! Critical shear stress for deposition of mud [N/m2], not used for sand
-fract(1)%M = 1.e-4		! Erosion rate mud [kg/sm2] VanRijn proposes 1e-5 - 5e-4 kg/sm2, not used for sand
-fract(1)%kn_sed = 80.		! Nikkuradse roughness for shear stress acting on this sediment fraction (advised as dfloc for mud, for sand with interaction_bed=4 kn_sed is not used, but 2*d50 is used in line with Van Rijn 1984) [10^-6 m] (Elsewhere van Rijn proposes kn_sed=3*d90=6*d50=6*dpart for sand...) 
-fract(1)%zair_ref_belowsurf = 0.		! Optional reference level used to make air_fraction semi-compressible; fract(1)%rho is defined at zair_ref_belowsurf [m]
-fract(1)%CD = 0.		! (default 0.) [-] Optional define CD to make simplified correction in start up of settling velocity as function of distance to zair_ref_belowsurf (sqrt(1-exp(-1.5*CD/dpart*rho_b/rho_s*zzz)))
-fract(1)%type = 1			! 1 = silt/mud (default), 2=sand, 3=air, -1=VOF (VOF is nerd option)
+fract(1)%ws = 0.001					! Particle settling velocity [m/s] !! positive downwards !!
+fract(1)%c = 0.00234 				! Volume fraction of this particle fraction in source plume [-]
+fract(1)%rho = 2650.				! Particle density [kg/m3]
+fract(1)%dpart = 15.				! Particle diameter [10^-6 m]
+fract(1)%dfloc = 80.				! Floc diameter equal or more than dpart (for sand equal to dpart) [10^-6 m]
+fract(1)%tau_e = 0.15				! Critical shear stress for erosion of mud [N/m2], not used for sand
+fract(1)%tau_d =  0.1				! Critical shear stress for deposition of mud [N/m2], not used for sand
+fract(1)%M = 1.e-4					! Erosion rate mud [kg/sm2] VanRijn proposes 1e-5 - 5e-4 kg/sm2, not used for sand
+fract(1)%kn_sed = 80.				! Nikkuradse roughness for shear stress acting on this sediment fraction (advised as dfloc for mud, for sand with interaction_bed=4 kn_sed is not used, but 2*d50 is used in line with Van Rijn 1984) [10^-6 m] (Elsewhere van Rijn proposes kn_sed=3*d90=6*d50=6*dpart for sand...) 
+fract(1)%zair_ref_belowsurf = 0.	! Optional reference level used to make air_fraction semi-compressible; fract(1)%rho is defined at zair_ref_belowsurf [m]
+fract(1)%CD = 0.					! (default 0.) [-] Optional define CD to make simplified correction in start up of settling velocity as function of distance to zair_ref_belowsurf (sqrt(1-exp(-1.5*CD/dpart*rho_b/rho_s*zzz)))
+fract(1)%type = 1					! 1 = silt/mud (default), 2=sand, 3=air, -1=VOF (VOF is nerd option)
 /
 
 &LESmodel
-sgs_model='SWALE'			! Smagorinsky, WALE or SIGMA sgs model: 'SSmag','SWALE','Sigma','DSmag','MixLe','ReaKE'
+sgs_model='SWALE'			! Turbulence model; sgs: 'SWALE','Sigma','SSmag','DSmag'; RANS-type: 'MixLe','ReaKE'
 Cs=0.325					! Constant in sgs model [-]
 Cs_relax = 0.01 			! Relaxation factor for Cs dynamically determined within DSmag for stable results (default 0.01); additionally Cs is clipped between 0 and 0.23 
 Lmix_type=1					! 1=(dx*dy*dz)^1/3 | 2=sqrt((dx^2+dy^2+dz^2)/3)
@@ -230,47 +229,47 @@ Cal_buoyancy_eps = 1.		! Calibration factor for buoyancy term in Eps equation in
 
 
 &constants
-kappa = 0.41			! Von Karman constant [-]
-gx = 0.0 				! Gravity [m/s2] positive to work in negative x-dir
-gy = 0.0				! Gravity [m/s2] positive to work in negative y-dir
-gz = 9.81				! Gravity [m/s2] positive to work in negative z-dir
-settling_along_gvector = 0 ! 0 (default) = settling occurs in z-dir, 1 = settling along gravity vector direction
-ekm_mol = 1.e-3			! Moleculair dyn. viscosity [kg/(sm)]
-calibfac_sand_pickup = 1. ! Calibration factor for sand pickup, default 1. [-].
-calibfac_Shields_cr = 1. ! Calibration factor to adjust Shields_cr curve for start motion sand pickup, default 1. [-].
-pickup_formula = 'nielsen1992' !options are 'vanrijn1984' (default),'vanrijn2019' (=VR1984 including simple high speed erosion correction),'VR2019_Cbed' (=VR1984 including simple high speed erosion correction and reduction pickup for C_near_bed),'VR1984_Cbed' (=VR1984 including reduction pickup for C_near_bed),'nielsen1992','okayasu2010'
-kn_d50_multiplier = 2. 	! Defines Nikuradse bedroughness for sand pickup function (not for flow shear stress), default 2.; kn=2*d50 defined in paper Van Rijn 1984
-avalanche_slope = 2. ! Max bedslope 1:as; all slopes steeper avalanche towards 1:as (0=vertical slope, wet sand=30deg=1.7--15deg=3.7)
-av_slope_z =         ! To define variable avalanche_slope over depth --> make av_slope_z and avalanche_slope series over vertical; when av_slope_z not defined a uniform avalanche_slope is used
+kappa = 0.41					! Von Karman constant [-]
+gx = 0.0 						! Gravity [m/s2] positive to work in negative x-dir
+gy = 0.0						! Gravity [m/s2] positive to work in negative y-dir
+gz = 9.81						! Gravity [m/s2] positive to work in negative z-dir
+settling_along_gvector = 0 		! 0 (default) = settling occurs in z-dir, 1 = settling along gravity vector direction
+ekm_mol = 1.e-3					! Moleculair dyn. viscosity [kg/(sm)]
+calibfac_sand_pickup = 1. 		! Calibration factor for sand pickup, default 1. [-].
+calibfac_Shields_cr = 1. 		! Calibration factor to adjust Shields_cr curve for start motion sand pickup, default 1. [-].
+pickup_formula = 'vanrijn1984' 	!options are 'vanrijn1984' (default),'vanrijn2019' (=VR1984 including simple high speed erosion correction),'VR2019_Cbed' (=VR1984 including simple high speed erosion correction and reduction pickup for C_near_bed),'VR1984_Cbed' (=VR1984 including reduction pickup for C_near_bed),'nielsen1992','okayasu2010'
+kn_d50_multiplier = 2. 			! Defines Nikuradse bedroughness for sand pickup function (not for flow shear stress), default 2.; kn=2*d50 defined in paper Van Rijn 1984
+avalanche_slope = 2. 			! Max bedslope 1:as; all slopes steeper avalanche towards 1:as (0=vertical slope, wet sand=30deg=1.7--15deg=3.7)
+av_slope_z =         			! To define variable avalanche_slope over depth --> make av_slope_z and avalanche_slope series over vertical; when av_slope_z not defined a uniform avalanche_slope is used
 avfile = './inputfiles/av_SQDA2_v01.nc'         ! Input netcdf file for spatially variable av_slope (filled with av_slope(1:imax,1:jmax*px,0:k1) [-]) 
-avalanche_until_done =0	!1 = repeat avalanche until all bedslopes in domain agree with avalanche_slope (default 0 only do morfac times avalanche each timestep)
+avalanche_until_done =0			!1 = repeat avalanche until all bedslopes in domain agree with avalanche_slope (default 0 only do morfac times avalanche each timestep)
 reduction_sedimentation_shields = 0. ! Reduction of sedimentation at the bed by shear or perhaps grain-grain interactions (sheet flow) default 0. no reduction, value should be 4-5 PhD thesis vRhee p87, p99, p146 eq 7.74
-morfac = 1. 		! Factor applied to erosion and sedimentation fluxes to speed up morfology simulation (default 1.)
-morfac2 = 1. 		! Factor applied to erosion and sedimentation fluxes in bed (not in fluid) to speed up morfology simulation (default 1.); only dz_bed is accelerated but concentrations in fluid remain unaltered 
+morfac = 1. 					! Factor applied to erosion and sedimentation fluxes to speed up morfology simulation (default 1.)
+morfac2 = 1. 					! Factor applied to erosion and sedimentation fluxes in bed (not in fluid) to speed up morfology simulation (default 1.); only dz_bed is accelerated but concentrations in fluid remain unaltered 
 !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
 pickup_correction='noneMastBergenvdBerg' 		! option 'MastBergenvdBerg2003' gives correction to pickup for negative pore pressure, dilantancy effects and very steep slopes (See paper MastBergenvdBerg2003), default no correction is applied
-vwal=0.001				! vwal [m/s] is the wall velocity used in pickup_correction 'MastBergenvdBerg2003' 
-nl=0.44				! nl is the porosity of loose sand after dilantancy used in pickup_correction 'MastBergenvdBerg2003' and must be >(1-cfixedbed) 
-permeability_kl=0.000307	! permeability_kl [m/s] is the permeability of loose sand used in pickup_correction 'MastBergenvdBerg2003', can be calculated by relation Kozeny-Carmen kl = gD15^2/160nu*nl^3/(1-nl)^2
-wbed_correction = 0 		! 1 = apply upward W velocity at bed for eroding bed W=V_ero_bed; only applicable i.c.w. pickup_correction 'MastBergenvdBerg2003', default 0 --> W=0. at bed 
-pickup_fluctuations=0		!1 means white noise random fluctuations are added to calculated pickup, default 0 no random fluctuations on calculated pickup  
-pickup_fluctuations_ampl=0.	!determines amplitude of turbulent fluctuations --> pickup = pickup+pickup_fluctuations_ampl*random(range[-1 to 1])*pickup 
-cbed_method = 1				! 1 (default) = cbed is determined in lowest fluid cell above the bed; 2 = avg of all fluid cells above bed up to location of max horizontal velocity
-z_tau_sed = 0.1				! distance [m] from bed where Uflow is taken to calculate tau_sed (relevant when kn_sed differs from kn_flow), default 0.5*dz, but when comparing results with different dz define it as user input otherwise grid-dependent results as the calculation of tau_sed depends on distance from bed 
-wallmodel_tau_sed = 1 		! 1 (default) is log-law wall-model; 3 is TBL wall-model including dpdx, 4 is TBL wall-model excluding dpdx, 5 is wall-model based on VanDriest U-profile, 11 is tau based on U'W' and V'W'; this model choice is used for both suspended load pickup tau and bedload tau 
-nrmsbed = 100 				! # of realizations used to determine U'W' and V'W' in wallmodel_tau_sed=11
-ndtbed = 10 				! every ndtbed time steps a realization is made for U'W' and V'W' in wallmodel_tau_sed=11
-k_layer_pickup = 5		! number of grid cells over which pickup is spread out (default k_layer_pickup=1; everything in lowest cell)
-pickup_bedslope_geo = 1	!Default 0 no geometric correction for bedslopes on pickup (assuming nearly flat beds); 1 = geometric correction for bedslopes on near bed velocity and cell surface used to determine pickup and deposition
+vwal=0.001						! vwal [m/s] is the wall velocity used in pickup_correction 'MastBergenvdBerg2003' 
+nl=0.44							! nl is the porosity of loose sand after dilantancy used in pickup_correction 'MastBergenvdBerg2003' and must be >(1-cfixedbed) 
+permeability_kl=0.000307		! permeability_kl [m/s] is the permeability of loose sand used in pickup_correction 'MastBergenvdBerg2003', can be calculated by relation Kozeny-Carmen kl = gD15^2/160nu*nl^3/(1-nl)^2
+wbed_correction = 0 			! 1 = apply upward W velocity at bed for eroding bed W=V_ero_bed; only applicable i.c.w. pickup_correction 'MastBergenvdBerg2003', default 0 --> W=0. at bed 
+pickup_fluctuations=0			!1 means white noise random fluctuations are added to calculated pickup, default 0 no random fluctuations on calculated pickup  
+pickup_fluctuations_ampl=0.		!determines amplitude of turbulent fluctuations --> pickup = pickup+pickup_fluctuations_ampl*random(range[-1 to 1])*pickup 
+cbed_method = 1					! 1 (default) = cbed is determined in lowest fluid cell above the bed; 2 = avg of all fluid cells above bed up to location of max horizontal velocity
+z_tau_sed = 0.1					! distance [m] from bed where Uflow is taken to calculate tau_sed (relevant when kn_sed differs from kn_flow), default 0.5*dz, but when comparing results with different dz define it as user input otherwise grid-dependent results as the calculation of tau_sed depends on distance from bed 
+wallmodel_tau_sed = 1 			! 1 (default) is log-law wall-model; 3 is TBL wall-model including dpdx, 4 is TBL wall-model excluding dpdx, 5 is wall-model based on VanDriest U-profile, 11 is tau based on U'W' and V'W'; this model choice is used for both suspended load pickup tau and bedload tau 
+nrmsbed = 100 					! # of realizations used to determine U'W' and V'W' in wallmodel_tau_sed=11
+ndtbed = 10 					! every ndtbed time steps a realization is made for U'W' and V'W' in wallmodel_tau_sed=11
+k_layer_pickup = 5				! number of grid cells over which pickup is spread out (default k_layer_pickup=1; everything in lowest cell)
+pickup_bedslope_geo = 1			!Default 0 no geometric correction for bedslopes on pickup (assuming nearly flat beds); 1 = geometric correction for bedslopes on near bed velocity and cell surface used to determine pickup and deposition
 bedload_formula = 'nonenon0000' !options are 'vanrijn2003'; 'vanrijn2007'; 'MeyPeMu1948' (default no bedload calculated)
-kn_d50_multiplier_bl = 2. 	! Defines Nikuradse bedroughness for sand bedload function (not for flow shear stress), default 2.; kn=d90~2*d50
-calibfac_sand_bedload = 1. ! Calibration factor for sand bedload, default 1. [-].
-bl_relax = 0.01 			! Relaxation factor for bedload applied to near bed velocity to calculate bedload (default 0.01), needed for stable bedload results
-bedslope_effect=0			! 0 (default) no bedslope effect; 1 = adjust Shields_cr following Roulund,Fredsoe etal. 2004 for suspension and bedload; 2 = like 1 but only for bedload; 3 = bed-slope influence on bedload D3D style (Bagnold (1966) for longitudinal slope and Ikeda (1982, 1988) for transverse slope)
-bedslope_mu_s=0.63 			! static friction coefficient used in bedslope_effect = 1 or 2; bedslope_mu_s=0.63 used in Roulund,Fredsoe etal. 2004
-alfabs_bl=1.0 				! calibration factor longitudinal slope used in bedslope_effect = 3; default 1.0
-alfabn_bl=1.5 				! calibration factor transverse slope used in bedslope_effect = 3; default 1.5
-phi_sediment=30. 	! internal angle of friction of bed material (deg); default 30. degrees
+kn_d50_multiplier_bl = 2. 		! Defines Nikuradse bedroughness for sand bedload function (not for flow shear stress), default 2.; kn=d90~2*d50
+calibfac_sand_bedload = 1. 		! Calibration factor for sand bedload, default 1. [-].
+bl_relax = 0.01 				! Relaxation factor for bedload applied to near bed velocity to calculate bedload (default 0.01), needed for stable bedload results
+bedslope_effect=0				! 0 (default) no bedslope effect; 1 = adjust Shields_cr following Roulund,Fredsoe etal. 2004 for suspension and bedload; 2 = like 1 but only for bedload; 3 = bed-slope influence on bedload D3D style (Bagnold (1966) for longitudinal slope and Ikeda (1982, 1988) for transverse slope)
+bedslope_mu_s=0.63 				! static friction coefficient used in bedslope_effect = 1 or 2; bedslope_mu_s=0.63 used in Roulund,Fredsoe etal. 2004
+alfabs_bl=1.0 					! calibration factor longitudinal slope used in bedslope_effect = 3; default 1.0
+alfabn_bl=1.5 					! calibration factor transverse slope used in bedslope_effect = 3; default 1.5
+phi_sediment=30. 				! internal angle of friction of bed material (deg); default 30. degrees
 /
 
 &ship
@@ -284,19 +283,19 @@ Hback   = 6.			! Height of slope at back to fit propellers (preferably larger th
 xfront = -50. 			! x-coordinate front tip TSHD with respect to position overflow [m] (negative)
 yfront = -5. 			! y-coordinate front tip TSHD with respect to position overflow [m]
 kn_TSHD = 0.05			! Nikkuradse roughness bottom TSHD hull [m]
-nprop = 0			! Number of propellers [1 or 2]
+nprop = 0				! Number of propellers [1 or 2]
 Dprop = 4.7 			! Diameter of propellers [m]
 xprop = 180.			! x-coordinate of propellers [m] (distance from front TSHD)
-yprop = 10.			! y-distance of propellers from centerline TSHD [m] (only used when nprop=2)
+yprop = 10.				! y-distance of propellers from centerline TSHD [m] (only used when nprop=2)
 zprop = 3.65			! z-coordinate of centerline propellers with respect to waterline [m] (must be between 0 and depth)
-Pprop = 6000000.			! Power of propeller [W]
-rudder = 0			! 1 = Rudder behind propeller, 0 = no rudder
+Pprop = 6000000.		! Power of propeller [W]
+rudder = 0				! 1 = Rudder behind propeller, 0 = no rudder
 rot_prop = 10.			! Rotation direction of propellers [-] ! positive rpm_prop means right turning while watching from back (with two props both props counter-rotate with starboard prop is right-turning) 
 draghead = 'port'		! Draghead down at 'port','star' or 'both'; default 'none' [-]
-Dsp = 1.5			! Diameter suction pipe (outside diameter) [m]
-xdh = 75.			! Horizontal distance downstream of draghead to end of TSHD front nose [m] 
-softnose = 0                    ! 1 = TSHD nose is streamlined with a slope, 0 = vertical nose
-Hfront = 1.5                    ! Height of slope at front for streamlining (25% of Draught typically is okay)
+Dsp = 1.5				! Diameter suction pipe (outside diameter) [m]
+xdh = 75.				! Horizontal distance downstream of draghead to end of TSHD front nose [m] 
+softnose = 0            ! 1 = TSHD nose is streamlined with a slope, 0 = vertical nose
+Hfront = 1.5            ! Height of slope at front for streamlining (25% of Draught typically is okay)
 /
 
 ! Explanation cylindrical grid:             _
