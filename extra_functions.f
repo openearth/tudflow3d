@@ -59,7 +59,7 @@
 		IF (Uoutflow.eq.999) Uoutflow=2 !after 10 time steps use convective outflow 
       ENDIF	  
 !		write(*,*),'dt,rank voor',dt,rank
-      IF (CNdiffz.eq.1.or.CNdiffz.eq.2.or.CNdiffz.eq.11.or.CNdiffz.eq.12) THEN
+      IF (CNdiffz.eq.1.or.CNdiffz.eq.2) THEN
 	dz2 = 1.e9*dz*dz ! no dt restriction for vertical diff with CN implicit scheme
       ELSE
         dz2 = dz    * dz

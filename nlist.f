@@ -39,7 +39,7 @@
       INTEGER tmax_inUpunt_tauTSHD,tmax_inVpunt_tauTSHD,tmax_inVpunt_rudder
       INTEGER tmax_inWpunt2,tmax_inVpunt2,tmax_inPpunt2,tmax_inWpunt_suction
       INTEGER nfrac,slipvel,interaction_bed,nobst,nbedplume,continuity_solver,hindered_settling,settling_along_gvector
-      INTEGER nfr_silt,nfr_sand,nfr_air,istart_morf2,i_periodicx
+      INTEGER nfr_silt,nfr_sand,nfr_air,istart_morf2,i_periodicx,hindered_settling_c
       CHARACTER*256 hisfile,restart_dir,inpfile,plumetseriesfile,bcfile,plumetseriesfile2,bedlevelfile,initconditionsfile
       CHARACTER*3 time_int,advec_conc,cutter,split_rho_cont
       CHARACTER*5 sgs_model
@@ -251,7 +251,7 @@
      & ,istart_morf2,i_periodicx
 	NAMELIST /plume/W_j,plumetseriesfile,Awjet,Aujet,Avjet,Strouhal,azi_n,kjet,radius_j,Sc,slipvel,outflow_overflow_down,
      & U_j2,plumetseriesfile2,Awjet2,Aujet2,Avjet2,Strouhal2,azi_n2,radius_j2,zjet2,bedplume,radius_inner_j,xj,yj,W_j_powerlaw,
-     & plume_z_outflow_belowsurf,hindered_settling,Q_j,plumeQtseriesfile,plumectseriesfile
+     & plume_z_outflow_belowsurf,hindered_settling,hindered_settling_c,Q_j,plumeQtseriesfile,plumectseriesfile
 	NAMELIST /LESmodel/sgs_model,Cs,Lmix_type,nr_HPfilter,damping_drho_dz,damping_a1,damping_b1,damping_a2,damping_b2,
      & extra_mix_visc,nu_minimum_wall,Const1eps,Const2,Sc_k,Sc_eps,Cal_buoyancy_k,Cal_buoyancy_eps,Cs_relax
 	NAMELIST /constants/kappa,gx,gy,gz,ekm_mol,calibfac_sand_pickup,pickup_formula,kn_d50_multiplier,avalanche_slope,
@@ -420,6 +420,7 @@
 	Sc = -999.
 	slipvel = -999
 	hindered_settling = 1 !! hindered_settling = 1	!Hindered settling formula [-] 1=Rowe (1987) (smooth Ri-Za org) (default); 2=Garside (1977); 3=Di Felice (1999)
+	hindered_settling_c = 0 
 	outflow_overflow_down = 0
 	U_j2 = -999.
 	plumetseriesfile2=''
@@ -782,7 +783,8 @@
 	IF (Sc<0.) CALL writeerror(67)
 	IF (slipvel.ne.0.and.slipvel.ne.1.and.slipvel.ne.2) CALL writeerror(68)
 	IF (hindered_settling.ne.1.and.hindered_settling.ne.2.and.hindered_settling.ne.3) CALL writeerror(280)
-
+	IF (hindered_settling_c.ne.0.and.hindered_settling_c.ne.1) CALL writeerror(282)
+	
 	IF (U_j2.eq.999.and.radius_j2>0.) CALL writeerror(260)
 	IF (U_j2>-999.and.Awjet2<0.) CALL writeerror(261)
 	IF (U_j2>-999.and.Aujet2<0.) CALL writeerror(262)

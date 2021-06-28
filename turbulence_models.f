@@ -456,35 +456,8 @@ c*************************************************************
 	      enddo
  	endif
 
-		IF (extra_mix_visc.eq.'Krie') THEN
-			pwr=-2.5*cfixedbed
-			cref=1.001*cfixedbed !max ekm_mix is 3e4*ekm_mol
-			tel=0
-			DO n=1,nfr_silt
-				tel=tel+1
-				fracs_included(tel)=nfrac_silt(n)
-			ENDDO
-			DO n=1,nfr_sand
-				tel=tel+1
-				fracs_included(tel)=nfrac_sand(n)
-			ENDDO				
-			DO i=1,imax
-			  DO j=1,jmax
-			    DO k=1,kmax
-				  !ctot=SUM(cnew(fracs_included,i,j,k))
-				  ctot=0.
-				  DO n2=1,tel
-				    n=fracs_included(n2)
-					ctot = ctot + cnew(n,i,j,k)*frac(n)%dfloc/frac(n)%dpart
-					ctot = MIN(cfixedbed,ctot)
-				  ENDDO 
-				  ekm(i,j,k)=ekm(i,j,k)+ekm_mol*(1.-ctot/cref)**pwr
-				ENDDO
-			  ENDDO
-			ENDDO
-		ELSE
-			ekm=ekm+ekm_mol
-		ENDIF
+	ekm=ekm+ekm_mol
+
 		
 !!      Boundary conditions Neumann
         call shiftf(ekm,ebf) 
@@ -635,6 +608,34 @@ c*************************************************************
 !				ENDDO
 !			ENDDO
 
+		IF (extra_mix_visc.eq.'Krie') THEN !apply Krieger mixing viscosity only on ekm (momentum diffusivity) and not on Diffcof (concentration diffusivity)
+			pwr=-2.5*cfixedbed
+			cref=1.001*cfixedbed !max ekm_mix is 3e4*ekm_mol
+			tel=0
+			DO n=1,nfr_silt
+				tel=tel+1
+				fracs_included(tel)=nfrac_silt(n)
+			ENDDO
+			DO n=1,nfr_sand
+				tel=tel+1
+				fracs_included(tel)=nfrac_sand(n)
+			ENDDO				
+			DO i=0,i1 !1,imax
+			  DO j=0,j1 !1,jmax
+			    DO k=0,k1 !1,kmax
+				  !ctot=SUM(cnew(fracs_included,i,j,k))
+				  ctot=0.
+				  DO n2=1,tel
+				    n=fracs_included(n2)
+					ctot = ctot + cnew(n,i,j,k)*frac(n)%dfloc/frac(n)%dpart
+					ctot = MIN(cfixedbed,ctot)
+				  ENDDO 
+				  ekm(i,j,k)=ekm(i,j,k)+ekm_mol*(1.-ctot/cref)**pwr-ekm_mol 
+				ENDDO
+			  ENDDO
+			ENDDO
+		ENDIF 
+
       end
 
       subroutine LES_mixinglengthdamped(Uvel,Vvel,Wvel,rr)
@@ -755,35 +756,8 @@ c*************************************************************
 		enddo
 	enddo
 
-		IF (extra_mix_visc.eq.'Krie') THEN
-			pwr=-2.5*cfixedbed
-			cref=1.001*cfixedbed !max ekm_mix is 3e4*ekm_mol
-			tel=0
-			DO n=1,nfr_silt
-				tel=tel+1
-				fracs_included(tel)=nfrac_silt(n)
-			ENDDO
-			DO n=1,nfr_sand
-				tel=tel+1
-				fracs_included(tel)=nfrac_sand(n)
-			ENDDO				
-			DO i=1,imax
-			  DO j=1,jmax
-			    DO k=1,kmax
-				  !ctot=SUM(cnew(fracs_included,i,j,k))
-				  ctot=0.
-				  DO n2=1,tel
-				    n=fracs_included(n2)
-					ctot = ctot + cnew(n,i,j,k)*frac(n)%dfloc/frac(n)%dpart
-					ctot = MIN(cfixedbed,ctot)
-				  ENDDO 
-				  ekm(i,j,k)=ekm(i,j,k)+ekm_mol*(1.-ctot/cref)**pwr
-				ENDDO
-			  ENDDO
-			ENDDO
-		ELSE
-			ekm=ekm+ekm_mol
-		ENDIF
+		ekm=ekm+ekm_mol
+
 		if (slip_bot.ge.1.and.nu_minimum_wall.ge.1) then
 		  do i=1,imax
 			do j=1,jmax
@@ -1336,6 +1310,35 @@ c*************************************************************
             Diffcof(i,j,k)=0.
           enddo
         enddo
+		
+		IF (extra_mix_visc.eq.'Krie') THEN !apply Krieger mixing viscosity only on ekm (momentum diffusivity) and not on Diffcof (concentration diffusivity)
+			pwr=-2.5*cfixedbed
+			cref=1.001*cfixedbed !max ekm_mix is 3e4*ekm_mol
+			tel=0
+			DO n=1,nfr_silt
+				tel=tel+1
+				fracs_included(tel)=nfrac_silt(n)
+			ENDDO
+			DO n=1,nfr_sand
+				tel=tel+1
+				fracs_included(tel)=nfrac_sand(n)
+			ENDDO				
+			DO i=0,i1 !1,imax
+			  DO j=0,j1 !1,jmax
+			    DO k=0,k1 !1,kmax
+				  !ctot=SUM(cnew(fracs_included,i,j,k))
+				  ctot=0.
+				  DO n2=1,tel
+				    n=fracs_included(n2)
+					ctot = ctot + cnew(n,i,j,k)*frac(n)%dfloc/frac(n)%dpart
+					ctot = MIN(cfixedbed,ctot)
+				  ENDDO 
+				  ekm(i,j,k)=ekm(i,j,k)+ekm_mol*(1.-ctot/cref)**pwr-ekm_mol 
+				ENDDO
+			  ENDDO
+			ENDDO
+		ENDIF		
+		
       end
 
 
@@ -1445,35 +1448,7 @@ c*************************************************************
 	  enddo
 	enddo
 
-		IF (extra_mix_visc.eq.'Krie') THEN
-			pwr=-2.5*cfixedbed
-			cref=1.001*cfixedbed !max ekm_mix is 3e4*ekm_mol
-			tel=0
-			DO n=1,nfr_silt
-				tel=tel+1
-				fracs_included(tel)=nfrac_silt(n)
-			ENDDO
-			DO n=1,nfr_sand
-				tel=tel+1
-				fracs_included(tel)=nfrac_sand(n)
-			ENDDO				
-			DO i=1,imax
-			  DO j=1,jmax
-			    DO k=1,kmax
-				  !ctot=SUM(cnew(fracs_included,i,j,k))
-				  ctot=0.
-				  DO n2=1,tel
-				    n=fracs_included(n2)
-					ctot = ctot + cnew(n,i,j,k)*frac(n)%dfloc/frac(n)%dpart
-					ctot = MIN(cfixedbed,ctot)
-				  ENDDO 
-				  ekm(i,j,k)=ekm(i,j,k)+ekm_mol*(1.-ctot/cref)**pwr
-				ENDDO
-			  ENDDO
-			ENDDO
-		ELSE
-			ekm=ekm+ekm_mol
-		ENDIF
+		ekm=ekm+ekm_mol
 
 
 		if (slip_bot.ge.1.and.nu_minimum_wall.ge.1) then
@@ -1939,6 +1914,34 @@ c*************************************************************
 !					ENDDO
 !				ENDDO
 !			ENDDO
+
+		IF (extra_mix_visc.eq.'Krie') THEN !apply Krieger mixing viscosity only on ekm (momentum diffusivity) and not on Diffcof (concentration diffusivity)
+			pwr=-2.5*cfixedbed
+			cref=1.001*cfixedbed !max ekm_mix is 3e4*ekm_mol
+			tel=0
+			DO n=1,nfr_silt
+				tel=tel+1
+				fracs_included(tel)=nfrac_silt(n)
+			ENDDO
+			DO n=1,nfr_sand
+				tel=tel+1
+				fracs_included(tel)=nfrac_sand(n)
+			ENDDO				
+			DO i=0,i1 !1,imax
+			  DO j=0,j1 !1,jmax
+			    DO k=0,k1 !1,kmax
+				  !ctot=SUM(cnew(fracs_included,i,j,k))
+				  ctot=0.
+				  DO n2=1,tel
+				    n=fracs_included(n2)
+					ctot = ctot + cnew(n,i,j,k)*frac(n)%dfloc/frac(n)%dpart
+					ctot = MIN(cfixedbed,ctot)
+				  ENDDO 
+				  ekm(i,j,k)=ekm(i,j,k)+ekm_mol*(1.-ctot/cref)**pwr-ekm_mol 
+				ENDDO
+			  ENDDO
+			ENDDO
+		ENDIF
 		
       end
 
@@ -2079,35 +2082,7 @@ c*************************************************************
 	  enddo
 	enddo
 	
-		IF (extra_mix_visc.eq.'Krie') THEN
-			pwr=-2.5*cfixedbed
-			cref=1.001*cfixedbed !max ekm_mix is 3e4*ekm_mol
-			tel=0
-			DO n=1,nfr_silt
-				tel=tel+1
-				fracs_included(tel)=nfrac_silt(n)
-			ENDDO
-			DO n=1,nfr_sand
-				tel=tel+1
-				fracs_included(tel)=nfrac_sand(n)
-			ENDDO				
-			DO i=1,imax
-			  DO j=1,jmax
-			    DO k=1,kmax
-				  !ctot=SUM(cnew(fracs_included,i,j,k))
-				  ctot=0.
-				  DO n2=1,tel
-				    n=fracs_included(n2)
-					ctot = ctot + cnew(n,i,j,k)*frac(n)%dfloc/frac(n)%dpart
-					ctot = MIN(cfixedbed,ctot)
-				  ENDDO 
-				  ekm(i,j,k)=ekm(i,j,k)+ekm_mol*(1.-ctot/cref)**pwr
-				ENDDO
-			  ENDDO
-			ENDDO
-		ELSE
-			ekm=ekm+ekm_mol
-		ENDIF
+		ekm=ekm+ekm_mol
 
 		if (slip_bot.ge.1.and.nu_minimum_wall.ge.1) then
 		  do i=1,imax
@@ -2573,6 +2548,34 @@ c*************************************************************
 !				ENDDO
 !			ENDDO
 
+		IF (extra_mix_visc.eq.'Krie') THEN !apply Krieger mixing viscosity only on ekm (momentum diffusivity) and not on Diffcof (concentration diffusivity)
+			pwr=-2.5*cfixedbed
+			cref=1.001*cfixedbed !max ekm_mix is 3e4*ekm_mol
+			tel=0
+			DO n=1,nfr_silt
+				tel=tel+1
+				fracs_included(tel)=nfrac_silt(n)
+			ENDDO
+			DO n=1,nfr_sand
+				tel=tel+1
+				fracs_included(tel)=nfrac_sand(n)
+			ENDDO				
+			DO i=0,i1 !1,imax
+			  DO j=0,j1 !1,jmax
+			    DO k=0,k1 !1,kmax
+				  !ctot=SUM(cnew(fracs_included,i,j,k))
+				  ctot=0.
+				  DO n2=1,tel
+				    n=fracs_included(n2)
+					ctot = ctot + cnew(n,i,j,k)*frac(n)%dfloc/frac(n)%dpart
+					ctot = MIN(cfixedbed,ctot)
+				  ENDDO 
+				  ekm(i,j,k)=ekm(i,j,k)+ekm_mol*(1.-ctot/cref)**pwr-ekm_mol 
+				ENDDO
+			  ENDDO
+			ENDDO
+		ENDIF
+
       end
 
       subroutine LES_DSmag(Uvel,Vvel,Wvel,rr)
@@ -3029,35 +3032,9 @@ c*************************************************************
    	     enddo			
 	  enddo
 	enddo
-		IF (extra_mix_visc.eq.'Krie') THEN
-			pwr=-2.5*cfixedbed
-			cref=1.001*cfixedbed !max ekm_mix is 3e4*ekm_mol
-			tel=0
-			DO n=1,nfr_silt
-				tel=tel+1
-				fracs_included(tel)=nfrac_silt(n)
-			ENDDO
-			DO n=1,nfr_sand
-				tel=tel+1
-				fracs_included(tel)=nfrac_sand(n)
-			ENDDO				
-			DO i=1,imax
-			  DO j=1,jmax
-			    DO k=1,kmax
-				  !ctot=SUM(cnew(fracs_included,i,j,k))
-				  ctot=0.
-				  DO n2=1,tel
-				    n=fracs_included(n2)
-					ctot = ctot + cnew(n,i,j,k)*frac(n)%dfloc/frac(n)%dpart
-					ctot = MIN(cfixedbed,ctot)
-				  ENDDO 
-				  ekm(i,j,k)=ekm(i,j,k)+ekm_mol*(1.-ctot/cref)**pwr
-				ENDDO
-			  ENDDO
-			ENDDO
-		ELSE
-			ekm=ekm+ekm_mol
-		ENDIF
+
+		ekm=ekm+ekm_mol
+
 
 		if (slip_bot.ge.1.and.nu_minimum_wall.ge.1) then
 		  do i=1,imax
@@ -3523,6 +3500,34 @@ c*************************************************************
 !					ENDDO
 !				ENDDO
 !			ENDDO
+
+		IF (extra_mix_visc.eq.'Krie') THEN !apply Krieger mixing viscosity only on ekm (momentum diffusivity) and not on Diffcof (concentration diffusivity)
+			pwr=-2.5*cfixedbed
+			cref=1.001*cfixedbed !max ekm_mix is 3e4*ekm_mol
+			tel=0
+			DO n=1,nfr_silt
+				tel=tel+1
+				fracs_included(tel)=nfrac_silt(n)
+			ENDDO
+			DO n=1,nfr_sand
+				tel=tel+1
+				fracs_included(tel)=nfrac_sand(n)
+			ENDDO				
+			DO i=0,i1 !1,imax
+			  DO j=0,j1 !1,jmax
+			    DO k=0,k1 !1,kmax
+				  !ctot=SUM(cnew(fracs_included,i,j,k))
+				  ctot=0.
+				  DO n2=1,tel
+				    n=fracs_included(n2)
+					ctot = ctot + cnew(n,i,j,k)*frac(n)%dfloc/frac(n)%dpart
+					ctot = MIN(cfixedbed,ctot)
+				  ENDDO 
+				  ekm(i,j,k)=ekm(i,j,k)+ekm_mol*(1.-ctot/cref)**pwr-ekm_mol 
+				ENDDO
+			  ENDDO
+			ENDDO
+		ENDIF
 			 
       end
 	  
@@ -3665,35 +3670,8 @@ c*************************************************************
 	  enddo
 	enddo
 	
-		IF (extra_mix_visc.eq.'Krie') THEN
-			pwr=-2.5*cfixedbed
-			cref=1.001*cfixedbed !max ekm_mix is 3e4*ekm_mol
-			tel=0
-			DO n=1,nfr_silt
-				tel=tel+1
-				fracs_included(tel)=nfrac_silt(n)
-			ENDDO
-			DO n=1,nfr_sand
-				tel=tel+1
-				fracs_included(tel)=nfrac_sand(n)
-			ENDDO				
-			DO i=1,imax
-			  DO j=1,jmax
-			    DO k=1,kmax
-				  !ctot=SUM(cnew(fracs_included,i,j,k))
-				  ctot=0.
-				  DO n2=1,tel
-				    n=fracs_included(n2)
-					ctot = ctot + cnew(n,i,j,k)*frac(n)%dfloc/frac(n)%dpart
-					ctot = MIN(cfixedbed,ctot)
-				  ENDDO 
-				  ekm(i,j,k)=ekm(i,j,k)+ekm_mol*(1.-ctot/cref)**pwr
-				ENDDO
-			  ENDDO
-			ENDDO
-		ELSE
-			ekm=ekm+ekm_mol
-		ENDIF
+		ekm=ekm+ekm_mol
+
 		if (slip_bot.ge.1.and.nu_minimum_wall.ge.1) then
 		  do i=1,imax
 			do j=1,jmax
@@ -4158,6 +4136,33 @@ c*************************************************************
 !				ENDDO
 !			ENDDO		
 		
+		IF (extra_mix_visc.eq.'Krie') THEN !apply Krieger mixing viscosity only on ekm (momentum diffusivity) and not on Diffcof (concentration diffusivity)
+			pwr=-2.5*cfixedbed
+			cref=1.001*cfixedbed !max ekm_mix is 3e4*ekm_mol
+			tel=0
+			DO n=1,nfr_silt
+				tel=tel+1
+				fracs_included(tel)=nfrac_silt(n)
+			ENDDO
+			DO n=1,nfr_sand
+				tel=tel+1
+				fracs_included(tel)=nfrac_sand(n)
+			ENDDO				
+			DO i=0,i1 !1,imax
+			  DO j=0,j1 !1,jmax
+			    DO k=0,k1 !1,kmax
+				  !ctot=SUM(cnew(fracs_included,i,j,k))
+				  ctot=0.
+				  DO n2=1,tel
+				    n=fracs_included(n2)
+					ctot = ctot + cnew(n,i,j,k)*frac(n)%dfloc/frac(n)%dpart
+					ctot = MIN(cfixedbed,ctot)
+				  ENDDO 
+				  ekm(i,j,k)=ekm(i,j,k)+ekm_mol*(1.-ctot/cref)**pwr-ekm_mol 
+				ENDDO
+			  ENDDO
+			ENDDO
+		ENDIF		
 		gvector=sqrt(gx**2+gy**2+gz**2)
 		dnew = 0.
 	      call advecc_VLE(dnew,TKE,rhU*Uvel,rhV*Vvel,rhW*Wvel,rr,Ru,Rp,dr,phiv,phipt,dz,
@@ -4176,11 +4181,14 @@ c*************************************************************
 	 !implicit treatment negative Pb term for stable stratification giving destruction of TKE 
         IF (CNdiffz.eq.1.or.CNdiffz.eq.2.or.CNdiffz.eq.11.or.CNdiffz.eq.12) THEN !CN semi implicit treatment diff-z:
 		 IF (CNdiffz.eq.1.or.CNdiffz.eq.11) THEN 
-			CNz=0.55 
+			CNz=0.5 
 		 ELSE 
 			CNz=1.
 		 ENDIF 		   
 		 call bound_p(TKEnew) ! bc start CN-diffz 
+		 IF (CNdiffz.eq.11) THEN 
+			TKEnew=TKEnew-TKE !CNdiffz apply implicit part on C^n+1-C^n 
+		 ENDIF		 
 		 do j=1,jmax
 		  do i=1,imax
 			do k=1,kmax !0,k1
@@ -4281,6 +4289,9 @@ c*************************************************************
 				   enddo
 				 enddo	
 				 call t2fp(ans_T(1:imax,1:jmax*px,1:kmax/px),TKEnew(1:imax,1:jmax,1:kmax))
+				 IF (CNdiffz.eq.11) THEN 
+					TKEnew=TKEnew+TKE !!after CNdiffz implicit part on C^n+1-C^n bring back C^n+1
+				 ENDIF				 
 			 ENDIF
 		ENDIF	 
 		TKEnew=MAX(1.e-12,TKEnew) 
@@ -4299,11 +4310,14 @@ c*************************************************************
 	 
         IF (CNdiffz.eq.1.or.CNdiffz.eq.2.or.CNdiffz.eq.11.or.CNdiffz.eq.12) THEN !CN semi implicit treatment diff-z:
 			IF (CNdiffz.eq.1.or.CNdiffz.eq.11) THEN 
-				CNz=0.55 
+				CNz=0.5
 			ELSE 
 				CNz=1.
 			ENDIF 		   
 			call bound_p(EEEnew) ! bc start CN-diffz 
+			IF (CNdiffz.eq.11) THEN 
+				EEEnew=EEEnew-EEE !CNdiffz apply implicit part on C^n+1-C^n 
+			ENDIF				 			
             do j=1,jmax
               do i=1,imax
                 do k=1,kmax !0,k1
@@ -4404,6 +4418,9 @@ c*************************************************************
 				   enddo
 				 enddo	
 				 call t2fp(ans_T(1:imax,1:jmax*px,1:kmax/px),EEEnew(1:imax,1:jmax,1:kmax))
+				 IF (CNdiffz.eq.11) THEN 
+					EEEnew=EEEnew+EEE !!after CNdiffz implicit part on C^n+1-C^n bring back C^n+1
+				 ENDIF				 				 
 			 ENDIF
 		ENDIF	 
 		EEEnew=MAX(1.e-12,EEEnew) 
@@ -4902,35 +4919,8 @@ c*************************************************************
 		enddo
 	enddo
 	
-    	IF (extra_mix_visc.eq.'Krie') THEN
-			pwr=-2.5*cfixedbed
-			cref=1.001*cfixedbed !max ekm_mix is 3e4*ekm_mol
-			tel=0
-			DO n=1,nfr_silt
-				tel=tel+1
-				fracs_included(tel)=nfrac_silt(n)
-			ENDDO
-			DO n=1,nfr_sand
-				tel=tel+1
-				fracs_included(tel)=nfrac_sand(n)
-			ENDDO				
-			DO i=1,imax
-			  DO j=1,jmax
-			    DO k=1,kmax
-				  !ctot=SUM(cnew(fracs_included,i,j,k))
-				  ctot=0.
-				  DO n2=1,tel
-				    n=fracs_included(n2)
-					ctot = ctot + cnew(n,i,j,k)*frac(n)%dfloc/frac(n)%dpart
-					ctot = MIN(cfixedbed,ctot)
-				  ENDDO 
-				  ekm(i,j,k)=ekm(i,j,k)+ekm_mol*(1.-ctot/cref)**pwr
-				ENDDO
-			  ENDDO
-			ENDDO
-		ELSE
-			ekm=ekm+ekm_mol
-		ENDIF
+ 		ekm=ekm+ekm_mol
+
 !!	Boundary conditions Neumann
 	call shiftf(ekm,ebf) 
 	call shiftb(ekm,ebb) 
@@ -5031,6 +5021,35 @@ c*************************************************************
 !					ENDDO
 !				ENDDO
 !			ENDDO
+
+		IF (extra_mix_visc.eq.'Krie') THEN !apply Krieger mixing viscosity only on ekm (momentum diffusivity) and not on Diffcof (concentration diffusivity)
+			pwr=-2.5*cfixedbed
+			cref=1.001*cfixedbed !max ekm_mix is 3e4*ekm_mol
+			tel=0
+			DO n=1,nfr_silt
+				tel=tel+1
+				fracs_included(tel)=nfrac_silt(n)
+			ENDDO
+			DO n=1,nfr_sand
+				tel=tel+1
+				fracs_included(tel)=nfrac_sand(n)
+			ENDDO				
+			DO i=0,i1 !1,imax
+			  DO j=0,j1 !1,jmax
+			    DO k=0,k1 !1,kmax
+				  !ctot=SUM(cnew(fracs_included,i,j,k))
+				  ctot=0.
+				  DO n2=1,tel
+				    n=fracs_included(n2)
+					ctot = ctot + cnew(n,i,j,k)*frac(n)%dfloc/frac(n)%dpart
+					ctot = MIN(cfixedbed,ctot)
+				  ENDDO 
+				  ekm(i,j,k)=ekm(i,j,k)+ekm_mol*(1.-ctot/cref)**pwr-ekm_mol 
+				ENDDO
+			  ENDDO
+			ENDDO
+		ENDIF
+		
       end
 
 

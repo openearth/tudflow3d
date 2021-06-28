@@ -139,6 +139,7 @@ plume_z_outflow_belowsurf = 6. ! depth flow surface at which plume flows downwar
 Sc = 1.0							! Schmidt number used to determine Diff. coeff from viscosity [-]
 slipvel = 0							! 0 = no slip velocity, 1 = hindered settling RiZa, 2 = settling with frac(n)%ws
 hindered_settling = 1				!Hindered settling formula [-] 1=Rowe (1987) (smooth Ri-Za org) (default); 2=Garside (1977); 3=Di Felice (1999)
+hindered_settling_c = 0				! 0 = use AVG of C(k) and C(k+1) for hindered settling formula (default); 1 = use MAX
 outflow_overflow_down = 0       	! 1 = outflow velocity bc at keel TSHD 0 = outflow velocity bc at top overflow pipe (default 0)
 U_j2 = 2.							! Inflow velocity plume horizontal at i=0 [m/s]
 Aujet2 = 0.1						! Azimuthal factor Ujet2 [-]

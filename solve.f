@@ -682,6 +682,7 @@ c
 	real utr(0:i1,0:j1,0:k1),vtr(0:i1,0:j1,0:k1),wtr(0:i1,0:j1,0:k1)	
 	real ws(0:i1,0:j1,0:k1),gvector,CNz
 	integer ileng,ierr,itag,status(MPI_STATUS_SIZE),perx,pery 
+	real rhU2(0:i1,0:j1,0:k1),rhV2(0:i1,0:j1,0:k1),rhW2(0:i1,0:j1,0:k1)
 !		real dUdt1(0:i1,0:j1,0:k1),dVdt1(0:i1,0:j1,0:k1),dWdt1(0:i1,0:j1,0:k1)
 !	
 !	dUdt1=dudt
@@ -900,7 +901,7 @@ c********************************************************************
 				dcdtbot(n,:,:)= cnewbot(n,:,:) + dt*dnewcbot(n,:,:) ! time update	
 			IF (CNdiffz.eq.1.or.CNdiffz.eq.2.or.CNdiffz.eq.11.or.CNdiffz.eq.12) THEN !CN semi implicit treatment diff-z:
 			 IF (CNdiffz.eq.1.or.CNdiffz.eq.11) THEN 
-				CNz=0.55
+				CNz=0.5
 			 ELSE 
 				CNz=1.
 			 ENDIF 
@@ -912,6 +913,9 @@ c********************************************************************
 				 dcdt(n,i,j,k) = dcdt(n,i,j,kmax) ! No diffusion over vertical inflow boundary, this line is needed for exact influx
 			   enddo
 			 enddo
+			 IF (CNdiffz.eq.11) THEN 
+				dcdt(n,:,:,:)=dcdt(n,:,:,:)-cnew(n,:,:,:) !apply CNdiffz implicit part on C^n+1-U^n
+			 ENDIF				 
              do j=1,jmax
                do i=1,imax
                  do k=1,kmax !0,k1
@@ -1012,6 +1016,9 @@ c********************************************************************
 				   enddo
 				 enddo	
 				 call t2fp(ans_T(1:imax,1:jmax*px,1:kmax/px),dcdt(n,1:imax,1:jmax,1:kmax))
+				 IF (CNdiffz.eq.11) THEN 
+					dcdt(n,:,:,:)=dcdt(n,:,:,:)+cnew(n,:,:,:) !!after CNdiffz implicit part on C^n+1-C^n bring back C^n+1
+				 ENDIF					 
 			 ENDIF
 			ENDIF
           enddo !end nfrac
@@ -1312,12 +1319,20 @@ c********************************************************************
 
       IF (CNdiffz.eq.1.or.CNdiffz.eq.2.or.CNdiffz.eq.11.or.CNdiffz.eq.12) THEN !CN semi implicit treatment diff-z:
 			IF (CNdiffz.eq.1.or.CNdiffz.eq.11) THEN 
-				CNz=0.55  
+				CNz=0.5 !0.55 
 			ELSE 
 				CNz=1.
-			ENDIF 	  
+			ENDIF 
+		rhU2=rhU  !use rho at U loc determined with rnew and not drdt
+		rhV2=rhV 
+		rhW2=rhW 
 		call bound_rhoU(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
      & 	Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
+		IF (CNdiffz.eq.11) THEN 
+			dUdt=dUdt-Unew*rhU2 !apply CNdiffz implicit part on U*-U^n
+			dVdt=dVdt-Vnew*rhV2
+			dWdt=dWdt-Wnew*rhW2
+		ENDIF 
 		do j=1,jmax
          do i=1,imax
             do k=1,kmax !0,k1
@@ -1605,9 +1620,15 @@ c********************************************************************
 		 call t2fp(uu_T(1:imax,1:jmax*px,1:kmax/px),dUdt(1:imax,1:jmax,1:kmax))
 		 call t2fp(vv_T(1:imax,1:jmax*px,1:kmax/px),dVdt(1:imax,1:jmax,1:kmax))
 		 call t2fp(ww_T(1:imax,1:jmax*px,1:kmax/px),dWdt(1:imax,1:jmax,1:kmax))
+		 IF (CNdiffz.eq.11) THEN 
+			 dUdt=dUdt+Unew*rhU2 !after CNdiffz implicit part on U*-U^n bring back U*
+			 dVdt=dVdt+Vnew*rhV2
+			 dWdt=dWdt+Wnew*rhW2	
+		 ENDIF 
 		  ! add source terms for cylindrical coordinate system (following PhD dissertation Pourqeui 1994 TU p. 82)
 		  ! --> LdW 24-5-2021 choice to do it explicitly at end to avoid issues with boundary conditions at 0,i1/0,j1
 		  ! --> in diff_compact.f the diffusion terms are discretised a bit differently (via the stress tensor), but the below source terms are included there as well
+		  IF (CNdiffz.eq.12) THEN !CNdiffz.eq.11 gives 2*0.5*DIFF_EXPLICIT so source term already covered
 		  do k=1,kmax ! add source term [-u/r^2 - 2/r^2*dvdphi] to U and [-v/r^2 - 2/r^2*dudphi] to V 
            do i=1,imax
             do j=1,jmax 
@@ -1619,8 +1640,9 @@ c********************************************************************
      &          (Vnew(i,j,k)-2.*(Unew(i,jp,k)-Unew(i,j,k))/(phip(jp)-phip(j)))/(Rp(i)*Rp(i))   				
 			enddo
            enddo
-		  enddo		
-		ENDIF 
+		  enddo	
+		  ENDIF 
+		ENDIF
       ENDIF
 	  
 	  pold=p+pold    !what is called p here was dp in reality, now p is 			--> P^n 
@@ -3410,7 +3432,7 @@ c********************************************************************
 	      	  !endif
            IF (CNdiffz.eq.1.or.CNdiffz.eq.2) THEN !CN semi implicit treatment diff-z:
 			IF (CNdiffz.eq.1) THEN 
-				CNz=0.55 
+				CNz=0.5 
 			ELSE 
 				CNz=1.
 			ENDIF 		   
@@ -3628,7 +3650,7 @@ c********************************************************************
 
       IF (CNdiffz.eq.1.or.CNdiffz.eq.2) THEN !CN semi implicit treatment diff-z:
 			IF (CNdiffz.eq.1) THEN 
-				CNz=0.55 
+				CNz=0.5 !0.55 
 			ELSE 
 				CNz=1.
 			ENDIF 	  
