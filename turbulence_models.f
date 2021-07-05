@@ -3563,6 +3563,7 @@ c*************************************************************
 	real aaay(0:jmax*px+1),bbby(0:jmax*px+1),cccy(0:jmax*px+1),rhssy(0:jmax*px+1)
 	real ans_T(1:imax,0:jmax*px+1,1:kmax/px),ekm_T(1:imax,0:jmax*px+1,1:kmax/px)
 	integer ileng,ierr,itag,status(MPI_STATUS_SIZE),perx,pery 
+	real ddvar(0:i1,0:j1,0:k1),varnew2(0:i1,0:j1,0:k1) 
 
 	sqrtsix=sqrt(6.)
 	
@@ -4186,58 +4187,16 @@ c*************************************************************
 			CNz=1.
 		 ENDIF 		   
 		 call bound_p(TKEnew) ! bc start CN-diffz 
-		 IF (CNdiffz.eq.11) THEN 
-			TKEnew=TKEnew-TKE !CNdiffz apply implicit part on C^n+1-C^n 
-		 ENDIF		 
-		 do j=1,jmax
-		  do i=1,imax
-			do k=1,kmax !0,k1
-				km=k-1 !MAX(0,k-1)
-				kp=k+1 !MIN(k1,k+1)
-				!kpp=MIN(k1,k+2)
-				ekm_min=0.5*(ekm(i,j,km)/rr(i,j,km)+ekm(i,j,k)/rr(i,j,k))/Sc_k
-				ekm_plus=0.5*(ekm(i,j,kp)/rr(i,j,kp)+ekm(i,j,k)/rr(i,j,k))/Sc_k
-			    aaa(k)=-CNz*ekm_min*dt/dz**2
-			    ccc(k)=-CNz*ekm_plus*dt/dz**2
-			    bbb(k)=1.-aaa(k)-ccc(k) 
-			enddo
-			aaa(0)=0.
-			aaa(k1)=0.
-			ccc(0)=0.
-			ccc(k1)=0.
-			bbb(0)=1.
-			bbb(k1)=1.
-			rhss=TKEnew(i,j,0:k1)
-			CALL solve_tridiag(TKEnew(i,j,0:k1),aaa,bbb,ccc,rhss,k1+1) 
-		  enddo
-		 enddo
+!		 IF (CNdiffz.eq.11) THEN 
+!			TKEnew=TKEnew-TKE !CNdiffz apply implicit part on C^n+1-C^n 
+!		 ENDIF	
+		 varnew2=TKEnew !for non-updated RHS 	 
 		 IF (CNdiffz.eq.11.or.CNdiffz.eq.12) THEN 
 			 perx=0
 			 pery=0 		 
 			 IF (periodicx.eq.1) perx=1
 			 IF (periodicy.eq.1) pery=1			 
 			 Diffcof3 = ekm/rr/Sc_k
-			 do k=1,kmax !j=1,jmax
-			   do j=1,jmax 
-				 do i=1,imax
-				   im=i-1 !MAX(0,i-1)
-				   ip=i+1 !MIN(i1,i+1)
-				   ekm_min=0.5*(Diffcof3(im,j,k)+Diffcof3(i,j,k))
-				   ekm_plus=0.5*(Diffcof3(ip,j,k)+Diffcof3(i,j,k))
-				   aaax(i)=-CNz*ekm_min*Ru(im)*dt/((Rp(i)-Rp(im))*dr(i)*Rp(i))
-				   cccx(i)=-CNz*ekm_plus*Ru(i)*dt/((Rp(ip)-Rp(i))*dr(i)*Rp(i))				   
-				   bbbx(i)=1.-aaax(i)-cccx(i)				   
-				 enddo
-				 aaax(0)=0.
-				 aaax(i1)=0.
-				 cccx(0)=0.
-				 cccx(i1)=0.
-				 bbbx(0)=1.
-				 bbbx(i1)=1.
-				 rhssx=TKEnew(0:i1,j,k)
-				 CALL solve_tridiag_switchperiodic(TKEnew(0:i1,j,k),aaax,bbbx,cccx,rhssx,i1+1,perx) 
-			   enddo
-			 enddo	
 			 call t2np(Diffcof3(1:imax,1:jmax,1:kmax),ekm_T(1:imax,1:jmax*px,1:kmax/px))
 			 call t2np(TKEnew(1:imax,1:jmax,1:kmax),ans_T(1:imax,1:jmax*px,1:kmax/px))
 			 !! also pass over boundaries at j=0 :
@@ -4288,12 +4247,63 @@ c*************************************************************
 					 CALL solve_tridiag(ans_T(i,0:px*jmax+1,k),aaay,bbby,cccy,rhssy,px*jmax+2) 
 				   enddo
 				 enddo	
-				 call t2fp(ans_T(1:imax,1:jmax*px,1:kmax/px),TKEnew(1:imax,1:jmax,1:kmax))
-				 IF (CNdiffz.eq.11) THEN 
-					TKEnew=TKEnew+TKE !!after CNdiffz implicit part on C^n+1-C^n bring back C^n+1
-				 ENDIF				 
+				 call t2fp(ans_T(1:imax,1:jmax*px,1:kmax/px),TKEnew(1:imax,1:jmax,1:kmax))	
+				ddvar=TKEnew-varnew2 
+			 do k=1,kmax !j=1,jmax
+			   do j=1,jmax 
+				 do i=1,imax
+				   im=i-1 !MAX(0,i-1)
+				   ip=i+1 !MIN(i1,i+1)
+				   ekm_min=0.5*(Diffcof3(im,j,k)+Diffcof3(i,j,k))
+				   ekm_plus=0.5*(Diffcof3(ip,j,k)+Diffcof3(i,j,k))
+				   aaax(i)=-CNz*ekm_min*Ru(im)*dt/((Rp(i)-Rp(im))*dr(i)*Rp(i))
+				   cccx(i)=-CNz*ekm_plus*Ru(i)*dt/((Rp(ip)-Rp(i))*dr(i)*Rp(i))				   
+				   bbbx(i)=1.-aaax(i)-cccx(i)				   
+				 enddo
+				 aaax(0)=0.
+				 aaax(i1)=0.
+				 cccx(0)=0.
+				 cccx(i1)=0.
+				 bbbx(0)=1.
+				 bbbx(i1)=1.
+				 rhssx=varnew2(0:i1,j,k)
+				 CALL solve_tridiag_switchperiodic(TKEnew(0:i1,j,k),aaax,bbbx,cccx,rhssx,i1+1,perx) 
+			   enddo
+			 enddo	
+			 ddvar=ddvar+TKEnew-varnew2
+!				 IF (CNdiffz.eq.11) THEN 
+!					TKEnew=TKEnew+TKE !!after CNdiffz implicit part on C^n+1-C^n bring back C^n+1
+!				 ENDIF				 
 			 ENDIF
+		 do j=1,jmax
+		  do i=1,imax
+			do k=1,kmax !0,k1
+				km=k-1 !MAX(0,k-1)
+				kp=k+1 !MIN(k1,k+1)
+				!kpp=MIN(k1,k+2)
+				ekm_min=0.5*(ekm(i,j,km)/rr(i,j,km)+ekm(i,j,k)/rr(i,j,k))/Sc_k
+				ekm_plus=0.5*(ekm(i,j,kp)/rr(i,j,kp)+ekm(i,j,k)/rr(i,j,k))/Sc_k
+			    aaa(k)=-CNz*ekm_min*dt/dz**2
+			    ccc(k)=-CNz*ekm_plus*dt/dz**2
+			    bbb(k)=1.-aaa(k)-ccc(k) 
+			enddo
+			aaa(0)=0.
+			aaa(k1)=0.
+			ccc(0)=0.
+			ccc(k1)=0.
+			bbb(0)=1.
+			bbb(k1)=1.
+			rhss=varnew2(i,j,0:k1)
+			CALL solve_tridiag(TKEnew(i,j,0:k1),aaa,bbb,ccc,rhss,k1+1) 
+		  enddo
+		 enddo	
+		 IF (CNdiffz.eq.1.or.CNdiffz.eq.2) THEN 
+		   ddvar=TKEnew-varnew2
+		 ELSE 
+		   ddvar=ddvar+TKEnew-varnew2
+		 ENDIF 
 		ENDIF	 
+		TKEnew=varnew2+ddvar
 		TKEnew=MAX(1.e-12,TKEnew) 
 		
 		dnew = 0.
@@ -4315,58 +4325,16 @@ c*************************************************************
 				CNz=1.
 			ENDIF 		   
 			call bound_p(EEEnew) ! bc start CN-diffz 
-			IF (CNdiffz.eq.11) THEN 
-				EEEnew=EEEnew-EEE !CNdiffz apply implicit part on C^n+1-C^n 
-			ENDIF				 			
-            do j=1,jmax
-              do i=1,imax
-                do k=1,kmax !0,k1
-					km=k-1 !MAX(0,k-1)
-					kp=k+1 !MIN(k1,k+1)
-					!kpp=MIN(k1,k+2)
-					ekm_min=0.5*(ekm(i,j,km)/rr(i,j,km)+ekm(i,j,k)/rr(i,j,k))/Sc_eps
-					ekm_plus=0.5*(ekm(i,j,kp)/rr(i,j,kp)+ekm(i,j,k)/rr(i,j,k))/Sc_eps
-					aaa(k)=-CNz*ekm_min*dt/dz**2
-					ccc(k)=-CNz*ekm_plus*dt/dz**2
-					bbb(k)=1.-aaa(k)-ccc(k) 
-                enddo
-				aaa(0)=0.
-				aaa(k1)=0.
-				ccc(0)=0.
-				ccc(k1)=0.
-				bbb(0)=1.
-				bbb(k1)=1.
-				rhss=EEEnew(i,j,0:k1)
-				CALL solve_tridiag(EEEnew(i,j,0:k1),aaa,bbb,ccc,rhss,k1+1) 
-              enddo
-            enddo
+!			IF (CNdiffz.eq.11) THEN 
+!				EEEnew=EEEnew-EEE !CNdiffz apply implicit part on C^n+1-C^n 
+!			ENDIF				 			
+			varnew2=EEEnew 
 		    IF (CNdiffz.eq.11.or.CNdiffz.eq.12) THEN 
 			 perx=0
 			 pery=0 			
 			 IF (periodicx.eq.1) perx=1
 			 IF (periodicy.eq.1) pery=1			
 			 Diffcof3 = ekm/rr/Sc_eps
-			 do k=1,kmax !j=1,jmax
-			   do j=1,jmax 
-				 do i=1,imax
-				   im=i-1 !MAX(0,i-1)
-				   ip=i+1 !MIN(i1,i+1)
-				   ekm_min=0.5*(Diffcof3(im,j,k)+Diffcof3(i,j,k))
-				   ekm_plus=0.5*(Diffcof3(ip,j,k)+Diffcof3(i,j,k))
-				   aaax(i)=-CNz*ekm_min*Ru(im)*dt/((Rp(i)-Rp(im))*dr(i)*Rp(i))
-				   cccx(i)=-CNz*ekm_plus*Ru(i)*dt/((Rp(ip)-Rp(i))*dr(i)*Rp(i))				   
-				   bbbx(i)=1.-aaax(i)-cccx(i)				   
-				 enddo
-				 aaax(0)=0.
-				 aaax(i1)=0.
-				 cccx(0)=0.
-				 cccx(i1)=0.
-				 bbbx(0)=1.
-				 bbbx(i1)=1.
-				 rhssx=EEEnew(0:i1,j,k)
-				 CALL solve_tridiag_switchperiodic(EEEnew(0:i1,j,k),aaax,bbbx,cccx,rhssx,i1+1,perx) 
-			   enddo
-			 enddo	
 			 call t2np(Diffcof3(1:imax,1:jmax,1:kmax),ekm_T(1:imax,1:jmax*px,1:kmax/px))
 			 call t2np(EEEnew(1:imax,1:jmax,1:kmax),ans_T(1:imax,1:jmax*px,1:kmax/px))
 			 !! also pass over boundaries at j=0 :
@@ -4417,12 +4385,63 @@ c*************************************************************
 					 CALL solve_tridiag_switchperiodic(ans_T(i,0:px*jmax+1,k),aaay,bbby,cccy,rhssy,px*jmax+2,pery) 
 				   enddo
 				 enddo	
-				 call t2fp(ans_T(1:imax,1:jmax*px,1:kmax/px),EEEnew(1:imax,1:jmax,1:kmax))
-				 IF (CNdiffz.eq.11) THEN 
-					EEEnew=EEEnew+EEE !!after CNdiffz implicit part on C^n+1-C^n bring back C^n+1
-				 ENDIF				 				 
+				 call t2fp(ans_T(1:imax,1:jmax*px,1:kmax/px),EEEnew(1:imax,1:jmax,1:kmax))		
+				 ddvar=EEEnew-varnew2
+			 do k=1,kmax !j=1,jmax
+			   do j=1,jmax 
+				 do i=1,imax
+				   im=i-1 !MAX(0,i-1)
+				   ip=i+1 !MIN(i1,i+1)
+				   ekm_min=0.5*(Diffcof3(im,j,k)+Diffcof3(i,j,k))
+				   ekm_plus=0.5*(Diffcof3(ip,j,k)+Diffcof3(i,j,k))
+				   aaax(i)=-CNz*ekm_min*Ru(im)*dt/((Rp(i)-Rp(im))*dr(i)*Rp(i))
+				   cccx(i)=-CNz*ekm_plus*Ru(i)*dt/((Rp(ip)-Rp(i))*dr(i)*Rp(i))				   
+				   bbbx(i)=1.-aaax(i)-cccx(i)				   
+				 enddo
+				 aaax(0)=0.
+				 aaax(i1)=0.
+				 cccx(0)=0.
+				 cccx(i1)=0.
+				 bbbx(0)=1.
+				 bbbx(i1)=1.
+				 rhssx=varnew2(0:i1,j,k)
+				 CALL solve_tridiag_switchperiodic(EEEnew(0:i1,j,k),aaax,bbbx,cccx,rhssx,i1+1,perx) 
+			   enddo
+			 enddo	
+			 ddvar=ddvar+EEEnew-varnew2
+!				 IF (CNdiffz.eq.11) THEN 
+!					EEEnew=EEEnew+EEE !!after CNdiffz implicit part on C^n+1-C^n bring back C^n+1
+!				 ENDIF				 				 
 			 ENDIF
-		ENDIF	 
+            do j=1,jmax
+              do i=1,imax
+                do k=1,kmax !0,k1
+					km=k-1 !MAX(0,k-1)
+					kp=k+1 !MIN(k1,k+1)
+					!kpp=MIN(k1,k+2)
+					ekm_min=0.5*(ekm(i,j,km)/rr(i,j,km)+ekm(i,j,k)/rr(i,j,k))/Sc_eps
+					ekm_plus=0.5*(ekm(i,j,kp)/rr(i,j,kp)+ekm(i,j,k)/rr(i,j,k))/Sc_eps
+					aaa(k)=-CNz*ekm_min*dt/dz**2
+					ccc(k)=-CNz*ekm_plus*dt/dz**2
+					bbb(k)=1.-aaa(k)-ccc(k) 
+                enddo
+				aaa(0)=0.
+				aaa(k1)=0.
+				ccc(0)=0.
+				ccc(k1)=0.
+				bbb(0)=1.
+				bbb(k1)=1.
+				rhss=varnew2(i,j,0:k1)
+				CALL solve_tridiag(EEEnew(i,j,0:k1),aaa,bbb,ccc,rhss,k1+1) 
+              enddo
+            enddo
+		 IF (CNdiffz.eq.1.or.CNdiffz.eq.2) THEN 
+		   ddvar=EEEnew-varnew2
+		 ELSE 
+		   ddvar=ddvar+EEEnew-varnew2
+		 ENDIF 			
+		ENDIF
+		EEEnew=varnew2+ddvar
 		EEEnew=MAX(1.e-12,EEEnew) 
 		
 		! buoyancy term in epsilon equation is ommitted in Fluent because influence on epsilon is unknown

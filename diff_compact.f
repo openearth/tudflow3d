@@ -724,9 +724,9 @@ c*****************************************************************
 	  CNz=1.
 	ENDIF
 	IF (CNdiffz.eq.11) THEN !CN diff in z-dir is half old, half new timestep (this is half old timestep)
-	  CNx=0.5*2. !0.45 !0.5
-	  CNy=0.5*2. !0.45 !0.5
-	  CNz=0.5*2.
+	  CNx=0.5 !0.5*2. !0.45 !0.5
+	  CNy=0.5 !0.5*2. !0.45 !0.5
+	  CNz=0.5 !0.5*2.
 	ELSEIF (CNdiffz.eq.12) THEN !CN diff in z-dir is 100% new timestep (Euler backward)
 	  CNx=0. 
 	  CNy=0. 
@@ -880,9 +880,9 @@ c*****************************************************************
 	  CNz=1.
 	ENDIF
 	IF (CNdiffz.eq.11) THEN !CN diff in z-dir is half old, half new timestep (this is half old timestep)
-	  CNx=0.5*2. !0.45 !0.5
-	  CNy=0.5*2. !0.45 !0.5
-	  CNz=0.5*2.
+	  CNx=0.5 !0.5*2. !0.45 !0.5
+	  CNy=0.5 !0.5*2. !0.45 !0.5
+	  CNz=0.5 !0.5*2.
 	ELSEIF (CNdiffz.eq.12) THEN !CN diff in z-dir is 100% new timestep (Euler backward)
 	  CNx=0. 
 	  CNy=0. 
@@ -1029,9 +1029,9 @@ c*****************************************************************
 	  CNz=1.
 	ENDIF
 	IF (CNdiffz.eq.11) THEN !CN diff in z-dir is half old, half new timestep (this is half old timestep)
-	  CNx=0.5*2. !0.45 !0.5
-	  CNy=0.5*2. !0.45 !0.5
-	  CNz=0.5*2.
+	  CNx=0.5 !0.5*2. !0.45 !0.5
+	  CNy=0.5 !0.5*2. !0.45 !0.5
+	  CNz=0.5 !0.5*2.
 	ELSEIF (CNdiffz.eq.12) THEN !CN diff in z-dir is 100% new timestep (Euler backward)
 	  CNx=0. 
 	  CNy=0. 
@@ -1162,9 +1162,9 @@ c*****************************************************************
 	  CNz=1.
 	ENDIF
 	IF (CNdiffz.eq.11) THEN !CNdiffz 11 is 0.5*DIFF(C^n+1-C^n) + 1*DIFF(C^n) --> this is explicit last step
-	  CNx=0.5*2. !0.45 !0.5
-	  CNy=0.5*2. !0.45 !0.5
-	  CNz=0.5*2.	  
+	  CNx=0.5 !0.5*2. !0.45 !0.5
+	  CNy=0.5 !0.5*2. !0.45 !0.5
+	  CNz=0.5 !0.5*2.	  
 	ELSEIF (CNdiffz.eq.12) THEN !CN diff in z-dir is 100% new timestep (Euler backward)
 	  CNx=0. 
 	  CNy=0. 
