@@ -27,7 +27,7 @@
       real  dr2,dz2,df,df2,kcoeff,tmp1,tmp2,tmp3,Courant,dtmp,dtold
 	  double precision Tadapt,Uav,Vav,localsum,globalsum,du,duu,wsettlingmax,wsettlingmin
 	  real Wmaxx,tmp11,tmp12,tmp13,tmp4,tmp11global,tmp12global,tmp13global
-	  real dtnew
+	  real dtnew,tmp10,tmp10global
 
 	  
 !		IF (nobst>0.and.bp(1)%forever.eq.0.and.time_np+dt.gt.bp(1)%t0.and.counter<10) THEN
@@ -75,6 +75,7 @@
 		  tmp11=dt/Courant
 		  tmp12=dt/Courant
 		  tmp13=dt/Courant
+		  tmp10=dt/Courant  
 		  do k=1,kmax
 			 do j=1,jmax
 				do i=1,imax
@@ -83,13 +84,12 @@
 				dr2 = dr(i) * dr(i) 
 				kcoeff = ekm(i,j,k) /rnew(i,j,k)
 				Wmaxx = MAX(abs(Wnew(i,j,k)-wsettlingmax),abs(Wnew(i,j,k)-wsettlingmin))
-!				tmp1 = ( abs(Unew(i,j,k)) / ( Rp(i+1)-Rp(i) ) ) +
-!     &             ( abs(Vnew(i,j,k)) /         df        ) +
-!     &             ( Wmaxx /         dz        )             
-!				tmp3 = 1.0 / ( tmp1 + 1.e-12 )
-!				tmp3 =Courant *tmp3 !CFD advection criterium
-!				dt = min( dt , tmp3 )
-!				!dtmp = dt
+				tmp1 = ( abs(Unew(i,j,k)) / ( Rp(i+1)-Rp(i) ) ) +
+     &             ( abs(Vnew(i,j,k)) /         df        ) +
+     &             ( Wmaxx /         dz        )             
+				tmp3 = 1.0 / ( tmp1 + 1.e-12 )
+				tmp3 =0.5*tmp3 !CFD advection criterium
+				tmp10 = min(tmp10, tmp3 )
 				
 				tmp11 = min(tmp11,1.33*kcoeff/(Unew(i,j,k)**2+Vnew(i,j,k)**2+Wmaxx**2+1.e-12))
 				tmp12 = min(tmp12,0.25/(kcoeff*(1./dr2+1./df2+1./dz2)))
@@ -97,12 +97,14 @@
 				enddo
 			 enddo
 		  enddo	  
-		!dtmp=dt
-		!call mpi_allreduce(dtmp,dt,1,mpi_double_precision,mpi_min,mpi_comm_world,ierr)	
+		!!dtmp=dt
+		!!call mpi_allreduce(dtmp,dt,1,mpi_double_precision,mpi_min,mpi_comm_world,ierr)	
+		call mpi_allreduce(tmp10,tmp10global,1,mpi_double_precision,mpi_min,mpi_comm_world,ierr)			
 		call mpi_allreduce(tmp11,tmp11global,1,mpi_double_precision,mpi_min,mpi_comm_world,ierr)			
 		call mpi_allreduce(tmp12,tmp12global,1,mpi_double_precision,mpi_min,mpi_comm_world,ierr)			
 		call mpi_allreduce(tmp13,tmp13global,1,mpi_double_precision,mpi_min,mpi_comm_world,ierr)	
-		dt = Courant*max(tmp11global,min(tmp12global,tmp13global))
+		dt = Courant*min(tmp10global,max(tmp11global,min(tmp12global,tmp13global)))
+!		dt = Courant*tmp10global
 	  ELSE 
 		  do k=1,kmax
 			 do j=1,jmax

@@ -788,10 +788,10 @@ c*****************************************************************
      2            + (Uvel(i,j,k)   - Uvel(i,jm,k)) / ( Ru(i) * (phip(j)-phip(jm)) )
      2          ) ) / ( Ru(i) * (phiv(j)-phiv(jm)) )
      +              +
-     3 ( epop * (   CNz*(Uvel(i,j,kp)  - Uvel(i,j,k) ) * dzi
+     3 ( epop *CNz* ( (Uvel(i,j,kp)  - Uvel(i,j,k) ) * dzi
      3            + (Wvel(ip,j,k)  - Wvel(i,j,k) ) / (Rp(ip) - Rp(i))
      3          )             -
-     3   epom * (   CNz*(Uvel(i,j,k)   - Uvel(i,j,km)) * dzi 
+     3   epom *CNz* (   (Uvel(i,j,k)   - Uvel(i,j,km)) * dzi 
      3            + (Wvel(ip,j,km) - Wvel(i,j,km)) / (Rp(ip) - Rp(i))
      3          ) ) * dzi
      +              -
@@ -955,10 +955,10 @@ c*****************************************************************
      2			 - 1./3.*divvL*Rp(i)
      2                 ) ) / ( 0.5 * Rp(i) * Rp(i) * (phip(jp)-phip(j)))
      +              +
-     3 (   eopp * (  CNz*(Vvel(i,j,kp)  - Vvel(i,j,k) ) * dzi
+     3 (   eopp * CNz*(  (Vvel(i,j,kp)  - Vvel(i,j,k) ) * dzi
      3              +(Wvel(i,jp,k)  - Wvel(i,j,k) ) / (Rp(i)*(phip(jp)-phip(j)))
      3            ) -
-     3     eopm * (  CNz*(Vvel(i,j,k)   - Vvel(i,j,km)) * dzi
+     3     eopm * CNz*(  (Vvel(i,j,k)   - Vvel(i,j,km)) * dzi
      3              +(Wvel(i,jp,km) - Wvel(i,j,km)) / (Rp(i)*(phip(jp)-phip(j)))
      3            )  ) * dzi
 
@@ -1090,8 +1090,8 @@ c*****************************************************************
      +             +
 !     3 ( ekm(i,j,kp)*fc_global(i,j+rank*jmax,kp) * (CNz*(Wvel(i,j,kp) - Wvel(i,j,k ))*dzi - 1./3.*divvR ) -
 !     3   ekm(i,j,k )*fc_global(i,j+rank*jmax,k) * (CNz*(Wvel(i,j,k)  - Wvel(i,j,km))*dzi - 1./3.*divvL )	 
-     3 ( ekm(i,j,kp)* (CNz*(Wvel(i,j,kp) - Wvel(i,j,k ))*dzi - 1./3.*divvR ) -
-     3   ekm(i,j,k )* (CNz*(Wvel(i,j,k)  - Wvel(i,j,km))*dzi - 1./3.*divvL )
+     3 ( ekm(i,j,kp)* CNz*((Wvel(i,j,kp) - Wvel(i,j,k ))*dzi - 1./3.*divvR ) -
+     3   ekm(i,j,k )* CNz*((Wvel(i,j,k)  - Wvel(i,j,km))*dzi - 1./3.*divvL )
      3  	 ) *2.*dzi 
            enddo
         enddo
