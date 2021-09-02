@@ -249,7 +249,7 @@ morfac = 1. 					! Factor applied to erosion and sedimentation fluxes to speed u
 morfac2 = 1. 					! Factor applied to erosion and sedimentation fluxes in bed (not in fluid) to speed up morfology simulation (default 1.); only dz_bed is accelerated but concentrations in fluid remain unaltered 
 !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
 pickup_correction='noneMastBergenvdBerg' 		! option 'MastBergenvdBerg2003' gives correction to pickup for negative pore pressure, dilantancy effects and very steep slopes (See paper MastBergenvdBerg2003), default no correction is applied
-vwal=0.001						! vwal [m/s] is the wall velocity used in pickup_correction 'MastBergenvdBerg2003' 
+vwal=0.001						! vwal [m/s] is the wall velocity used in pickup_correction 'MastBergenvdBerg2003'; if defined >999 then vwal is calculated from the actual bed-slope 
 nl=0.44							! nl is the porosity of loose sand after dilantancy used in pickup_correction 'MastBergenvdBerg2003' and must be >(1-cfixedbed) 
 permeability_kl=0.000307		! permeability_kl [m/s] is the permeability of loose sand used in pickup_correction 'MastBergenvdBerg2003', can be calculated by relation Kozeny-Carmen kl = gD15^2/160nu*nl^3/(1-nl)^2
 wbed_correction = 0 			! 1 = apply upward W velocity at bed for eroding bed W=V_ero_bed; only applicable i.c.w. pickup_correction 'MastBergenvdBerg2003', default 0 --> W=0. at bed 

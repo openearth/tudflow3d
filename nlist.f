@@ -63,7 +63,7 @@
       CHARACTER*256 plumeQtseriesfile,plumectseriesfile,avfile,obstfile     
       REAL Q_j,plumeQseries(1:10000),plumeQtseries(1:10000),plumectseries(1:10000),plumecseries(30,1:10000) !c(30) matches with size frac_init
       REAL Aplume,driftfluxforce_calfac
-	  REAL vwal,delta_nsed,nl,permeability_kl,pickup_fluctuations_ampl,z_tau_sed,kn_d50_multiplier_bl,bl_relax
+	  REAL vwal,vwal2,delta_nsed,nl,permeability_kl,pickup_fluctuations_ampl,z_tau_sed,kn_d50_multiplier_bl,bl_relax
 	  INTEGER pickup_fluctuations,cbed_method,k_layer_pickup,nu_minimum_wall,pickup_bedslope_geo,wbed_correction,bedslope_effect
 	  INTEGER wallmodel_tau_sed,ndtbed,nrmsbed,telUVWbed,tel_dt
 	  REAL Const1eps,Const2,Sc_k,Sc_eps,Cal_buoyancy_k,Cal_buoyancy_eps,Cs_relax
@@ -1390,7 +1390,8 @@
 	IF (calibfac_Shields_cr<0.) CALL writeerror(99)
 	IF (morfac<0.) CALL writeerror(101)
 	IF (morfac2<1.) CALL writeerror(102)
-	IF (pickup_correction.eq.'MastBergenvdBerg2003') THEN 
+	IF (pickup_correction.eq.'MastBergenvdBerg2003'.or.pickup_correction.eq.'MBvdBerg2003_vecheck') THEN 
+		vwal2=vwal 
 		IF (vwal<0) CALL writeerror(103)
 		IF (nl<0.or.nl<(1.-cfixedbed)) CALL writeerror(104)
 		delta_nsed=(nl-(1.-cfixedbed))/(cfixedbed) !delta_nsed=(nl-n0)/(1-n0)

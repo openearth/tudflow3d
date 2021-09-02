@@ -1185,7 +1185,34 @@
 				ENDIF
 				IF (pickup_correction.eq.'MastBergenvdBerg2003') THEN 
 					vs = MAX(sqrt(gvector*delta*d50),1.e-12)
-					!vwal = (-cfixedbed*delta*sin(phi-alpha)/sin(alpha))/(delta_nsed/permeability_kt) !vwal is user input, here Eq.6 from MastBergenvdBerg2003 is mentioned to know how to calculate it (in Eq. 6 the minus sign was forgotten)
+					!vwal = (-cfixedbed*delta*sin(phi-alpha)/sin(phi))/(delta_nsed/permeability_kt) !vwal is user input, here Eq.6 from MastBergenvdBerg2003 is mentioned to know how to calculate it (in Eq. 6 the minus sign was forgotten)
+					IF (vwal2>999.) THEN !determine vwal dynamically within computational domain
+					  dzbed_dx=-(zbed(i+1,j)-zbed(i-1,j))/(Rp(i+1)-Rp(i-1)) !defined with z positive down
+     &  *MIN(bednotfixed(i+1,j,kbed(i+1,j)),bednotfixed(i-1,j,kbed(i-1,j)))					
+					  dzbed_dy=-(zbed(i,j+1)-zbed(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1))) !defined with z positive down
+     &  *MIN(bednotfixed(i,j+1,kbed(i,j+1)),bednotfixed(i,j-1,kbed(i,j-1)))					
+					  dzbed_dl=sqrt(dzbed_dx**2+dzbed_dy**2)
+					  bedslope_angle=atan(dzbed_dl)					
+					  vwal = (-cfixedbed*delta*sin(MIN(phi_sediment-bedslope_angle,0.))/sin(phi_sediment))/(delta_nsed/permeability_kl)
+					ENDIF 
+					
+					ve = 0.5*vwal+vs*sqrt((0.5*vwal/vs)**2+fcor*phipp*delta/delta_nsed*(permeability_kl/vs))
+					phipp = ve*cfixedbed/vs
+					
+					IF (wbed_correction.eq.1) Wbed(i,j)=MAX(vwal*bs_geo,0.)
+				ELSEIF (pickup_correction.eq.'MBvdBerg2003_vecheck') THEN 
+					vs = MAX(sqrt(gvector*delta*d50),1.e-12)
+					!vwal = (-cfixedbed*delta*sin(phi-alpha)/sin(phi))/(delta_nsed/permeability_kt) !vwal is user input, here Eq.6 from MastBergenvdBerg2003 is mentioned to know how to calculate it (in Eq. 6 the minus sign was forgotten)
+					IF (vwal2>999.) THEN !determine vwal dynamically within computational domain
+					  dzbed_dx=-(zbed(i+1,j)-zbed(i-1,j))/(Rp(i+1)-Rp(i-1)) !defined with z positive down
+     &  *MIN(bednotfixed(i+1,j,kbed(i+1,j)),bednotfixed(i-1,j,kbed(i-1,j)))					
+					  dzbed_dy=-(zbed(i,j+1)-zbed(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1))) !defined with z positive down
+     &  *MIN(bednotfixed(i,j+1,kbed(i,j+1)),bednotfixed(i,j-1,kbed(i,j-1)))					
+					  dzbed_dl=sqrt(dzbed_dx**2+dzbed_dy**2)
+					  bedslope_angle=atan(dzbed_dl)					
+					  vwal = (-cfixedbed*delta*sin(MIN(phi_sediment-bedslope_angle,0.))/sin(phi_sediment))/(delta_nsed/permeability_kl)
+					ENDIF 
+					
 					ve = 0.5*vwal+vs*sqrt((0.5*vwal/vs)**2+fcor*phipp*delta/delta_nsed*(permeability_kl/vs))
 					phipp = ve*cfixedbed/vs 
 					
@@ -1193,7 +1220,7 @@
      & 					SUM(ccnew(1:nfrac,i,j,kplus))*(MIN(0.,Wsed(n,i,j,kbed(i,j))))*morfac ! this is depo (neg value) in m/s 
 					ve_check = ve_check/cfixedbed  ! correction needed for pore volume 
 					phipp = phipp + MAX(vwal*bs_geo-ve_check,0.)/((delta*gvector*d50)**0.5*morfac*bs_geo)*cfixedbed
-					IF (wbed_correction.eq.1) Wbed(i,j)=ve_check+MAX(vwal*bs_geo-ve_check,0.)
+					IF (wbed_correction.eq.1) Wbed(i,j)=ve_check+MAX(vwal*bs_geo-ve_check,0.)				
 				ENDIF
 				IF (pickup_fluctuations.eq.1) THEN
 					!1 add white noise to pickup
