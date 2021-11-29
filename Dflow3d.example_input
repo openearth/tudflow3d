@@ -102,7 +102,7 @@ obst(1)%height = 0.5            	! vertical height obstacle
 obst(1)%zbottom = 0.2            	! vertical bottom start height obstacle [m] (optional, default 0)
 obst(1)%ero = 0. 					! 0. = no erosion on top of obstacle, 1. = erosion possible  (optional, default 0)
 obst(1)%depo = 0. 					! 0. = no deposition on top of obstacle, 1. = deposition possible  (optional, default 0)
-obstfile = './inputfiles/obstacles_v01.nc'         ! Input netcdf file 3D obstacles; must contain obstacle_Ploc (1=obst, 0=not), obstacle_ero, obstacle_depo (0:i1,0:jmax*px+1,0:k1) [-]) 
+obstfile = './inputfiles/obstacles_v01.nc'         ! Input netcdf file 3D obstacles; must contain obstacle_Ploc (1=obst, 0=not), obstacle_ero, obstacle_depo (0:i1,0:jmax*px+1,0:k1) [-]); optionally a wildcard can be used to provide several obstfiles which are used one by one at moments in time defined in variable obstacle_starttimes [s] which indicates the starttime for each next obstfile, obstacle_starttimes is a vector in the netcdf file and must be equal in length to the number of obstfiles provided
 U_b3 = -0.47						! Ambient bc U velocity [m/s] in surf_layer with respect to TSHD motion: negative means TSHD sailing against current (Utotal=U_TSHD-U_b), without TSHD positive is inward velocity
 V_b3 = -0.29						! Ambient bc V velocity [m/s] in surf_layer with respect to TSHD motion: positive means current from starboard  
 surf_layer = 0.						! Layer depth [m] from free surface with U_b3,V_b3 ambient current (default 0)
@@ -228,7 +228,6 @@ Cal_buoyancy_k = 1.			! Calibration factor for buoyancy term in K equation in Re
 Cal_buoyancy_eps = 1.		! Calibration factor for buoyancy term in Eps equation in Realizible K-Eps turbulence model 'ReaKE', default 1. [-] -->buoyancy term in Eps equation is only applied for unstable stratification, not for stable stratification (destruction of turbulence) 
 /
 
-
 &constants
 kappa = 0.41					! Von Karman constant [-]
 gx = 0.0 						! Gravity [m/s2] positive to work in negative x-dir
@@ -297,6 +296,43 @@ Dsp = 1.5				! Diameter suction pipe (outside diameter) [m]
 xdh = 75.				! Horizontal distance downstream of draghead to end of TSHD front nose [m] 
 softnose = 0            ! 1 = TSHD nose is streamlined with a slope, 0 = vertical nose
 Hfront = 1.5            ! Height of slope at front for streamlining (25% of Draught typically is okay)
+/
+
+&rheology
+Non_Newtonian=0				!Default is 0, which is Newtonian treatment, 1 is time-independent behaviour, 2 is including time-dependent behaviour (thixotropy)
+Rheological_model='SIMPLE'	!If Non-Newtonian = 1, choose rheological model to determine the Bingham parameters, i.e. yield stress and bingham viscosity. Options are: 'SIMPLE','JACOBS','WINTER','THOMAS'.
+PAPANASTASIOUS_m=400.		!Exponential stress growth parameter of the Papanastasious model 1987
+SIMPLE_tauy=0.2				!Bingham yield stress [Pa] is constant
+SIMPLE_muB=0.1				!Bingham dynamic viscosity [kg/m/s] is constant
+JACOBS_Ky=6.72e4			!Empirical yield stress constant
+JACOBS_Kmu=251				!Empirical Viscosity constant
+JACOBS_Aclay=1.0			!Colloidal activity of clay
+JACOBS_By=-4.75				!Empirical constant of yield stress power function
+JACOBS_Bmu=-2.64			!Empirical constant of viscosity power function
+JACOBS_muw=0.001			!Dynamic viscosity fit to model
+WINTER_Ay=7.3e5				!Empirical yield stress constant
+WINTER_Amu=932				!Empirical Viscosity constant
+WINTER_nf=2.64				!Fractal dimension
+WINTER_af=3.65				!Coefficient accounting for anisometry of aggregate geometry
+WINTER_muw=0.001			!Dynamic viscosity fit to model
+THOMAS_Cy=7.45e5			!Empirical yield stress constant
+THOMAS_Cmu=1e-3				!Empirical Viscosity constant
+THOMAS_ky=1.5				!Empirical yield stress constant relating to max sand concentration
+THOMAS_kmu=1.25				!Empirical viscosity constant relating to max sand concentration
+THOMAS_Py=5.61				!Empirical constant of yield stress power function
+THOMAS_Pmu=-3.03			!Empirical Viscosity constant of the exponential function
+THOMAS_phi_sand_max=0.6		!Maximal solids fraction of sand
+Lambda_init=0.				!Initial value for structural parameter lambda (at t=0)
+Kin_eq_a=1.					!Recovery parameter of the thixotropic structure
+Kin_eq_b=0.02				!Break-down parameter of the thixotropic structure
+Kin_eq_lambda_0=1.			!Maximum value of the strutural parameter (Default is 1)
+HOUSKA_n=1.					!Flow index (n=1 is Bingham fluid)
+HOUSKA_eta_0=0.3			!Viscosity in completely build-up structure (lambda = 1)
+HOUSKA_eta_inf=	20.			!Viscosity at completely broken down structure (lambda = 0)
+HOUSKA_tauy_0=400.			!Yield stress at completely build-up structure (lambda =1)
+HOUSKA_tauy_inf=20.			!Yield stress at completely broken down structure (lambda = 0)
+BAGNOLD_beta=0.275			!Empirical fitting coefficient, solids effect Bagnold 1954
+BAGNOLD_phi_max=0.6			!Maximal concentration for sand and silt, usually 0.6																	   
 /
 
 ! Explanation cylindrical grid:             _

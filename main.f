@@ -29,7 +29,7 @@
       real     cput10a,cput10b,cput11a,cput11b
 	  !real     cput1b,cput2b,t_output,t_output_movie,crate
 	  !integer cput1,cput2,cr
-      real     bulk ,stress,pold_ref
+      real     bulk ,pold_ref
       real A(3,3)
 	character(1024) :: svnversion
 	character(1024) :: svnurl
@@ -180,6 +180,29 @@
 	else 
 	  ekm(:,:,:)=ekm_mol
 	endif
+	
+
+	if (Non_Newtonian.eq.1) then
+		!Erwin ten Brummelhuis corrected for ekm_mol by following line, Lynyrd de Wit 6-10-2021 switched off:
+		!ekm=ekm-ekm_mol				!ekm_mol is replaced by the apparent viscosity,so correcting for ekm_mol from turbulence models
+		if (Rheological_model.eq.'SIMPLE') then
+			call Simple_Bingham
+		elseif (Rheological_model.eq.'JACOBS') then
+			call Rheo_Jacobs_and_vKesteren
+		elseif (Rheological_model.eq.'WINTER') then
+			call Rheo_Winterwerp_and_Kranenburg
+		elseif (Rheological_model.eq.'THOMAS') then
+			call Rheo_Thomas
+		endif
+		call Bingham_Papanastasiou
+	elseif (Non_Newtonian.eq.2) then
+		!Erwin ten Brummelhuis corrected for ekm_mol by following line, Lynyrd de Wit 6-10-2021 switched off:
+		!ekm=ekm-ekm_mol				!ekm_mol is replaced by the apparent viscosity,so correcting for ekm_mol from turbulence models
+		lambda_old(:,:,:)=Lambda_init
+		lambda_new(:,:,:)=0.
+		call Houska_Papanastasiou(ib,ie,jb,je,kb,ke)
+	endif
+	
       call chkdt
 	  if (restart_dir.eq.'') then
 	    time_n=0.
@@ -236,6 +259,24 @@
 		else
 		      ekm(:,:,:)=ekm_mol 
 		endif
+		!add rheological apparent viscosity to turbulent viscosity calculated above
+		if (Non_Newtonian.eq.1) then 
+		!Erwin ten Brummelhuis corrected for ekm_mol by following line, Lynyrd de Wit 6-10-2021 switched off:
+		!ekm=ekm-ekm_mol				!ekm_mol is replaced by the apparent viscosity,so correcting for ekm_mol from turbulence models
+			if (Rheological_model.eq.'JACOBS') then
+				call Rheo_Jacobs_and_vKesteren
+			elseif (Rheological_model.eq.'WINTER') then
+				call Rheo_Winterwerp_and_Kranenburg
+			elseif (Rheological_model.eq.'THOMAS') then
+				call Rheo_Thomas
+			endif
+			call Bingham_Papanastasiou
+		elseif (Non_Newtonian.eq.2) then
+		!Erwin ten Brummelhuis corrected for ekm_mol by following line, Lynyrd de Wit 6-10-2021 switched off:
+		!ekm=ekm-ekm_mol				!ekm_mol is replaced by the apparent viscosity,so correcting for ekm_mol from turbulence models
+			call Houska_Papanastasiou(ib,ie,jb,je,kb,ke)
+		endif
+		
 		if ((interaction_bed.eq.4.or.interaction_bed.eq.6).and.time_n.ge.tstart_morf2) then 
 			call update_fc_global
 		endif 		
@@ -255,8 +296,13 @@
 			call RK3(ib,ie,jb,je,kb,ke)
 		endif
 
-		call bound_rhoU(dUdt,dVdt,dWdt,drdt,MIN(3,slip_bot),monopile,time_np,
-     & Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new) !bound_rhoU on rhou^*
+		IF (time_int.eq.'ABv') THEN 
+			call bound_rhoU(dUdt,dVdt,dWdt,drdt,MIN(0,slip_bot),monopile,time_np,
+     & 		Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new) !bound_rhoU on rhou^* without wall shear stress, which in ABv is done as first step 
+		ELSE
+			call bound_rhoU(dUdt,dVdt,dWdt,drdt,MIN(3,slip_bot),monopile,time_np,
+     & 		Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new) !bound_rhoU on rhou^* with wall shear stress	 
+		ENDIF 
 		call update_QSc_bedplume(time_np)
 		call update_Qc_plume(time_np)
 		call update_location_bedplume
@@ -264,6 +310,9 @@
 		IF (MAXVAL(bp(1:nbedplume)%dt_history)>0.) THEN 
 		   call update_his_bedplume(time_n)
 		ENDIF
+		if (time_np.ge.obst_starttimes(nobst_file).and.obstfile.ne.'') then
+		   CALL read_obstacle(tmax_inPpuntTSHDini,tmax_inUpuntTSHDini,tmax_inVpuntTSHDini,tmax_inWpuntTSHDini) 
+		endif		
 		
 		if (comp_filter_n>0) then
 		  if (mod(istep,comp_filter_n).eq.0) then

@@ -353,6 +353,8 @@
        integer :: x_dimid, y_dimid, z_dimid, nfrac_dimid, par_dimid
 	   integer :: dimids4(NDIMS),varid20,varid21,varid22,varid12,varid13,varid14,varid15,varid16,varid23
 	   integer :: varid24,varid25,varid26,varid27,varid28,varid29
+       integer :: varid30,varid31,varid32,varid33,varid34,varid35,varid36,varid37,varid38
+
 	character(1024) :: svnversion
 	character(1024) :: svnurl
       include 'version.inc'
@@ -499,6 +501,33 @@
          call check( nf90_put_att(ncid, varid16, 'units', '-') )
          call check( nf90_put_att(ncid, varid16, 'long_name', 'Simulated Cmu from realizible K-Epsilon model') )			 
        endif
+	   !! output variable rheology
+	   if (Non_Newtonian.eq.1.or.Non_Newtonian.eq.2) then
+         call check( nf90_def_var(ncid, "strain", NF90_REAL, dimids, varid30) )
+         call check( nf90_put_att(ncid, varid30, 'units', '1/s') )
+         call check( nf90_put_att(ncid, varid30, 'long_name', 'magnitude rate-of-strain tensor') )
+         call check( nf90_def_var(ncid, "stress", NF90_REAL, dimids, varid31) )
+         call check( nf90_put_att(ncid, varid31, 'units', 'Pa') )
+         call check( nf90_put_att(ncid, varid31, 'long_name', 'magnitude of stress tensor') )
+		 call check( nf90_def_var(ncid, "tauY", NF90_REAL, dimids, varid32) )
+         call check( nf90_put_att(ncid, varid32, 'units', 'Pa') )
+         call check( nf90_put_att(ncid, varid32, 'long_name', 'yield stress') )
+         call check( nf90_def_var(ncid, "muB", NF90_REAL, dimids, varid33) )
+         call check( nf90_put_att(ncid, varid33, 'units', 'kg/(sm)') )
+         call check( nf90_put_att(ncid, varid33, 'long_name', 'Bingham viscosity') )
+		 call check( nf90_def_var(ncid, "muA", NF90_REAL, dimids, varid36) )
+         call check( nf90_put_att(ncid, varid36, 'units', 'kg/(sm)') )
+         call check( nf90_put_att(ncid, varid36, 'long_name', 'apparent viscosity') )
+       endif
+	   
+	   if (Non_Newtonian.eq.2) then
+	     call check( nf90_def_var(ncid, "lambda_new", NF90_REAL, dimids, varid34) )
+         call check( nf90_put_att(ncid, varid34, 'units', 'Pa') )
+         call check( nf90_put_att(ncid, varid34, 'long_name', 'structural parameter of thixotropy') )
+		 call check( nf90_def_var(ncid, "lambda_old", NF90_REAL, dimids, varid35) )
+         call check( nf90_put_att(ncid, varid35, 'units', 'Pa') )
+         call check( nf90_put_att(ncid, varid35, 'long_name', 'structural parameter of thixotropy') )
+	   endif
 	   
        call check( nf90_def_var(ncid, "wiggle_factor", NF90_REAL, dimids, varid10) )
        call check( nf90_put_att(ncid, varid10, 'units', '-') )
@@ -569,6 +598,19 @@
 		 call check( nf90_put_var(ncid, varid15, EEE(1:imax,1:jmax,1:kmax)) )
 		 call check( nf90_put_var(ncid, varid16, Cmu(1:imax,1:jmax,1:kmax)) )
 	   endif	   
+	   !! new output variable
+	   if (Non_Newtonian.eq.1.or.Non_Newtonian.eq.2) then
+         call check( nf90_put_var(ncid, varid30, strain(1:imax,1:jmax,1:kmax)) )
+		 call check( nf90_put_var(ncid, varid31, stress(1:imax,1:jmax,1:kmax)) )
+		 call check( nf90_put_var(ncid, varid32, tauY(1:imax,1:jmax,1:kmax)) )
+		 call check( nf90_put_var(ncid, varid33, muB(1:imax,1:jmax,1:kmax)) )
+		 call check( nf90_put_var(ncid, varid36, muA(1:imax,1:jmax,1:kmax)) )
+       endif
+
+	   if (Non_Newtonian.eq.2) then
+		 call check( nf90_put_var(ncid, varid34, lambda_new(1:imax,1:jmax,1:kmax)) )
+		 call check( nf90_put_var(ncid, varid35, lambda_old(1:imax,1:jmax,1:kmax)) )
+	   endif
 	   call check( nf90_put_var(ncid, varid10, wf(1:imax,1:jmax,1:kmax)) )
        call check( nf90_put_var(ncid, varid8, tt) )
 	   call check( nf90_put_var(ncid, varid23, obstacle) )

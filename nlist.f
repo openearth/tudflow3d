@@ -70,6 +70,27 @@
 	  REAL bedslope_mu_s,alfabs_bl,alfabn_bl,phi_sediment
 	  REAL dt_factor_avg
 	  INTEGER n_dtavg
+	  INTEGER tmax_inPpuntTSHDini,tmax_inUpuntTSHDini,tmax_inVpuntTSHDini,tmax_inWpuntTSHDini
+	  INTEGER nobst_files,nobst_file
+	  CHARACTER(len=256) :: obst_file_series(5000)
+	  REAL :: obst_starttimes(5000) 
+	  
+	  
+	  !new variables rheology
+	  INTEGER Non_Newtonian
+	  REAL SIMPLE_tauy,SIMPLE_muB
+	  REAL JACOBS_Ky,JACOBS_Kmu,JACOBS_Aclay,JACOBS_By,JACOBS_Bmu,JACOBS_muw
+	  REAL WINTER_Ay,WINTER_Amu,WINTER_nf,WINTER_af,WINTER_muw
+	  REAL THOMAS_Cy,THOMAS_Cmu,THOMAS_ky,THOMAS_kmu,THOMAS_Py,THOMAS_Pmu,THOMAS_phi_sand_max
+	  REAL BAGNOLD_beta,BAGNOLD_phi_max,PAPANASTASIOUS_m
+	  REAL Lambda_init,Kin_eq_a,Kin_eq_b,Kin_eq_lambda_0
+	  REAL HOUSKA_n,HOUSKA_eta_0,HOUSKA_eta_inf,HOUSKA_tauy_0,HOUSKA_tauy_inf
+	  
+
+	  REAL, DIMENSION(:,:,:),ALLOCATABLE :: tauY,muB
+	  REAL, DIMENSION(:,:,:),ALLOCATABLE :: stress,strain,muA
+	  REAL, DIMENSION(:,:,:),ALLOCATABLE :: lambda_old,lambda_new
+	  CHARACTER*6 Rheological_model	  
 	  
 	  
       CHARACTER*4 convection,diffusion
@@ -262,6 +283,10 @@
 	NAMELIST /fractions_in_plume/fract
 	NAMELIST /ship/U_TSHD,LOA,Lfront,Breadth,Draught,Lback,Hback,xfront,yfront,kn_TSHD,nprop,Dprop,xprop,yprop,zprop,
      &   Pprop,rudder,rot_prop,draghead,Dsp,xdh,perc_dh_suction,softnose,Hfront,cutter
+	NAMELIST /rheology/Non_Newtonian,Rheological_model,PAPANASTASIOUS_m,SIMPLE_tauy,SIMPLE_muB,JACOBS_Ky,JACOBS_Kmu,JACOBS_Aclay,
+     & JACOBS_By,JACOBS_Bmu,JACOBS_muw,WINTER_Ay,WINTER_Amu,WINTER_nf,WINTER_af,WINTER_muw,THOMAS_Cy,THOMAS_Cmu,THOMAS_ky,
+     & THOMAS_kmu,THOMAS_Py,THOMAS_Pmu,THOMAS_phi_sand_max,Lambda_init,Kin_eq_a,Kin_eq_b,Kin_eq_lambda_0,
+     & HOUSKA_n,HOUSKA_eta_0,HOUSKA_eta_inf,HOUSKA_tauy_0,HOUSKA_tauy_inf,BAGNOLD_beta,BAGNOLD_phi_max	 
 
 	!! initialise:
 	!! simulation:
@@ -388,6 +413,7 @@
 	surf_layer=0.
 	wallup=0
 	obstfile = ''
+	nobst_files = 0
 	i_periodicx=0
 	istart_morf2=0
 	
@@ -605,6 +631,42 @@
 	softnose=0
 	Hfront=-999.
 	cutter='not'
+	
+	!! rheology
+	Non_Newtonian = 0.			!Default is 0, Newtonian treatment
+	Rheological_model ='AAARGH'
+	PAPANASTASIOUS_m=9.e18		!if not defined than inf --> model reduces to standard Bingham
+	SIMPLE_tauy=0.2
+	SIMPLE_muB=0.1
+	JACOBS_Ky=6.72e4
+	JACOBS_Kmu=251
+	JACOBS_Aclay=1.0
+	JACOBS_By=-4.75
+	JACOBS_Bmu=-2.64
+	JACOBS_muw=0.001
+	WINTER_Ay=7.3e5
+	WINTER_Amu=932
+	WINTER_nf=2.64
+	WINTER_af=3.65
+	WINTER_muw=0.001
+	THOMAS_Cy=7.45e5
+	THOMAS_Cmu=1e-3
+	THOMAS_ky=1.5
+	THOMAS_kmu=1.25
+	THOMAS_Py=5.61
+	THOMAS_Pmu=-3.03
+	THOMAS_phi_sand_max=0.6		!Maximal solids fraction of sand
+	Lambda_init=0.
+	Kin_eq_a=1.
+	Kin_eq_b=0.02
+	Kin_eq_lambda_0=1.
+	HOUSKA_n=1.
+	HOUSKA_eta_0=0.3
+	HOUSKA_eta_inf=	20.
+	HOUSKA_tauy_0=400.
+	HOUSKA_tauy_inf=20.
+	BAGNOLD_beta=0.275
+	BAGNOLD_phi_max=0.6			!Usually 0.6	
 
 	CALL GETARG(1,inpfile)
 	OPEN(1,FILE=inpfile,IOSTAT=ios,ACTION='read')
@@ -1439,6 +1501,12 @@
 	IF (softnose.eq.1.and.Lfront.le.0.) CALL writeerror(322)
 	IF (LOA<0.) U_TSHD=0.
 
+	READ (UNIT=1,NML=rheology,IOSTAT=ios)
+	!! check input rheology
+	IF (Non_Newtonian.ne.0.and.Non_Newtonian.ne.1.and.Non_Newtonian.ne.2) CALL writeerror(801)
+	IF (Rheological_model.ne.'SIMPLE'.AND.Rheological_model.ne.'JACOBS'.AND.Rheological_model.ne.'WINTER'
+     &  .AND.Rheological_model.ne.'THOMAS') CALL writeerror(802)
+
 	CLOSE(1)
 
 	IF (plumetseriesfile.eq.'') THEN
@@ -1867,6 +1935,19 @@
 	ust_mud_old=0.
 	ust_frac_new=0.
 	ust_frac_old=0.	
+	
+	!new variables rheology
+	IF (Non_Newtonian.eq.1.or.Non_Newtonian.eq.2) THEN
+		ALLOCATE(tauY(0:i1,0:j1,0:k1))
+		ALLOCATE(muB(0:i1,0:j1,0:k1))
+		ALLOCATE(stress(0:i1,0:j1,0:k1))
+		ALLOCATE(strain(0:i1,0:j1,0:k1))
+		ALLOCATE(muA(0:i1,0:j1,0:k1))
+	ENDIF
+	IF (Non_Newtonian.eq.2) THEN
+		ALLOCATE(lambda_old(0:i1,0:j1,0:k1))
+		ALLOCATE(lambda_new(0:i1,0:j1,0:k1))
+	ENDIF	
 	
 	IF (wallmodel_tau_sed.eq.11) THEN 
 		ALLOCATE(sigUWbed(1:nrmsbed,0:i1,0:j1))

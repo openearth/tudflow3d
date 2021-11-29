@@ -1389,14 +1389,14 @@ c 	influence of waves on lateral boundaries:
 	  Wjetbc=pi*MAX(radius_j**2,1.e-12)*W_j*perc_dh_suction/(dr(i)*3.*Dsp) !(m3/s)/m2=m/s per suction cell (perc_dh_suction is corrected for number of dragheads)
 	  Wbound(i,j,k)=Wjetbc
        enddo
-	IF (interaction_bed.ge.4) THEN
-	 DO i=1,imax
-	  DO j=1,jmax
-		zbed(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(dcdtbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
-	  ENDDO 
-	 ENDDO 
-	 call bound_cbot(zbed)
-	ENDIF 	
+!	IF (interaction_bed.ge.4) THEN !	IF (interaction_bed.ge.4) THEN !for interaction_bed.ge.4 zbed is determined in sediment.f so not needed here 
+!	 DO i=1,imax
+!	  DO j=1,jmax
+!		zbed(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(dcdtbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
+!	  ENDDO 
+!	 ENDDO 
+!	 call bound_cbot(zbed)
+!	ENDIF 	
 	IF ((interaction_bed.ge.4.or.bedlevelfile.ne.''.or.nobst>0).and.IBMorder.eq.2) THEN ! order-2 IBM before information is exchanged between partitions (hence only j=1-jmax); order-0 IBM is done at and of this subroutine 
 		DO i=1,imax
 			DO j=1,jmax
@@ -3011,14 +3011,14 @@ c 	influence of waves on lateral boundaries:
 	  Wbound(i,j,k)=Wjetbc*rhW(i,j,k) !0.5*(rho(i,j,k)+rho(i,j,k+1))
        enddo
 
-	IF (interaction_bed.ge.4) THEN
-	 DO i=1,imax
-	  DO j=1,jmax
-		zbed(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(dcdtbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
-	  ENDDO 
-	 ENDDO 
-	 call bound_cbot(zbed)
-	ENDIF 
+!	IF (interaction_bed.ge.4) THEN !for interaction_bed.ge.4 zbed is determined in sediment.f so not needed here 
+!	 DO i=1,imax
+!	  DO j=1,jmax
+!		zbed(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(dcdtbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
+!	  ENDDO 
+!	 ENDDO 
+!	 call bound_cbot(zbed)
+!	ENDIF 
 	IF ((interaction_bed.ge.4.or.bedlevelfile.ne.''.or.nobst>0).and.IBMorder.eq.2) THEN ! order-2 IBM j=1,jmax --> at end bound_rhoU lateral boundaries are exchanged to get j=0 and j=j1 right 
 		DO i=1,imax
 			DO j=1,jmax

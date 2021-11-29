@@ -54,9 +54,9 @@ PROGRAM = TUDflow3d_vg_h7.exe
 
 #OBJS    = error_functions.o nlist.o extra_functions.o sediment.o advec.o advec_compact4knikker.o advec_cds6.o advec_cds4.o advec_hybrid6.o advec_hybrid4.o advec_c4a6.o diff_compact.o bound.o init.o main.o sparse_matrix.o solve.o turbulence_models.o vfft.o output.o 
 
-SRCS    = error_functions.f nlist.f extra_functions.f sediment.f advec.f advec_compact4knikker.f advec_cds6.f advec_cds4.f advec_hybrid6.f advec_hybrid4.f advec_c4a6.f diff_compact.f bound.f init.f main.f solve.f turbulence_models.f vfft.f output.f 
+SRCS    = error_functions.f nlist.f extra_functions.f sediment.f advec.f advec_compact4knikker.f advec_cds6.f advec_cds4.f advec_hybrid6.f advec_hybrid4.f advec_c4a6.f diff_compact.f bound.f init.f main.f solve.f turbulence_models.f vfft.f output.f rheology.f
 
-OBJS    = error_functions.o nlist.o extra_functions.o sediment.o advec.o advec_compact4knikker.o advec_cds6.o advec_cds4.o advec_hybrid6.o advec_hybrid4.o advec_c4a6.o diff_compact.o bound.o init.o main.o solve.o turbulence_models.o vfft.o output.o 
+OBJS    = error_functions.o nlist.o extra_functions.o sediment.o advec.o advec_compact4knikker.o advec_cds6.o advec_cds4.o advec_hybrid6.o advec_hybrid4.o advec_c4a6.o diff_compact.o bound.o init.o main.o solve.o turbulence_models.o vfft.o output.o rheology.o 
 
 all: $(PROGRAM)
 
@@ -126,7 +126,8 @@ init.o: init.f makefile
 solve.o: solve.f makefile	
 	$(F77) $(FLAGS) -I$MKLINCLUDE -c solve.f
 	
-
+rheology.o: rheology.f makefile	
+	$(F77) $(FLAGS) -c rheology.f
 
 clean:
 	$(RM) a.out core *.mod $(PROGRAM) $(OBJS)

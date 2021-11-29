@@ -1016,7 +1016,163 @@ c********************************************************************
 	x=y+corr*q
 
       end subroutine solve_tridiag_periodic
+	  
+      subroutine solve_tridiag_periodic2(x,a,b,c,v,n)
+      implicit none
+	  ! periodic TDMA algorithm from Hirsch1994 appendix A.2
+!	 a - sub-diagonal (means it is the diagonal below the main diagonal)
+!	 b - the main diagonal
+!	 c - sup-diagonal (means it is the diagonal above the main diagonal)
+!	 v - right part
+!	 x - the answer
+!	 n - number of equations
+ 
+        integer,intent(in) :: n
+        real,dimension(n),intent(in) :: a,b,c,v
+        real,dimension(n),intent(out) :: x
+        real,dimension(n) :: ap,bp,cp,vp,gam2
+        real :: zaa
+        integer i,k,k2 
+ 
+	! make copies to leave original diagonals unchanged:
+	ap = a 
+	bp = b
+	cp = c 
+	vp = v 
+ 
+	bp(1) = 1./b(1) 
+	gam2(1) = -a(1)*bp(1) 
+	ap(1) = v(1)*bp(1) 
+	
+	DO i = 2,n-1
+!		cp(i-1) = c(i-1) * bp(i-1) 
+!		bp(i) 	= 1./(b(i)-a(i)*cp(i-1))
+!		gam2(i) = -a(i)*gam2(i-1)*bp(i)
+!		ap(i)   = (q(i)-a(i)*ap(i-1))*bp(i) 
+! safer is lines below with pre copies of ap bp and cp (little slower though)
+		cp(i-1) = cp(i-1) * bp(i-1) 
+		bp(i) 	= 1./(bp(i)-ap(i)*cp(i-1))
+		gam2(i) = -ap(i)*gam2(i-1)*bp(i)
+		ap(i)   = (v(i)-ap(i)*ap(i-1))*bp(i) 		
+	ENDDO 
+	
+	gam2(n-1)=gam2(n-1)-cp(n-1)*bp(n-1) 
 
+	!n1 in Hirsch is 1 
+	!n2 in Hirsch is 2 
+	!n1n in Hirsch is n (end of vector)
+	!n in Hirsch is n-1 
+
+	! back substitution:
+	
+	vp(n-1) = ap(n-1) 
+	bp(n-1) = gam2(n-1) 
+	DO i=2,n-1 
+		k = n - i 
+		k2 = k+1 
+		vp(k)=ap(k)-cp(k)*vp(k2)
+		bp(k)=gam2(k)-cp(k)*bp(k2) 
+	ENDDO 
+	
+	zaa=vp(n)-cp(n)*vp(1)-ap(n)*vp(n-1)
+	zaa=zaa/(bp(n)+ap(n)*bp(n-1)+cp(n)*bp(1))
+	x(n) = zaa 
+	DO i=1,n-1 
+		x(i)=vp(i)+bp(i)*zaa 
+	ENDDO 
+		
+	
+      end subroutine solve_tridiag_periodic2	  
+
+      subroutine solve_tridiag_switchperiodic2(x,a,b,c,v,n,switch)
+      implicit none
+!	 a - sub-diagonal (means it is the diagonal below the main diagonal)
+!	 b - the main diagonal
+!	 c - sup-diagonal (means it is the diagonal above the main diagonal)
+!	 v - right part
+!	 x - the answer
+!	 n - number of equations
+!	 switch - 0 = non-periodic; 1 =  periodic 
+ 
+        integer,intent(in) :: n,switch 
+        real,dimension(n),intent(in) :: a,b,c,v
+        real,dimension(n),intent(out) :: x
+        real,dimension(n) :: bp,vp,bper,u,y,q,up,ap,cp,gam2
+        real :: m,corr,zaa
+        integer i,k,k2
+ 
+	IF (switch.eq.1) THEN ! periodic 
+		
+!		CALL solve_tridiag_periodic2(x,a,b,c,v,n)
+		
+		! make copies to leave original diagonals unchanged:
+		ap = a 
+		bp = b
+		cp = c 
+		vp = v 
+	 
+		bp(1) = 1./b(1) 
+		gam2(1) = -a(1)*bp(1) 
+		ap(1) = v(1)/b(1) 
+		
+		DO i = 2,n-1
+	!		cp(i-1) = c(i-1) * bp(i-1) 
+	!		bp(i) 	= 1./(b(i)-a(i)*cp(i-1))
+	!		gam2(i) = -a(i)*gam2(i-1)*bp(i)
+	!		ap(i)   = (q(i)-a(i)*ap(i-1))*bp(i) 
+	! safer is lines below with pre copies of ap bp and cp (little slower though)
+			cp(i-1) = cp(i-1) * bp(i-1) 
+			bp(i) 	= 1./(bp(i)-ap(i)*cp(i-1))
+			gam2(i) = -ap(i)*gam2(i-1)*bp(i)
+			ap(i)   = (v(i)-ap(i)*ap(i-1))*bp(i) 		
+		ENDDO 
+		
+		gam2(n-1)=gam2(n-1)-cp(n-1)*bp(n-1) 
+
+		!n1 in Hirsch is 1 
+		!n2 in Hirsch is 2 
+		!n1n in Hirsch is n (end of vector)
+		!n in Hirsch is n-1 
+
+		! back substitution:
+		
+		vp(n-1) = ap(n-1) 
+		bp(n-1) = gam2(n-1) 
+		DO i=2,n-1 
+			k = n - i 
+			k2 = k+1 
+			vp(k)=ap(k)-cp(k)*vp(k2)
+			bp(k)=gam2(k)-cp(k)*bp(k2) 
+		ENDDO 
+		
+		zaa=vp(n)-cp(n)*vp(1)-ap(n)*vp(n-1)
+		zaa=zaa/(bp(n)+ap(n)*bp(n-1)+cp(n)*bp(1))
+		x(n) = zaa 
+		DO i=1,n-1 
+			x(i)=vp(i)+bp(i)*zaa 
+		ENDDO 
+
+	ELSE ! non-periodic 
+! Make copies of the b and v variables so that they are unaltered by this sub
+        bp(1) = b(1)
+        vp(1) = v(1)
+ 
+        !The first pass (setting coefficients):
+		do i = 2,n
+         m = a(i)/bp(i-1)
+         bp(i) = b(i) - m*c(i-1)
+         vp(i) = v(i) - m*vp(i-1)
+        end do 
+ 
+         x(n) = vp(n)/bp(n)
+        !The second pass (back-substition)
+		do i = n-1, 1, -1
+          x(i) = (vp(i) - c(i)*x(i+1))/bp(i)
+        end do 
+	ENDIF 
+ 
+      end subroutine solve_tridiag_switchperiodic2
+	  
 
       subroutine solve_tridiag_switchperiodic(x,a,b,c,v,n,switch)
       implicit none
@@ -1028,12 +1184,12 @@ c********************************************************************
 !	 n - number of equations
 !	 switch - 0 = non-periodic; 1 =  periodic 
  
-        integer,intent(in) :: n
+        integer,intent(in) :: n,switch 
         real,dimension(n),intent(in) :: a,b,c,v
         real,dimension(n),intent(out) :: x
         real,dimension(n) :: bp,vp,bper,u,y,q,up
         real :: m,corr
-        integer i,switch
+        integer i
  
 	IF (switch.eq.1) THEN ! periodic 
 	! Make new slightly adjusted diagonal to solve periodic system:
@@ -1105,5 +1261,5 @@ c********************************************************************
         end do 
 	ENDIF 
  
-      end subroutine solve_tridiag_switchperiodic
+      end subroutine solve_tridiag_switchperiodic	  
 

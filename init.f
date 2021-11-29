@@ -1733,7 +1733,7 @@ C ...  Locals
 	integer :: ncid, rhVarId, status2, ndims, xtype,natts,status
 	integer, dimension(nf90_max_var_dims) :: dimids
 	integer :: size1,size2,size3
-	real :: obb(0:i1,0:j1,0:k1),obb_ero(0:i1,0:j1,0:k1),obb_depo(0:i1,0:j1,0:k1)
+	!real :: obb(0:i1,0:j1,0:k1),obb_ero(0:i1,0:j1,0:k1),obb_depo(0:i1,0:j1,0:k1)
 
 	REAL xx,yy,zz,phi
 	INTEGER tel1,tel2,tel3,tel4,inout,kmaxTSHD,t,n
@@ -2717,10 +2717,173 @@ C ...  Locals
 !	      enddo
 !	ENDDO
 	if (obstfile.ne.'') then
-		obb = 0.
-       	status2 = nf90_open(obstfile, nf90_NoWrite, ncid) 
+		tmax_inPpuntTSHDini=tmax_inPpuntTSHD
+		tmax_inUpuntTSHDini=tmax_inUpuntTSHD
+		tmax_inVpuntTSHDini=tmax_inVpuntTSHD
+		tmax_inWpuntTSHDini=tmax_inWpuntTSHD
+		CALL read_obstacle(tmax_inPpuntTSHD,tmax_inUpuntTSHD,tmax_inVpuntTSHD,tmax_inWpuntTSHD)
+	endif 
+
+	
+	if (bedlevelfile.ne.'') then
+
+       	status2 = nf90_open(bedlevelfile, nf90_NoWrite, ncid) 
 		IF (status2/= nf90_noerr) THEN
-			write(*,*),'obstacle file =',obstfile
+			write(*,*),'bedlevelfile =',bedlevelfile
+			CALL writeerror(606)
+		ENDIF
+		call check( nf90_inq_varid(ncid, "zbed",rhVarid) )
+		call check( nf90_get_var(ncid,rhVarid,zbed3(1:imax,0:j1),start=(/1,rank*jmax+1/),count=(/imax,jmax+2/)) )
+		call check( nf90_close(ncid) )
+	
+		! bedlevel file obstacles have no i=0 or i=i1 in zbed3, but do have j=0 and j=j1
+		kbed3=0
+		zbed3(0,0:j1)=zbed3(1,0:j1)
+		zbed3(i1,0:j1)=zbed3(imax,0:j1)
+		!! search for zbed and kbed on each proc (j=0,j1): (used for deposition and bc in solver [adjusted for ob(n)%zbottom])
+	      do j=0,j1 
+	       do i=0,i1 !imax  !including i1 strangely gives crash (13/4/15) !1,imax !0,i1
+				kbed3(i,j)=FLOOR(zbed3(i,j)/dz+0.5) !added+0.5 10-3-2020 because now top kbed level is within +0.5 and -0.5dz from real bed (cnewbot can be positive and negative) 
+				kbed3(i,j)=MAX(0,kbed3(i,j))
+				kbed3(i,j)=MIN(kmax,kbed3(i,j))
+				zbed(i,j)=MAX(zbed(i,j),zbed3(i,j)) !zero without obstacle, otherwise max of all obstacles at i,j  
+				
+			enddo
+	       enddo
+
+			!! update kbed on each proc (j=0,j1) with kbed3 (used for deposition and bc in solver [adjusted for ob(n)%zbottom])
+			do j=0,j1 
+				do i=0,i1 !imax !including i1 strangely gives crash (13/4/15) !1,imax !0,i1
+					kbed(i,j)=MAX(kbed(i,j),kbed3(i,j)) !zero without obstacle, otherwise max of all obstacles at i,j  
+				enddo
+			enddo
+	endif !endif bedlevelfile
+	
+	      do j=0,j1 
+	       do i=0,imax 
+	          kbed(i,j)=MIN(kbed(i,j),kmax) ! make sure kbed never is larger than kmax
+	       enddo
+	      enddo
+		call bound_cbot_integer(kbed)
+		kbedt=kbed
+		kbed0=kbed !original kbed saved to be used in SEM for example for sims with bed update in which kbed changes during a simulation 
+
+		IF (interaction_bed.ge.4) THEN   
+			do j=0,j1 
+				do i=0,i1 
+					do k=1,kbed(i,j) ! assign initial bed concentrations; k=0 remains empty
+						do n=1,nfrac
+							Clivebed(n,i,j,k)=c_bed(n)*bednotfixed(i,j,k) ! in case obstacle no erosion (bednotfixed=0) then no cbed
+							!Cold(n,i,j,k)=c_bed(n)
+							!Cnew(n,i,j,k)=c_bed(n)
+							!dCdt(n,i,j,k)=c_bed(n)	
+						enddo
+					enddo
+					do n=1,nfrac
+					  ! place remainder which does not fit exactly in 1dz into cnewbot; this can be positive or negative as cnewbot varies between +/-0.5*cfixedbed 
+					  Cnewbot(n,i,j)=(zbed(i,j)-DBLE(kbed(i,j))*dz)/dz*c_bed(n)*bednotfixed(i,j,kbed(i,j))
+					enddo 
+				enddo
+			enddo
+			Coldbot = Cnewbot 
+			dCdtbot = Cnewbot
+		ENDIF	
+		IF (U_TSHD>0.) THEN
+			kbedin(0:j1)=kbed(1,0:j1)
+		ENDIF
+		
+		  IF (IBMorder.ne.2) THEN 
+		    kbed22=kbed 
+		  ELSE 
+		  	do j=1,jmax 
+				do i=1,imax 
+					IF (interaction_bed.ge.4) THEN 
+					  zb_W=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(dcdtbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
+					ELSE 
+					  zb_W=zbed(i,j)
+					ENDIF
+					kbed22(i,j)=FLOOR(zb_W/dz) 
+				ENDDO
+			ENDDO 
+			call bound_cbot_integer(kbed22) 
+		  ENDIF 
+      end
+
+		subroutine read_obstacle(tel1start,tel2start,tel3start,tel4start) 
+		
+		USE netcdf
+		USE nlist
+		
+		implicit none	
+		
+		integer :: ncid, rhVarId, status2, ndims, xtype,natts,status
+		integer, dimension(nf90_max_var_dims) :: dimids
+		integer :: size1,size2,size3,tel1start,tel2start,tel3start,tel4start,n,tel1,tel2,tel3,tel4,io
+		real :: obb(0:i1,0:j1,0:k1),obb_ero(0:i1,0:j1,0:k1),obb_depo(0:i1,0:j1,0:k1)	
+		CHARACTER(len=256) :: command,dummy,dummy2
+	
+	
+		IF (nobst_files.eq.0) THEN !first time check how many files
+		WRITE(*,*) 'Listing obstacle files with system call'
+		WRITE(command,'(a,a,a,i4.4,a)')'ls ',TRIM(obstfile),' > obstfiles_temp',INT(rank),'.txt'
+		CALL SYSTEM(command) 
+		
+		WRITE(command,'(a,i4.4,a)')'obstfiles_temp',INT(rank),'.txt'
+		OPEN(unit=25,file=command) 
+		
+		DO
+			READ(25,'(a)',iostat=io) dummy
+			IF (io/=0) EXIT
+			nobst_files = nobst_files + 1
+			IF (nobst_files==1) THEN 
+				obst_file_series(nobst_files)=TRIM(dummy)
+			ELSE 
+				write(dummy2,'(a,a)'),'.',TRIM(dummy)
+				obst_file_series(nobst_files)=TRIM(dummy2)
+			ENDIF 
+		ENDDO
+		IF (rank.eq.0) THEN
+			WRITE(*,'(A,I0)') ' Number of obstacle files found: ',nobst_files	
+			DO n=1,nobst_files,nobst_files-1
+			  write(*,*),obst_file_series(n)
+			ENDDO
+		ENDIF
+		CLOSE(25, STATUS = 'DELETE')	
+		
+		nobst_file = 1
+		obst_starttimes = t_end+1.e6 !initialize beyond end of simulation so that in main.f this subroutine will never be called in case of only one obstacle file valid throughout full simulation period
+		
+			IF (nobst_files>1) THEN 
+				status2 = nf90_open(obst_file_series(nobst_file), nf90_NoWrite, ncid) 
+				IF (status2/= nf90_noerr) THEN
+					write(*,*),'obstacle file =',obst_file_series(nobst_file)
+					CALL writeerror(606)
+				ENDIF
+				status = nf90_inq_varid(ncid, "obstacle_starttimes",rhVarid)
+				if (status.eq.nf90_NoErr) then
+					call check( nf90_inquire_variable(ncid, rhVarid, dimids = dimIDs))
+					call check( nf90_inquire_dimension(ncid, dimIDs(1), len = size1))
+					IF(size1.ne.nobst_files) CALL writeerror(705)
+					call check( nf90_get_var(ncid,rhVarid,obst_starttimes(1:nobst_files),start=(/1/),count=(/nobst_files/)) )
+					IF (rank.eq.0) THEN
+						write(*,*),'"obstacle_starttimes" read from obstacle file =',obst_file_series(nobst_file)
+						write(*,*),'First, second and last "obstacle_starttimes" in [s]=',
+     &						obst_starttimes(1),obst_starttimes(2),obst_starttimes(nobst_files)
+					ENDIF 
+				else
+					write(*,*),'obstacle file =',obst_file_series(nobst_file),' variable "obstacle_starttimes" not found correctly'
+					write(*,*) '      ERROR(S) FOUND, DFLOW3D TERMINATED          '
+					STOP					
+				endif		
+				call check( nf90_close(ncid) )
+			ENDIF 
+		ENDIF 
+		
+		
+			obb = 0.
+       	status2 = nf90_open(obst_file_series(nobst_file), nf90_NoWrite, ncid) 
+		IF (status2/= nf90_noerr) THEN
+			write(*,*),'obstacle file =',obst_file_series(nobst_file)
 			CALL writeerror(606)
 		ENDIF
 		status = nf90_inq_varid(ncid, "obstacle_Ploc",rhVarid)
@@ -2731,10 +2894,12 @@ C ...  Locals
 			call check( nf90_inquire_dimension(ncid, dimIDs(3), len = size3))
 			IF(size1.ne.imax+2.or.size2.ne.jmax*px+2.or.size3.ne.kmax+2) CALL writeerror(705)
 			call check( nf90_get_var(ncid,rhVarid,obb(0:i1,0:j1,0:k1),start=(/1,rank*jmax+1,1/),count=(/imax+2,jmax+2,kmax+2/)) )
-			write(*,*),'3D Obstacles "obstacle_Ploc" read from obstacle file =',obstfile
+			IF (rank.eq.0) THEN
+				write(*,*),'3D Obstacles "obstacle_Ploc" read from obstacle file =',obst_file_series(nobst_file),' at time ',time_np,' s.'
+			ENDIF 
 			nobst=MAX(1,nobst) !nobst acts as a switch which turns on several switches in rest of the code, in the remainder it is not used as counter in DO loops
 		else
-			write(*,*),'obstacle file =',obstfile,' variable "obstacle_Ploc" not found correctly'
+			write(*,*),'obstacle file =',obst_file_series(nobst_file),' variable "obstacle_Ploc" not found correctly'
 		endif
 		status = nf90_inq_varid(ncid, "obstacle_ero",rhVarid)
 		if (status.eq.nf90_NoErr) then
@@ -2744,9 +2909,11 @@ C ...  Locals
 			call check( nf90_inquire_dimension(ncid, dimIDs(3), len = size3))
 			IF(size1.ne.imax+2.or.size2.ne.jmax*px+2.or.size3.ne.kmax+2) CALL writeerror(705)
 			call check( nf90_get_var(ncid,rhVarid,obb_ero(0:i1,0:j1,0:k1),start=(/1,rank*jmax+1,1/),count=(/imax+2,jmax+2,kmax+2/)) )
-			write(*,*),'3D Obstacles "obstacle_ero" read from obstacle file =',obstfile
+			IF (rank.eq.0) THEN
+				write(*,*),'3D Obstacles "obstacle_ero" read from obstacle file =',obst_file_series(nobst_file),' at time ',time_np,' s.'
+			ENDIF 
 		else
-			write(*,*),'obstacle file =',obstfile,' variable "obstacle_ero" not found correctly'
+			write(*,*),'obstacle file =',obst_file_series(nobst_file),' variable "obstacle_ero" not found correctly'
 		endif
 		status = nf90_inq_varid(ncid, "obstacle_depo",rhVarid)
 		if (status.eq.nf90_NoErr) then
@@ -2756,16 +2923,18 @@ C ...  Locals
 			call check( nf90_inquire_dimension(ncid, dimIDs(3), len = size3))
 			IF(size1.ne.imax+2.or.size2.ne.jmax*px+2.or.size3.ne.kmax+2) CALL writeerror(705)
 			call check( nf90_get_var(ncid,rhVarid,obb_depo(0:i1,0:j1,0:k1),start=(/1,rank*jmax+1,1/),count=(/imax+2,jmax+2,kmax+2/)) )
-			write(*,*),'3D Obstacles "obstacle_depo" read from obstacle file =',obstfile
+			IF (rank.eq.0) THEN
+				write(*,*),'3D Obstacles "obstacle_depo" read from obstacle file =',obst_file_series(nobst_file),' at time ',time_np,' s.'
+			ENDIF 
 		else
-			write(*,*),'obstacle file =',obstfile,' variable "obstacle_depo" not found correctly'
+			write(*,*),'obstacle file =',obst_file_series(nobst_file),' variable "obstacle_depo" not found correctly'
 		endif
 		call check( nf90_close(ncid) )  
 
-		tel1 = tmax_inPpuntTSHD
-		tel2 = tmax_inUpuntTSHD
-		tel3 = tmax_inVpuntTSHD
-		tel4 = tmax_inWpuntTSHD
+		tel1 = tel1start
+		tel2 = tel2start
+		tel3 = tel3start
+		tel4 = tel4start
 		do i=0,i1
 		  do j=0,j1 
 			do k=0,k1
@@ -2819,93 +2988,11 @@ C ...  Locals
 		tmax_inUpuntTSHD = tel2  
 		tmax_inVpuntTSHD = tel3  
 		tmax_inWpuntTSHD = tel4  
-	endif
-	
-	if (bedlevelfile.ne.'') then
-
-       	status2 = nf90_open(bedlevelfile, nf90_NoWrite, ncid) 
-		IF (status2/= nf90_noerr) THEN
-			write(*,*),'bedlevelfile =',bedlevelfile
-			CALL writeerror(606)
-		ENDIF
-		call check( nf90_inq_varid(ncid, "zbed",rhVarid) )
-		call check( nf90_get_var(ncid,rhVarid,zbed3(1:imax,0:j1),start=(/1,rank*jmax+1/),count=(/imax,jmax+2/)) )
-		call check( nf90_close(ncid) )
-	
-		! bedlevel file obstacles have no i=0 or i=i1 in zbed3, but do have j=0 and j=j1
-		kbed3=0
-		zbed3(0,0:j1)=zbed3(1,0:j1)
-		zbed3(i1,0:j1)=zbed3(imax,0:j1)
-		!! search for zbed and kbed on each proc (j=0,j1): (used for deposition and bc in solver [adjusted for ob(n)%zbottom])
-	      do j=0,j1 
-	       do i=0,i1 !imax  !including i1 strangely gives crash (13/4/15) !1,imax !0,i1
-				kbed3(i,j)=FLOOR(zbed3(i,j)/dz+0.5) !added+0.5 10-3-2020 because now top kbed level is within +0.5 and -0.5dz from real bed (cnewbot can be positive and negative) 
-				kbed3(i,j)=MAX(0,kbed3(i,j))
-				kbed3(i,j)=MIN(kmax,kbed3(i,j))
-				zbed(i,j)=MAX(zbed(i,j),zbed3(i,j)) !zero without obstacle, otherwise max of all obstacles at i,j  
-				
-			enddo
-	       enddo
-
-			!! update kbed on each proc (j=0,j1) with kbed3 (used for deposition and bc in solver [adjusted for ob(n)%zbottom])
-			do j=0,j1 
-				do i=0,i1 !imax !including i1 strangely gives crash (13/4/15) !1,imax !0,i1
-					kbed(i,j)=MAX(kbed(i,j),kbed3(i,j)) !zero without obstacle, otherwise max of all obstacles at i,j  
-				enddo
-			enddo
-	endif !endif bedlevelfile
-	
-	      do j=0,j1 
-	       do i=0,imax 
-	          kbed(i,j)=MIN(kbed(i,j),kmax) ! make sure kbed never is larger than kmax
-	       enddo
-	      enddo
-
-
-		IF (interaction_bed.ge.4) THEN   
-			do j=0,j1 
-				do i=0,i1 !imax !including i1 strangely gives crash (13/4/15) !1,imax !0,i1
-					do k=1,kbed(i,j) ! assign initial bed concentrations; k=0 remains empty
-						do n=1,nfrac
-							Clivebed(n,i,j,k)=c_bed(n)*bednotfixed(i,j,k) ! in case obstacle no erosion (bednotfixed=0) then no cbed
-							!Cold(n,i,j,k)=c_bed(n)
-							!Cnew(n,i,j,k)=c_bed(n)
-							!dCdt(n,i,j,k)=c_bed(n)	
-						enddo
-					enddo
-					do n=1,nfrac
-					  ! place remainder which does not fit exactly in 1dz into cnewbot; this can be positive or negative as cnewbot varies between +/-0.5*cfixedbed 
-					  Cnewbot(n,i,j)=(zbed(i,j)-DBLE(kbed(i,j))*dz)/dz*c_bed(n)*bednotfixed(i,j,kbed(i,j))
-					enddo 
-				enddo
-			enddo
-			Coldbot = Cnewbot 
-			dCdtbot = Cnewbot
-		ENDIF	
-		call bound_cbot_integer(kbed)
-		kbedt=kbed
-		kbed0=kbed !original kbed saved to be used in SEM for example for sims with bed update in which kbed changes during a simulation  
-		IF (U_TSHD>0.) THEN
-			kbedin(0:j1)=kbed(1,0:j1)
-		ENDIF
+		nobst_file = nobst_file+1
 		
-		  IF (IBMorder.ne.2) THEN 
-		    kbed22=kbed 
-		  ELSE 
-		  	do j=1,jmax 
-				do i=1,imax 
-					IF (interaction_bed.ge.4) THEN 
-					  zb_W=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(dcdtbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
-					ELSE 
-					  zb_W=zbed(i,j)
-					ENDIF
-					kbed22(i,j)=FLOOR(zb_W/dz) 
-				ENDDO
-			ENDDO 
-			call bound_cbot_integer(kbed22) 
-		  ENDIF 
-      end
-
+		end subroutine read_obstacle 
+	
+	
 	subroutine bedroughness_init
 
         USE nlist

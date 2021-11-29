@@ -27,7 +27,7 @@
       real  dr2,dz2,df,df2,kcoeff,tmp1,tmp2,tmp3,Courant,dtmp,dtold
 	  double precision Tadapt,Uav,Vav,localsum,globalsum,du,duu,wsettlingmax,wsettlingmin
 	  real Wmaxx,tmp11,tmp12,tmp13,tmp4,tmp11global,tmp12global,tmp13global
-	  real dtnew,tmp10,tmp10global
+	  real dtnew,tmp10,tmp10global,Umaxx,Vmaxx
 
 	  
 !		IF (nobst>0.and.bp(1)%forever.eq.0.and.time_np+dt.gt.bp(1)%t0.and.counter<10) THEN
@@ -83,17 +83,22 @@
 				df2 = df * df 
 				dr2 = dr(i) * dr(i) 
 				kcoeff = ekm(i,j,k) /rnew(i,j,k)
-				Wmaxx = MAX(abs(Wnew(i,j,k)-wsettlingmax),abs(Wnew(i,j,k)-wsettlingmin))
-				tmp1 = ( abs(Unew(i,j,k)) / ( Rp(i+1)-Rp(i) ) ) +
-     &             ( abs(Vnew(i,j,k)) /         df        ) +
-     &             ( Wmaxx /         dz        )             
-				tmp3 = 1.0 / ( tmp1 + 1.e-12 )
-				tmp3 =0.5*tmp3 !CFD advection criterium
+				Wmaxx = MAX(abs(Wnew(i,j,k)-wsettlingmax),abs(Wnew(i,j,k)-wsettlingmin),
+     &				abs(Wnew(i,j,k-1)-wsettlingmax),abs(Wnew(i,j,k-1)-wsettlingmin))
+				Umaxx = MAX(abs(Unew(i,j,k)),abs(Unew(i-1,j,k))) 
+				Vmaxx = MAX(abs(Vnew(i,j,k)),abs(Vnew(i,j-1,k)))
+				tmp1 = ( Umaxx / dr(i) ) +
+     &             ( Vmaxx /         df        ) +
+     &             ( Wmaxx /         dz        )    
+				tmp2 = ( 1.0/dr2 + 1.0/df2 + 1.0/dz2 )
+!				tmp3 = 1.0 / ( 0.001 * tmp2 * kcoeff + 3.*tmp1 + 1.e-12 ) !19-11-2021: included dt<1000*dx^2/(kcoeff) as additional time step restriction for CN-implicit as tests for very high viscosity and no flow gave unstable results; theoretically it is not needed for stability + factor 3 for CFL advection criterium as AB2 needs <0.3 and CFL user-input can be as high as 0.9	 
+				tmp3 = 1.0 / ( 3.*tmp1 + 1.e-12 )
+!				tmp3 =0.5*tmp3 !CFD advection criterium
 				tmp10 = min(tmp10, tmp3 )
 				
-				tmp11 = min(tmp11,1.33*kcoeff/(Unew(i,j,k)**2+Vnew(i,j,k)**2+Wmaxx**2+1.e-12))
+				tmp11 = min(tmp11,1.333333*kcoeff/(Umaxx**2+Vmaxx**2+Wmaxx**2+1.e-12))
 				tmp12 = min(tmp12,0.25/(kcoeff*(1./dr2+1./df2+1./dz2)))
-				tmp13 = min(tmp13,(3.*kcoeff)**0.333*(Unew(i,j,k)**4/dr2+Vnew(i,j,k)**4/df2+Wmaxx**4/dz2+1.e-12)**-0.333)
+				tmp13 = min(tmp13,(3.*kcoeff)**0.333333*(Umaxx**4/dr2+Vmaxx**4/df2+Wmaxx**4/dz2+1.e-12)**-0.333333)
 				enddo
 			 enddo
 		  enddo	  
@@ -104,7 +109,24 @@
 		call mpi_allreduce(tmp12,tmp12global,1,mpi_double_precision,mpi_min,mpi_comm_world,ierr)			
 		call mpi_allreduce(tmp13,tmp13global,1,mpi_double_precision,mpi_min,mpi_comm_world,ierr)	
 		dt = Courant*min(tmp10global,max(tmp11global,min(tmp12global,tmp13global)))
-!		dt = Courant*tmp10global
+		!dt = Courant*(max(tmp11global,min(tmp12global,tmp13global)))
+	ELSEIF (.false.) THEN !(CNdiffz.eq.12) THEN  !CN-diff fully implicit with theta=1; unconditionally stable 
+		  do k=1,kmax
+			 do j=1,jmax
+				do i=1,imax
+				df = Rp(i)*(phiv(j)-phiv(j-1))
+				tmp1 = ( abs(Unew(i,j,k)) / ( Rp(i+1)-Rp(i) ) ) +
+     &             ( abs(Vnew(i,j,k)) /         df        ) +
+     &             ( MAX(abs(Wnew(i,j,k)-wsettlingmax),abs(Wnew(i,j,k)-wsettlingmin)) /         dz        )             
+				tmp3 = 1.0 / ( tmp1 + 1.e-12 )
+				tmp3 =Courant *tmp3 
+				dt = min( dt , tmp3 )
+				!dtmp = dt
+				enddo
+			 enddo
+		  enddo
+		dtmp=dt
+		call mpi_allreduce(dtmp,dt,1,mpi_double_precision,mpi_min,mpi_comm_world,ierr)			
 	  ELSE 
 		  do k=1,kmax
 			 do j=1,jmax
@@ -120,7 +142,7 @@
 	!			tmp1 = MAX(tmp1,( abs(Vnew(i,j,k)) /         df        ))
 	!			tmp1 = MAX(tmp1,( abs(Wnew(i,j,k)) /         dz        ))
 				tmp2 = ( 1.0/dr2 + 1.0/df2 + 1.0/dz2 )
-				tmp3 = 1.0 / ( 1.0 * tmp2 * kcoeff + tmp1 + 1.e-12 )
+				tmp3 = 1.0 / ( 2.0 * tmp2 * kcoeff + tmp1 + 1.e-12 ) !19-11-2021: adjusted with factor 2 on tmp2, because stability explicit diffusion operator is dt<dx^2/(2*kcoeff)
 				tmp3 =Courant *tmp3 
 				dt = min( dt , tmp3 )
 				!dtmp = dt

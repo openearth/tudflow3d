@@ -762,11 +762,7 @@ c*************************************************************
 		  do i=1,imax
 			do j=1,jmax
 				IF (IBMorder.eq.2) THEN
-					IF (interaction_bed.ge.4) THEN
-					  zb_C=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(dcdtbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
-					ELSE 
-					  zb_C=zbed(i,j)
-					ENDIF
+				    zb_C=zbed(i,j)
 					kp=MIN(CEILING(zb_C/dz+0.5)+1,k1)	!location velocity which must be adjusted 2nd order IBM -->(0-1)*dz distance from bed
 					distance_to_bed=(REAL(kp)-0.5)*dz-zb_C
 					IF (distance_to_bed<0.1*dz) THEN 
@@ -1390,6 +1386,7 @@ c*************************************************************
      &		        (Uvel(i  ,j  ,k  )-Uvel(i  ,j-1,k  ))/(Ru(i)*(phip(j)-phip(j-1))) +
      &		        (Uvel(i-1,j+1,k  )-Uvel(i-1,j  ,k  ))/(Ru(i-1)*(phip(j+1)-phip(j))) +
      &		        (Uvel(i-1,j  ,k  )-Uvel(i-1,j-1,k  ))/(Ru(i-1)*(phip(j)-phip(j-1))) ) * 0.25
+		dudy = dudy - 0.5*(Vvel(i,j,k)+Vvel(i,j-1,k))/Rp(i) 	 
 		dudz = ((Uvel(i  ,j  ,k+1)-Uvel(i  ,j  ,k  ))*dzi +
      &		        (Uvel(i  ,j  ,k  )-Uvel(i  ,j  ,k-1))*dzi +
      &		        (Uvel(i-1,j  ,k+1)-Uvel(i-1,j  ,k  ))*dzi +
@@ -1455,11 +1452,7 @@ c*************************************************************
 		  do i=1,imax
 			do j=1,jmax
 				IF (IBMorder.eq.2) THEN
-					IF (interaction_bed.ge.4) THEN
-					  zb_C=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(dcdtbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
-					ELSE 
-					  zb_C=zbed(i,j)
-					ENDIF
+					zb_C=zbed(i,j)
 					kp=MIN(CEILING(zb_C/dz+0.5)+1,k1)	!location velocity which must be adjusted 2nd order IBM -->(0-1)*dz distance from bed
 					distance_to_bed=(REAL(kp)-0.5)*dz-zb_C
 					IF (distance_to_bed<0.1*dz) THEN 
@@ -1986,6 +1979,7 @@ c*************************************************************
      &		        (Uvel(i  ,j  ,k  )-Uvel(i  ,j-1,k  ))/(Ru(i)*(phip(j)-phip(j-1))) +
      &		        (Uvel(i-1,j+1,k  )-Uvel(i-1,j  ,k  ))/(Ru(i-1)*(phip(j+1)-phip(j))) +
      &		        (Uvel(i-1,j  ,k  )-Uvel(i-1,j-1,k  ))/(Ru(i-1)*(phip(j)-phip(j-1))) ) * 0.25
+		dudy = dudy - 0.5*(Vvel(i,j,k)+Vvel(i,j-1,k))/Rp(i)
 		dudz = ((Uvel(i  ,j  ,k+1)-Uvel(i  ,j  ,k  ))*dzi +
      &		        (Uvel(i  ,j  ,k  )-Uvel(i  ,j  ,k-1))*dzi +
      &		        (Uvel(i-1,j  ,k+1)-Uvel(i-1,j  ,k  ))*dzi +
@@ -2088,11 +2082,7 @@ c*************************************************************
 		  do i=1,imax
 			do j=1,jmax
 				IF (IBMorder.eq.2) THEN
-					IF (interaction_bed.ge.4) THEN
-					  zb_C=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(dcdtbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
-					ELSE 
-					  zb_C=zbed(i,j)
-					ENDIF
+					zb_C=zbed(i,j)
 					kp=MIN(CEILING(zb_C/dz+0.5)+1,k1)	!location velocity which must be adjusted 2nd order IBM -->(0-1)*dz distance from bed
 					distance_to_bed=(REAL(kp)-0.5)*dz-zb_C
 					IF (distance_to_bed<0.1*dz) THEN 
@@ -2642,6 +2632,7 @@ c*************************************************************
      &		        (Uvel(i  ,j  ,k  )-Uvel(i  ,j-1,k  ))/(Ru(i)*(phip(j)-phip(j-1))) +
      &		        (Uvel(i-1,j+1,k  )-Uvel(i-1,j  ,k  ))/(Ru(i-1)*(phip(j+1)-phip(j))) +
      &		        (Uvel(i-1,j  ,k  )-Uvel(i-1,j-1,k  ))/(Ru(i-1)*(phip(j)-phip(j-1))) ) * 0.25
+		dudy = dudy - 0.5*(Vvel(i,j,k)+Vvel(i,j-1,k))/Rp(i)
 		dudz = ((Uvel(i  ,j  ,k+1)-Uvel(i  ,j  ,k  ))*dzi +
      &		        (Uvel(i  ,j  ,k  )-Uvel(i  ,j  ,k-1))*dzi +
      &		        (Uvel(i-1,j  ,k+1)-Uvel(i-1,j  ,k  ))*dzi +
@@ -3040,11 +3031,7 @@ c*************************************************************
 		  do i=1,imax
 			do j=1,jmax
 				IF (IBMorder.eq.2) THEN
-					IF (interaction_bed.ge.4) THEN
-					  zb_C=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(dcdtbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
-					ELSE 
-					  zb_C=zbed(i,j)
-					ENDIF
+					zb_C=zbed(i,j)
 					kp=MIN(CEILING(zb_C/dz+0.5)+1,k1)	!location velocity which must be adjusted 2nd order IBM -->(0-1)*dz distance from bed
 					distance_to_bed=(REAL(kp)-0.5)*dz-zb_C
 					IF (distance_to_bed<0.1*dz) THEN 
@@ -3596,6 +3583,7 @@ c*************************************************************
      &		        (Uvel(i  ,j  ,k  )-Uvel(i  ,j-1,k  ))/(Ru(i)*(phip(j)-phip(j-1))) +
      &		        (Uvel(i-1,j+1,k  )-Uvel(i-1,j  ,k  ))/(Ru(i-1)*(phip(j+1)-phip(j))) +
      &		        (Uvel(i-1,j  ,k  )-Uvel(i-1,j-1,k  ))/(Ru(i-1)*(phip(j)-phip(j-1))) ) * 0.25
+		dudy = dudy - 0.5*(Vvel(i,j,k)+Vvel(i,j-1,k))/Rp(i)
 		dudz = ((Uvel(i  ,j  ,k+1)-Uvel(i  ,j  ,k  ))*dzi +
      &		        (Uvel(i  ,j  ,k  )-Uvel(i  ,j  ,k-1))*dzi +
      &		        (Uvel(i-1,j  ,k+1)-Uvel(i-1,j  ,k  ))*dzi +
@@ -3676,11 +3664,7 @@ c*************************************************************
 		  do i=1,imax
 			do j=1,jmax
 				IF (IBMorder.eq.2) THEN
-					IF (interaction_bed.ge.4) THEN
-					  zb_C=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(dcdtbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
-					ELSE 
-					  zb_C=zbed(i,j)
-					ENDIF
+					zb_C=zbed(i,j)
 					kp=MIN(CEILING(zb_C/dz+0.5)+1,k1)	!location velocity which must be adjusted 2nd order IBM -->(0-1)*dz distance from bed
 					distance_to_bed=(REAL(kp)-0.5)*dz-zb_C
 					IF (distance_to_bed<0.1*dz) THEN 
@@ -4165,8 +4149,8 @@ c*************************************************************
 		ENDIF		
 		gvector=sqrt(gx**2+gy**2+gz**2)
 		dnew = 0.
-	      call advecc_VLE(dnew,TKE,rhU*Uvel,rhV*Vvel,rhW*Wvel,rr,Ru,Rp,dr,phiv,phipt,dz,
-     +            i1,j1,k1,1,imax,1,jmax,1,kmax,dt,rank,px,periodicx,periodicy,'massfrac',kbed)
+	      call advecc_VLE(dnew,TKE,Uvel,Vvel,Wvel,rr,Ru,Rp,dr,phiv,phipt,dz,
+     +            i1,j1,k1,1,imax,1,jmax,1,kmax,dt,rank,px,periodicx,periodicy,'volufrac',kbed)
 	      call diffc_CDS2 (dnew,TKE,ekm/Sc_k,1,imax,1,jmax,1,kmax)
 
 		TKEnew(1:imax,1:jmax,1:kmax)=TKE(1:imax,1:jmax,1:kmax)*rr(1:imax,1:jmax,1:kmax) + dt*dnew(1:imax,1:jmax,1:kmax) 	!advection and diffusion 
@@ -4234,7 +4218,7 @@ c*************************************************************
 					   bbby(j)=1.-aaay(j)-cccy(j) 				   
 					 enddo
 					 rhssy(1:px*jmax)=ans_T(i,1:px*jmax,k)
-					 CALL solve_tridiag_switchperiodic(ans_T(i,1:px*jmax,k),aaay(1:px*jmax),bbby(1:px*jmax),cccy(1:px*jmax),
+					 CALL solve_tridiag_switchperiodic2(ans_T(i,1:px*jmax,k),aaay(1:px*jmax),bbby(1:px*jmax),cccy(1:px*jmax),
      &			rhssy(1:px*jmax),px*jmax,pery)
 				   enddo
 				  enddo
@@ -4255,7 +4239,7 @@ c*************************************************************
 					bbby(1)=bbby(1)+aaay(1) !d.dn=0
 					aaay(1)=0.
 					rhssy(1:px*jmax)=ans_T(i,1:px*jmax,k)
-					CALL solve_tridiag_switchperiodic(ans_T(i,1:px*jmax,k),aaay(1:px*jmax),bbby(1:px*jmax),
+					CALL solve_tridiag_switchperiodic2(ans_T(i,1:px*jmax,k),aaay(1:px*jmax),bbby(1:px*jmax),
      &			cccy(1:px*jmax),rhssy(1:px*jmax),px*jmax,pery)	
 				   enddo
 				  enddo
@@ -4274,7 +4258,7 @@ c*************************************************************
 					   bbbx(i)=1.-aaax(i)-cccx(i) 
 					 enddo
 					 rhssx(1:imax)=TKEnew(1:imax,j,k) 
-					 CALL solve_tridiag_switchperiodic(TKEnew(1:imax,j,k),aaax(1:imax),bbbx(1:imax),cccx(1:imax),rhssx(1:imax),imax,perx) 
+					 CALL solve_tridiag_switchperiodic2(TKEnew(1:imax,j,k),aaax(1:imax),bbbx(1:imax),cccx(1:imax),rhssx(1:imax),imax,perx) 
 				   enddo
 				 enddo
 				ELSE !Neumann inflow and outflow 
@@ -4294,7 +4278,7 @@ c*************************************************************
 					 bbbx(imax)=bbbx(imax)+cccx(imax)
 					 cccx(imax)=0.
 					 rhssx(1:imax)=TKEnew(1:imax,j,k) 
-					 CALL solve_tridiag_switchperiodic(TKEnew(1:imax,j,k),aaax(1:imax),bbbx(1:imax),cccx(1:imax),rhssx(1:imax),imax,perx) 
+					 CALL solve_tridiag_switchperiodic2(TKEnew(1:imax,j,k),aaax(1:imax),bbbx(1:imax),cccx(1:imax),rhssx(1:imax),imax,perx) 
 				   enddo
 				 enddo					 
 				ENDIF 
@@ -4322,8 +4306,8 @@ c*************************************************************
 		TKEnew=MAX(1.e-12,TKEnew) 
 		
 		dnew = 0.
-	      call advecc_VLE(dnew,EEE,rhU*Uvel,rhV*Vvel,rhW*Wvel,rr,Ru,Rp,dr,phiv,phipt,dz,
-     +            i1,j1,k1,1,imax,1,jmax,1,kmax,dt,rank,px,periodicx,periodicy,'massfrac',kbed)
+	      call advecc_VLE(dnew,EEE,Uvel,Vvel,Wvel,rr,Ru,Rp,dr,phiv,phipt,dz,
+     +            i1,j1,k1,1,imax,1,jmax,1,kmax,dt,rank,px,periodicx,periodicy,'volufrac',kbed)
 	      call diffc_CDS2 (dnew,EEE,ekm/Sc_eps,1,imax,1,jmax,1,kmax)		
 		EEEnew(1:imax,1:jmax,1:kmax)=EEE(1:imax,1:jmax,1:kmax) + dt*dnew(1:imax,1:jmax,1:kmax)/rr(1:imax,1:jmax,1:kmax) 	!advection and diffusion --> divide by rho straight away 
      &  +dt*C1(1:imax,1:jmax,1:kmax)*Sabs(1:imax,1:jmax,1:kmax)*EEE(1:imax,1:jmax,1:kmax) 									!eps production	
@@ -4388,7 +4372,7 @@ c*************************************************************
 					   bbby(j)=1.-aaay(j)-cccy(j) 				   
 					 enddo
 					 rhssy(1:px*jmax)=ans_T(i,1:px*jmax,k)
-					 CALL solve_tridiag_switchperiodic(ans_T(i,1:px*jmax,k),aaay(1:px*jmax),bbby(1:px*jmax),cccy(1:px*jmax),
+					 CALL solve_tridiag_switchperiodic2(ans_T(i,1:px*jmax,k),aaay(1:px*jmax),bbby(1:px*jmax),cccy(1:px*jmax),
      &			rhssy(1:px*jmax),px*jmax,pery)
 				   enddo
 				  enddo
@@ -4409,7 +4393,7 @@ c*************************************************************
 					bbby(1)=bbby(1)+aaay(1) !d.dn=0
 					aaay(1)=0.
 					rhssy(1:px*jmax)=ans_T(i,1:px*jmax,k)
-					CALL solve_tridiag_switchperiodic(ans_T(i,1:px*jmax,k),aaay(1:px*jmax),bbby(1:px*jmax),
+					CALL solve_tridiag_switchperiodic2(ans_T(i,1:px*jmax,k),aaay(1:px*jmax),bbby(1:px*jmax),
      &			cccy(1:px*jmax),rhssy(1:px*jmax),px*jmax,pery)	
 				   enddo
 				  enddo
@@ -4428,7 +4412,7 @@ c*************************************************************
 					   bbbx(i)=1.-aaax(i)-cccx(i) 
 					 enddo
 					 rhssx(1:imax)=EEEnew(1:imax,j,k) 
-					 CALL solve_tridiag_switchperiodic(EEEnew(1:imax,j,k),aaax(1:imax),bbbx(1:imax),cccx(1:imax),rhssx(1:imax),imax,perx) 
+					 CALL solve_tridiag_switchperiodic2(EEEnew(1:imax,j,k),aaax(1:imax),bbbx(1:imax),cccx(1:imax),rhssx(1:imax),imax,perx) 
 				   enddo
 				 enddo
 				ELSE !Neumann inflow and outflow 
@@ -4448,7 +4432,7 @@ c*************************************************************
 					 bbbx(imax)=bbbx(imax)+cccx(imax)
 					 cccx(imax)=0.
 					 rhssx(1:imax)=EEEnew(1:imax,j,k) 
-					 CALL solve_tridiag_switchperiodic(EEEnew(1:imax,j,k),aaax(1:imax),bbbx(1:imax),cccx(1:imax),rhssx(1:imax),imax,perx) 
+					 CALL solve_tridiag_switchperiodic2(EEEnew(1:imax,j,k),aaax(1:imax),bbbx(1:imax),cccx(1:imax),rhssx(1:imax),imax,perx) 
 				   enddo
 				 enddo					 
 				ENDIF 
@@ -4524,14 +4508,14 @@ c*************************************************************
 					  ENDDO 
 					ENDDO 		
 				ENDIF
-				IF (interaction_bed.ge.4) THEN
-				 DO i=1,imax
-				  DO j=1,jmax
-					zbed(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(dcdtbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
-				  ENDDO 
-				 ENDDO 
-				 call bound_cbot(zbed)
-				ENDIF 		
+!				IF (interaction_bed.ge.4) THEN
+!				 DO i=1,imax
+!				  DO j=1,jmax
+!					zbed(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(dcdtbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
+!				  ENDDO 
+!				 ENDDO 
+!				 call bound_cbot(zbed)
+!				ENDIF 		
 			  do i=1,imax
 				do j=1,jmax
 				IF (slip_bot.ge.3) THEN 
@@ -4548,7 +4532,7 @@ c*************************************************************
 						ddzzW=(REAL(kppW)-0.5)*dz-0.5*(zbed(i,j)+zbed(i-1,j))
 						ddzzN=(REAL(kppN)-0.5)*dz-0.5*(zbed(i,j)+zbed(i,j+1))
 						ddzzS=(REAL(kppS)-0.5)*dz-0.5*(zbed(i,j)+zbed(i,j-1))
-						distance_to_bed=MIN(0.5*dz,0.25*(ddzzE+ddzzW+ddzzN+ddzzS))
+						distance_to_bed=MAX(0.5*dz,0.25*(ddzzE+ddzzW+ddzzN+ddzzS))
 					ELSE
 						kppE = MIN(MAX(kbed(i,j),kbed(i+1,j))+k_ust_tau,k1)
 						kppW = MIN(MAX(kbed(i,j),kbed(i-1,j))+k_ust_tau,k1)
@@ -4594,9 +4578,10 @@ c*************************************************************
 				ENDIF  
 				! apply bc for TKE and EEE on cell at least 0.1dz above bed:
 				IF (IBMorder.eq.2) THEN
+					zb_W=zbed(i,j)
 					kp=MIN(CEILING(zb_W/dz+0.5),kmax)		!kpp is between 0-dz distance from bed 
 					distance_to_bed=(REAL(kp)-0.5)*dz-zb_W
-					IF (distance_to_bed<0.1*dz) THEN !first cell too close to bed, therefore use second cell from bed
+					IF (distance_to_bed<0.5*dz) THEN !first cell too close to bed, therefore use second cell from bed
 					  kp=kp+1		
 					  distance_to_bed=(REAL(kp)-0.5)*dz-zb_W
 					ENDIF 

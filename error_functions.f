@@ -671,7 +671,28 @@
 		write(*,*) '# avfile does not contain correct data           #'	
 	CASE(705)
 		write(*,*) '# namelist &ambient                              #'			
-		write(*,*) '# obstfile does not contain correct size data    #'			
+		write(*,*) '# obstfile does not contain correct size data    #'	
+	CASE(706)
+		write(*,*) '# namelist &ambient                              #'			
+		write(*,*) '# obstfile does not contain correct length       #'			
+		write(*,*) '# ostacle_starttimes vector                      #'			
+		write(*,*) '# (should be equal to number of obstacle files)  #'
+	CASE(801)															!new error functions
+		write(*,*) '# namelist &rheology                             #'
+		write(*,*) '# Non_Newtonian should be 0,1 or 2 (default 0)   #'
+	CASE(802)
+		write(*,*) '# namelist &rheology	                         #'			
+		write(*,*) '# Rheological_model is not defined               #'
+		write(*,*) '# choose ''SIMPLE'' for simple Bingham#          #'
+		write(*,*) '# choose ''JACOBS'' for Jacobs and van Kesteren  #'
+		write(*,*) '# choose ''WINTER'' for Winterwerp and Kranenburg#'
+		write(*,*) '# choose ''THOMAS'' for Thomas                   #'
+!	CASE(803)
+!		write(*,*) '# namelist &rheology                             #'
+!		write(*,*) '# thixotropy should be 0 or 1 (default 0)        #'
+!	CASE(804)
+!		write(*,*) '# namelist &rheology                             #'
+!		write(*,*) '# thixotropy should be 0 or 1 (default 0)        #'		
 	CASE(1001)
 		write(*,*) '# namelist &timeseries                           #'			
 		write(*,*) '# file cannot be found                           #'	
