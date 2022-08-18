@@ -54,7 +54,7 @@ c******************************************************************
 
         ii=(i1+1)*(j1+1)*(kmaxTSHD_ind)*2 ! per partition it is possible that obstacles overlap
 		
-	IF (LOA>0.or.nobst>0) THEN
+	IF (LOA>0.or.nobst>0.or.obstfile.ne.'') THEN
         ALLOCATE(i_inPpuntTSHD(ii))
         ALLOCATE(j_inPpuntTSHD(ii))
         ALLOCATE(k_inPpuntTSHD(ii))
@@ -349,18 +349,18 @@ c******************************************************************
 
 !       include 'param.txt'
 !       include 'common.txt'
-           Unew =0.
-           Vnew =0.
-           Wnew =0.
-           Uold =0.
-           Vold =0.
-           Wold =0.
-	   dUdt =0.
-	   dVdt =0.
-	   dWdt =0.
-        rold =rho_b
-        rnew =rho_b
-	drdt=rho_b
+		Unew =0.
+		Vnew =0.
+		Wnew =0.
+		Uold =0.
+		Vold =0.
+		Wold =0.
+		dUdt =0.
+		dVdt =0.
+		dWdt =0.
+		rold =rho_b
+		rnew =rho_b
+		drdt=rho_b
 		rhoU=0.
 		rhoV=0.
 		rhoW=0.
@@ -416,17 +416,17 @@ c******************************************************************
 		dUdt=Unew*rnew
 		dVdt=Vnew*rnew
 		dWdt=Wnew*rnew
-	  	do n=1,nfrac
-			cnew(n,:,:,:) = frac(n)%c
-			cold(n,:,:,:) = frac(n)%c
-			dcdt(n,:,:,:) = frac(n)%c
-			IF (time_int.eq.'AB2'.or.time_int.eq.'AB3'.or.time_int.eq.'ABv') THEN
-				cc(n,:,:,:) = frac(n)%c
-				ccold(n,:,:,:) = frac(n)%c
-				ccbot=0.
-				ccoldbot=0.
-			ENDIF
-	  	enddo
+	!  	do n=1,nfrac !!switched off 3-2-2022 -> init c can be defined via bedplume, no need to do it like this
+	!		cnew(n,:,:,:) = frac(n)%c
+	!		cold(n,:,:,:) = frac(n)%c
+	!		dcdt(n,:,:,:) = frac(n)%c
+	!		IF (time_int.eq.'AB2'.or.time_int.eq.'AB3'.or.time_int.eq.'ABv') THEN
+	!			cc(n,:,:,:) = frac(n)%c
+	!			ccold(n,:,:,:) = frac(n)%c
+	!			ccbot=0.
+	!			ccoldbot=0.
+	!		ENDIF
+	!  	enddo
 	endif
 
 	IF (nbedplume>0) THEN
@@ -452,7 +452,7 @@ c******************************************************************
 	 	inout=0
 	  ENDIF
 	  if (inout.eq.1) then
-	   IF (bp(n)%t0.eq.0.) THEN
+	   IF (bp(n)%t0.lt.1.e-12) THEN
 	    DO n2=1,nfrac
 		Cold(n2,i,j,k)=bp(n)%c(n2)
 		Cnew(n2,i,j,k)=bp(n)%c(n2)
@@ -460,7 +460,7 @@ c******************************************************************
 		! rho is calculated in state called after fkdat
 	    ENDDO
 	   ENDIF
-	    IF (bp(n)%u.ne.-99999.and.bp(n).t0.eq.0.) THEN
+	    IF (bp(n)%u.ne.-99999.and.bp(n).t0.lt.1.e-12) THEN
 	      Uold(i,j,k)=bp(n)%u*cos_u(j)+bp(n)%v*sin_u(j)
 		  Uold(MAX(i-1,0),j,k)=bp(n)%u*cos_u(j)+bp(n)%v*sin_u(j)
 	      Vold(i,j,k)=-bp(n)%u*sin_v(j)+bp(n)%v*cos_v(j) 
@@ -2521,29 +2521,30 @@ C ...  Locals
 	      enddo
 	ENDDO
 
-	kbed2=0
-	DO n=1,nobst
-	!! search for zbed and kbed for dummy array (j=0:px*jmax+1):
-	      do j=0,jmax*px+1 
-	       do i=0,i1  
-		in=.false.
-		do k=0,k1 ! one extra in vertical direction for W  
-		  xx=Rp(i)*cos_ut(j)-schuif_x
-		  yy=Rp(i)*sin_ut(j)
-		  IF (k.le.FLOOR(ob(n)%height/dz).and.ob(n)%zbottom.le.0.) THEN ! obstacle part of bed:
-			xTSHD(1:4)=ob(n)%x*cos(phi)-ob(n)%y*sin(phi)
-			yTSHD(1:4)=ob(n)%x*sin(phi)+ob(n)%y*cos(phi)
-			CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
-		  ELSE 
-		 	inout=0
-		  ENDIF
-		  if (inout.eq.1) then
-		      kbed2(i,j)=MAX(kbed2(i,j),FLOOR(ob(n)%height/dz)) !zero without obstacle, otherwise max of all obstacles at i,j
-		  endif
-		enddo
-	       enddo
-	      enddo
-	ENDDO
+!!! this kbed2 is not used anymore
+!!!	kbed2=0
+!!!	DO n=1,nobst
+!!!	!! search for zbed and kbed for dummy array (j=0:px*jmax+1):
+!!!	      do j=0,jmax*px+1 
+!!!	       do i=0,i1  
+!!!		in=.false.
+!!!		do k=0,k1 ! one extra in vertical direction for W  
+!!!		  xx=Rp(i)*cos_ut(j)-schuif_x
+!!!		  yy=Rp(i)*sin_ut(j)
+!!!		  IF (k.le.FLOOR(ob(n)%height/dz).and.ob(n)%zbottom.le.0.) THEN ! obstacle part of bed:
+!!!			xTSHD(1:4)=ob(n)%x*cos(phi)-ob(n)%y*sin(phi)
+!!!			yTSHD(1:4)=ob(n)%x*sin(phi)+ob(n)%y*cos(phi)
+!!!			CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+!!!		  ELSE 
+!!!		 	inout=0
+!!!		  ENDIF
+!!!		  if (inout.eq.1) then
+!!!		      kbed2(i,j)=MAX(kbed2(i,j),FLOOR(ob(n)%height/dz)) !zero without obstacle, otherwise max of all obstacles at i,j
+!!!		  endif
+!!!		enddo
+!!!	       enddo
+!!!	      enddo
+!!!	ENDDO
 
 	DO n=1,nobst
       !! Search for P,V:
@@ -2558,7 +2559,7 @@ C ...  Locals
 
 !	  IF (k.le.FLOOR(ob(n)%height/dz)) THEN ! obstacle:
 	  !IF ((k.ge.CEILING(ob(n)%zbottom/dz)).and.(k.le.FLOOR(ob(n)%height/dz)).and.(FLOOR(ob(n)%height/dz).eq.kbed2(i,j))) THEN ! obstacle:
-	  IF ((k.ge.CEILING(ob(n)%zbottom/dz)).and.(k.le.FLOOR(ob(n)%height/dz)).and.ob(n)%zbottom.gt.0.) THEN ! obstacle: adjustment 10-1-2017 because some obstacles are missed with check on kbed
+	  IF ((k.ge.CEILING(ob(n)%zbottom/dz)).and.(k.le.FLOOR(ob(n)%height/dz)).and.ob(n)%zbottom.gt.1.e-9) THEN ! obstacle: adjustment 10-1-2017 because some obstacles are missed with check on kbed
 		xTSHD(1:4)=ob(n)%x*cos(phi)-ob(n)%y*sin(phi)
 		yTSHD(1:4)=ob(n)%x*sin(phi)+ob(n)%y*cos(phi)
 		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
@@ -2624,7 +2625,7 @@ C ...  Locals
 	  yy=Rp(i)*sin_u(j)
 !	  IF (k.le.FLOOR(ob(n)%height/dz)) THEN ! obstacle:
 	  !IF ((k.ge.CEILING(ob(n)%zbottom/dz)).and.(k.le.FLOOR(ob(n)%height/dz)).and.(FLOOR(ob(n)%height/dz).eq.kbed(i,j))) THEN ! obstacle:
-	  IF ((k.ge.CEILING(ob(n)%zbottom/dz)).and.(k.le.FLOOR(ob(n)%height/dz)).and.ob(n)%zbottom.gt.0.) THEN ! obstacle: adjustment 10-1-2017 because some obstacles are missed with check on kbed
+	  IF ((k.ge.CEILING(ob(n)%zbottom/dz)).and.(k.le.FLOOR(ob(n)%height/dz)).and.ob(n)%zbottom.gt.1.e-9) THEN ! obstacle: adjustment 10-1-2017 because some obstacles are missed with check on kbed
 		xTSHD(1:4)=ob(n)%x*cos(phi)-ob(n)%y*sin(phi)
 		yTSHD(1:4)=ob(n)%x*sin(phi)+ob(n)%y*cos(phi)
 		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
@@ -2660,7 +2661,7 @@ C ...  Locals
 	  yy=Rp(i)*sin_u(j)
 !	  IF (k.le.FLOOR(ob(n)%height/dz)) THEN ! obstacle:
 !	  IF ((k.ge.CEILING(ob(n)%zbottom/dz)).and.(k.le.FLOOR(ob(n)%height/dz)).and.(FLOOR(ob(n)%height/dz).eq.kbed(i,j))) THEN ! obstacle:
-	  IF ((k.ge.CEILING(ob(n)%zbottom/dz)).and.(k.le.FLOOR(ob(n)%height/dz)).and.ob(n)%zbottom.gt.0.) THEN ! obstacle: adjustment 10-1-2017 because some obstacles are missed with check on kbed
+	  IF ((k.ge.CEILING(ob(n)%zbottom/dz)).and.(k.le.FLOOR(ob(n)%height/dz)).and.ob(n)%zbottom.gt.1.e-9) THEN ! obstacle: adjustment 10-1-2017 because some obstacles are missed with check on kbed
 		xTSHD(1:4)=ob(n)%x*cos(phi)-ob(n)%y*sin(phi)
 		yTSHD(1:4)=ob(n)%x*sin(phi)+ob(n)%y*cos(phi)
 		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
@@ -2791,22 +2792,23 @@ C ...  Locals
 		IF (U_TSHD>0.) THEN
 			kbedin(0:j1)=kbed(1,0:j1)
 		ENDIF
-		
-		  IF (IBMorder.ne.2) THEN 
-		    kbed22=kbed 
-		  ELSE 
-		  	do j=1,jmax 
-				do i=1,imax 
-					IF (interaction_bed.ge.4) THEN 
-					  zb_W=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(dcdtbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
-					ELSE 
-					  zb_W=zbed(i,j)
-					ENDIF
-					kbed22(i,j)=FLOOR(zb_W/dz) 
-				ENDDO
-			ENDDO 
-			call bound_cbot_integer(kbed22) 
-		  ENDIF 
+
+!!! kbed22 not used anymore 		
+!!!		  IF (IBMorder.ne.2) THEN 
+!!!		    kbed22=kbed 
+!!!		  ELSE 
+!!!		  	do j=1,jmax 
+!!!				do i=1,imax 
+!!!					IF (interaction_bed.ge.4) THEN 
+!!!					  zb_W=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(dcdtbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
+!!!					ELSE 
+!!!					  zb_W=zbed(i,j)
+!!!					ENDIF
+!!!					kbed22(i,j)=FLOOR(zb_W/dz) 
+!!!				ENDDO
+!!!			ENDDO 
+!!!			call bound_cbot_integer(kbed22) 
+!!!		  ENDIF 
       end
 
 		subroutine read_obstacle(tel1start,tel2start,tel3start,tel4start) 
@@ -2844,7 +2846,7 @@ C ...  Locals
 		ENDDO
 		IF (rank.eq.0) THEN
 			WRITE(*,'(A,I0)') ' Number of obstacle files found: ',nobst_files	
-			DO n=1,nobst_files,nobst_files-1
+			DO n=1,nobst_files
 			  write(*,*),obst_file_series(n)
 			ENDDO
 		ENDIF
@@ -2943,7 +2945,7 @@ C ...  Locals
 					  bednotfixed(i,j,k)=obb_ero(i,j,k) ! obstacle in bed cannot be avalanched or eroded if 0. (default) user can choose to have erosion: 1.
 					  bednotfixed_depo(i,j,k)=obb_depo(i,j,k) ! obstacle in bed cannot have deposition if 0. (default)
 				  endif 
-				  if (kbed(i,j).eq.k-1) then  !obstacle is connected to floor so include in kbed + this works only for k=0,k1 upward counting inner loop in i,j loop
+				  if (kbed(i,j).eq.k-1.and.obb(i,j,kmax).eq.0) then  !obstacle is connected to floor and not complete vertical is obstacle so include in kbed + this works only for k=0,k1 upward counting inner loop in i,j loop
 					kbed(i,j)=k
 				  endif 
 				  tel1=tel1+1
@@ -2954,7 +2956,7 @@ C ...  Locals
 				  i_inUpuntTSHD(tel2)=i 
 				  j_inUpuntTSHD(tel2)=j
 				  k_inUpuntTSHD(tel2)=k	
-				  if (i-1.ge.0) then 
+				  if (i-1.ge.0.and.obb(i-1,j,k).eq.0) then 
 					  tel2=tel2+1
 					  i_inUpuntTSHD(tel2)=i-1 
 					  j_inUpuntTSHD(tel2)=j
@@ -2964,7 +2966,7 @@ C ...  Locals
 				  i_inVpuntTSHD(tel3)=i 
 				  j_inVpuntTSHD(tel3)=j
 				  k_inVpuntTSHD(tel3)=k	
-				  if (j-1.ge.0) then 
+				  if (j-1.ge.0.and.obb(i,j-1,k).eq.0) then 
 					  tel3=tel3+1
 					  i_inVpuntTSHD(tel3)=i 
 					  j_inVpuntTSHD(tel3)=j-1
@@ -2974,7 +2976,7 @@ C ...  Locals
 				  i_inWpuntTSHD(tel4)=i 
 				  j_inWpuntTSHD(tel4)=j
 				  k_inWpuntTSHD(tel4)=k	
-				  if (k-1.ge.0) then 
+				  if (k-1.ge.0.and.obb(i,j,k-1).eq.0) then 
 					  tel4=tel4+1
 					  i_inWpuntTSHD(tel4)=i
 					  j_inWpuntTSHD(tel4)=j

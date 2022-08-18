@@ -71,11 +71,88 @@
 		wsettlingmax=0.
 		wsettlingmin=0.
 	  ENDIF
-	  IF (CNdiffz.eq.11.or.CNdiffz.eq.12) THEN !AB3-CN, use stability limits viscosity from Wesseling for AB2-CN + standard CFD advection
-		  tmp11=dt/Courant
-		  tmp12=dt/Courant
-		  tmp13=dt/Courant
-		  tmp10=dt/Courant  
+!!!!!	  IF (CNdiffz.eq.11) THEN !AB2-CN, use stability limits viscosity from Wesseling for AB2-CN + standard CFL advection
+!!!!!		  do k=1,kmax
+!!!!!			 do j=1,jmax
+!!!!!				do i=1,imax
+!!!!!				df = Rp(i)*(phiv(j)-phiv(j-1))
+!!!!!				df2 = df * df 
+!!!!!				dr2 = dr(i) * dr(i) 
+!!!!!				kcoeff = ekm(i,j,k) /rnew(i,j,k)
+!!!!!				Wmaxx = MAX(abs(Wnew(i,j,k)-wsettlingmax),abs(Wnew(i,j,k)-wsettlingmin),
+!!!!!     &				abs(Wnew(i,j,k-1)-wsettlingmax),abs(Wnew(i,j,k-1)-wsettlingmin))
+!!!!!				Umaxx = MAX(abs(Unew(i,j,k)),abs(Unew(i-1,j,k))) 
+!!!!!				Vmaxx = MAX(abs(Vnew(i,j,k)),abs(Vnew(i,j-1,k)))
+!!!!!!!!				tmp1 = ( Umaxx / dr(i) ) +
+!!!!!!!!     &             ( Vmaxx /         df        ) +
+!!!!!!!!     &             ( Wmaxx /         dz        )    
+!!!!!				tmp2 = ( 1.0/dr2 + 1.0/df2 + 1.0/dz2 )
+!!!!!!				tmp3 = 1.0 / ( 0.001 * tmp2 * kcoeff + 3.*tmp1 + 1.e-12 ) !19-11-2021: included dt<1000*dx^2/(kcoeff) as additional time step restriction for CN-implicit as tests for very high viscosity and no flow gave unstable results; theoretically it is not needed for stability + factor 3 for CFL advection criterium as AB2 needs <0.3 and CFL user-input can be as high as 0.9	
+!!!!!
+!!!!!!!!				! switched off courant advection criterium 17-1-2022 as Wesseling doesn't have this 
+!!!!!!!!				tmp3 = Courant / ( 3.*tmp1 + 1.e-12 )
+!!!!!				tmp11 = Courant*1.333333*kcoeff/(Umaxx**2+Vmaxx**2+Wmaxx**2+1.e-12)
+!!!!!				tmp12 = Courant*0.25/(kcoeff*(1./dr2+1./df2+1./dz2))
+!!!!!				tmp13 = Courant*(3.*kcoeff)**0.333333*(Umaxx**4/dr2+Vmaxx**4/df2+Wmaxx**4/dz2+1.e-12)**-0.333333
+!!!!!				
+!!!!!!!!				dt = min( dt , tmp3 , max(tmp11,min(tmp12,tmp13)) )
+!!!!!				dt = min( dt , max(tmp11,min(tmp12,tmp13)) )
+!!!!!				enddo
+!!!!!			 enddo
+!!!!!		  enddo	  
+!!!!!		dtmp=dt
+!!!!!		call mpi_allreduce(dtmp,dt,1,mpi_double_precision,mpi_min,mpi_comm_world,ierr)	
+!!!!!	  ELSEIF (CNdiffz.eq.12) THEN !AB2-CN, use stability limits viscosity from Wesseling for AB2-CN + standard CFL advection + diffusion limit from Chang 1991
+!!!!!		  do k=1,kmax
+!!!!!			 do j=1,jmax
+!!!!!				do i=1,imax
+!!!!!				df = Rp(i)*(phiv(j)-phiv(j-1))
+!!!!!				df2 = df * df 
+!!!!!				dr2 = dr(i) * dr(i) 
+!!!!!				kcoeff = ekm(i,j,k) /rnew(i,j,k)
+!!!!!				Wmaxx = MAX(abs(Wnew(i,j,k)-wsettlingmax),abs(Wnew(i,j,k)-wsettlingmin),
+!!!!!     &				abs(Wnew(i,j,k-1)-wsettlingmax),abs(Wnew(i,j,k-1)-wsettlingmin))
+!!!!!				Umaxx = MAX(abs(Unew(i,j,k)),abs(Unew(i-1,j,k))) 
+!!!!!				Vmaxx = MAX(abs(Vnew(i,j,k)),abs(Vnew(i,j-1,k)))
+!!!!!!!!				tmp1 = ( Umaxx / dr(i) ) +
+!!!!!!!!     &             ( Vmaxx /         df        ) +
+!!!!!!!!     &             ( Wmaxx /         dz        )    
+!!!!!				tmp2 = ( 1.0/dr2 + 1.0/df2 + 1.0/dz2 )
+!!!!!!!!				tmp3 = Courant / ( CNdiff_factor * 0.75* tmp2 * kcoeff + 3.*tmp1 + 1.e-12 ) !19-11-2021: included dt<0.75*dx^2/(kcoeff)/CNdiff_factor from Chang 1991 + factor 3 for CFL advection criterium as AB2 needs <0.3 and CFL user-input can be as high as 0.9	 
+!!!!!				tmp3 = Courant / ( CNdiff_factor * 0.75* tmp2 * kcoeff + 1.e-12 ) !19-11-2021: included dt<0.75*dx^2/(kcoeff)/CNdiff_factor from Chang 1991; 17-1-2022 removed advection tmp1 criterium	 
+!!!!!!				tmp3 = Courant / ( 3.*tmp1 + 1.e-12 )
+!!!!!				tmp11 = Courant*1.333333*kcoeff/(Umaxx**2+Vmaxx**2+Wmaxx**2+1.e-12)
+!!!!!				tmp12 = Courant*0.25/(kcoeff*(1./dr2+1./df2+1./dz2))
+!!!!!				tmp13 = Courant*(3.*kcoeff)**0.333333*(Umaxx**4/dr2+Vmaxx**4/df2+Wmaxx**4/dz2+1.e-12)**-0.333333
+!!!!!				
+!!!!!				dt = min( dt , tmp3 , max(tmp11,min(tmp12,tmp13)) )
+!!!!!				enddo
+!!!!!			 enddo
+!!!!!		  enddo	  
+!!!!!		dtmp=dt
+!!!!!		call mpi_allreduce(dtmp,dt,1,mpi_double_precision,mpi_min,mpi_comm_world,ierr)	
+	IF (CNdiffz.eq.11) THEN  !CN-diff 3D implicit; theoretically unconditionally stable 
+			! advection CFL dt criterium and diffusion dt criterium relaxed by factor CNdiff_dtfactor
+			! when CNdiff_dtfactor is chosen very large then no dt limit for diffusion (theoretically unconditionally stable)
+			! don't use Wesseling AB2-CN dt limits, because analyses of Wesseling AB2-CN dt limits reveal some problems: 
+			! * at low viscosity, high velocity Wesseling AB2-CN dt gives much lower dt as advection CFL; why, that is not logical because even explicit diffusion scheme would give higher dt in this range of conditions and implicit diffusion is more stable 
+			! * at high viscosity, all velocities Wesseling AB2-CN dt gives much higher dt as advection CFL; --> this seems dangerous
+!		  do k=1,kmax
+!			 do j=1,jmax
+!				do i=1,imax
+!				df = Rp(i)*(phiv(j)-phiv(j-1))
+!				tmp1 = ( abs(Unew(i,j,k)) / ( Rp(i+1)-Rp(i) ) ) +
+!     &             ( abs(Vnew(i,j,k)) /         df        ) +
+!     &             ( MAX(abs(Wnew(i,j,k)-wsettlingmax),abs(Wnew(i,j,k)-wsettlingmin)) /         dz        )             
+!				tmp3 = 1.0 / ( tmp1 + 1.e-12 )
+!				tmp3 =Courant *tmp3 
+!				dt = min( dt , tmp3 )
+!				!dtmp = dt
+!				enddo
+!			 enddo
+!		  enddo
+!		dtmp=dt
+!		call mpi_allreduce(dtmp,dt,1,mpi_double_precision,mpi_min,mpi_comm_world,ierr)		
 		  do k=1,kmax
 			 do j=1,jmax
 				do i=1,imax
@@ -83,50 +160,71 @@
 				df2 = df * df 
 				dr2 = dr(i) * dr(i) 
 				kcoeff = ekm(i,j,k) /rnew(i,j,k)
-				Wmaxx = MAX(abs(Wnew(i,j,k)-wsettlingmax),abs(Wnew(i,j,k)-wsettlingmin),
-     &				abs(Wnew(i,j,k-1)-wsettlingmax),abs(Wnew(i,j,k-1)-wsettlingmin))
-				Umaxx = MAX(abs(Unew(i,j,k)),abs(Unew(i-1,j,k))) 
-				Vmaxx = MAX(abs(Vnew(i,j,k)),abs(Vnew(i,j-1,k)))
-				tmp1 = ( Umaxx / dr(i) ) +
-     &             ( Vmaxx /         df        ) +
-     &             ( Wmaxx /         dz        )    
-				tmp2 = ( 1.0/dr2 + 1.0/df2 + 1.0/dz2 )
-!				tmp3 = 1.0 / ( 0.001 * tmp2 * kcoeff + 3.*tmp1 + 1.e-12 ) !19-11-2021: included dt<1000*dx^2/(kcoeff) as additional time step restriction for CN-implicit as tests for very high viscosity and no flow gave unstable results; theoretically it is not needed for stability + factor 3 for CFL advection criterium as AB2 needs <0.3 and CFL user-input can be as high as 0.9	 
-				tmp3 = 1.0 / ( 3.*tmp1 + 1.e-12 )
-!				tmp3 =0.5*tmp3 !CFD advection criterium
-				tmp10 = min(tmp10, tmp3 )
-				
-				tmp11 = min(tmp11,1.333333*kcoeff/(Umaxx**2+Vmaxx**2+Wmaxx**2+1.e-12))
-				tmp12 = min(tmp12,0.25/(kcoeff*(1./dr2+1./df2+1./dz2)))
-				tmp13 = min(tmp13,(3.*kcoeff)**0.333333*(Umaxx**4/dr2+Vmaxx**4/df2+Wmaxx**4/dz2+1.e-12)**-0.333333)
-				enddo
-			 enddo
-		  enddo	  
-		!!dtmp=dt
-		!!call mpi_allreduce(dtmp,dt,1,mpi_double_precision,mpi_min,mpi_comm_world,ierr)	
-		call mpi_allreduce(tmp10,tmp10global,1,mpi_double_precision,mpi_min,mpi_comm_world,ierr)			
-		call mpi_allreduce(tmp11,tmp11global,1,mpi_double_precision,mpi_min,mpi_comm_world,ierr)			
-		call mpi_allreduce(tmp12,tmp12global,1,mpi_double_precision,mpi_min,mpi_comm_world,ierr)			
-		call mpi_allreduce(tmp13,tmp13global,1,mpi_double_precision,mpi_min,mpi_comm_world,ierr)	
-		dt = Courant*min(tmp10global,max(tmp11global,min(tmp12global,tmp13global)))
-		!dt = Courant*(max(tmp11global,min(tmp12global,tmp13global)))
-	ELSEIF (.false.) THEN !(CNdiffz.eq.12) THEN  !CN-diff fully implicit with theta=1; unconditionally stable 
-		  do k=1,kmax
-			 do j=1,jmax
-				do i=1,imax
-				df = Rp(i)*(phiv(j)-phiv(j-1))
 				tmp1 = ( abs(Unew(i,j,k)) / ( Rp(i+1)-Rp(i) ) ) +
      &             ( abs(Vnew(i,j,k)) /         df        ) +
      &             ( MAX(abs(Wnew(i,j,k)-wsettlingmax),abs(Wnew(i,j,k)-wsettlingmin)) /         dz        )             
-				tmp3 = 1.0 / ( tmp1 + 1.e-12 )
+	!			tmp1 = ( abs(Unew(i,j,k)) / ( Rp(i+1)-Rp(i) ) )              !2D TVD tests show that taking MAX of 3 dirs is not sufficient for stable results without overshoot/undershoot
+	!			tmp1 = MAX(tmp1,( abs(Vnew(i,j,k)) /         df        ))
+	!			tmp1 = MAX(tmp1,( abs(Wnew(i,j,k)) /         dz        ))
+				tmp2 = ( 1.0/dr2 + 1.0/df2 + 1.0/dz2 )
+				tmp3 = 1.0 / ( 2./CNdiff_dtfactor * tmp2 * kcoeff + tmp1 + 1.e-12 ) !included dt<CNdiff_dtfactor*dx^2/(2*kcoeff) --> Courant is extra safety factor for diffusion dt
 				tmp3 =Courant *tmp3 
 				dt = min( dt , tmp3 )
 				!dtmp = dt
+
 				enddo
 			 enddo
 		  enddo
 		dtmp=dt
-		call mpi_allreduce(dtmp,dt,1,mpi_double_precision,mpi_min,mpi_comm_world,ierr)			
+		call mpi_allreduce(dtmp,dt,1,mpi_double_precision,mpi_min,mpi_comm_world,ierr)	
+	  ELSEIF (CNdiffz.eq.12) THEN !dt based on advection CFL and diffusion criterium relaxed by factor CNdiff_factor
+		  do k=1,kmax
+			 do j=1,jmax
+				do i=1,imax
+				df = Rp(i)*(phiv(j)-phiv(j-1))
+				df2 = df * df 
+				dr2 = dr(i) * dr(i) 
+				kcoeff = ekm(i,j,k) /rnew(i,j,k)
+				tmp1 = ( abs(Unew(i,j,k)) / ( Rp(i+1)-Rp(i) ) ) +
+     &             ( abs(Vnew(i,j,k)) /         df        ) +
+     &             ( MAX(abs(Wnew(i,j,k)-wsettlingmax),abs(Wnew(i,j,k)-wsettlingmin)) /         dz        )             
+	!			tmp1 = ( abs(Unew(i,j,k)) / ( Rp(i+1)-Rp(i) ) )              !2D TVD tests show that taking MAX of 3 dirs is not sufficient for stable results without overshoot/undershoot
+	!			tmp1 = MAX(tmp1,( abs(Vnew(i,j,k)) /         df        ))
+	!			tmp1 = MAX(tmp1,( abs(Wnew(i,j,k)) /         dz        ))
+				tmp2 = ( 1.0/dr2 + 1.0/df2 + 1.0/dz2 )
+				tmp3 = 1.0 / ( CNdiff_factor * 0.75 * tmp2 * kcoeff + tmp1 + 1.e-12 ) !included dt<0.75*dx^2/(kcoeff)/CNdiff_factor from Chang 1991 --> Courant is extra safety factor for diffusion dt
+				tmp3 =Courant *tmp3 
+				dt = min( dt , tmp3 )
+				!dtmp = dt
+
+				enddo
+			 enddo
+		  enddo
+		dtmp=dt
+		call mpi_allreduce(dtmp,dt,1,mpi_double_precision,mpi_min,mpi_comm_world,ierr)
+	ELSEIF (CNdiffz.eq.31) THEN  !fully 3D CN-diff implicit; theoretically unconditionally stable 
+		  do k=1,kmax
+			 do j=1,jmax
+				do i=1,imax
+				df = Rp(i)*(phiv(j)-phiv(j-1))
+				df2 = df * df 
+				dr2 = dr(i) * dr(i) 
+				kcoeff = ekm(i,j,k) /rnew(i,j,k)
+				tmp1 = ( abs(Unew(i,j,k)) / ( Rp(i+1)-Rp(i) ) ) +
+     &             ( abs(Vnew(i,j,k)) /         df        ) +
+     &             ( MAX(abs(Wnew(i,j,k)-wsettlingmax),abs(Wnew(i,j,k)-wsettlingmin)) /         dz        )             
+	!			tmp1 = ( abs(Unew(i,j,k)) / ( Rp(i+1)-Rp(i) ) )              !2D TVD tests show that taking MAX of 3 dirs is not sufficient for stable results without overshoot/undershoot
+	!			tmp1 = MAX(tmp1,( abs(Vnew(i,j,k)) /         df        ))
+	!			tmp1 = MAX(tmp1,( abs(Wnew(i,j,k)) /         dz        ))
+				tmp2 = ( 1.0/dr2 + 1.0/df2 + 1.0/dz2 )
+				tmp3 = 1.0 / ( 2./CNdiff_dtfactor * tmp2 * kcoeff + tmp1 + 1.e-12 ) !included dt<CNdiff_dtfactor*dx^2/(2*kcoeff) --> Courant is extra safety factor for diffusion dt
+				tmp3 =Courant *tmp3 
+				dt = min( dt , tmp3 )
+				enddo
+			 enddo
+		  enddo
+		dtmp=dt
+		call mpi_allreduce(dtmp,dt,1,mpi_double_precision,mpi_min,mpi_comm_world,ierr)	
 	  ELSE 
 		  do k=1,kmax
 			 do j=1,jmax
@@ -195,12 +293,72 @@
 !	    dt=dt_max
 !	  endif
 !	endif
-	  if (periodicx.eq.1.and.ABS(dpdx).lt.1.e-12) THEN ! test determination correct dpdx and dpdy based on wanted u or v
+	if (periodicx.eq.1.and.ABS(dpdx).lt.1.e-12) THEN ! test determination correct dpdx and dpdy based on wanted u or v
+	   if (surf_layer>1.e-12) then !two different driving forces in the vertical are used 
+	    localsum=0.
+        do k=1,ksurf_bc !kmax
+          do j=1,jmax
+             do i=1,imax	  
+		       localsum=localsum+Unew(i,j,k)*(Rp(i+1)-Rp(i))*(phiv(j)-phiv(j-1))*Ru(i)*dz*fc_global(i,j+jmax*rank,k)	
+			 enddo
+		  enddo
+	    enddo
+		call mpi_allreduce(localsum,globalsum,1,mpi_double_precision,mpi_sum,mpi_comm_world,ierr)
+		
+		Uav = globalsum/(SUM(Vol_V)*REAL(ksurf_bc)) 
+		if (istep>1) THEN
+			du = Uav-Uavold
+		else
+			du = 0.
+		endif
+		Uavold = Uav
+		Tadapt = 100.*depth/sqrt(MAX(U_b,U_b3)**2+MAX(V_b,V_b3)**2+1.e-18) 
+		duu = Tadapt*du/dt !30 seconds worked
+		Uav = Uav + duu 
+		dpdx1 = dpdx1 + ABS(U_b-Uav)*(U_b-Uav)/depth*dt/Tadapt
+		!dpdx1 = dpdx1 + MIN(ABS(ABS(U_b)*(U_b-Uav)/depth*dt/Tadapt),0.1*ABS(dpdx1))*SIGN(1.,ABS(U_b)*(U_b-Uav)/depth*dt/Tadapt)
+		Ppropx(:,:,1:ksurf_bc) = dpdx1*rhU(:,:,1:ksurf_bc) !rnew !with variable density important to use rnew and not rho_b 
+		Uav = Uav - duu
+		if (rank.eq.0) then
+			if (mod(istep,10) .eq.0) then   
+				write(*,'(a,e11.4,a,f6.2,a,f6.2,a)') ' # bottom-layer dpdx: ',dpdx1,' Pa/m/(kg/m3); Uav: ',Uav,'; U_b:',U_b,' m/s #'
+			endif  
+		endif
+	    localsum=0.
+        do k=ksurf_bc+1,kmax !kmax
+          do j=1,jmax
+             do i=1,imax	  
+		       localsum=localsum+Unew(i,j,k)*(Rp(i+1)-Rp(i))*(phiv(j)-phiv(j-1))*Ru(i)*dz*fc_global(i,j+jmax*rank,k)
+			 enddo
+		  enddo
+	    enddo
+		call mpi_allreduce(localsum,globalsum,1,mpi_double_precision,mpi_sum,mpi_comm_world,ierr)
+		
+		Uav = globalsum/(SUM(Vol_V)*REAL(kmax-ksurf_bc)) 
+		if (istep>1) THEN
+			du = Uav-U3avold
+		else
+			du = 0.
+		endif
+		U3avold = Uav
+		Tadapt = 100.*depth/sqrt(MAX(U_b,U_b3)**2+MAX(V_b,V_b3)**2+1.e-18)
+		duu = Tadapt*du/dt !30 seconds worked
+		Uav = Uav + duu 
+		dpdx3 = dpdx3 + ABS(U_b3-Uav)*(U_b3-Uav)/depth*dt/Tadapt
+		!dpdx1 = dpdx1 + MIN(ABS(ABS(U_b)*(U_b-Uav)/depth*dt/Tadapt),0.1*ABS(dpdx1))*SIGN(1.,ABS(U_b)*(U_b-Uav)/depth*dt/Tadapt)
+		Ppropx(:,:,ksurf_bc+1:kmax) = dpdx3*rhU(:,:,ksurf_bc+1:kmax) !rnew !with variable density important to use rnew and not rho_b 
+		Uav = Uav - duu
+		if (rank.eq.0) then
+			if (mod(istep,10) .eq.0) then   
+				write(*,'(a,e11.4,a,f6.2,a,f6.2,a)') ' # top-layer dpdx: ',dpdx3,' Pa/m/(kg/m3); Uav: ',Uav,'; U_b3:',U_b3,' m/s #'
+			endif  
+		endif		
+	   else ! one driving force over whole vertical
 	    localsum=0.
         do k=1,kmax
           do j=1,jmax
              do i=1,imax	  
-		       localsum=localsum+Unew(i,j,k)*(Rp(i+1)-Rp(i))*(phiv(j)-phiv(j-1))*Ru(i)*dz
+		       localsum=localsum+Unew(i,j,k)*(Rp(i+1)-Rp(i))*(phiv(j)-phiv(j-1))*Ru(i)*dz*fc_global(i,j+jmax*rank,k)
 			 enddo
 		  enddo
 	    enddo
@@ -216,23 +374,82 @@
 		Tadapt = 100.*depth/sqrt(U_b**2+V_b**2+1.e-18) !for test just take a value
 		duu = Tadapt*du/dt !30 seconds worked
 		Uav = Uav + duu 
-		dpdx1 = dpdx1 + ABS(U_b)*(U_b-Uav)/depth*dt/Tadapt
+		dpdx1 = dpdx1 + ABS(U_b-Uav)*(U_b-Uav)/depth*dt/Tadapt
 		!dpdx1 = dpdx1 + MIN(ABS(ABS(U_b)*(U_b-Uav)/depth*dt/Tadapt),0.1*ABS(dpdx1))*SIGN(1.,ABS(U_b)*(U_b-Uav)/depth*dt/Tadapt)
 		Ppropx = dpdx1*rhU !rnew !with variable density important to use rnew and not rho_b 
 		Uav = Uav - duu
 		if (rank.eq.0) then
 			if (mod(istep,10) .eq.0) then   
-				write(*,'(a,f8.2,a,f6.2,a,f6.2,a)') ' # dpdx: ',dpdx1*rho_b,' Pa/m; Uav: ',Uav,'; U_b:',U_b,' m/s #'
+				write(*,'(a,e11.4,a,f6.2,a,f6.2,a)') ' # dpdx: ',dpdx1,' Pa/m/(kg/m3); Uav: ',Uav,'; U_b:',U_b,' m/s #'
      		    !write(*,*),du,duu,ABS(U_b)*(U_b-(Uav+duu))/depth*dt/Tadapt
 			endif  
 		endif			
-	  endif
-	  if (periodicy.eq.1.and.ABS(dpdy).lt.1.e-12) THEN ! test determination correct dpdx and dpdy based on wanted u or v
+	   endif
+	endif   
+	if (periodicy.eq.1.and.ABS(dpdy).lt.1.e-12) THEN ! test determination correct dpdx and dpdy based on wanted u or v
+	   if (surf_layer>1.e-12) then !two different driving forces in the vertical are used 
+	    localsum=0.
+        do k=1,ksurf_bc !kmax
+          do j=1,jmax
+             do i=1,imax	  
+		       localsum=localsum+Vnew(i,j,k)*(Ru(i)-Ru(i-1))*(phip(j+1)-phip(j))*Rp(i)*dz*fc_global(i,j+jmax*rank,k)
+			 enddo
+		  enddo
+	    enddo
+		call mpi_allreduce(localsum,globalsum,1,mpi_double_precision,mpi_sum,mpi_comm_world,ierr)	
+		Vav = globalsum/(SUM(Vol_V)*REAL(ksurf_bc)) 
+		if (istep>1) THEN
+			du = Vav-Vavold
+		else
+			du = 0.
+		endif
+		Vavold = Vav
+		Tadapt = 100.*depth/sqrt(MAX(U_b,U_b3)**2+MAX(V_b,V_b3)**2+1.e-18)
+		duu = Tadapt*du/dt !30 seconds worked
+		Vav = Vav + duu 
+		dpdy1 = dpdy1 + ABS(V_b-Vav)*(V_b-Vav)/depth*dt/Tadapt 
+		!dpdy1 = dpdy1 + MIN(ABS(ABS(V_b)*(V_b-Vav)/depth*dt/Tadapt),0.1*ABS(dpdy1))*SIGN(1.,ABS(V_b)*(V_b-Vav)/depth*dt/Tadapt)
+		Ppropy(:,:,1:ksurf_bc) = dpdy1*rhV(:,:,1:ksurf_bc) !rnew !with variable density important to use rnew and not rho_b
+		Vav = Vav - duu
+		if (rank.eq.0) then
+			if (mod(istep,10) .eq.0) then   
+				write(*,'(a,e11.4,a,f6.2,a,f6.2,a)') ' # bottom-layer dpdy: ',dpdy1,' Pa/m/(kg/m3); Vav: ',Vav,'; V_b:',V_b,' m/s #'
+			endif  
+		endif	
+	    localsum=0.
+        do k=ksurf_bc+1,kmax !kmax
+          do j=1,jmax
+             do i=1,imax	  
+		       localsum=localsum+Vnew(i,j,k)*(Ru(i)-Ru(i-1))*(phip(j+1)-phip(j))*Rp(i)*dz*fc_global(i,j+jmax*rank,k)
+			 enddo
+		  enddo
+	    enddo
+		call mpi_allreduce(localsum,globalsum,1,mpi_double_precision,mpi_sum,mpi_comm_world,ierr)	
+		Vav = globalsum/(SUM(Vol_V)*REAL(kmax-ksurf_bc)) 
+		if (istep>1) THEN
+			du = Vav-V3avold
+		else
+			du = 0.
+		endif
+		V3avold = Vav
+		Tadapt = 100.*depth/sqrt(MAX(U_b,U_b3)**2+MAX(V_b,V_b3)**2+1.e-18)
+		duu = Tadapt*du/dt !30 seconds worked
+		Vav = Vav + duu 
+		dpdy3 = dpdy3 + ABS(V_b3-Vav)*(V_b3-Vav)/depth*dt/Tadapt 
+		!dpdy1 = dpdy1 + MIN(ABS(ABS(V_b)*(V_b-Vav)/depth*dt/Tadapt),0.1*ABS(dpdy1))*SIGN(1.,ABS(V_b)*(V_b-Vav)/depth*dt/Tadapt)
+		Ppropy(:,:,ksurf_bc+1:kmax) = dpdy3*rhV(:,:,ksurf_bc+1:kmax) !rnew !with variable density important to use rnew and not rho_b
+		Vav = Vav - duu
+		if (rank.eq.0) then
+			if (mod(istep,10) .eq.0) then   
+				write(*,'(a,e11.4,a,f6.2,a,f6.2,a)') ' # top-layer dpdy: ',dpdy3,' Pa/m/(kg/m3); Vav: ',Vav,'; V_b3:',V_b3,' m/s #'
+			endif  
+		endif		
+	   else ! one driving force over whole vertical
 	    localsum=0.
         do k=1,kmax
           do j=1,jmax
              do i=1,imax	  
-		       localsum=localsum+Vnew(i,j,k)*(Ru(i)-Ru(i-1))*(phip(j+1)-phip(j))*Rp(i)*dz
+		       localsum=localsum+Vnew(i,j,k)*(Ru(i)-Ru(i-1))*(phip(j+1)-phip(j))*Rp(i)*dz*fc_global(i,j+jmax*rank,k)
 			 enddo
 		  enddo
 	    enddo
@@ -247,16 +464,17 @@
 		Tadapt = 100.*depth/sqrt(U_b**2+V_b**2+1.e-18) !for test just take a value
 		duu = Tadapt*du/dt !30 seconds worked
 		Vav = Vav + duu 
-		dpdy1 = dpdy1 + ABS(V_b)*(V_b-Vav)/depth*dt/Tadapt 
+		dpdy1 = dpdy1 + ABS(V_b-Vav)*(V_b-Vav)/depth*dt/Tadapt 
 		!dpdy1 = dpdy1 + MIN(ABS(ABS(V_b)*(V_b-Vav)/depth*dt/Tadapt),0.1*ABS(dpdy1))*SIGN(1.,ABS(V_b)*(V_b-Vav)/depth*dt/Tadapt)
 		Ppropy = dpdy1*rhV !rnew !with variable density important to use rnew and not rho_b
 		Vav = Vav - duu
 		if (rank.eq.0) then
 			if (mod(istep,10) .eq.0) then   
-				write(*,'(a,f8.2,a,f6.2,a,f6.2,a)') ' # dpdy: ',dpdy1*rho_b,' Pa/m; Vav: ',Vav,'; V_b:',V_b,' m/s #'		
+				write(*,'(a,e11.4,a,f6.2,a,f6.2,a)') ' # dpdy: ',dpdy1,' Pa/m/(kg/m3); Vav: ',Vav,'; V_b:',V_b,' m/s #'
 			endif  
 		endif	
 	   endif		
+	endif 
 
       end
 
@@ -893,4 +1111,1913 @@
 		
 	 END SUBROUTINE
 			
+		SUBROUTINE CN3Dpcg_d(xnew,x0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,i1,j1,k1,ib,ie,jb,je,kb,ke,maxiter,tol,rank) 
+		! Pre-conditioned ConjungateGradient implicit solver for 3D Laplacian Ax=RHS 
+		! Matrix A is a 3D Laplacian matrix containing 7 diagonals:
+		! Main diagonal values of matrix A in DD3D(0:i1,0:j1,0:k1)
+		! Off-diagonal values left and right in x-dir, y-dir and z-dir: Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D with size (0:i1,0:j1,0:k1) 
+		! Righthandside in RHS(0:i1,0:j1,0:k1) 
+		! solution output in xnew(0:i1,0:j1,0:k1) 
+		! starting condition in x0(0:i1,0:j1,0:k1)
+		
+		implicit none
+		
+        include 'mpif.h'
+        integer ierr,rank
+		integer  i,j,k,i1,j1,k1,im,ip,jm,jp,km,kp,tel,maxiter !,imax,jmax,kmax
+		integer ib,ie,jb,je,kb,ke
+		real Ax3D(0:i1,0:j1,0:k1),Ay3D(0:i1,0:j1,0:k1),Az3D(0:i1,0:j1,0:k1)
+		real Cx3D(0:i1,0:j1,0:k1),Cy3D(0:i1,0:j1,0:k1),Cz3D(0:i1,0:j1,0:k1)
+		real DD3D(0:i1,0:j1,0:k1),RHS3D(0:i1,0:j1,0:k1)
+		real x(0:i1,0:j1,0:k1),xnew(0:i1,0:j1,0:k1),p(0:i1,0:j1,0:k1),r(0:i1,0:j1,0:k1),rnew(0:i1,0:j1,0:k1) !,pnew(0:i1,0:j1,0:k1)
+		real ap(0:i1,0:j1,0:k1),x0(0:i1,0:j1,0:k1)
+		real tol,alpha,beta,rnew2,r2,pap,rnew2_global,r2_global,pap_global,eps,b2,b2_global
+		real znew(0:i1,0:j1,0:k1),rz2_global,rz2,rznew2,rznew2_global		
+
+		!x = RHS3D !start with RHS as initial guess
+		x = x0 !starting condition
+		p=0. 
+		b2=0.
+		r2=0.
+		rz2=0.		
+		do i=ib,ie !1,imax 
+			do j=jb,je !1,jmax 
+				do k=kb,ke !1,kmax 
+					! residual = RHS - A*x 
+!					r(i,j,k) = 	RHS3D(i,j,k)-x(i,j,k) - !x(i,j,k)-x(i,j,k)*DD3D(i,j,k)/DD3D(i,j,k) !first x(i,j,k) is RHS, second is DIAG*1/DIAG*x(i,j,k)
+					r(i,j,k) = 	RHS3D(i,j,k)-x(i,j,k)*DD3D(i,j,k) - !x(i,j,k)-x(i,j,k)*DD3D(i,j,k)/DD3D(i,j,k) !first x(i,j,k) is RHS, second is DIAG*1/DIAG*x(i,j,k)
+     &						    Cx3D(i  ,j  ,k  ) * x(i+1,j  ,k  ) - Ax3D(i  ,j  ,k  ) * x(i-1,j  ,k  ) -
+     &							Cy3D(i  ,j  ,k  ) * x(i  ,j+1,k  ) - Ay3D(i  ,j  ,k  ) * x(i  ,j-1,k  ) -
+     &							Cz3D(i  ,j  ,k  ) * x(i  ,j  ,k+1) - Az3D(i  ,j  ,k  ) * x(i  ,j  ,k-1) 
+					znew(i,j,k) = r(i,j,k)/DD3D(i,j,k) !preconditioning
+					p(i,j,k) = znew(i,j,k)
+					b2 = b2 + RHS3D(i,j,k)*RHS3D(i,j,k) 					
+					r2 = r2 + r(i,j,k)*r(i,j,k) 
+					rz2 = rz2 + r(i,j,k)*znew(i,j,k)
+				enddo
+			enddo 
+		enddo 
+		call mpi_allreduce(b2,b2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+		call mpi_allreduce(r2,r2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)		
+		call mpi_allreduce(rz2,rz2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)	
+		IF (sqrt(r2_global).le.tol.or.sqrt(b2_global).le.tol) THEN
+			!no need to iterate
+			xnew=x0
+!					write(*,*),'xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)',xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)
+!					write(*,*),'RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)',RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)
+!					write(*,*),'DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)',DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)
+			return 
+		ENDIF
+		call bound_intern_and_periodic(p)
 			
+		
+				
+		do tel=1,maxiter 
+			rnew2=0.
+			rznew2=0.
+			pap=0.
+			rnew2_global=0.
+			rznew2_global=0.
+			pap_global=0. 
+			eps=0. 
+			alpha=0. 
+			beta=0.
+
+			do i=ib,ie !1,imax 
+				do j=jb,je !1,jmax 
+					do k=kb,ke !1,kmax 
+						!ap(i,j,k) = p(i,j,k) + !*DIAG/DIAG
+						ap(i,j,k) = p(i,j,k)*DD3D(i,j,k) + !*DIAG/DIAG
+     &								Cx3D(i  ,j  ,k  ) * p(i+1,j  ,k  ) + Ax3D(i  ,j  ,k  ) * p(i-1,j  ,k  ) +
+     &								Cy3D(i  ,j  ,k  ) * p(i  ,j+1,k  ) + Ay3D(i  ,j  ,k  ) * p(i  ,j-1,k  ) +
+     &								Cz3D(i  ,j  ,k  ) * p(i  ,j  ,k+1) + Az3D(i  ,j  ,k  ) * p(i  ,j  ,k-1) 
+!						ap(i,j,k) = ap(i,j,k)/DD3D(i,j,k) !preconditioning
+						!r2  = r2  + r(i,j,k)* r(i,j,k) 
+						pap = pap + p(i,j,k)*ap(i,j,k) 	 
+					enddo
+				enddo 
+			enddo 	
+			
+!			do i=1,imax 
+!				do j=1,jmax 
+!					do k=1,kmax 
+!						!r2  = r2  + r(i,j,k)* r(i,j,k) 
+!						pap = pap + p(i,j,k)*ap(i,j,k) 
+!					enddo
+!				enddo 
+!			enddo 			
+			!call mpi_allreduce(r2,r2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+			call mpi_allreduce(pap,pap_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+			alpha = rz2_global/pap_global !with pre-conditioner !r2_global/pap_global
+			do i=ib,ie !1,imax 
+				do j=jb,je !1,jmax 
+					do k=kb,ke !1,kmax 
+						xnew(i,j,k)  = x(i,j,k)  + alpha* p(i,j,k)
+						rnew(i,j,k)  = r(i,j,k)  - alpha*ap(i,j,k)
+						rnew2 = rnew2 + rnew(i,j,k)*rnew(i,j,k)
+						znew(i,j,k) = rnew(i,j,k)/DD3D(i,j,k) !pre-conditioning
+						rznew2 = rznew2 + rnew(i,j,k)*znew(i,j,k) 
+					enddo
+				enddo 
+			enddo 			
+			call mpi_allreduce(rnew2,rnew2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+			call mpi_allreduce(rznew2,rznew2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+			eps = sqrt(rnew2_global)/sqrt(b2_global) 
+!				IF (rank.eq.0) THEN 
+!					write(*,*),'CN3Dpcg iteration working; tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D)
+!				ENDIF			
+			IF (eps<=tol) THEN 
+				IF (rank.eq.0) THEN 
+					write(*,*),'CN3Dcg iteration finished; tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',
+     & 					tel,tol,eps,b2_global,MINVAL(DD3D(ib:ie,jb:je,kb:ke)),MAXVAL(DD3D(ib:ie,jb:je,kb:ke))
+!					write(*,*),'xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)',xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)
+!					write(*,*),'RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)',RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)
+!					write(*,*),'DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)',DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)
+				ENDIF			
+				EXIT 
+			ELSEIF (tel.eq.maxiter) THEN 
+				IF (rank.eq.0) THEN 
+					write(*,*),'WARNING : CN3Dpcg iteration did not reach desired tolerance, TUDflow3D will continue with end result'
+					write(*,*)'tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',
+     &					tel,tol,eps,b2_global,MINVAL(DD3D(ib:ie,jb:je,kb:ke)),MAXVAL(DD3D(ib:ie,jb:je,kb:ke))
+!					write(*,*),'xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)',xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)
+!					write(*,*),'RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)',RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)
+!					write(*,*),'DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)',DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)
+				ENDIF
+				EXIT 
+			ENDIF 
+			beta = rznew2_global/rz2_global 
+			IF (isnan(alpha).or.isnan(beta)) THEN 
+				IF (rank.eq.0) THEN 
+					write(*,*),'WARNING : CN3Dpcg iteration crashed; alpha,beta,tel,tol,eps=',alpha,beta,tel,tol,eps
+				ENDIF
+				EXIT 
+			ENDIF
+
+			! not finished, so continue:
+			do i=ib,ie !1,imax 
+				do j=jb,je !1,jmax 
+					do k=kb,ke !1,kmax
+						p(i,j,k) = znew(i,j,k)  + beta*p(i,j,k)
+						x(i,j,k) = xnew(i,j,k)
+						r(i,j,k) = rnew(i,j,k)
+						!p(i,j,k) = pnew(i,j,k)
+					enddo
+				enddo 
+			enddo
+			r2_global = rnew2_global 
+			rz2_global = rznew2_global 
+			call bound_intern_and_periodic(p)
+
+		enddo ! interation loop 
+		
+		END SUBROUTINE
+		
+		SUBROUTINE CN3Dpcg_d2(xnew,x0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,i1,j1,k1,ib,ie,jb,je,kb,ke,maxiter,tol,rank) 
+		! Pre-conditioned ConjungateGradient implicit solver for 3D Laplacian Ax=RHS 
+		! Matrix A is a 3D Laplacian matrix containing 7 diagonals:
+		! Main diagonal values of matrix A in DD3D(0:i1,0:j1,0:k1)
+		! Off-diagonal values left and right in x-dir, y-dir and z-dir: Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D with size (0:i1,0:j1,0:k1) 
+		! Righthandside in RHS(0:i1,0:j1,0:k1) 
+		! solution output in xnew(0:i1,0:j1,0:k1) 
+		! starting condition in x0(0:i1,0:j1,0:k1)
+		
+		implicit none
+		
+        include 'mpif.h'
+        integer ierr,rank
+		integer  i,j,k,i1,j1,k1,im,ip,jm,jp,km,kp,tel,maxiter !,imax,jmax,kmax
+		integer ib,ie,jb,je,kb,ke
+		real Ax3D(0:i1,0:j1,0:k1),Ay3D(0:i1,0:j1,0:k1),Az3D(0:i1,0:j1,0:k1)
+		real Cx3D(0:i1,0:j1,0:k1),Cy3D(0:i1,0:j1,0:k1),Cz3D(0:i1,0:j1,0:k1)
+		real DD3D(0:i1,0:j1,0:k1),RHS3D(0:i1,0:j1,0:k1)
+		real x(0:i1,0:j1,0:k1),xnew(0:i1,0:j1,0:k1),p(0:i1,0:j1,0:k1),r(0:i1,0:j1,0:k1),rnew(0:i1,0:j1,0:k1) !,pnew(0:i1,0:j1,0:k1)
+		real ap(0:i1,0:j1,0:k1),x0(0:i1,0:j1,0:k1)
+		real tol,alpha,beta,rnew2,r2,pap,rnew2_global,r2_global,pap_global,eps,b2,b2_global
+		
+		! Diagonal pre-conditioner
+		! Appy regular CG to solve AAxx=bb with AA=P^-1AP^-T and x=P^-T*xx and bb=P^-1*b
+		! With diagonal pre-conditioner p_ii=sqrt(a_ii)
+
+!!		!x = RHS3D/sqrt(DD3D) !start condition equal to RHS 
+!!		x = x0 ! !starting condition 	
+!!		!! left preconditioning M^-1Ax = M^-1b with M=D -->D^-1Ax = b/D
+!!		! works for sdc 
+!!		Ax3D = Ax3D/DD3D
+!!		Cx3D = Cx3D/DD3D
+!!		Ay3D = Ay3D/DD3D
+!!		Cy3D = Cy3D/DD3D
+!!		Az3D = Az3D/DD3D
+!!		Cz3D = Cz3D/DD3D
+!!		RHS3D = RHS3D/DD3D
+		
+		
+		!! central preconditioning leading to symmetric matrix:
+		!A~x~=b~ with A~ = P^-1AP^-T x=P^-Tx~ and b~ = P^-1b 
+		!P = sqrt(D)
+		!at end x=P^-Tx~
+		call bound_p(DD3D) !--> DD3D (ip im jp jm kp km) are needed  
+		x = x0*sqrt(DD3D) !starting condition for x~
+		Ax3D = Ax3D/sqrt(DD3D)
+		Cx3D = Cx3D/sqrt(DD3D)
+		Ay3D = Ay3D/sqrt(DD3D)
+		Cy3D = Cy3D/sqrt(DD3D)
+		Az3D = Az3D/sqrt(DD3D)
+		Cz3D = Cz3D/sqrt(DD3D)
+		RHS3D = RHS3D/sqrt(DD3D)
+		do i=ib,ie !1,imax 
+			do j=jb,je !1,jmax 
+				do k=kb,ke !1,kmax 
+					im=MAX(ib,i-1)
+					jm=MAX(jb,j-1)
+					km=MAX(kb,k-1)
+					ip=MIN(ie,i+1) 
+					jp=MIN(je,j+1)
+					kp=MIN(ke,k+1) 			
+					!if (im>=0) then 
+						Ax3D(i,j,k)=Ax3D(i,j,k)/sqrt(DD3D(im,j,k))
+					!endif 
+					!if (ip<=i1) then 
+						Cx3D(i,j,k)=Cx3D(i,j,k)/sqrt(DD3D(ip,j,k))
+					!endif 					
+					!if (jm>=0) then  
+						Ay3D(i,j,k)=Ay3D(i,j,k)/sqrt(DD3D(i,jm,k))
+					!endif
+					!if (jp<=j1) then 
+						Cy3D(i,j,k)=Cy3D(i,j,k)/sqrt(DD3D(i,jp,k))
+					!endif 						
+					!if (km>=0) then 
+						Az3D(i,j,k)=Az3D(i,j,k)/sqrt(DD3D(i,j,km))
+					!endif 
+					!if (kp<=k1) then 
+						Cz3D(i,j,k)=Cz3D(i,j,k)/sqrt(DD3D(i,j,kp))
+					!endif 				
+				enddo 
+			enddo 
+		enddo
+		p=0.
+		b2=0.
+		r2=0. 
+		do i=ib,ie !1,imax 
+			do j=jb,je !1,jmax 
+				do k=kb,ke !1,kmax 
+					! residual = RHS - A*x 
+					r(i,j,k) = 	RHS3D(i,j,k)-x(i,j,k) - !x(i,j,k)-x(i,j,k)*DD3D(i,j,k)/DD3D(i,j,k) !first x(i,j,k) is RHS, second is DIAG*1/DIAG*x(i,j,k)
+					!r(i,j,k) = 	RHS3D(i,j,k)/sqrt(DD3D(i,j,k))-x(i,j,k) - !x(i,j,k)-x(i,j,k)*DD3D(i,j,k)/DD3D(i,j,k) !first x(i,j,k) is RHS, second is DIAG*1/DIAG*x(i,j,k)
+!					r(i,j,k) = 	RHS3D(i,j,k)-x(i,j,k)*DD3D(i,j,k) - !x(i,j,k)-x(i,j,k)*DD3D(i,j,k)/DD3D(i,j,k) !first x(i,j,k) is RHS, second is DIAG*1/DIAG*x(i,j,k)
+     &						    Cx3D(i  ,j  ,k  ) * x(i+1,j  ,k  ) - Ax3D(i  ,j  ,k  ) * x(i-1,j  ,k  ) -
+     &							Cy3D(i  ,j  ,k  ) * x(i  ,j+1,k  ) - Ay3D(i  ,j  ,k  ) * x(i  ,j-1,k  ) -
+     &							Cz3D(i  ,j  ,k  ) * x(i  ,j  ,k+1) - Az3D(i  ,j  ,k  ) * x(i  ,j  ,k-1) 
+					p(i,j,k) = r(i,j,k)
+					b2 = b2 + RHS3D(i,j,k)*RHS3D(i,j,k) 					
+					r2 = r2 + r(i,j,k)*r(i,j,k) 
+				enddo
+			enddo 
+		enddo 
+		call mpi_allreduce(b2,b2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+		call mpi_allreduce(r2,r2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)		
+		IF (sqrt(r2_global).le.tol.or.sqrt(b2_global).le.tol) THEN
+			!no need to iterate
+			xnew=x0
+			return 
+		ENDIF
+		call bound_intern_and_periodic(p)
+			
+		
+				
+		do tel=1,maxiter 
+			rnew2=0.
+			pap=0.
+			rnew2_global=0.
+			pap_global=0. 
+			eps=0. 
+			alpha=0. 
+			beta=0.
+
+			do i=ib,ie !1,imax 
+				do j=jb,je !1,jmax 
+					do k=kb,ke !1,kmax 
+						ap(i,j,k) = p(i,j,k) + !*DIAG/DIAG
+						!ap(i,j,k) = p(i,j,k)*DD3D(i,j,k) + !*DIAG/DIAG
+     &								Cx3D(i  ,j  ,k  ) * p(i+1,j  ,k  ) + Ax3D(i  ,j  ,k  ) * p(i-1,j  ,k  ) +
+     &								Cy3D(i  ,j  ,k  ) * p(i  ,j+1,k  ) + Ay3D(i  ,j  ,k  ) * p(i  ,j-1,k  ) +
+     &								Cz3D(i  ,j  ,k  ) * p(i  ,j  ,k+1) + Az3D(i  ,j  ,k  ) * p(i  ,j  ,k-1) 
+						!r2  = r2  + r(i,j,k)* r(i,j,k) 
+						pap = pap + p(i,j,k)*ap(i,j,k) 	 
+					enddo
+				enddo 
+			enddo 	
+		
+			!call mpi_allreduce(r2,r2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+			call mpi_allreduce(pap,pap_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+			alpha = r2_global/pap_global
+			do i=ib,ie !1,imax 
+				do j=jb,je !1,jmax 
+					do k=kb,ke !1,kmax 
+						xnew(i,j,k)  = x(i,j,k)  + alpha* p(i,j,k)
+						rnew(i,j,k)  = r(i,j,k)  - alpha*ap(i,j,k)
+						rnew2 = rnew2 + rnew(i,j,k)*rnew(i,j,k)
+					enddo
+				enddo 
+			enddo 			
+			call mpi_allreduce(rnew2,rnew2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+			eps = sqrt(rnew2_global)/sqrt(b2_global) 
+!				IF (rank.eq.0) THEN 
+!					write(*,*),'CN3Dpcg iteration working; tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D)
+!				ENDIF			
+			IF (eps<=tol) THEN 
+				xnew = xnew/sqrt(DD3D)
+				IF (rank.eq.0) THEN 
+					write(*,*),'CN3Dcg iteration finished; tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',
+     & 					tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D)
+!					write(*,*),'xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)',xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)
+!					write(*,*),'RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)',RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)
+!					write(*,*),'DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)',DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)
+				ENDIF			
+				EXIT 
+			ELSEIF (tel.eq.maxiter) THEN 
+				xnew = xnew/sqrt(DD3D)
+				IF (rank.eq.0) THEN 
+					write(*,*),'WARNING : CN3Dcg iteration did not reach desired tolerance, TUDflow3D will continue with end result'
+					write(*,*)'tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D)
+!					write(*,*),'xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)',xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)
+!					write(*,*),'RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)',RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)
+!					write(*,*),'DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)',DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)
+				ENDIF
+				EXIT 
+			ENDIF 
+			beta = rnew2_global/r2_global 
+			IF (isnan(alpha).or.isnan(beta)) THEN 
+				IF (rank.eq.0) THEN 
+					write(*,*),'WARNING : CN3Dpcg iteration crashed; alpha,beta,tel,tol,eps=',alpha,beta,tel,tol,eps
+				ENDIF
+				EXIT 
+			ENDIF
+
+			! not finished, so continue:
+			do i=ib,ie !1,imax 
+				do j=jb,je !1,jmax 
+					do k=kb,ke !1,kmax
+						p(i,j,k) = rnew(i,j,k)  + beta*p(i,j,k)
+						x(i,j,k) = xnew(i,j,k)
+						r(i,j,k) = rnew(i,j,k)
+						!p(i,j,k) = pnew(i,j,k)
+					enddo
+				enddo 
+			enddo
+			r2_global = rnew2_global 
+			call bound_intern_and_periodic(p)
+		enddo ! interation loop 	
+		
+		END SUBROUTINE		
+		
+		SUBROUTINE CN3Dcg(xnew,x0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,i1,j1,k1,ib,ie,jb,je,kb,ke,maxiter,tol,rank) 
+		! ConjungateGradient implicit solver for 3D Laplacian Ax=RHS without pre-conditioner
+		! Matrix A is a 3D Laplacian matrix containing 7 diagonals:
+		! Main diagonal values of matrix A in DD3D(0:i1,0:j1,0:k1)
+		! Off-diagonal values left and right in x-dir, y-dir and z-dir: Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D with size (0:i1,0:j1,0:k1) 
+		! Righthandside in RHS(0:i1,0:j1,0:k1) 
+		! solution output in xnew(0:i1,0:j1,0:k1) 
+		! starting condition in x0(0:i1,0:j1,0:k1) 
+		
+		implicit none
+		
+        include 'mpif.h'
+        integer ierr,rank
+		integer  i,j,k,i1,j1,k1,im,ip,jm,jp,km,kp,tel,maxiter !,imax,jmax,kmax
+		integer ib,ie,jb,je,kb,ke
+		real Ax3D(0:i1,0:j1,0:k1),Ay3D(0:i1,0:j1,0:k1),Az3D(0:i1,0:j1,0:k1)
+		real Cx3D(0:i1,0:j1,0:k1),Cy3D(0:i1,0:j1,0:k1),Cz3D(0:i1,0:j1,0:k1)
+		real DD3D(0:i1,0:j1,0:k1),RHS3D(0:i1,0:j1,0:k1)
+		real x(0:i1,0:j1,0:k1),xnew(0:i1,0:j1,0:k1),p(0:i1,0:j1,0:k1),r(0:i1,0:j1,0:k1),rnew(0:i1,0:j1,0:k1) !,pnew(0:i1,0:j1,0:k1)
+		real ap(0:i1,0:j1,0:k1),x0(0:i1,0:j1,0:k1)
+		real tol,alpha,beta,rnew2,r2,pap,rnew2_global,r2_global,pap_global,eps,b2,b2_global
+
+		!x = RHS3D !start condition equal to RHS 
+		x = x0 !starting condition 
+		p=0. 
+		b2=0.
+		r2=0. 
+		do i=ib,ie !1,imax 
+			do j=jb,je !1,jmax 
+				do k=kb,ke !1,kmax 
+					! residual = RHS - A*x 
+!					r(i,j,k) = 	RHS3D(i,j,k)-x(i,j,k) - !x(i,j,k)-x(i,j,k)*DD3D(i,j,k)/DD3D(i,j,k) !first x(i,j,k) is RHS, second is DIAG*1/DIAG*x(i,j,k)
+					r(i,j,k) = 	RHS3D(i,j,k)-x(i,j,k)*DD3D(i,j,k) - !x(i,j,k)-x(i,j,k)*DD3D(i,j,k)/DD3D(i,j,k) !first x(i,j,k) is RHS, second is DIAG*1/DIAG*x(i,j,k)
+     &						    Cx3D(i  ,j  ,k  ) * x(i+1,j  ,k  ) - Ax3D(i  ,j  ,k  ) * x(i-1,j  ,k  ) -
+     &							Cy3D(i  ,j  ,k  ) * x(i  ,j+1,k  ) - Ay3D(i  ,j  ,k  ) * x(i  ,j-1,k  ) -
+     &							Cz3D(i  ,j  ,k  ) * x(i  ,j  ,k+1) - Az3D(i  ,j  ,k  ) * x(i  ,j  ,k-1) 
+!					r(i,j,k) = r(i,j,k)/DD3D(i,j,k) !preconditioning
+					p(i,j,k) = r(i,j,k)
+					b2 = b2 + RHS3D(i,j,k)*RHS3D(i,j,k) 					
+					r2 = r2 + r(i,j,k)*r(i,j,k) 
+				enddo
+			enddo 
+		enddo 
+		call mpi_allreduce(b2,b2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+		call mpi_allreduce(r2,r2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)		
+		IF (sqrt(r2_global).le.tol.or.sqrt(b2_global).le.tol) THEN
+			!no need to iterate
+			xnew=x0
+!					write(*,*),'xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)',xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)
+!					write(*,*),'RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)',RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)
+!					write(*,*),'DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)',DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)
+			return 
+		ENDIF
+		call bound_intern_and_periodic(p)
+			
+		
+				
+		do tel=1,maxiter 
+			rnew2=0.
+			pap=0.
+			rnew2_global=0.
+			pap_global=0. 
+			eps=0. 
+			alpha=0. 
+			beta=0.
+
+			do i=ib,ie !1,imax 
+				do j=jb,je !1,jmax 
+					do k=kb,ke !1,kmax 
+						!ap(i,j,k) = p(i,j,k) + !*DIAG/DIAG
+						ap(i,j,k) = p(i,j,k)*DD3D(i,j,k) + !*DIAG/DIAG
+     &								Cx3D(i  ,j  ,k  ) * p(i+1,j  ,k  ) + Ax3D(i  ,j  ,k  ) * p(i-1,j  ,k  ) +
+     &								Cy3D(i  ,j  ,k  ) * p(i  ,j+1,k  ) + Ay3D(i  ,j  ,k  ) * p(i  ,j-1,k  ) +
+     &								Cz3D(i  ,j  ,k  ) * p(i  ,j  ,k+1) + Az3D(i  ,j  ,k  ) * p(i  ,j  ,k-1) 
+!						ap(i,j,k) = ap(i,j,k)/DD3D(i,j,k) !preconditioning
+						!r2  = r2  + r(i,j,k)* r(i,j,k) 
+						pap = pap + p(i,j,k)*ap(i,j,k) 	 
+					enddo
+				enddo 
+			enddo 	
+			
+!			do i=1,imax 
+!				do j=1,jmax 
+!					do k=1,kmax 
+!						!r2  = r2  + r(i,j,k)* r(i,j,k) 
+!						pap = pap + p(i,j,k)*ap(i,j,k) 
+!					enddo
+!				enddo 
+!			enddo 			
+			!call mpi_allreduce(r2,r2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+			call mpi_allreduce(pap,pap_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+			alpha = r2_global/pap_global
+			do i=ib,ie !1,imax 
+				do j=jb,je !1,jmax 
+					do k=kb,ke !1,kmax 
+						xnew(i,j,k)  = x(i,j,k)  + alpha* p(i,j,k)
+						rnew(i,j,k)  = r(i,j,k)  - alpha*ap(i,j,k)
+						rnew2 = rnew2 + rnew(i,j,k)*rnew(i,j,k)
+					enddo
+				enddo 
+			enddo 			
+			call mpi_allreduce(rnew2,rnew2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+			eps = sqrt(rnew2_global)/sqrt(b2_global) 
+!				IF (rank.eq.0) THEN 
+!					write(*,*),'CN3Dpcg iteration working; tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D)
+!				ENDIF			
+			IF (eps<=tol) THEN 
+				IF (rank.eq.0) THEN 
+					write(*,*),'CN3Dcg iteration finished; tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',
+     & 					tel,tol,eps,b2_global,MINVAL(DD3D(ib:ie,jb:je,kb:ke)),MAXVAL(DD3D(ib:ie,jb:je,kb:ke))
+!					write(*,*),'xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)',xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)
+!					write(*,*),'RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)',RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)
+!					write(*,*),'DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)',DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)
+				ENDIF			
+				EXIT 
+			ELSEIF (tel.eq.maxiter) THEN 
+				IF (rank.eq.0) THEN 
+					write(*,*),'WARNING : CN3Dcg iteration did not reach desired tolerance, TUDflow3D will continue with end result'
+					write(*,*)'tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',
+     &					tel,tol,eps,b2_global,MINVAL(DD3D(ib:ie,jb:je,kb:ke)),MAXVAL(DD3D(ib:ie,jb:je,kb:ke))
+!					write(*,*),'xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)',xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)
+!					write(*,*),'RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)',RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)
+!					write(*,*),'DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)',DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)
+				ENDIF
+				EXIT 
+			ENDIF 
+			beta = rnew2_global/r2_global 
+			IF (isnan(alpha).or.isnan(beta)) THEN 
+				IF (rank.eq.0) THEN 
+					write(*,*),'WARNING : CN3Dpcg iteration crashed; alpha,beta,tel,tol,eps=',alpha,beta,tel,tol,eps
+				ENDIF
+				EXIT 
+			ENDIF
+
+			! not finished, so continue:
+			do i=ib,ie !1,imax 
+				do j=jb,je !1,jmax 
+					do k=kb,ke !1,kmax
+						p(i,j,k) = rnew(i,j,k)  + beta*p(i,j,k)
+						x(i,j,k) = xnew(i,j,k)
+						r(i,j,k) = rnew(i,j,k)
+						!p(i,j,k) = pnew(i,j,k)
+					enddo
+				enddo 
+			enddo
+			r2_global = rnew2_global 
+			call bound_intern_and_periodic(p)
+
+		enddo ! interation loop 		
+		END SUBROUTINE
+		
+		SUBROUTINE CN3Dcg2(xnew,x0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,ib,ie,jb,je,kb,ke,maxiter,tol) 
+		! ConjungateGradient implicit solver for 3D Laplacian Ax=RHS without pre-conditioner
+		! Matrix A is a 3D Laplacian matrix containing 7 diagonals:
+		! Main diagonal values of matrix A in DD3D(0:i1,0:j1,0:k1)
+		! Off-diagonal values left and right in x-dir, y-dir and z-dir: Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D with size (0:i1,0:j1,0:k1) 
+		! Righthandside in RHS(0:i1,0:j1,0:k1) 
+		! solution output in xnew(0:i1,0:j1,0:k1) 
+		! starting condition in x0(0:i1,0:j1,0:k1) 
+		
+		USE nlist 
+		
+		implicit none
+				
+        include 'mpif.h'
+        integer ierr
+		integer im,ip,jm,jp,km,kp,tel,maxiter !,imax,jmax,kmax
+		integer ib,ie,jb,je,kb,ke
+		real Ax3D(0:i1,0:j1,0:k1),Ay3D(0:i1,0:j1,0:k1),Az3D(0:i1,0:j1,0:k1)
+		real Cx3D(0:i1,0:j1,0:k1),Cy3D(0:i1,0:j1,0:k1),Cz3D(0:i1,0:j1,0:k1)
+		real DD3D(0:i1,0:j1,0:k1),RHS3D(0:i1,0:j1,0:k1)
+		real x(0:i1,0:j1,0:k1),xnew(0:i1,0:j1,0:k1),pp(0:i1,0:j1,0:k1),rr(0:i1,0:j1,0:k1),rrnew(0:i1,0:j1,0:k1) !,pnew(0:i1,0:j1,0:k1)
+		real ap(0:i1,0:j1,0:k1),x0(0:i1,0:j1,0:k1)
+		real tol,alpha,beta,rnew2,r2,pap,rnew2_global,r2_global,pap_global,eps,b2,b2_global
+
+		!x = RHS3D !start condition equal to RHS 
+		x = x0 !starting condition 
+		
+		pp=0.
+		b2=0.
+		r2=0. 
+		do i=ib,ie !1,imax 
+			do j=jb,je !1,jmax 
+				do k=kb,ke !1,kmax 
+					! residual = RHS - A*x 
+!					r(i,j,k) = 	RHS3D(i,j,k)-x(i,j,k) - !x(i,j,k)-x(i,j,k)*DD3D(i,j,k)/DD3D(i,j,k) !first x(i,j,k) is RHS, second is DIAG*1/DIAG*x(i,j,k)
+					rr(i,j,k) = 	RHS3D(i,j,k)-x(i,j,k)*DD3D(i,j,k) - !x(i,j,k)-x(i,j,k)*DD3D(i,j,k)/DD3D(i,j,k) !first x(i,j,k) is RHS, second is DIAG*1/DIAG*x(i,j,k)
+     &						    Cx3D(i  ,j  ,k  ) * x(i+1,j  ,k  ) - Ax3D(i  ,j  ,k  ) * x(i-1,j  ,k  ) -
+     &							Cy3D(i  ,j  ,k  ) * x(i  ,j+1,k  ) - Ay3D(i  ,j  ,k  ) * x(i  ,j-1,k  ) -
+     &							Cz3D(i  ,j  ,k  ) * x(i  ,j  ,k+1) - Az3D(i  ,j  ,k  ) * x(i  ,j  ,k-1) 
+!					r(i,j,k) = r(i,j,k)/DD3D(i,j,k) !preconditioning
+					pp(i,j,k) = rr(i,j,k)
+					b2 = b2 + RHS3D(i,j,k)*RHS3D(i,j,k) 					
+					r2 = r2 + rr(i,j,k)*rr(i,j,k) 
+				enddo
+			enddo 
+		enddo 
+		call mpi_allreduce(b2,b2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+		call mpi_allreduce(r2,r2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)		
+		IF (sqrt(r2_global).le.tol.or.sqrt(b2_global).le.tol) THEN
+			!no need to iterate
+			xnew=x0
+!					write(*,*),'xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)',xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)
+!					write(*,*),'RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)',RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)
+!					write(*,*),'DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)',DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)
+			return 
+		ENDIF
+		call bound_intern_and_periodic(pp)
+			
+		
+				
+		do tel=1,maxiter 
+			rnew2=0.
+			pap=0.
+			rnew2_global=0.
+			pap_global=0. 
+			eps=0. 
+			alpha=0. 
+			beta=0.
+
+			do i=ib,ie !1,imax 
+				do j=jb,je !1,jmax 
+					do k=kb,ke !1,kmax 
+						!ap(i,j,k) = p(i,j,k) + !*DIAG/DIAG
+						ap(i,j,k) = pp(i,j,k)*DD3D(i,j,k) + !*DIAG/DIAG
+     &								Cx3D(i  ,j  ,k  ) * pp(i+1,j  ,k  ) + Ax3D(i  ,j  ,k  ) * pp(i-1,j  ,k  ) +
+     &								Cy3D(i  ,j  ,k  ) * pp(i  ,j+1,k  ) + Ay3D(i  ,j  ,k  ) * pp(i  ,j-1,k  ) +
+     &								Cz3D(i  ,j  ,k  ) * pp(i  ,j  ,k+1) + Az3D(i  ,j  ,k  ) * pp(i  ,j  ,k-1) 
+!						ap(i,j,k) = ap(i,j,k)/DD3D(i,j,k) !preconditioning
+						!r2  = r2  + r(i,j,k)* r(i,j,k) 
+						pap = pap + pp(i,j,k)*ap(i,j,k) 	 
+					enddo
+				enddo 
+			enddo 	
+			
+!			do i=1,imax 
+!				do j=1,jmax 
+!					do k=1,kmax 
+!						!r2  = r2  + r(i,j,k)* r(i,j,k) 
+!						pap = pap + p(i,j,k)*ap(i,j,k) 
+!					enddo
+!				enddo 
+!			enddo 			
+			!call mpi_allreduce(r2,r2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+			call mpi_allreduce(pap,pap_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+			alpha = r2_global/pap_global
+			do i=ib,ie !1,imax 
+				do j=jb,je !1,jmax 
+					do k=kb,ke !1,kmax 
+						xnew(i,j,k)  = x(i,j,k)  + alpha* pp(i,j,k)
+						rrnew(i,j,k)  = rr(i,j,k)  - alpha*ap(i,j,k)
+						rnew2 = rnew2 + rrnew(i,j,k)*rrnew(i,j,k)
+					enddo
+				enddo 
+			enddo 			
+			call mpi_allreduce(rnew2,rnew2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+			eps = sqrt(rnew2_global)/sqrt(b2_global) 
+!				IF (rank.eq.0) THEN 
+!					write(*,*),'CN3Dpcg iteration working; tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D)
+!				ENDIF			
+			IF (eps<=tol) THEN 
+				IF (rank.eq.0) THEN 
+					write(*,*),'CN3Dcg iteration finished; tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',
+     & 					tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D)
+!					write(*,*),'xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)',xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)
+!					write(*,*),'RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)',RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)
+!					write(*,*),'DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)',DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)
+				ENDIF			
+				EXIT 
+			ELSEIF (tel.eq.maxiter) THEN 
+				IF (rank.eq.0) THEN 
+					write(*,*),'WARNING : CN3Dcg iteration did not reach desired tolerance, TUDflow3D will continue with end result'
+					write(*,*)'tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D)
+!					write(*,*),'xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)',xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)
+!					write(*,*),'RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)',RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)
+!					write(*,*),'DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)',DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)
+				ENDIF
+				EXIT 
+			ENDIF 
+			beta = rnew2_global/r2_global 
+			IF (isnan(alpha).or.isnan(beta)) THEN 
+				IF (rank.eq.0) THEN 
+					write(*,*),'WARNING : CN3Dpcg iteration crashed; alpha,beta,tel,tol,eps=',alpha,beta,tel,tol,eps
+				ENDIF
+				EXIT 
+			ENDIF
+
+			! not finished, so continue:
+			do i=ib,ie !1,imax 
+				do j=jb,je !1,jmax 
+					do k=kb,ke !1,kmax
+						pp(i,j,k) = rrnew(i,j,k)  + beta*pp(i,j,k)
+						x(i,j,k) = xnew(i,j,k)
+						rr(i,j,k) = rrnew(i,j,k)
+						!p(i,j,k) = pnew(i,j,k)
+					enddo
+				enddo 
+			enddo
+			r2_global = rnew2_global 
+			call bound_intern_and_periodic(pp)
+
+		enddo ! interation loop 		
+		END SUBROUTINE		
+		
+		SUBROUTINE CN3Dpcg_ic(xnew,x0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,i1,j1,k1,ib,ie,jb,je,kb,ke,maxiter,tol,rank) 
+		! Pre-conditioned ConjungateGradient implicit solver for 3D Laplacian Ax=RHS 
+		! Matrix A is a 3D Laplacian matrix containing 7 diagonals:
+		! Main diagonal values of matrix A in DD3D(0:i1,0:j1,0:k1)
+		! Off-diagonal values left and right in x-dir, y-dir and z-dir: Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D with size (0:i1,0:j1,0:k1) 
+		! Righthandside in RHS(0:i1,0:j1,0:k1) 
+		! solution output in xnew(0:i1,0:j1,0:k1) 
+		! starting condition in x0(0:i1,0:j1,0:k1)
+		
+		implicit none
+		
+        include 'mpif.h'
+        integer ierr,rank
+		integer  i,j,k,i1,j1,k1,im,ip,jm,jp,km,kp,tel,maxiter !,imax,jmax,kmax
+		integer ib,ie,jb,je,kb,ke,tel_end,imax2,jmax2,kmax2 
+		real Ax3D(0:i1,0:j1,0:k1),Ay3D(0:i1,0:j1,0:k1),Az3D(0:i1,0:j1,0:k1)
+		real Cx3D(0:i1,0:j1,0:k1),Cy3D(0:i1,0:j1,0:k1),Cz3D(0:i1,0:j1,0:k1)
+		real DD3D(0:i1,0:j1,0:k1),RHS3D(0:i1,0:j1,0:k1)
+		real x(0:i1,0:j1,0:k1),xnew(0:i1,0:j1,0:k1),p(0:i1,0:j1,0:k1),r(0:i1,0:j1,0:k1),rnew(0:i1,0:j1,0:k1) !,pnew(0:i1,0:j1,0:k1)
+		real ap(0:i1,0:j1,0:k1),x0(0:i1,0:j1,0:k1)
+		real tol,alpha,beta,rnew2,r2,pap,rnew2_global,r2_global,pap_global,eps,b2,b2_global
+		real znew(0:i1,0:j1,0:k1),rz2_global,rz2,rznew2,rznew2_global
+		integer*2 irks((i1+1)*(j1+1)*(k1+1)),jrks((i1+1)*(j1+1)*(k1+1)),krks((i1+1)*(j1+1)*(k1+1))
+		real Ax3D_c(0:i1,0:j1,0:k1),Ay3D_c(0:i1,0:j1,0:k1),Az3D_c(0:i1,0:j1,0:k1)
+		!real Cx3D_c(0:i1,0:j1,0:k1),Cy3D_c(0:i1,0:j1,0:k1),Cz3D_c(0:i1,0:j1,0:k1)
+		real DD3D_c(0:i1,0:j1,0:k1)
+		
+
+		
+		! make local (on this partition) incomplete Cholesky decomposition:
+		call bound_p(DD3D) 
+		Ax3D_c=0. 
+		Ay3D_c=0.
+		Az3D_c=0.
+		!Cx3D_c=0.
+		!Cy3D_c=0.
+		!Cz3D_c=0.
+		DD3D_c=0.
+		tel=0 
+		do k=kb,ke 
+			do j=jb,je
+				do i=ib,ie
+					tel=tel+1;
+					!tel2=i+(j-1)*nx+(k-1)*ny*nx;
+					irks(tel)=i;
+					jrks(tel)=j;
+					krks(tel)=k;		
+				enddo
+			enddo 
+		enddo
+		tel_end=tel 
+		
+		imax2=(ie-ib+1)
+		jmax2=(je-jb+1)
+		kmax2=(ke-kb+1) 
+		tel=1;
+		DD3D_c(irks(tel),jrks(tel),krks(tel))=DD3D(irks(tel),jrks(tel),krks(tel));
+		do tel = 2,imax2
+			DD3D_c(irks(tel),jrks(tel),krks(tel))=DD3D(irks(tel),jrks(tel),krks(tel))
+     &			-Ax3D(irks(tel),jrks(tel),krks(tel))**2/DD3D_c(irks(tel-1),jrks(tel-1),krks(tel-1))
+		enddo
+		do tel = imax2+1,imax2*jmax2
+			DD3D_c(irks(tel),jrks(tel),krks(tel))=DD3D(irks(tel),jrks(tel),krks(tel)) 
+     &			-Ax3D(irks(tel),jrks(tel),krks(tel))**2/DD3D_c(irks(tel-1),jrks(tel-1),krks(tel-1)) 
+     &			-Ay3D(irks(tel),jrks(tel),krks(tel))**2/DD3D_c(irks(tel-imax2),jrks(tel-imax2),krks(tel-imax2))
+		enddo
+		do tel = imax2*jmax2+1,imax2*jmax2*kmax2
+			DD3D_c(irks(tel),jrks(tel),krks(tel))=DD3D(irks(tel),jrks(tel),krks(tel)) 
+     &			-Ax3D(irks(tel),jrks(tel),krks(tel))**2/DD3D_c(irks(tel-1),jrks(tel-1),krks(tel-1)) 
+     &			-Ay3D(irks(tel),jrks(tel),krks(tel))**2/DD3D_c(irks(tel-imax2),jrks(tel-imax2),krks(tel-imax2)) 
+     &			-Az3D(irks(tel),jrks(tel),krks(tel))**2/DD3D_c(irks(tel-imax2*jmax2),jrks(tel-imax2*jmax2),krks(tel-imax2*jmax2))
+		enddo 
+		
+		call bound_p(DD3D_c) 
+		do k=kb,ke 
+			do j=jb,je
+				do i=ib,ie	
+					im=i-1 
+					jm=j-1
+					km=k-1
+					ip=i+1 
+					jp=j+1
+					kp=k+1 
+					if (im>=0) then 
+						Ax3D_c(i,j,k)=Ax3D(i,j,k)/sqrt(DD3D_c(im,j,k))
+					endif 
+!					if (ip<=i1) then 
+!						Cx3D_c(i,j,k)=Cx3D(i,j,k)/sqrt(DD3D_c(ip,j,k))
+!					endif 					
+					if (jm>=0) then  
+						Ay3D_c(i,j,k)=Ay3D(i,j,k)/sqrt(DD3D_c(i,jm,k)) 
+					endif
+!					if (jp<=j1) then 
+!						Cy3D_c(i,j,k)=Cy3D(i,j,k)/sqrt(DD3D_c(i,jp,k))
+!					endif 									
+					if (km>=0) then 
+						Az3D_c(i,j,k)=Az3D(i,j,k)/sqrt(DD3D_c(i,j,km))
+					endif 
+!					if (kp<=k1) then 
+!						Cz3D_c(i,j,k)=Cz3D(i,j,k)/sqrt(DD3D_c(i,j,kp))
+!					endif 									
+				enddo 
+			enddo 
+		enddo
+		do k=kb,ke 
+			do j=jb,je
+				do i=ib,ie	
+					DD3D_c(i,j,k)=DD3D_c(i,j,k)/sqrt(DD3D_c(i,j,k))
+				enddo 
+			enddo 
+		enddo		
+		call bound_p(Ax3D_c)
+		call bound_p(Ay3D_c)
+		call bound_p(Az3D_c)
+		call bound_p(DD3D_c)
+		! Local incomplete Cholesky matrix created, symmetric therefore both upper and lower triangle are filled 
+
+
+		p=0. 
+		znew=0. 
+		
+		!x = RHS3D !start with RHS as initial guess
+		x = x0 !starting condition
+		
+		b2=0.
+		r2=0.
+		rz2=0.		
+		do i=ib,ie !1,imax 
+			do j=jb,je !1,jmax 
+				do k=kb,ke !1,kmax 
+					! residual = RHS - A*x 
+!					r(i,j,k) = 	RHS3D(i,j,k)-x(i,j,k) - !x(i,j,k)-x(i,j,k)*DD3D(i,j,k)/DD3D(i,j,k) !first x(i,j,k) is RHS, second is DIAG*1/DIAG*x(i,j,k)
+					r(i,j,k) = 	RHS3D(i,j,k)-x(i,j,k)*DD3D(i,j,k) - !x(i,j,k)-x(i,j,k)*DD3D(i,j,k)/DD3D(i,j,k) !first x(i,j,k) is RHS, second is DIAG*1/DIAG*x(i,j,k)
+     &						    Cx3D(i  ,j  ,k  ) * x(i+1,j  ,k  ) - Ax3D(i  ,j  ,k  ) * x(i-1,j  ,k  ) -
+     &							Cy3D(i  ,j  ,k  ) * x(i  ,j+1,k  ) - Ay3D(i  ,j  ,k  ) * x(i  ,j-1,k  ) -
+     &							Cz3D(i  ,j  ,k  ) * x(i  ,j  ,k+1) - Az3D(i  ,j  ,k  ) * x(i  ,j  ,k-1) 
+					! preconditioning in following two loops 
+					b2 = b2 + RHS3D(i,j,k)*RHS3D(i,j,k) 					
+					r2 = r2 + r(i,j,k)*r(i,j,k) 
+				enddo
+			enddo 
+		enddo 
+		
+		! preconditioning: z = M^-1r -> Mz = r --> U^TDUz = r --> U^TDv=r solved by forward substitution followed by DUz = Dv solved by backward substitution 
+		! preconditioning: Mz = r --> L^TLz = r --> L^Tv = r solved by forward substitution followed by Lz = v solved by backward substitution 
+!		znew = r/DD3D_c 						!initialize all znew of ghost boundary cells 
+!		call bound_intern_and_periodic(znew) 		!initialize all znew of ghost boundary cells 
+		!call bound_intern_and_periodic(r) 			!initialize all znew of ghost boundary cells 
+		znew = 0. 
+		do k=kb,ke 
+			do j=jb,je
+				do i=ib,ie	!start
+					im=MAX(i-1,0)
+					jm=MAX(j-1,0)
+					km=MAX(k-1,0) 				
+					! preconditioning: z = M^-1r -> Mz = r with M=LL^T --> LL^Tz = r --> Lv=r solved by forward substitution followed by Lz = v solved by backward substitution 
+					!forward substitution:
+					znew(i,j,k) = (r(i,j,k)-Ax3D_c(i,j,k)*znew(im,j,k)-Ay3D_c(i,j,k)*znew(i,jm,k)-Az3D_c(i,j,k)*znew(i,j,km))/DD3D_c(i,j,k)
+				enddo 
+			enddo 
+		enddo 
+!		znew = znew / DD3D_c 						!initialize all znew of ghost boundary cells
+		!call bound_intern_and_periodic(znew) 		!initialize all znew of ghost boundary cells 		
+		do k=ke,kb,-1 
+			do j=je,jb,-1 
+				do i=ie,ib,-1 
+					ip=MIN(i+1,i1)
+					jp=MIN(j+1,j1)
+					kp=MIN(k+1,k1) 				
+					! preconditioning: z = M^-1r -> Mz = r with M=LL^T --> LL^Tz = r --> Lv=r solved by forward substitution followed by Lz = v solved by backward substitution  
+					!backward substitution:
+					!in Cholesky matrix Ax3D_c(i+1,j,k) is not equal to Cx3D_c(i,j,k) (due to scaling with column-diagonal) and the former needs to be used (tested in matlab)
+					znew(i,j,k) = (znew(i,j,k)-Ax3D_c(ip,j,k)*znew(ip,j,k)-Ay3D_c(i,jp,k)*znew(i,jp,k)
+     &					-Az3D_c(i,j,kp)*znew(i,j,kp))/DD3D_c(i,j,k)	 
+					!p(i,j,k) = znew(i,j,k)
+					!rz2 = rz2 + r(i,j,k)*znew(i,j,k)
+				enddo 
+			enddo 
+		enddo		
+		do k=ke,kb,-1 
+			do j=je,jb,-1 
+				do i=ie,ib,-1 
+					p(i,j,k) = znew(i,j,k)
+					rz2 = rz2 + r(i,j,k)*znew(i,j,k)
+				enddo 
+			enddo 
+		enddo	
+		
+		
+		
+		call mpi_allreduce(b2,b2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+		call mpi_allreduce(r2,r2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)		
+		call mpi_allreduce(rz2,rz2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)	
+		IF (sqrt(r2_global).le.tol.or.sqrt(b2_global).le.tol) THEN
+			!no need to iterate
+			xnew=x0
+!					write(*,*),'xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)',xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)
+!					write(*,*),'RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)',RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)
+!					write(*,*),'DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)',DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)
+			return 
+		ENDIF
+		call bound_intern_and_periodic(p)
+			
+		
+				
+		do tel=1,maxiter 
+			rnew2=0.
+			rznew2=0.
+			pap=0.
+			rnew2_global=0.
+			rznew2_global=0.
+			pap_global=0. 
+			eps=0. 
+			alpha=0. 
+			beta=0.
+
+			do i=ib,ie !1,imax 
+				do j=jb,je !1,jmax 
+					do k=kb,ke !1,kmax 
+						ap(i,j,k) = p(i,j,k)*DD3D(i,j,k) + 
+     &								Cx3D(i  ,j  ,k  ) * p(i+1,j  ,k  ) + Ax3D(i  ,j  ,k  ) * p(i-1,j  ,k  ) +
+     &								Cy3D(i  ,j  ,k  ) * p(i  ,j+1,k  ) + Ay3D(i  ,j  ,k  ) * p(i  ,j-1,k  ) +
+     &								Cz3D(i  ,j  ,k  ) * p(i  ,j  ,k+1) + Az3D(i  ,j  ,k  ) * p(i  ,j  ,k-1) 
+						!r2  = r2  + r(i,j,k)* r(i,j,k) 
+						pap = pap + p(i,j,k)*ap(i,j,k) 	 
+					enddo
+				enddo 
+			enddo 	
+			call mpi_allreduce(pap,pap_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+			alpha = rz2_global/pap_global !with pre-conditioner !r2_global/pap_global
+			do i=ib,ie !1,imax 
+				do j=jb,je !1,jmax 
+					do k=kb,ke !1,kmax 
+						xnew(i,j,k)  = x(i,j,k)  + alpha* p(i,j,k)
+						rnew(i,j,k)  = r(i,j,k)  - alpha*ap(i,j,k)
+						rnew2 = rnew2 + rnew(i,j,k)*rnew(i,j,k)
+					enddo
+				enddo 
+			enddo 
+		znew = 0. 
+		!call bound_intern_and_periodic(rnew) 
+		do k=kb,ke 
+			do j=jb,je
+				do i=ib,ie	
+					im=MAX(i-1,0)
+					jm=MAX(j-1,0)
+					km=MAX(k-1,0) 				
+					! preconditioning: z = M^-1r -> Mz = r with M=LL^T --> LL^Tz = r --> Lv=r solved by forward substitution followed by Lz = v solved by backward substitution 
+					!forward substitution:
+					znew(i,j,k) = (rnew(i,j,k)-Ax3D_c(i,j,k)*znew(im,j,k)-Ay3D_c(i,j,k)*znew(i,jm,k)-Az3D_c(i,j,k)*znew(i,j,km))/DD3D_c(i,j,k)			
+				enddo 
+			enddo 
+		enddo 
+		!call bound_intern_and_periodic(znew) 
+		do k=ke,kb,-1 
+			do j=je,jb,-1 
+				do i=ie,ib,-1 
+					ip=MIN(i+1,i1)
+					jp=MIN(j+1,j1)
+					kp=MIN(k+1,k1) 				
+					! preconditioning: z = M^-1r -> Mz = r with M=LL^T --> LL^Tz = r --> Lv=r solved by forward substitution followed by Lz = v solved by backward substitution  
+					!backward substitution:
+					!in Cholesky matrix Ax3D_c(i+1,j,k) is not equal to Cx3D_c(i,j,k) (due to scaling with column-diagonal) and the former needs to be used (tested in matlab)
+					znew(i,j,k) = (znew(i,j,k)-Ax3D_c(ip,j,k)*znew(ip,j,k)-Ay3D_c(i,jp,k)*znew(i,jp,k)
+     &					-Az3D_c(i,j,kp)*znew(i,j,kp))/DD3D_c(i,j,k)
+
+					!rznew2 = rznew2 + rnew(i,j,k)*znew(i,j,k) 
+				enddo 
+			enddo 
+		enddo
+		do k=ke,kb,-1 
+			do j=je,jb,-1 
+				do i=ie,ib,-1 
+					rznew2 = rznew2 + rnew(i,j,k)*znew(i,j,k) 
+				enddo 
+			enddo 
+		enddo
+		
+
+			
+			call mpi_allreduce(rnew2,rnew2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+			call mpi_allreduce(rznew2,rznew2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+			eps = sqrt(rnew2_global)/sqrt(b2_global) 
+!				IF (rank.eq.0) THEN 
+!					write(*,*),'CN3Dpcg iteration working; tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D)
+!				ENDIF			
+			IF (eps<=tol) THEN 
+				IF (rank.eq.0) THEN 
+					write(*,*),'CN3Dcg iteration finished; tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',
+     & 					tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D)
+!					write(*,*),'xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)',xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)
+!					write(*,*),'RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)',RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)
+!					write(*,*),'DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)',DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)
+				ENDIF			
+				EXIT 
+			ELSEIF (tel.eq.maxiter) THEN 
+				IF (rank.eq.0) THEN 
+					write(*,*),'WARNING : CN3Dpcg iteration did not reach desired tolerance, TUDflow3D will continue with end result'
+					write(*,*)'tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D)
+!					write(*,*),'xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)',xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)
+!					write(*,*),'RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)',RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)
+!					write(*,*),'DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)',DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)
+				ENDIF
+				EXIT 
+			ENDIF 
+			beta = rznew2_global/rz2_global 
+			IF (isnan(alpha).or.isnan(beta)) THEN 
+				IF (rank.eq.0) THEN 
+					write(*,*),'WARNING : CN3Dpcg iteration crashed; alpha,beta,tel,tol,eps=',alpha,beta,tel,tol,eps
+				ENDIF
+				EXIT 
+			ENDIF
+
+			! not finished, so continue:
+			do i=ib,ie !1,imax 
+				do j=jb,je !1,jmax 
+					do k=kb,ke !1,kmax
+						p(i,j,k) = znew(i,j,k)  + beta*p(i,j,k)
+						x(i,j,k) = xnew(i,j,k)
+						r(i,j,k) = rnew(i,j,k)
+						!p(i,j,k) = pnew(i,j,k)
+					enddo
+				enddo 
+			enddo
+			r2_global = rnew2_global 
+			rz2_global = rznew2_global 
+			call bound_intern_and_periodic(p)
+
+		enddo ! interation loop 
+		
+		END SUBROUTINE	
+
+		SUBROUTINE CN3Dpcg_ilu(xnew,x0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,i1,j1,k1,ib,ie,jb,je,kb,ke,maxiter,tol,rank) 
+		! Pre-conditioned ConjungateGradient implicit solver for 3D Laplacian Ax=RHS 
+		! Matrix A is a 3D Laplacian matrix containing 7 diagonals:
+		! Main diagonal values of matrix A in DD3D(0:i1,0:j1,0:k1)
+		! Off-diagonal values left and right in x-dir, y-dir and z-dir: Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D with size (0:i1,0:j1,0:k1) 
+		! Righthandside in RHS(0:i1,0:j1,0:k1) 
+		! solution output in xnew(0:i1,0:j1,0:k1) 
+		! starting condition in x0(0:i1,0:j1,0:k1)
+		
+		implicit none
+		
+        include 'mpif.h'
+        integer ierr,rank
+		integer  i,j,k,i1,j1,k1,im,ip,jm,jp,km,kp,tel,maxiter !,imax,jmax,kmax
+		integer ib,ie,jb,je,kb,ke,tel_end,imax2,jmax2,kmax2 
+		real Ax3D(0:i1,0:j1,0:k1),Ay3D(0:i1,0:j1,0:k1),Az3D(0:i1,0:j1,0:k1)
+		real Cx3D(0:i1,0:j1,0:k1),Cy3D(0:i1,0:j1,0:k1),Cz3D(0:i1,0:j1,0:k1)
+		real DD3D(0:i1,0:j1,0:k1),RHS3D(0:i1,0:j1,0:k1)
+		real x(0:i1,0:j1,0:k1),xnew(0:i1,0:j1,0:k1),p(0:i1,0:j1,0:k1),r(0:i1,0:j1,0:k1),rnew(0:i1,0:j1,0:k1) !,pnew(0:i1,0:j1,0:k1)
+		real ap(0:i1,0:j1,0:k1),x0(0:i1,0:j1,0:k1)
+		real tol,alpha,beta,rnew2,r2,pap,rnew2_global,r2_global,pap_global,eps,b2,b2_global
+		real znew(0:i1,0:j1,0:k1),rz2_global,rz2,rznew2,rznew2_global
+		integer*2 irks((i1+1)*(j1+1)*(k1+1)),jrks((i1+1)*(j1+1)*(k1+1)),krks((i1+1)*(j1+1)*(k1+1))
+		real Ax3D_c(0:i1,0:j1,0:k1),Ay3D_c(0:i1,0:j1,0:k1),Az3D_c(0:i1,0:j1,0:k1)
+		real Cx3D_c(0:i1,0:j1,0:k1),Cy3D_c(0:i1,0:j1,0:k1),Cz3D_c(0:i1,0:j1,0:k1)
+		real DD3D_c(0:i1,0:j1,0:k1),AAA(1:(ie-ib+1)*(je-jb+1)*(ke-kb+1),1:(ie-ib+1)*(je-jb+1)*(ke-kb+1))
+		
+
+		
+		! make local (on this partition) ILU(0) decomposition:
+		tel=0 
+		do k=kb,ke 
+			do j=jb,je
+				do i=ib,ie
+					tel=tel+1;
+					!tel2=i+(j-1)*nx+(k-1)*ny*nx;
+					irks(tel)=i;
+					jrks(tel)=j;
+					krks(tel)=k;		
+				enddo
+			enddo 
+		enddo
+		tel_end=tel 
+		
+		imax2=(ie-ib+1)
+		jmax2=(je-jb+1)
+		kmax2=(ke-kb+1) 
+		tel=1;
+		AAA(1:imax2*jmax2*kmax2,1:imax2*jmax2*kmax2)=0.
+		do tel = 1,imax2*jmax2*kmax2
+			i=irks(tel)
+			j=jrks(tel)
+			k=krks(tel)
+			im=i-1 
+			jm=j-1
+			km=k-1
+			ip=i+1 
+			jp=j+1
+			kp=k+1		
+			AAA(tel,tel)=DD3D(i,j,k) 
+			!if (im>=0) then 
+				AAA(tel-1,tel)=Ax3D(i,j,k)
+			!endif 
+			!if (ip<=i1) then 
+				AAA(tel+1,tel)=Cx3D(i,j,k)
+			!endif 					
+			!if (jm>=0) then  
+				AAA(tel-imax2,tel)=Ay3D(i,j,k) 
+			!endif
+			!if (jp<=j1) then 
+				AAA(tel+imax2,tel)=Cy3D(i,j,k)
+			!endif 						
+			!if (km>=0) then 
+				AAA(tel+imax2*jmax2,tel)=Az3D(i,j,k)
+			!endif 
+			!if (kp<=k1) then 
+				AAA(tel-imax2*jmax2,tel)=Cz3D(i,j,k)
+			!endif 
+		enddo 
+		
+		write(*,*),'1 building ILU AAA matrix',rank
+		
+		! DD3D_c contains diagonal belonging to U; L has a diagonal with ones which is not stored 
+		! first entry DD3D_c(1,1) = DD3D(1,1) 
+		do i = 2,imax2*jmax2*kmax2 !do i=2,n 
+			do k = 1,i-1 
+				! a_ik = a_ik/a_kk
+				AAA(i,k) = AAA(i,k)/AAA(k,k)
+				do j=k+1,imax2*jmax2*kmax2
+					! a_ij = a_ij - a_ik*a_kj
+					AAA(i,j) = AAA(i,j) - AAA(i,k)*AAA(k,j) 
+				enddo
+			enddo 
+		enddo 
+		
+		write(*,*),'2 building ILU AAA matrix',rank
+		
+		do tel = 1,imax2*jmax2*kmax2
+			i=irks(tel)
+			j=jrks(tel)
+			k=krks(tel)
+			im=i-1 
+			jm=j-1
+			km=k-1
+			ip=i+1 
+			jp=j+1
+			kp=k+1			
+			DD3D_c(i,j,k)=AAA(tel,tel)
+			!if (im>=0) then 
+				Ax3D_c(i,j,k)=AAA(tel-1,tel)
+			!endif 
+			!if (ip<=i1) then 
+				Cx3D_c(i,j,k)=AAA(tel+1,tel)
+			!endif 					
+			!if (jm>=0) then  
+				Ay3D_c(i,j,k)=AAA(tel-imax2,tel)
+			!endif
+			!if (jp<=j1) then 
+				Cy3D_c(i,j,k)=AAA(tel+imax2,tel)
+			!endif 						
+			!if (km>=0) then 
+				Az3D_c(i,j,k)=AAA(tel+imax2*jmax2,tel)
+			!endif 
+			!if (kp<=k1) then 
+				Cz3D_c(i,j,k)=AAA(tel-imax2*jmax2,tel)
+			!endif 
+		enddo 
+		! Local ILU(0) matrix created, DD3D_c contains diagonal belonging to U; L has a diagonal with ones which is not stored 
+		write(*,*),'3 building ILU AAA matrix',rank
+		
+		!x = RHS3D !start with RHS as initial guess
+		x = x0 !starting condition
+		
+		b2=0.
+		r2=0.
+		rz2=0.		
+		do i=ib,ie !1,imax 
+			do j=jb,je !1,jmax 
+				do k=kb,ke !1,kmax 
+					! residual = RHS - A*x 
+!					r(i,j,k) = 	RHS3D(i,j,k)-x(i,j,k) - !x(i,j,k)-x(i,j,k)*DD3D(i,j,k)/DD3D(i,j,k) !first x(i,j,k) is RHS, second is DIAG*1/DIAG*x(i,j,k)
+					r(i,j,k) = 	RHS3D(i,j,k)-x(i,j,k)*DD3D(i,j,k) - !x(i,j,k)-x(i,j,k)*DD3D(i,j,k)/DD3D(i,j,k) !first x(i,j,k) is RHS, second is DIAG*1/DIAG*x(i,j,k)
+     &						    Cx3D(i  ,j  ,k  ) * x(i+1,j  ,k  ) - Ax3D(i  ,j  ,k  ) * x(i-1,j  ,k  ) -
+     &							Cy3D(i  ,j  ,k  ) * x(i  ,j+1,k  ) - Ay3D(i  ,j  ,k  ) * x(i  ,j-1,k  ) -
+     &							Cz3D(i  ,j  ,k  ) * x(i  ,j  ,k+1) - Az3D(i  ,j  ,k  ) * x(i  ,j  ,k-1) 
+					! preconditioning in following two loops 
+					b2 = b2 + RHS3D(i,j,k)*RHS3D(i,j,k) 					
+					r2 = r2 + r(i,j,k)*r(i,j,k) 
+				enddo
+			enddo 
+		enddo 
+		
+		! preconditioning: z = M^-1r -> Mz = r --> LUz = r --> Lv=r solved by forward substitution followed by Uz = v solved by backward substitution 
+		znew = 0. 
+		do k=kb,ke 
+			do j=jb,je
+				do i=ib,ie	
+					!forward substitution:
+					!znew(i,j,k) = (r(i,j,k)-Ax3D_c(i,j,k)*znew(i-1,j,k)-Ay3D_c(i,j,k)*znew(i,j-1,k)-Az3D_c(i,j,k)*znew(i,j,k-1)) !divided by diag which is one !/DD3D_c(i,j,k)
+					znew(i,j,k) = (r(i,j,k)-Ax3D_c(i,j,k)*znew(i-1,j,k)-Ay3D_c(i,j,k)*znew(i,j-1,k)-Az3D_c(i,j,k)*znew(i,j,k-1))/DD3D_c(i,j,k)
+				enddo 
+			enddo 
+		enddo 
+		do k=ke,kb,-1 
+			do j=je,jb,-1 
+				do i=ie,ib,-1 
+					!backward substitution:
+!					znew(i,j,k) = (znew(i,j,k)-Cx3D_c(i,j,k)*znew(i+1,j,k)-Cy3D_c(i,j,k)*znew(i,j+1,k)
+!     &					-Cz3D_c(i,j,k)*znew(i,j,k+1))/DD3D_c(i,j,k)
+					znew(i,j,k) = (znew(i,j,k)*DD3D_c(i,j,k)-Cx3D_c(i,j,k)*znew(i+1,j,k)-Cy3D_c(i,j,k)*znew(i,j+1,k)
+     &					-Cz3D_c(i,j,k)*znew(i,j,k+1))/DD3D_c(i,j,k)
+
+					p(i,j,k) = znew(i,j,k)
+					rz2 = rz2 + r(i,j,k)*znew(i,j,k)
+				enddo 
+			enddo 
+		enddo		
+		write(*,*),'4 preconditioning with ILU AAA matrix',rank
+		
+		
+		call mpi_allreduce(b2,b2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+		call mpi_allreduce(r2,r2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)		
+		call mpi_allreduce(rz2,rz2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)	
+		IF (sqrt(r2_global).le.tol.or.sqrt(b2_global).le.tol) THEN
+			!no need to iterate
+			xnew=x0
+!					write(*,*),'xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)',xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)
+!					write(*,*),'RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)',RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)
+!					write(*,*),'DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)',DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)
+			return 
+		ENDIF
+		call bound_intern_and_periodic(p)
+			
+		
+				
+		do tel=1,maxiter 
+			rnew2=0.
+			rznew2=0.
+			pap=0.
+			rnew2_global=0.
+			rznew2_global=0.
+			pap_global=0. 
+			eps=0. 
+			alpha=0. 
+			beta=0.
+
+			do i=ib,ie !1,imax 
+				do j=jb,je !1,jmax 
+					do k=kb,ke !1,kmax 
+						ap(i,j,k) = p(i,j,k)*DD3D(i,j,k) + 
+     &								Cx3D(i  ,j  ,k  ) * p(i+1,j  ,k  ) + Ax3D(i  ,j  ,k  ) * p(i-1,j  ,k  ) +
+     &								Cy3D(i  ,j  ,k  ) * p(i  ,j+1,k  ) + Ay3D(i  ,j  ,k  ) * p(i  ,j-1,k  ) +
+     &								Cz3D(i  ,j  ,k  ) * p(i  ,j  ,k+1) + Az3D(i  ,j  ,k  ) * p(i  ,j  ,k-1) 
+						!r2  = r2  + r(i,j,k)* r(i,j,k) 
+						pap = pap + p(i,j,k)*ap(i,j,k) 	 
+					enddo
+				enddo 
+			enddo 	
+			call mpi_allreduce(pap,pap_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+			alpha = rz2_global/pap_global !with pre-conditioner !r2_global/pap_global
+			do i=ib,ie !1,imax 
+				do j=jb,je !1,jmax 
+					do k=kb,ke !1,kmax 
+						xnew(i,j,k)  = x(i,j,k)  + alpha* p(i,j,k)
+						rnew(i,j,k)  = r(i,j,k)  - alpha*ap(i,j,k)
+						rnew2 = rnew2 + rnew(i,j,k)*rnew(i,j,k)
+					enddo
+				enddo 
+			enddo 
+
+		znew = 0. 
+		do k=kb,ke 
+			do j=jb,je
+				do i=ib,ie	
+					! preconditioning: z = M^-1r 
+					!forward substitution:
+					!znew(i,j,k) = (rnew(i,j,k)-Ax3D_c(i,j,k)*znew(i-1,j,k)-Ay3D_c(i,j,k)*znew(i,j-1,k)-Az3D_c(i,j,k)*znew(i,j,k-1)) !divided by diag which is one !/DD3D_c(i,j,k)
+					znew(i,j,k) = (rnew(i,j,k)-Ax3D_c(i,j,k)*znew(i-1,j,k)-Ay3D_c(i,j,k)*znew(i,j-1,k)-Az3D_c(i,j,k)*znew(i,j,k-1))/DD3D_c(i,j,k)
+				enddo 
+			enddo 
+		enddo 
+		do k=ke,kb,-1 
+			do j=je,jb,-1 
+				do i=ie,ib,-1 
+					! preconditioning: z = M^-1r -> Mz = r --> U^TDUz = r --> U^TDv=r solved by forward substitution followed by DUz = Dv solved by backward substitution 
+					
+					!backward substitution:
+!					znew(i,j,k) = (znew(i,j,k)-Cx3D_c(i,j,k)*znew(i+1,j,k)-Cy3D_c(i,j,k)*znew(i,j+1,k)
+!     &					-Cz3D_c(i,j,k)*znew(i,j,k+1))/DD3D_c(i,j,k)	 
+					znew(i,j,k) = (znew(i,j,k)*DD3D_c(i,j,k)-Cx3D_c(i,j,k)*znew(i+1,j,k)-Cy3D_c(i,j,k)*znew(i,j+1,k)
+     &					-Cz3D_c(i,j,k)*znew(i,j,k+1))/DD3D_c(i,j,k)	 
+
+					rznew2 = rznew2 + rnew(i,j,k)*znew(i,j,k) 
+				enddo 
+			enddo 
+		enddo
+
+
+			
+			call mpi_allreduce(rnew2,rnew2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+			call mpi_allreduce(rznew2,rznew2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+			eps = sqrt(rnew2_global)/sqrt(b2_global) 
+!				IF (rank.eq.0) THEN 
+!					write(*,*),'CN3Dpcg iteration working; tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D)
+!				ENDIF			
+			IF (eps<=tol) THEN 
+				IF (rank.eq.0) THEN 
+					write(*,*),'CN3Dcg iteration finished; tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',
+     & 					tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D)
+!					write(*,*),'xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)',xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)
+!					write(*,*),'RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)',RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)
+!					write(*,*),'DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)',DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)
+				ENDIF			
+				EXIT 
+			ELSEIF (tel.eq.maxiter) THEN 
+				IF (rank.eq.0) THEN 
+					write(*,*),'WARNING : CN3Dpcg iteration did not reach desired tolerance, TUDflow3D will continue with end result'
+					write(*,*)'tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D)
+!					write(*,*),'xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)',xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)
+!					write(*,*),'RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)',RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)
+!					write(*,*),'DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)',DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)
+				ENDIF
+				EXIT 
+			ENDIF 
+			beta = rznew2_global/rz2_global 
+			IF (isnan(alpha).or.isnan(beta)) THEN 
+				IF (rank.eq.0) THEN 
+					write(*,*),'WARNING : CN3Dpcg iteration crashed; alpha,beta,tel,tol,eps=',alpha,beta,tel,tol,eps
+				ENDIF
+				EXIT 
+			ENDIF
+
+			! not finished, so continue:
+			do i=ib,ie !1,imax 
+				do j=jb,je !1,jmax 
+					do k=kb,ke !1,kmax
+						p(i,j,k) = znew(i,j,k)  + beta*p(i,j,k)
+						x(i,j,k) = xnew(i,j,k)
+						r(i,j,k) = rnew(i,j,k)
+						!p(i,j,k) = pnew(i,j,k)
+					enddo
+				enddo 
+			enddo
+			r2_global = rnew2_global 
+			rz2_global = rznew2_global 
+			call bound_intern_and_periodic(p)
+
+		enddo ! interation loop 
+		
+		END SUBROUTINE		
+
+		SUBROUTINE CN3Dpcg_pol(xnew,x0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,i1,j1,k1,ib,ie,jb,je,kb,ke,maxiter,tol,rank) 
+		! Pre-conditioned ConjungateGradient implicit solver for 3D Laplacian Ax=RHS 
+		! Matrix A is a 3D Laplacian matrix containing 7 diagonals:
+		! Main diagonal values of matrix A in DD3D(0:i1,0:j1,0:k1)
+		! Off-diagonal values left and right in x-dir, y-dir and z-dir: Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D with size (0:i1,0:j1,0:k1) 
+		! Righthandside in RHS(0:i1,0:j1,0:k1) 
+		! solution output in xnew(0:i1,0:j1,0:k1) 
+		! starting condition in x0(0:i1,0:j1,0:k1)
+		
+		implicit none
+		
+        include 'mpif.h'
+        integer ierr,rank
+		integer  i,j,k,i1,j1,k1,im,ip,jm,jp,km,kp,tel,maxiter !,imax,jmax,kmax
+		integer ib,ie,jb,je,kb,ke,contin
+		real Ax3D(0:i1,0:j1,0:k1),Ay3D(0:i1,0:j1,0:k1),Az3D(0:i1,0:j1,0:k1)
+		real Cx3D(0:i1,0:j1,0:k1),Cy3D(0:i1,0:j1,0:k1),Cz3D(0:i1,0:j1,0:k1)
+		real DD3D(0:i1,0:j1,0:k1),RHS3D(0:i1,0:j1,0:k1)
+		real x(0:i1,0:j1,0:k1),xnew(0:i1,0:j1,0:k1),p(0:i1,0:j1,0:k1),r(0:i1,0:j1,0:k1),rnew(0:i1,0:j1,0:k1) !,pnew(0:i1,0:j1,0:k1)
+		real ap(0:i1,0:j1,0:k1),x0(0:i1,0:j1,0:k1)
+		real tol,alpha,beta,rnew2,r2,pap,rnew2_global,r2_global,pap_global,eps,b2,b2_global
+		real znew(0:i1,0:j1,0:k1),rz2_global,rz2,rznew2,rznew2_global	
+		real con(3),g,z1(0:i1,0:j1,0:k1),z2(0:i1,0:j1,0:k1),g_local 
+
+!!		! First apply diagonal pre-conditioner
+!!		!! left preconditioning M^-1Ax = M^-1b with M=D -->D^-1Ax = b/D
+!!		!! works for sdc, but not really lower number of iterations needed, except at end when no iterations are required  
+!!		x = x0 
+!!		Ax3D = Ax3D/DD3D
+!!		Cx3D = Cx3D/DD3D
+!!		Ay3D = Ay3D/DD3D
+!!		Cy3D = Cy3D/DD3D
+!!		Az3D = Az3D/DD3D
+!!		Cz3D = Cz3D/DD3D
+!!		RHS3D = RHS3D/DD3D
+
+		!! central preconditioning leading to symmetric matrix:
+		!A~x~=b~ with A~ = P^-1AP^-T x=P^-Tx~ and b~ = P^-1b 
+		!P = sqrt(D)
+		!at end x=P^-Tx~
+		call bound_p(DD3D) !--> DD3D (ip im jp jm kp km) are needed  
+		x = x0*sqrt(DD3D) !starting condition for x~
+		Ax3D = Ax3D/sqrt(DD3D)
+		Cx3D = Cx3D/sqrt(DD3D)
+		Ay3D = Ay3D/sqrt(DD3D)
+		Cy3D = Cy3D/sqrt(DD3D)
+		Az3D = Az3D/sqrt(DD3D)
+		Cz3D = Cz3D/sqrt(DD3D)
+		RHS3D = RHS3D/sqrt(DD3D)
+		do i=ib,ie !1,imax 
+			do j=jb,je !1,jmax 
+				do k=kb,ke !1,kmax 
+					im=MAX(ib,i-1)
+					jm=MAX(jb,j-1)
+					km=MAX(kb,k-1)
+					ip=MIN(ie,i+1) 
+					jp=MIN(je,j+1)
+					kp=MIN(ke,k+1) 			
+					!if (im>=0) then 
+						Ax3D(i,j,k)=Ax3D(i,j,k)/sqrt(DD3D(im,j,k))
+					!endif 
+					!if (ip<=i1) then 
+						Cx3D(i,j,k)=Cx3D(i,j,k)/sqrt(DD3D(ip,j,k))
+					!endif 					
+					!if (jm>=0) then  
+						Ay3D(i,j,k)=Ay3D(i,j,k)/sqrt(DD3D(i,jm,k))
+					!endif
+					!if (jp<=j1) then 
+						Cy3D(i,j,k)=Cy3D(i,j,k)/sqrt(DD3D(i,jp,k))
+					!endif 						
+					!if (km>=0) then 
+						Az3D(i,j,k)=Az3D(i,j,k)/sqrt(DD3D(i,j,km))
+					!endif 
+					!if (kp<=k1) then 
+						Cz3D(i,j,k)=Cz3D(i,j,k)/sqrt(DD3D(i,j,kp))
+					!endif 				
+				enddo 
+			enddo 
+		enddo
+
+
+		r=0. 
+		p=0. 
+		z1=0.
+		z2=0. 
+		rnew=0. 
+		xnew=0. 
+		
+		b2=0.
+		r2=0. 
+		rz2=0.			
+		do i=ib,ie !1,imax 
+			do j=jb,je !1,jmax 
+				do k=kb,ke !1,kmax 
+					! residual = RHS - A*x 
+					r(i,j,k) = 	RHS3D(i,j,k)-x(i,j,k) - !x(i,j,k)-x(i,j,k)*DD3D(i,j,k)/DD3D(i,j,k) !first x(i,j,k) is RHS, second is DIAG*1/DIAG*x(i,j,k)
+!					r(i,j,k) = 	RHS3D(i,j,k)-x(i,j,k)*DD3D(i,j,k) - !x(i,j,k)-x(i,j,k)*DD3D(i,j,k)/DD3D(i,j,k) !first x(i,j,k) is RHS, second is DIAG*1/DIAG*x(i,j,k)
+     &						    Cx3D(i  ,j  ,k  ) * x(i+1,j  ,k  ) - Ax3D(i  ,j  ,k  ) * x(i-1,j  ,k  ) -
+     &							Cy3D(i  ,j  ,k  ) * x(i  ,j+1,k  ) - Ay3D(i  ,j  ,k  ) * x(i  ,j-1,k  ) -
+     &							Cz3D(i  ,j  ,k  ) * x(i  ,j  ,k+1) - Az3D(i  ,j  ,k  ) * x(i  ,j  ,k-1) 
+					!p(i,j,k) = r(i,j,k)
+					b2 = b2 + RHS3D(i,j,k)*RHS3D(i,j,k) 					
+					r2 = r2 + r(i,j,k)*r(i,j,k) 
+				enddo
+			enddo 
+		enddo
+		call mpi_allreduce(b2,b2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+		call mpi_allreduce(r2,r2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)	
+		IF (sqrt(r2_global).le.tol.or.sqrt(b2_global).le.tol) THEN
+			!no need to iterate
+			xnew=x0
+!					write(*,*),'xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)',xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)
+!					write(*,*),'RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)',RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)
+!					write(*,*),'DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)',DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)
+			return 
+		ENDIF
+		
+		!Polynomial preconditioning 
+		g_local=0.
+		do i=ib,ie !1,imax 
+			do j=jb,je !1,jmax 
+				do k=kb,ke !1,kmax 
+					g_local  = MAX(g_local,ABS(Ax3D(i,j,k))+ABS(Cx3D(i,j,k))+ABS(Ay3D(i,j,k))+ABS(Cy3D(i,j,k))
+     & 						+ABS(Az3D(i,j,k))+ABS(Cz3D(i,j,k))+1.) !last value is diagonal which after scaling is one		
+				enddo
+			enddo 
+		enddo 	
+		call mpi_allreduce(g_local,g,1,mpi_real8,mpi_max,mpi_comm_world,ierr)	
+		!g=2.
+		con(1)=-9./4.*g 			
+		con(2)=27./16.*g**2
+		con(3)=-15./32.*g**3	
+		call bound_intern_and_periodic(r)
+		do i=ib,ie !1,imax 
+			do j=jb,je !1,jmax 
+				do k=kb,ke !1,kmax 
+					z1(i,j,k) =	con(1)*r(i,j,k)+r(i,j,k) + 
+     &						    Cx3D(i  ,j  ,k  ) * r(i+1,j  ,k  ) + Ax3D(i  ,j  ,k  ) * r(i-1,j  ,k  ) +
+     &							Cy3D(i  ,j  ,k  ) * r(i  ,j+1,k  ) + Ay3D(i  ,j  ,k  ) * r(i  ,j-1,k  ) +
+     &							Cz3D(i  ,j  ,k  ) * r(i  ,j  ,k+1) + Az3D(i  ,j  ,k  ) * r(i  ,j  ,k-1) 
+				enddo
+			enddo 
+		enddo
+		call bound_intern_and_periodic(z1)
+		do i=ib,ie !1,imax 
+			do j=jb,je !1,jmax 
+				do k=kb,ke !1,kmax 
+					z2(i,j,k) = con(2)*r(i,j,k)+z1(i,j,k) + 
+     &						    Cx3D(i  ,j  ,k  ) * z1(i+1,j  ,k  ) + Ax3D(i  ,j  ,k  ) * z1(i-1,j  ,k  ) +
+     &							Cy3D(i  ,j  ,k  ) * z1(i  ,j+1,k  ) + Ay3D(i  ,j  ,k  ) * z1(i  ,j-1,k  ) +
+     &							Cz3D(i  ,j  ,k  ) * z1(i  ,j  ,k+1) + Az3D(i  ,j  ,k  ) * z1(i  ,j  ,k-1) 
+				enddo
+			enddo 
+		enddo
+		call bound_intern_and_periodic(z2)
+		do i=ib,ie !1,imax 
+			do j=jb,je !1,jmax 
+				do k=kb,ke !1,kmax 
+					znew(i,j,k) = con(3)*r(i,j,k)+z2(i,j,k) + 
+     &						    Cx3D(i  ,j  ,k  ) * z2(i+1,j  ,k  ) + Ax3D(i  ,j  ,k  ) * z2(i-1,j  ,k  ) +
+     &							Cy3D(i  ,j  ,k  ) * z2(i  ,j+1,k  ) + Ay3D(i  ,j  ,k  ) * z2(i  ,j-1,k  ) +
+     &							Cz3D(i  ,j  ,k  ) * z2(i  ,j  ,k+1) + Az3D(i  ,j  ,k  ) * z2(i  ,j  ,k-1) 
+	 
+					p(i,j,k) = znew(i,j,k)
+					rz2 = rz2 + r(i,j,k)*znew(i,j,k)
+				enddo
+			enddo 
+		enddo		
+		
+		call mpi_allreduce(rz2,rz2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)	
+		call bound_intern_and_periodic(p)
+	
+				
+		do tel=1,maxiter 
+			rnew2=0.
+			rznew2=0.
+			pap=0.
+			rnew2_global=0.
+			rznew2_global=0.
+			pap_global=0. 
+			eps=0. 
+			alpha=0. 
+			beta=0.
+			contin=0
+
+			do i=ib,ie !1,imax 
+				do j=jb,je !1,jmax 
+					do k=kb,ke !1,kmax 
+						ap(i,j,k) = p(i,j,k) + !*DIAG/DIAG
+						!ap(i,j,k) = p(i,j,k)*DD3D(i,j,k) + !*DIAG/DIAG
+     &								Cx3D(i  ,j  ,k  ) * p(i+1,j  ,k  ) + Ax3D(i  ,j  ,k  ) * p(i-1,j  ,k  ) +
+     &								Cy3D(i  ,j  ,k  ) * p(i  ,j+1,k  ) + Ay3D(i  ,j  ,k  ) * p(i  ,j-1,k  ) +
+     &								Cz3D(i  ,j  ,k  ) * p(i  ,j  ,k+1) + Az3D(i  ,j  ,k  ) * p(i  ,j  ,k-1) 
+!						ap(i,j,k) = ap(i,j,k)/DD3D(i,j,k) !preconditioning
+						!r2  = r2  + r(i,j,k)* r(i,j,k) 
+						pap = pap + p(i,j,k)*ap(i,j,k) 	 
+					enddo
+				enddo 
+			enddo 	
+			
+		
+			!call mpi_allreduce(r2,r2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+			call mpi_allreduce(pap,pap_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+			alpha = rz2_global/pap_global !with pre-conditioner !r2_global/pap_global
+			do i=ib,ie !1,imax 
+				do j=jb,je !1,jmax 
+					do k=kb,ke !1,kmax 
+						xnew(i,j,k)  = x(i,j,k)  + alpha* p(i,j,k)
+						rnew(i,j,k)  = r(i,j,k)  - alpha*ap(i,j,k)
+						rnew2 = rnew2 + rnew(i,j,k)*rnew(i,j,k)
+						!znew(i,j,k) = rnew(i,j,k)/DD3D(i,j,k) !pre-conditioning
+						!rznew2 = rznew2 + rnew(i,j,k)*znew(i,j,k) 
+					enddo
+				enddo 
+			enddo 	
+			call mpi_allreduce(rnew2,rnew2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+			eps = sqrt(rnew2_global)/sqrt(b2_global) 
+			IF (eps<=tol) THEN
+				!check whether convergence has been achieved, due to round-off errors this could not be the case, then iteration should continue
+				rnew2=0.
+				rnew2_global=0. 
+				call bound_intern_and_periodic(xnew)
+				do i=ib,ie !1,imax 
+					do j=jb,je !1,jmax 
+						do k=kb,ke !1,kmax 
+							! residual = RHS - A*x 
+							rnew(i,j,k) = 	RHS3D(i,j,k)-xnew(i,j,k) - 
+     &						    Cx3D(i  ,j  ,k  ) * xnew(i+1,j  ,k  ) - Ax3D(i  ,j  ,k  ) * xnew(i-1,j  ,k  ) -
+     &							Cy3D(i  ,j  ,k  ) * xnew(i  ,j+1,k  ) - Ay3D(i  ,j  ,k  ) * xnew(i  ,j-1,k  ) -
+     &							Cz3D(i  ,j  ,k  ) * xnew(i  ,j  ,k+1) - Az3D(i  ,j  ,k  ) * xnew(i  ,j  ,k-1) 
+							rnew2 = rnew2 + rnew(i,j,k)*rnew(i,j,k) 
+						enddo
+					enddo 
+				enddo			
+				call mpi_allreduce(rnew2,rnew2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+				eps = sqrt(rnew2_global)/sqrt(b2_global) 
+				IF (eps<=tol) THEN
+					IF (rank.eq.0) THEN 
+							write(*,*),'CN3Dcg iteration finished; tel,tol,eps,g,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',
+     & 						tel,tol,eps,g,b2_global,MINVAL(DD3D),MAXVAL(DD3D)
+					ENDIF	
+					xnew = xnew/sqrt(DD3D)
+					EXIT 
+				ELSE 
+					IF (rank.eq.0) THEN 
+							write(*,*),'CN3Dcg iteration continued after false stop; tel,tol,eps:',tel,tol,eps
+					ENDIF					
+					!continue with iteration with new rnew and rnew2_global 
+					contin = 1
+				ENDIF 
+			ELSEIF (tel.eq.maxiter) THEN 
+				xnew = xnew/sqrt(DD3D)
+				IF (rank.eq.0) THEN 
+					write(*,*),'WARNING : CN3Dpcg iteration did not reach desired tolerance, TUDflow3D will continue with end result'
+					write(*,*)'tel,tol,eps,g,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',tel,tol,eps,g,b2_global,MINVAL(DD3D),MAXVAL(DD3D)
+!					write(*,*),'xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)',xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)
+!					write(*,*),'RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)',RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)
+!					write(*,*),'DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)',DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)
+				ENDIF
+				EXIT 
+			ENDIF 
+
+			!Polynomial preconditioning 
+			call bound_intern_and_periodic(rnew)
+			do i=ib,ie !1,imax 
+				do j=jb,je !1,jmax 
+					do k=kb,ke !1,kmax 
+						z1(i,j,k) =	con(1)*rnew(i,j,k)+rnew(i,j,k) + 
+     &					    Cx3D(i  ,j  ,k  ) * rnew(i+1,j  ,k  ) + Ax3D(i  ,j  ,k  ) * rnew(i-1,j  ,k  ) +
+     &						Cy3D(i  ,j  ,k  ) * rnew(i  ,j+1,k  ) + Ay3D(i  ,j  ,k  ) * rnew(i  ,j-1,k  ) +
+     &						Cz3D(i  ,j  ,k  ) * rnew(i  ,j  ,k+1) + Az3D(i  ,j  ,k  ) * rnew(i  ,j  ,k-1) 
+					enddo
+				enddo 
+			enddo
+			call bound_intern_and_periodic(z1)
+			do i=ib,ie !1,imax 
+				do j=jb,je !1,jmax 
+					do k=kb,ke !1,kmax 
+						z2(i,j,k) = con(2)*rnew(i,j,k)+z1(i,j,k) + 
+     &					    Cx3D(i  ,j  ,k  ) * z1(i+1,j  ,k  ) + Ax3D(i  ,j  ,k  ) * z1(i-1,j  ,k  ) +
+     &						Cy3D(i  ,j  ,k  ) * z1(i  ,j+1,k  ) + Ay3D(i  ,j  ,k  ) * z1(i  ,j-1,k  ) +
+     &						Cz3D(i  ,j  ,k  ) * z1(i  ,j  ,k+1) + Az3D(i  ,j  ,k  ) * z1(i  ,j  ,k-1) 
+					enddo
+				enddo 
+			enddo
+			call bound_intern_and_periodic(z2)
+			do i=ib,ie !1,imax 
+				do j=jb,je !1,jmax 
+					do k=kb,ke !1,kmax 
+						znew(i,j,k) = con(3)*rnew(i,j,k)+z2(i,j,k) + 
+     &				    	Cx3D(i  ,j  ,k  ) * z2(i+1,j  ,k  ) + Ax3D(i  ,j  ,k  ) * z2(i-1,j  ,k  ) +
+     &						Cy3D(i  ,j  ,k  ) * z2(i  ,j+1,k  ) + Ay3D(i  ,j  ,k  ) * z2(i  ,j-1,k  ) +
+     &						Cz3D(i  ,j  ,k  ) * z2(i  ,j  ,k+1) + Az3D(i  ,j  ,k  ) * z2(i  ,j  ,k-1) 
+
+						rznew2 = rznew2 + rnew(i,j,k)*znew(i,j,k) 
+					enddo
+				enddo 
+			enddo			
+			call mpi_allreduce(rznew2,rznew2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+			if (contin.eq.1) then 
+				beta = 0.
+			else 
+				beta = rznew2_global/rz2_global 
+			endif 
+			IF (isnan(alpha).or.isnan(beta)) THEN 
+				IF (rank.eq.0) THEN 
+					write(*,*),'WARNING : CN3Dpcg iteration crashed; alpha,beta,tel,tol,eps=',alpha,beta,tel,tol,eps
+				ENDIF
+				EXIT 
+			ENDIF
+
+			! not finished, so continue:
+			do i=ib,ie !1,imax 
+				do j=jb,je !1,jmax 
+					do k=kb,ke !1,kmax
+						p(i,j,k) = znew(i,j,k)  + beta*p(i,j,k)
+						x(i,j,k) = xnew(i,j,k) !should be removable; keep only x
+						r(i,j,k) = rnew(i,j,k) !should be removable; keep only r
+						!p(i,j,k) = pnew(i,j,k)
+					enddo
+				enddo 
+			enddo
+			r2_global = rnew2_global 
+			rz2_global = rznew2_global 
+			call bound_intern_and_periodic(p)
+
+		enddo ! interation loop 
+		
+		END SUBROUTINE		
+	
+	
+		SUBROUTINE CN3Dpcg_pol2(xnew,x0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,i1,j1,k1,ib,ie,jb,je,kb,ke,maxiter,tol,rank) 
+		! Pre-conditioned ConjungateGradient implicit solver for 3D Laplacian Ax=RHS 
+		! Matrix A is a 3D Laplacian matrix containing 7 diagonals:
+		! Main diagonal values of matrix A in DD3D(0:i1,0:j1,0:k1)
+		! Off-diagonal values left and right in x-dir, y-dir and z-dir: Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D with size (0:i1,0:j1,0:k1) 
+		! Righthandside in RHS(0:i1,0:j1,0:k1) 
+		! solution output in xnew(0:i1,0:j1,0:k1) 
+		! starting condition in x0(0:i1,0:j1,0:k1)
+		
+		implicit none
+		
+        include 'mpif.h'
+        integer ierr,rank
+		integer  i,j,k,i1,j1,k1,im,ip,jm,jp,km,kp,tel,maxiter !,imax,jmax,kmax
+		integer ib,ie,jb,je,kb,ke,contin
+		real Ax3D(0:i1,0:j1,0:k1),Ay3D(0:i1,0:j1,0:k1),Az3D(0:i1,0:j1,0:k1)
+		real Cx3D(0:i1,0:j1,0:k1),Cy3D(0:i1,0:j1,0:k1),Cz3D(0:i1,0:j1,0:k1)
+		real DD3D(0:i1,0:j1,0:k1),RHS3D(0:i1,0:j1,0:k1)
+		real x(0:i1,0:j1,0:k1),xnew(0:i1,0:j1,0:k1),p(0:i1,0:j1,0:k1),r(0:i1,0:j1,0:k1),rnew(0:i1,0:j1,0:k1) !,pnew(0:i1,0:j1,0:k1)
+		real ap(0:i1,0:j1,0:k1),x0(0:i1,0:j1,0:k1)
+		real tol,alpha,beta,rnew2,r2,pap,rnew2_global,r2_global,pap_global,eps,b2,b2_global
+		real znew(0:i1,0:j1,0:k1),rz2_global,rz2,rznew2,rznew2_global	
+		real con(3),g,z1(0:i1,0:j1,0:k1),z2(0:i1,0:j1,0:k1),g_local 
+
+
+		r=0. 
+		p=0. 
+		z1=0.
+		z2=0. 
+		rnew=0. 
+		xnew=0. 
+!!		! No diagonal pre-conditioner
+		b2=0.
+		r2=0. 
+		rz2=0.			
+		do i=ib,ie !1,imax 
+			do j=jb,je !1,jmax 
+				do k=kb,ke !1,kmax 
+					! residual = RHS - A*x 
+!					r(i,j,k) = 	RHS3D(i,j,k)-x(i,j,k) - !x(i,j,k)-x(i,j,k)*DD3D(i,j,k)/DD3D(i,j,k) !first x(i,j,k) is RHS, second is DIAG*1/DIAG*x(i,j,k)
+					r(i,j,k) = 	RHS3D(i,j,k)-x(i,j,k)*DD3D(i,j,k) - !x(i,j,k)-x(i,j,k)*DD3D(i,j,k)/DD3D(i,j,k) !first x(i,j,k) is RHS, second is DIAG*1/DIAG*x(i,j,k)
+     &						    Cx3D(i  ,j  ,k  ) * x(i+1,j  ,k  ) - Ax3D(i  ,j  ,k  ) * x(i-1,j  ,k  ) -
+     &							Cy3D(i  ,j  ,k  ) * x(i  ,j+1,k  ) - Ay3D(i  ,j  ,k  ) * x(i  ,j-1,k  ) -
+     &							Cz3D(i  ,j  ,k  ) * x(i  ,j  ,k+1) - Az3D(i  ,j  ,k  ) * x(i  ,j  ,k-1) 
+					!p(i,j,k) = r(i,j,k)
+					b2 = b2 + RHS3D(i,j,k)*RHS3D(i,j,k) 					
+					r2 = r2 + r(i,j,k)*r(i,j,k) 
+				enddo
+			enddo 
+		enddo
+		call mpi_allreduce(b2,b2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+		call mpi_allreduce(r2,r2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)	
+		IF (sqrt(r2_global).le.tol.or.sqrt(b2_global).le.tol) THEN
+			!no need to iterate
+			xnew=x0
+			return 
+		ENDIF
+		
+		!Polynomial preconditioning 
+		g_local=0.
+		do i=ib,ie !1,imax 
+			do j=jb,je !1,jmax 
+				do k=kb,ke !1,kmax 
+					g_local  = MAX(g_local,ABS(Ax3D(i,j,k))+ABS(Cx3D(i,j,k))+ABS(Ay3D(i,j,k))+ABS(Cy3D(i,j,k))
+     & 						+ABS(Az3D(i,j,k))+ABS(Cz3D(i,j,k))+ABS(DD3D(i,j,k))) 
+				enddo
+			enddo 
+		enddo 	
+		call mpi_allreduce(g_local,g,1,mpi_real8,mpi_max,mpi_comm_world,ierr)	
+		!g=2.
+		con(1)=-9./4.*g 			
+		con(2)=27./16.*g**2
+		con(3)=-15./32.*g**3	
+		call bound_intern_and_periodic(r)
+		do i=ib,ie !1,imax 
+			do j=jb,je !1,jmax 
+				do k=kb,ke !1,kmax 
+					z1(i,j,k) =	con(1)*r(i,j,k)+r(i,j,k)*DD3D(i,j,k) + 
+     &						    Cx3D(i  ,j  ,k  ) * r(i+1,j  ,k  ) + Ax3D(i  ,j  ,k  ) * r(i-1,j  ,k  ) +
+     &							Cy3D(i  ,j  ,k  ) * r(i  ,j+1,k  ) + Ay3D(i  ,j  ,k  ) * r(i  ,j-1,k  ) +
+     &							Cz3D(i  ,j  ,k  ) * r(i  ,j  ,k+1) + Az3D(i  ,j  ,k  ) * r(i  ,j  ,k-1) 
+				enddo
+			enddo 
+		enddo
+		call bound_intern_and_periodic(z1)
+		do i=ib,ie !1,imax 
+			do j=jb,je !1,jmax 
+				do k=kb,ke !1,kmax 
+					z2(i,j,k) = con(2)*r(i,j,k)+z1(i,j,k)*DD3D(i,j,k) + 
+     &						    Cx3D(i  ,j  ,k  ) * z1(i+1,j  ,k  ) + Ax3D(i  ,j  ,k  ) * z1(i-1,j  ,k  ) +
+     &							Cy3D(i  ,j  ,k  ) * z1(i  ,j+1,k  ) + Ay3D(i  ,j  ,k  ) * z1(i  ,j-1,k  ) +
+     &							Cz3D(i  ,j  ,k  ) * z1(i  ,j  ,k+1) + Az3D(i  ,j  ,k  ) * z1(i  ,j  ,k-1) 
+				enddo
+			enddo 
+		enddo
+		call bound_intern_and_periodic(z2)
+		do i=ib,ie !1,imax 
+			do j=jb,je !1,jmax 
+				do k=kb,ke !1,kmax 
+					znew(i,j,k) = con(3)*r(i,j,k)+z2(i,j,k)*DD3D(i,j,k) + 
+     &						    Cx3D(i  ,j  ,k  ) * z2(i+1,j  ,k  ) + Ax3D(i  ,j  ,k  ) * z2(i-1,j  ,k  ) +
+     &							Cy3D(i  ,j  ,k  ) * z2(i  ,j+1,k  ) + Ay3D(i  ,j  ,k  ) * z2(i  ,j-1,k  ) +
+     &							Cz3D(i  ,j  ,k  ) * z2(i  ,j  ,k+1) + Az3D(i  ,j  ,k  ) * z2(i  ,j  ,k-1) 
+	 
+					p(i,j,k) = znew(i,j,k)
+					rz2 = rz2 + r(i,j,k)*znew(i,j,k)
+				enddo
+			enddo 
+		enddo		
+		
+		call mpi_allreduce(rz2,rz2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)	
+		call bound_intern_and_periodic(p)
+	
+				
+		do tel=1,maxiter 
+			rnew2=0.
+			rznew2=0.
+			pap=0.
+			rnew2_global=0.
+			rznew2_global=0.
+			pap_global=0. 
+			eps=0. 
+			alpha=0. 
+			beta=0.
+			contin=0
+
+			do i=ib,ie !1,imax 
+				do j=jb,je !1,jmax 
+					do k=kb,ke !1,kmax 
+						!ap(i,j,k) = p(i,j,k) + !*DIAG/DIAG
+						ap(i,j,k) = p(i,j,k)*DD3D(i,j,k) + !*DIAG/DIAG
+     &								Cx3D(i  ,j  ,k  ) * p(i+1,j  ,k  ) + Ax3D(i  ,j  ,k  ) * p(i-1,j  ,k  ) +
+     &								Cy3D(i  ,j  ,k  ) * p(i  ,j+1,k  ) + Ay3D(i  ,j  ,k  ) * p(i  ,j-1,k  ) +
+     &								Cz3D(i  ,j  ,k  ) * p(i  ,j  ,k+1) + Az3D(i  ,j  ,k  ) * p(i  ,j  ,k-1) 
+!						ap(i,j,k) = ap(i,j,k)/DD3D(i,j,k) !preconditioning
+						!r2  = r2  + r(i,j,k)* r(i,j,k) 
+						pap = pap + p(i,j,k)*ap(i,j,k) 	 
+					enddo
+				enddo 
+			enddo 	
+			
+		
+			!call mpi_allreduce(r2,r2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+			call mpi_allreduce(pap,pap_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+			alpha = rz2_global/pap_global !with pre-conditioner !r2_global/pap_global
+			do i=ib,ie !1,imax 
+				do j=jb,je !1,jmax 
+					do k=kb,ke !1,kmax 
+						xnew(i,j,k)  = x(i,j,k)  + alpha* p(i,j,k)
+						rnew(i,j,k)  = r(i,j,k)  - alpha*ap(i,j,k)
+						rnew2 = rnew2 + rnew(i,j,k)*rnew(i,j,k)
+						!znew(i,j,k) = rnew(i,j,k)/DD3D(i,j,k) !pre-conditioning
+						!rznew2 = rznew2 + rnew(i,j,k)*znew(i,j,k) 
+					enddo
+				enddo 
+			enddo 	
+			call mpi_allreduce(rnew2,rnew2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+			eps = sqrt(rnew2_global)/sqrt(b2_global) 
+			IF (eps<=tol) THEN
+				!check whether convergence has been achieved, due to round-off errors this could not be the case, then iteration should continue
+				rnew2=0.
+				rnew2_global=0. 
+				call bound_intern_and_periodic(xnew)
+				do i=ib,ie !1,imax 
+					do j=jb,je !1,jmax 
+						do k=kb,ke !1,kmax 
+							! residual = RHS - A*x 
+							rnew(i,j,k) = 	RHS3D(i,j,k)-xnew(i,j,k)*DD3D(i,j,k) - 
+     &						    Cx3D(i  ,j  ,k  ) * xnew(i+1,j  ,k  ) - Ax3D(i  ,j  ,k  ) * xnew(i-1,j  ,k  ) -
+     &							Cy3D(i  ,j  ,k  ) * xnew(i  ,j+1,k  ) - Ay3D(i  ,j  ,k  ) * xnew(i  ,j-1,k  ) -
+     &							Cz3D(i  ,j  ,k  ) * xnew(i  ,j  ,k+1) - Az3D(i  ,j  ,k  ) * xnew(i  ,j  ,k-1) 
+							rnew2 = rnew2 + rnew(i,j,k)*rnew(i,j,k) 
+						enddo
+					enddo 
+				enddo			
+				call mpi_allreduce(rnew2,rnew2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+				eps = sqrt(rnew2_global)/sqrt(b2_global) 
+				IF (eps<=tol) THEN
+					IF (rank.eq.0) THEN 
+							write(*,*),'CN3Dcg iteration finished; tel,tol,eps,g,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',
+     & 						tel,tol,eps,g,b2_global,MINVAL(DD3D),MAXVAL(DD3D)
+					ENDIF	
+					!xnew = xnew/sqrt(DD3D)
+					EXIT 
+				ELSE 
+					IF (rank.eq.0) THEN 
+							write(*,*),'CN3Dcg iteration continued after false stop; tel,tol,eps:',tel,tol,eps
+					ENDIF					
+					!continue with iteration with new rnew and rnew2_global 
+					contin = 1
+				ENDIF 
+			ELSEIF (tel.eq.maxiter) THEN 
+				!xnew = xnew/sqrt(DD3D)
+				IF (rank.eq.0) THEN 
+					write(*,*),'WARNING : CN3Dpcg iteration did not reach desired tolerance, TUDflow3D will continue with end result'
+					write(*,*)'tel,tol,eps,g,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',tel,tol,eps,g,b2_global,MINVAL(DD3D),MAXVAL(DD3D)
+!					write(*,*),'xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)',xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)
+!					write(*,*),'RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)',RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)
+!					write(*,*),'DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)',DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)
+				ENDIF
+				EXIT 
+			ENDIF 
+
+			!Polynomial preconditioning 
+			call bound_intern_and_periodic(rnew)
+			do i=ib,ie !1,imax 
+				do j=jb,je !1,jmax 
+					do k=kb,ke !1,kmax 
+						z1(i,j,k) =	con(1)*rnew(i,j,k)+rnew(i,j,k)*DD3D(i,j,k) + 
+     &					    Cx3D(i  ,j  ,k  ) * rnew(i+1,j  ,k  ) + Ax3D(i  ,j  ,k  ) * rnew(i-1,j  ,k  ) +
+     &						Cy3D(i  ,j  ,k  ) * rnew(i  ,j+1,k  ) + Ay3D(i  ,j  ,k  ) * rnew(i  ,j-1,k  ) +
+     &						Cz3D(i  ,j  ,k  ) * rnew(i  ,j  ,k+1) + Az3D(i  ,j  ,k  ) * rnew(i  ,j  ,k-1) 
+					enddo
+				enddo 
+			enddo
+			call bound_intern_and_periodic(z1)
+			do i=ib,ie !1,imax 
+				do j=jb,je !1,jmax 
+					do k=kb,ke !1,kmax 
+						z2(i,j,k) = con(2)*rnew(i,j,k)+z1(i,j,k)*DD3D(i,j,k) + 
+     &					    Cx3D(i  ,j  ,k  ) * z1(i+1,j  ,k  ) + Ax3D(i  ,j  ,k  ) * z1(i-1,j  ,k  ) +
+     &						Cy3D(i  ,j  ,k  ) * z1(i  ,j+1,k  ) + Ay3D(i  ,j  ,k  ) * z1(i  ,j-1,k  ) +
+     &						Cz3D(i  ,j  ,k  ) * z1(i  ,j  ,k+1) + Az3D(i  ,j  ,k  ) * z1(i  ,j  ,k-1) 
+					enddo
+				enddo 
+			enddo
+			call bound_intern_and_periodic(z2)
+			do i=ib,ie !1,imax 
+				do j=jb,je !1,jmax 
+					do k=kb,ke !1,kmax 
+						znew(i,j,k) = con(3)*rnew(i,j,k)+z2(i,j,k)*DD3D(i,j,k) + 
+     &				    	Cx3D(i  ,j  ,k  ) * z2(i+1,j  ,k  ) + Ax3D(i  ,j  ,k  ) * z2(i-1,j  ,k  ) +
+     &						Cy3D(i  ,j  ,k  ) * z2(i  ,j+1,k  ) + Ay3D(i  ,j  ,k  ) * z2(i  ,j-1,k  ) +
+     &						Cz3D(i  ,j  ,k  ) * z2(i  ,j  ,k+1) + Az3D(i  ,j  ,k  ) * z2(i  ,j  ,k-1) 
+
+						rznew2 = rznew2 + rnew(i,j,k)*znew(i,j,k) 
+					enddo
+				enddo 
+			enddo			
+			call mpi_allreduce(rznew2,rznew2_global,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
+			if (contin.eq.1) then 
+				beta = 0.
+			else 
+				beta = rznew2_global/rz2_global 
+			endif 
+			IF (isnan(alpha).or.isnan(beta)) THEN 
+				IF (rank.eq.0) THEN 
+					write(*,*),'WARNING : CN3Dpcg iteration crashed; alpha,beta,tel,tol,eps=',alpha,beta,tel,tol,eps
+				ENDIF
+				EXIT 
+			ENDIF
+
+			! not finished, so continue:
+			do i=ib,ie !1,imax 
+				do j=jb,je !1,jmax 
+					do k=kb,ke !1,kmax
+						p(i,j,k) = znew(i,j,k)  + beta*p(i,j,k)
+						x(i,j,k) = xnew(i,j,k) !should be removable; keep only x
+						r(i,j,k) = rnew(i,j,k) !should be removable; keep only r
+						!p(i,j,k) = pnew(i,j,k)
+					enddo
+				enddo 
+			enddo
+			r2_global = rnew2_global 
+			rz2_global = rznew2_global 
+			call bound_intern_and_periodic(p)
+
+		enddo ! interation loop 
+		
+		END SUBROUTINE		
+	
+	

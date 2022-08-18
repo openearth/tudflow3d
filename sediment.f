@@ -453,6 +453,7 @@
 	  INTEGER kbedp(0:i1,0:j1),ibeg,iend,kppE,kppW,kppN,kppS
 	  REAL dzbed_dx,dzbed_dy,dzbed_dn,dzbed_ds,bedslope_angle,bedslope_alpha,Shields_cr_bl,fnorm,dzbed_dl,fcor_slope
 	  REAL ppp(0:i1,0:j1,0:k1),Fix,Fiy,ddzzE,ddzzW,ddzzS,ddzzN,ustu2,ustv2,ww,c_adjust1,c_adjust2,dz1
+	  REAL dzbed_dl2,dzbed_dl3
 	
 	erosion=0.
 	deposition=0.
@@ -1187,11 +1188,25 @@
 					vs = MAX(sqrt(gvector*delta*d50),1.e-12)
 					!vwal = (-cfixedbed*delta*sin(phi-alpha)/sin(phi))/(delta_nsed/permeability_kt) !vwal is user input, here Eq.6 from MastBergenvdBerg2003 is mentioned to know how to calculate it (in Eq. 6 the minus sign was forgotten)
 					IF (vwal2>999.) THEN !determine vwal dynamically within computational domain
+!					  dzbed_dx=-(zbed(i+1,j)-zbed(i-1,j))/(Rp(i+1)-Rp(i-1)) !defined with z positive down
+!     &  *MIN(bednotfixed(i+1,j,kbed(i+1,j)),bednotfixed(i-1,j,kbed(i-1,j)))					
+!					  dzbed_dy=-(zbed(i,j+1)-zbed(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1))) !defined with z positive down
+!     &  *MIN(bednotfixed(i,j+1,kbed(i,j+1)),bednotfixed(i,j-1,kbed(i,j-1)))					
+!					  dzbed_dl=sqrt(dzbed_dx**2+dzbed_dy**2)
+					  
+					  ! 3-6-2022 LdW, implement max of four slopes including diagonal corner cells to get 3D breach dome shape correct:
 					  dzbed_dx=-(zbed(i+1,j)-zbed(i-1,j))/(Rp(i+1)-Rp(i-1)) !defined with z positive down
      &  *MIN(bednotfixed(i+1,j,kbed(i+1,j)),bednotfixed(i-1,j,kbed(i-1,j)))					
 					  dzbed_dy=-(zbed(i,j+1)-zbed(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1))) !defined with z positive down
-     &  *MIN(bednotfixed(i,j+1,kbed(i,j+1)),bednotfixed(i,j-1,kbed(i,j-1)))					
-					  dzbed_dl=sqrt(dzbed_dx**2+dzbed_dy**2)
+     &  *MIN(bednotfixed(i,j+1,kbed(i,j+1)),bednotfixed(i,j-1,kbed(i,j-1)))	
+
+					  dzbed_dl2=-(zbed(i+1,j+1)-zbed(i-1,j-1))/sqrt((Rp(i+1)-Rp(i-1))**2+(Rp(i+1)*phip(j+1)-Rp(i-1)*phip(j-1))**2) 
+     &  *MIN(bednotfixed(i+1,j+1,kbed(i+1,j+1)),bednotfixed(i-1,j-1,kbed(i-1,j-1)))					
+					  dzbed_dl3=-(zbed(i+1,j-1)-zbed(i-1,j+1))/sqrt((Rp(i+1)-Rp(i-1))**2+(Rp(i+1)*phip(j-1)-Rp(i-1)*phip(j+1))**2) 
+     &  *MIN(bednotfixed(i+1,j-1,kbed(i+1,j-1)),bednotfixed(i-1,j+1,kbed(i-1,j+1)))
+
+					  dzbed_dl=MAX(abs(dzbed_dx),abs(dzbed_dy),abs(dzbed_dl2),abs(dzbed_dl3))
+					  
 					  bedslope_angle=atan(dzbed_dl)					
 					  vwal = (-cfixedbed*delta*sin(MIN(phi_sediment-bedslope_angle,0.))/sin(phi_sediment))/(delta_nsed/permeability_kl)
 					ENDIF 
@@ -1204,11 +1219,23 @@
 					vs = MAX(sqrt(gvector*delta*d50),1.e-12)
 					!vwal = (-cfixedbed*delta*sin(phi-alpha)/sin(phi))/(delta_nsed/permeability_kt) !vwal is user input, here Eq.6 from MastBergenvdBerg2003 is mentioned to know how to calculate it (in Eq. 6 the minus sign was forgotten)
 					IF (vwal2>999.) THEN !determine vwal dynamically within computational domain
+!					  dzbed_dx=-(zbed(i+1,j)-zbed(i-1,j))/(Rp(i+1)-Rp(i-1)) !defined with z positive down
+!     &  *MIN(bednotfixed(i+1,j,kbed(i+1,j)),bednotfixed(i-1,j,kbed(i-1,j)))					
+!					  dzbed_dy=-(zbed(i,j+1)-zbed(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1))) !defined with z positive down
+!     &  *MIN(bednotfixed(i,j+1,kbed(i,j+1)),bednotfixed(i,j-1,kbed(i,j-1)))					
+!					  dzbed_dl=sqrt(dzbed_dx**2+dzbed_dy**2)
+					  ! 3-6-2022 LdW, implement max of four slopes including diagonal corner cells to get 3D breach dome shape correct:
 					  dzbed_dx=-(zbed(i+1,j)-zbed(i-1,j))/(Rp(i+1)-Rp(i-1)) !defined with z positive down
      &  *MIN(bednotfixed(i+1,j,kbed(i+1,j)),bednotfixed(i-1,j,kbed(i-1,j)))					
 					  dzbed_dy=-(zbed(i,j+1)-zbed(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1))) !defined with z positive down
-     &  *MIN(bednotfixed(i,j+1,kbed(i,j+1)),bednotfixed(i,j-1,kbed(i,j-1)))					
-					  dzbed_dl=sqrt(dzbed_dx**2+dzbed_dy**2)
+     &  *MIN(bednotfixed(i,j+1,kbed(i,j+1)),bednotfixed(i,j-1,kbed(i,j-1)))	
+
+					  dzbed_dl2=-(zbed(i+1,j+1)-zbed(i-1,j-1))/sqrt((Rp(i+1)-Rp(i-1))**2+(Rp(i+1)*phip(j+1)-Rp(i-1)*phip(j-1))**2) 
+     &  *MIN(bednotfixed(i+1,j+1,kbed(i+1,j+1)),bednotfixed(i-1,j-1,kbed(i-1,j-1)))					
+					  dzbed_dl3=-(zbed(i+1,j-1)-zbed(i-1,j+1))/sqrt((Rp(i+1)-Rp(i-1))**2+(Rp(i+1)*phip(j-1)-Rp(i-1)*phip(j+1))**2) 
+     &  *MIN(bednotfixed(i+1,j-1,kbed(i+1,j-1)),bednotfixed(i-1,j+1,kbed(i-1,j+1)))
+	 
+					  dzbed_dl=MAX(abs(dzbed_dx),abs(dzbed_dy),abs(dzbed_dl2),abs(dzbed_dl3))					  
 					  bedslope_angle=atan(dzbed_dl)					
 					  vwal = (-cfixedbed*delta*sin(MIN(phi_sediment-bedslope_angle,0.))/sin(phi_sediment))/(delta_nsed/permeability_kl)
 					ENDIF 
@@ -2187,23 +2214,24 @@
 		  ENDDO 
 		ENDDO 
 		call bound_cbot(zbed)			
-			! update ibm2 kbed22 which is subtly different from kbed:
-		if (IBMorder.eq.2) then
-			DO i=1,imax
-				DO j=1,jmax			
-					zb_W=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(cbotnew(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
-					kbed22(i,j)=FLOOR(zb_W/dz)
-!			if (rank.eq.1.and.j.eq.3.and.(i.eq.56.or.i.eq.56)) then 
-!		write(*,*),'CC ',i,kbed(i,j),kplus,absU,SUM(cbotnew(1:nfrac,i,j)),cbotnewtot,cbotnewtot_pos,erosionf(1),erosionf(2),
-!     & depositionf(1),depositionf(2),Wsed(1,i,j,kbed(i,j)),Wsed(2,i,j,kbed(i,j)),ccnew(1,i,j,kplus),ccnew(2,i,j,kplus),
-!     & ccfd(1,i,j,kplus),ccfd(2,i,j,kplus),cctot 
-!			endif 					
-				ENDDO 
-			ENDDO 
-			call bound_cbot_integer(kbed22)			
-		else 
-			kbed22=kbed
-		endif 		
+!!! kbed22 not used anymore 
+!!!			! update ibm2 kbed22 which is subtly different from kbed:
+!!!		if (IBMorder.eq.2) then
+!!!			DO i=1,imax
+!!!				DO j=1,jmax			
+!!!					zb_W=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(cbotnew(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
+!!!					kbed22(i,j)=FLOOR(zb_W/dz)
+!!!!			if (rank.eq.1.and.j.eq.3.and.(i.eq.56.or.i.eq.56)) then 
+!!!!		write(*,*),'CC ',i,kbed(i,j),kplus,absU,SUM(cbotnew(1:nfrac,i,j)),cbotnewtot,cbotnewtot_pos,erosionf(1),erosionf(2),
+!!!!     & depositionf(1),depositionf(2),Wsed(1,i,j,kbed(i,j)),Wsed(2,i,j,kbed(i,j)),ccnew(1,i,j,kplus),ccnew(2,i,j,kplus),
+!!!!     & ccfd(1,i,j,kplus),ccfd(2,i,j,kplus),cctot 
+!!!!			endif 					
+!!!				ENDDO 
+!!!			ENDDO 
+!!!			call bound_cbot_integer(kbed22)			
+!!!		else 
+!!!			kbed22=kbed
+!!!		endif 		
 	ENDIF
 
 	

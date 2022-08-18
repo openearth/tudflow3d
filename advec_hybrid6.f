@@ -18,7 +18,7 @@
 
 
       subroutine advecu_HYB6(putout,Uvel,Vvel,Wvel,RHO,rhu,rhv,rhw,Ru,Rp,dr,phiv,dz,
-     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy,kbed,wf,wd,nd2)
+     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy,kbed,wf,wd,nd2,fcg)
       implicit none
 c
 c********************************************************************
@@ -58,13 +58,17 @@ c********************************************************************
       real rho(0:i1,0:j1,0:k1),numdif,nd2
       real rhoip,rhoim,rhojp,rhojm,rhokp,rhokm
 	real uuR,uuL,vvR,vvL,wwR,wwL
-	integer kpp,kppp,kmm,kmmm,jpp,jppp,jmm,jmmm,ipp,ippp,imm,immm,rank,px,periodicx,periodicy,wd
+	integer kpp,kppp,kmm,kmmm,jpp,jppp,jmm,jmmm,ipp,ippp,imm,immm,rank,px,periodicx,periodicy,wd,jmax 
 	real*8 ubb(0:i1,0:k1),ubf(0:i1,0:k1),Uvel2(-2:i1+2,-2:j1+2,-2:k1+2)
 	real rhU(0:i1,0:j1,0:k1),rhV(0:i1,0:j1,0:k1),rhW(0:i1,0:j1,0:k1)
 	real wwdd(1:3),wf(0:i1,0:j1,0:k1),numdif2,u4mag 
 	real Vvel2(-2:i1+2,-2:j1+2,-2:k1+2),Wvel2(-2:i1+2,-2:j1+2,-2:k1+2)
-
+	real fcg(0:i1,0:px*(j1-1)+1,0:k1)
+	
 	Uvel2(0:i1,0:j1,0:k1)=Uvel
+	jmax=j1-1 
+
+
 
 !c get stuff from other CPU's
 	  call shiftf2(Uvel,ubf)
@@ -391,29 +395,29 @@ c********************************************************************
 			kmm=k-2
 			kmmm=k-3		
 
-!            rhojp =0.25*(rho(i,j,k)+rho(i,jp,k)+rho(ip,j,k)+rho(ip,jp,k))
-!            rhojm =0.25*(rho(i,j,k)+rho(i,jm,k)+rho(ip,j,k)+rho(ip,jm,k))
-!            rhokp =0.25*(rho(i,j,k)+rho(i,j,kp)+rho(ip,j,k)+rho(ip,j,kp))
-!            rhokm =0.25*(rho(i,j,k)+rho(i,j,km)+rho(ip,j,k)+rho(ip,j,km))
-!            putout(i,j,k) = 0.0
-!            uuR=(Uvel(i,j,k)+Uvel(ip,j,k))*rho(ip,j,k)*Rp(ip)
-!            uuL=(Uvel(i,j,k)+Uvel(im,j,k))*rho(i,j,k)*Rp(i)
-!            vvR=(Vvel(i,j,k)+Vvel(ip,j,k))*rhojp
-!            vvL=(Vvel(i,jm,k)+Vvel(ip,jm,k))*rhojm
-!            wwR=(Wvel(i,j,k)+Wvel(ip,j,k))*rhokp
-!            wwL=(Wvel(i,j,km)+Wvel(ip,j,km))*rhokm
-!            uuR=(rhoU(i,j,k)+rhoU(ip,j,k))*Rp(ip)
-!            uuL=(rhoU(i,j,k)+rhoU(im,j,k))*Rp(i)
-!            vvR=(rhoV(i,j,k)+rhoV(ip,j,k))
-!            vvL=(rhoV(i,jm,k)+rhoV(ip,jm,k))
-!            wwR=(rhoW(i,j,k)+rhoW(ip,j,k))
-!            wwL=(rhoW(i,j,km)+rhoW(ip,j,km))	
+!            uuR=(Uvel(i,j,k)*rhU(i,j,k)+Uvel(ip,j,k)*rhU(ip,j,k))*Rp(ip)
+!            uuL=(Uvel(i,j,k)*rhU(i,j,k)+Uvel(im,j,k)*rhU(im,j,k))*Rp(i)
+!            vvR=(Vvel(i,j,k)*rhV(i,j,k)+Vvel(ip,j,k)*rhV(ip,j,k))
+!            vvL=(Vvel(i,jm,k)*rhV(i,jm,k)+Vvel(ip,jm,k)*rhV(ip,jm,k))
+!            wwR=(Wvel(i,j,k)*rhW(i,j,k)+Wvel(ip,j,k)*rhW(ip,j,k))
+!            wwL=(Wvel(i,j,km)*rhW(i,j,km)+Wvel(ip,j,km)*rhW(ip,j,km))
+			
             uuR=(Uvel(i,j,k)*rhU(i,j,k)+Uvel(ip,j,k)*rhU(ip,j,k))*Rp(ip)
+     &		*MIN(fcg(i,j+rank*jmax,k),fcg(ip,j+rank*jmax,k),fcg(MIN(i1,ipp),j+rank*jmax,k))
             uuL=(Uvel(i,j,k)*rhU(i,j,k)+Uvel(im,j,k)*rhU(im,j,k))*Rp(i)
+     &		*MIN(fcg(im,j+rank*jmax,k),fcg(i,j+rank*jmax,k),fcg(ip,j+rank*jmax,k))			
             vvR=(Vvel(i,j,k)*rhV(i,j,k)+Vvel(ip,j,k)*rhV(ip,j,k))
+     &		*MIN(fcg(i,j+rank*jmax,k),fcg(i,jp+rank*jmax,k),fcg(ip,j+rank*jmax,k),fcg(ip,jp+rank*jmax,k))			
             vvL=(Vvel(i,jm,k)*rhV(i,jm,k)+Vvel(ip,jm,k)*rhV(ip,jm,k))
+     &		*MIN(fcg(i,j+rank*jmax,k),fcg(i,jm+rank*jmax,k),fcg(ip,j+rank*jmax,k),fcg(ip,jm+rank*jmax,k))			
             wwR=(Wvel(i,j,k)*rhW(i,j,k)+Wvel(ip,j,k)*rhW(ip,j,k))
-            wwL=(Wvel(i,j,km)*rhW(i,j,km)+Wvel(ip,j,km)*rhW(ip,j,km))
+     &		*MIN(fcg(i,j+rank*jmax,k),fcg(i,j+rank*jmax,kp),fcg(ip,j+rank*jmax,k),fcg(ip,j+rank*jmax,kp))			
+            wwL=(Wvel(i,j,km)*rhW(i,j,km)+Wvel(ip,j,km)*rhW(ip,j,km))			
+     &		*MIN(fcg(i,j+rank*jmax,k),fcg(i,j+rank*jmax,km),fcg(ip,j+rank*jmax,k),fcg(ip,j+rank*jmax,km))			
+			
+				!*MIN(fc_global(i,j+rank*jmax,k),
+!     & 			fc_global(i,j+rank*jmax,kp),fc_global(i,j+1+rank*jmax,k),fc_global(i,j+1+rank*jmax,kp))	
+
 			
 		numdif2=numdif*(wf(i,j,k)+wf(i+1,j,k))*0.5
 
@@ -453,7 +457,7 @@ c********************************************************************
 
 
       subroutine advecv_HYB6(putout,Uvel,Vvel,Wvel,RHO,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,
-     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy,kbed,wf,wd)
+     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy,kbed,wf,wd,fcg)
       implicit none
 c
 c********************************************************************
@@ -494,11 +498,13 @@ c********************************************************************
       real rhoip,rhoim,rhojp,rhojm,rhokp,rhokm
 	real numdif
 	real uuR,uuL,vvR,vvL,wwR,wwL,uuR2,uuL2
-	integer kpp,kppp,kmm,kmmm,jpp,jppp,jmm,jmmm,ipp,ippp,imm,immm,rank,px,periodicx,periodicy,wd
+	integer kpp,kppp,kmm,kmmm,jpp,jppp,jmm,jmmm,ipp,ippp,imm,immm,rank,px,periodicx,periodicy,wd,jmax
 
 	real*8 ubb(0:i1,0:k1),ubf(0:i1,0:k1),Vvel2(-2:i1+2,-2:j1+2,-2:k1+2)
 	real rhU(0:i1,0:j1,0:k1),rhV(0:i1,0:j1,0:k1),rhW(0:i1,0:j1,0:k1),numdif2,wf(0:i1,0:j1,0:k1)
-
+	real fcg(0:i1,0:px*(j1-1)+1,0:k1)
+	
+	jmax=j1-1 
 	Vvel2(0:i1,0:j1,0:k1)=Vvel
 
 !c get stuff from other CPU's
@@ -610,30 +616,19 @@ c********************************************************************
 			kppp=k+3
 			kmm=k-2
 			kmmm=k-3		
-!            rhoip =0.25*(rho(i,j,k)+rho(ip,j,k)+rho(i,jp,k)+rho(ip,jp,k))
-!            rhoim =0.25*(rho(i,j,k)+rho(im,j,k)+rho(i,jp,k)+rho(im,jp,k))
-!            rhojp =rho(i,jp,k)
-!            rhojm =rho(i,j,k )
-!            rhokp =0.25*(rho(i,j,k)+rho(i,j,kp)+rho(i,jp,k)+rho(i,jp,kp))
-!            rhokm =0.25*(rho(i,j,k)+rho(i,j,km)+rho(i,jp,k)+rho(i,jp,km))
-!           uuR=(Uvel(i,j,k)+Uvel(i,jp,k))*rhoip*Ru(i) !*Ru(i)
-!           uuL=(Uvel(im,j,k)+Uvel(im,jp,k))*rhoim*Ru(im) !*Ru(im)
-!     	    vvR=(Vvel(i,j,k)+Vvel(i,jp,k))*rhojp
-!           vvL=(Vvel(i,jm,k)+Vvel(i,j,k))*rhojm
-!           wwR=(Wvel(i,j,k)+Wvel(i,jp,k))*rhokp
-!           wwL=(Wvel(i,j,km)+Wvel(i,jp,km))*rhokm
-!            uuR=(rhoU(i,j,k)+rhoU(i,jp,k))*Ru(i) !*Ru(i)     !! uuL--> rhoU(im,jp,k)--> rhoU(0,j1,k) alleen is probleem??? 
-!            uuL=(rhoU(im,j,k)+rhoU(im,jp,k))*Ru(im) !*Ru(im)
-!      	    vvR=(rhoV(i,j,k)+rhoV(i,jp,k))
-!            vvL=(rhoV(i,jm,k)+rhoV(i,j,k))
-!            wwR=(rhoW(i,j,k)+rhoW(i,jp,k))
-!            wwL=(rhoW(i,j,km)+rhoW(i,jp,km))			
            uuR=(Uvel(i,j,k)*rhU(i,j,k)+Uvel(i,jp,k)*rhU(i,jp,k))*Ru(i) !*Ru(i)
+     &		*MIN(fcg(i,j+rank*jmax,k),fcg(ip,j+rank*jmax,k),fcg(i,jp+rank*jmax,k),fcg(ip,jp+rank*jmax,k))
            uuL=(Uvel(im,j,k)*rhU(im,j,k)+Uvel(im,jp,k)*rhU(im,jp,k))*Ru(im) !*Ru(im)
-     	    vvR=(Vvel(i,j,k)*rhV(i,j,k)+Vvel(i,jp,k)*rhV(i,jp,k))
+     &		*MIN(fcg(i,j+rank*jmax,k),fcg(im,j+rank*jmax,k),fcg(i,jp+rank*jmax,k),fcg(im,jp+rank*jmax,k))		   
+    	   vvR=(Vvel(i,j,k)*rhV(i,j,k)+Vvel(i,jp,k)*rhV(i,jp,k))
+     &		*MIN(fcg(i,j+rank*jmax,k),fcg(i,jp+rank*jmax,k),fcg(i,MIN(jpp+rank*jmax,px*jmax+1),k))		   		   
            vvL=(Vvel(i,jm,k)*rhV(i,jm,k)+Vvel(i,j,k)*rhV(i,j,k))
+     &		*MIN(fcg(i,jm+rank*jmax,k),fcg(i,j+rank*jmax,k),fcg(i,jp+rank*jmax,k))		   
            wwR=(Wvel(i,j,k)*rhW(i,j,k)+Wvel(i,jp,k)*rhW(i,jp,k))
-           wwL=(Wvel(i,j,km)*rhW(i,j,km)+Wvel(i,jp,km)*rhW(i,jp,km))
+     &		*MIN(fcg(i,j+rank*jmax,k),fcg(i,j+rank*jmax,kp),fcg(i,jp+rank*jmax,k),fcg(i,jp+rank*jmax,kp))		   
+           wwL=(Wvel(i,j,km)*rhW(i,j,km)+Wvel(i,jp,km)*rhW(i,jp,km))		   
+     &		*MIN(fcg(i,j+rank*jmax,k),fcg(i,j+rank*jmax,km),fcg(i,jp+rank*jmax,k),fcg(i,jp+rank*jmax,km))		   		   
+			   
 		   
 		numdif2=numdif*(wf(i,j,k)+wf(i,j+1,k))*0.5
 
@@ -687,7 +682,7 @@ c********************************************************************
       end
 
       subroutine advecw_HYB6(putout,Uvel,Vvel,Wvel,RHO,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,
-     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy,kbed,wf,wd)
+     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy,kbed,wf,wd,fcg)
       implicit none
 c
 c********************************************************************
@@ -727,9 +722,12 @@ c********************************************************************
       real rho(0:i1,0:j1,0:k1)
       real rhoip,rhoim,rhojp,rhojm
 	real uuR,uuL,vvR,vvL,wwR,wwL,numdif
-	integer kpp,kppp,kmm,kmmm,jpp,jppp,jmm,jmmm,ipp,ippp,imm,immm,rank,px,periodicx,periodicy,wd
+	integer kpp,kppp,kmm,kmmm,jpp,jppp,jmm,jmmm,ipp,ippp,imm,immm,rank,px,periodicx,periodicy,wd,jmax
 	real*8 ubb(0:i1,0:k1),ubf(0:i1,0:k1),Wvel2(-2:i1+2,-2:j1+2,-2:k1+2)
 	real rhU(0:i1,0:j1,0:k1),rhV(0:i1,0:j1,0:k1),rhW(0:i1,0:j1,0:k1),numdif2,wf(0:i1,0:j1,0:k1)
+	real fcg(0:i1,0:px*(j1-1)+1,0:k1)
+	
+	jmax=j1-1 
 
 		Wvel2(0:i1,0:j1,0:k1)=Wvel
 
@@ -840,28 +838,19 @@ c********************************************************************
 			kmm=k-2
 			kmmm=k-3		  
 
-!            rhoip =0.25*(rho(i,j,k)+rho(i,j,kp)+rho(ip,j,k)+rho(ip,j,kp))
-!            rhoim =0.25*(rho(i,j,k)+rho(i,j,kp)+rho(im,j,k)+rho(im,j,kp))
-!            rhojp =0.25*(rho(i,j,k)+rho(i,j,kp)+rho(i,jp,k)+rho(i,jp,kp))
-!            rhojm =0.25*(rho(i,j,k)+rho(i,j,kp)+rho(i,jm,k)+rho(i,jm,kp))
-!      	    uuR=(Uvel(i,j,k)+Uvel(i,j,kp))*rhoip*Ru(i)
-!      	    uuL=(Uvel(im,j,k)+Uvel(im,j,kp))*rhoim*Ru(im)
-!			vvR=(Vvel(i,j,k)+Vvel(i,j,kp))*rhojp
-!    	    vvL=(Vvel(i,jm,k)+Vvel(i,jm,kp))*rhojm
-!    	    wwR=(Wvel(i,j,k)+Wvel(i,j,kp))*rho(i,j,kp)
-!			wwL=(Wvel(i,j,k)+Wvel(i,j,km))*rho(i,j,k)
-!      	    uuR=(rhoU(i,j,k)+rhoU(i,j,kp))*Ru(i)
-!      	    uuL=(rhoU(im,j,k)+rhoU(im,j,kp))*Ru(im)
-!			vvR=(rhoV(i,j,k)+rhoV(i,j,kp))
-!    	    vvL=(rhoV(i,jm,k)+rhoV(i,jm,kp))
-!    	    wwR=(rhoW(i,j,k)+rhoW(i,j,kp))
-!			wwL=(rhoW(i,j,k)+rhoW(i,j,km))
       	    uuR=(Uvel(i,j,k)*rhU(i,j,k)+Uvel(i,j,kp)*rhU(i,j,kp))*Ru(i)
+     &		*MIN(fcg(i,j+rank*jmax,k),fcg(ip,j+rank*jmax,k),fcg(i,j+rank*jmax,kp),fcg(ip,j+rank*jmax,kp))			
       	    uuL=(Uvel(im,j,k)*rhU(im,j,k)+Uvel(im,j,kp)*rhU(im,j,kp))*Ru(im)
+     &		*MIN(fcg(i,j+rank*jmax,k),fcg(im,j+rank*jmax,k),fcg(i,j+rank*jmax,kp),fcg(im,j+rank*jmax,kp))			
 			vvR=(Vvel(i,j,k)*rhV(i,j,k)+Vvel(i,j,kp)*rhV(i,j,kp))
+     &		*MIN(fcg(i,j+rank*jmax,k),fcg(i,jp+rank*jmax,k),fcg(i,j+rank*jmax,kp),fcg(i,jp+rank*jmax,kp))			
     	    vvL=(Vvel(i,jm,k)*rhV(i,jm,k)+Vvel(i,jm,kp)*rhV(i,jm,kp))
+     &		*MIN(fcg(i,j+rank*jmax,k),fcg(i,jm+rank*jmax,k),fcg(i,j+rank*jmax,kp),fcg(i,jm+rank*jmax,kp))						
     	    wwR=(Wvel(i,j,k)*rhW(i,j,k)+Wvel(i,j,kp)*rhW(i,j,kp))
+     &		*MIN(fcg(i,j+rank*jmax,k),fcg(i,j+rank*jmax,kp),fcg(i,j+rank*jmax,MIN(k1,kpp)))						
 			wwL=(Wvel(i,j,k)*rhW(i,j,k)+Wvel(i,j,km)*rhW(i,j,km))
+     &		*MIN(fcg(i,j+rank*jmax,km),fcg(i,j+rank*jmax,k),fcg(i,j+rank*jmax,kp))						
+
 			
 			numdif2=numdif*(wf(i,j,k)+wf(i,j,k+1))*0.5
 

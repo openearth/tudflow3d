@@ -374,8 +374,7 @@
 			enddo		
 			IF (interaction_bed.ge.4) THEN
 			  zzbed(i,j) = REAL(MAX(kbed(i,j)-1,0))*dz+ SUM(Clivebed(1:nfrac,i,j,kbed(i,j)))/cfixedbed*dz  !bed level without buffer in Cnewbot
-			  zzbed2(i,j) = REAL(MAX(kbed(i,j)-1,0))*dz+ (SUM(Cnewbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
-			  ! total bed level 
+			  zzbed2(i,j) = zbed(i,j) !REAL(MAX(kbed(i,j)-1,0))*dz+ (SUM(Cnewbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz	  ! total bed level 
 			ENDIF			
 	   enddo
 	enddo

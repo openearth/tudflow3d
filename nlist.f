@@ -54,7 +54,8 @@
       REAL plumeUseries2(1:10000),c_bed(100)
       INTEGER plumeseriesloc,plumeseriesloc2,plumeQseriesloc,plumecseriesloc
       INTEGER nr_HPfilter,depo_implicit,depo_cbed_option,monopile
-      REAL timeAB_real(1:4),dpdx,dpdy,kn_d50_multiplier,avalanche_slope(100),av_slope_z(100),dpdx1,dpdy1,Uavold,Vavold
+      REAL timeAB_real(1:4),dpdx,dpdy,kn_d50_multiplier,avalanche_slope(100),av_slope_z(100)
+	  REAL dpdx1,dpdy1,Uavold,Vavold,U3avold,V3avold,dpdx3,dpdy3
       INTEGER periodicx,periodicy,wallup,dUVdn_IBMbed
       REAL U_b3,V_b3,surf_layer,reduction_sedimentation_shields,kn_mp,kn_sidewalls
       INTEGER ksurf_bc,kmaxTSHD_ind,nair
@@ -68,21 +69,21 @@
 	  INTEGER wallmodel_tau_sed,ndtbed,nrmsbed,telUVWbed,tel_dt
 	  REAL Const1eps,Const2,Sc_k,Sc_eps,Cal_buoyancy_k,Cal_buoyancy_eps,Cs_relax
 	  REAL bedslope_mu_s,alfabs_bl,alfabn_bl,phi_sediment
-	  REAL dt_factor_avg
-	  INTEGER n_dtavg
+	  REAL dt_factor_avg,CNdiff_factor,CNdiff_ho,CNdiff_dtfactor,CNdiff_tol,Apvisc_shear_relax
+	  INTEGER n_dtavg,CNdiff_pc,CNdiff_maxi,CNdiff_ini,initPhydrostatic,npresIBM_viscupdate,rheo_shear_method,Apvisc_force_eq
 	  INTEGER tmax_inPpuntTSHDini,tmax_inUpuntTSHDini,tmax_inVpuntTSHDini,tmax_inWpuntTSHDini
-	  INTEGER nobst_files,nobst_file
+	  INTEGER nobst_files,nobst_file,momentum_exchange_obstacles
 	  CHARACTER(len=256) :: obst_file_series(5000)
 	  REAL :: obst_starttimes(5000) 
 	  
 	  
 	  !new variables rheology
-	  INTEGER Non_Newtonian
-	  REAL SIMPLE_tauy,SIMPLE_muB
+	  INTEGER Non_Newtonian, Apvisc_interp
+	  REAL SIMPLE_tauy,SIMPLE_muB,SIMPLE_climit(30) 
 	  REAL JACOBS_Ky,JACOBS_Kmu,JACOBS_Aclay,JACOBS_By,JACOBS_Bmu,JACOBS_muw
 	  REAL WINTER_Ay,WINTER_Amu,WINTER_nf,WINTER_af,WINTER_muw
 	  REAL THOMAS_Cy,THOMAS_Cmu,THOMAS_ky,THOMAS_kmu,THOMAS_Py,THOMAS_Pmu,THOMAS_phi_sand_max
-	  REAL BAGNOLD_beta,BAGNOLD_phi_max,PAPANASTASIOUS_m
+	  REAL BAGNOLD_beta,BAGNOLD_phi_max,PAPANASTASIOUS_m,shear0limit
 	  REAL Lambda_init,Kin_eq_a,Kin_eq_b,Kin_eq_lambda_0
 	  REAL HOUSKA_n,HOUSKA_eta_0,HOUSKA_eta_inf,HOUSKA_tauy_0,HOUSKA_tauy_inf
 	  
@@ -127,7 +128,7 @@
 
       INTEGER*2, DIMENSION(:,:,:),ALLOCATABLE :: llist1,llist2,llist3
       INTEGER*2, DIMENSION(:,:),ALLOCATABLE :: llmax1,llmax2,llmax3 !,kbed,kbedt,kbed2
-      INTEGER*8, DIMENSION(:,:),ALLOCATABLE :: kbed,kbedt,kbed2,kbed22,kbed0
+      INTEGER*8, DIMENSION(:,:),ALLOCATABLE :: kbed,kbedt,kbed0 !,kbed2,kbed22
       INTEGER, DIMENSION(:,:),ALLOCATABLE :: Xkk,Tii
       INTEGER, DIMENSION(:),ALLOCATABLE :: Xii,Tkk,nfrac_air,nfrac_silt,nfrac_sand,nfrac_air2
 	  INTEGER*8, DIMENSION(:),ALLOCATABLE :: kbedin
@@ -173,7 +174,7 @@
 !       REAL, DIMENSION(:,:,:),ALLOCATABLE :: Uavg,Vavg,Wavg,Cavg,Ravg
 !       REAL, DIMENSION(:,:,:),ALLOCATABLE :: Urms,Vrms,Wrms,Crms,Rrms
 !       REAL, DIMENSION(:,:,:),ALLOCATABLE :: sigU2,sigV2,sigW2,sigC2,sigR2
-      REAL, DIMENSION(:,:,:),ALLOCATABLE :: p,pold,dp,pold1,pold2,pold3,Csgrid,phdt,phnew
+      REAL, DIMENSION(:,:,:),ALLOCATABLE :: p,pold,dp,pold1,pold2,pold3,Csgrid,phdt,phnew,viscf
       
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: wx,wy,wz,wxold,wyold,wzold,Ppropx,Ppropy,Ppropz
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: wxolder,wyolder,wzolder
@@ -265,7 +266,8 @@
      & t0_output_movie,dt_output_movie,te_output_movie,tstart_morf,te_rms,tstart_morf2,n_dtavg
 	NAMELIST /num_scheme/convection,numdiff,wiggle_detector,diffusion,comp_filter_a,comp_filter_n,CNdiffz,npresIBM,advec_conc,
      & continuity_solver,transporteq_fracs,split_rho_cont,driftfluxforce_calfac,depo_implicit,IBMorder,npresPRHO,
-     & pres_in_predictor_step,Poutflow,oPRHO,applyVOF,k_ust_tau,Uoutflow,dUVdn_IBMbed,k_pzero,numdiff2
+     & pres_in_predictor_step,Poutflow,oPRHO,applyVOF,k_ust_tau,Uoutflow,dUVdn_IBMbed,k_pzero,numdiff2,CNdiff_factor,CNdiff_ho,
+     & CNdiff_dtfactor,CNdiff_pc,CNdiff_maxi,CNdiff_tol,CNdiff_ini,initPhydrostatic,npresIBM_viscupdate,momentum_exchange_obstacles
 	NAMELIST /ambient/U_b,V_b,W_b,bcfile,rho_b,SEM,nmax2,nmax1,nmax3,lm_min,lm_min3,slip_bot,kn,interaction_bed,
      & periodicx,periodicy,dpdx,dpdy,W_ox,Hs,Tp,nx_w,ny_w,obst,bc_obst_h,U_b3,V_b3,surf_layer,wallup,bedlevelfile,
      & U_bSEM,V_bSEM,U_w,V_w,c_bed,cfixedbed,U_init,V_init,initconditionsfile,rho_b2,monopile,kn_mp,kn_sidewalls,obstfile
@@ -283,10 +285,12 @@
 	NAMELIST /fractions_in_plume/fract
 	NAMELIST /ship/U_TSHD,LOA,Lfront,Breadth,Draught,Lback,Hback,xfront,yfront,kn_TSHD,nprop,Dprop,xprop,yprop,zprop,
      &   Pprop,rudder,rot_prop,draghead,Dsp,xdh,perc_dh_suction,softnose,Hfront,cutter
-	NAMELIST /rheology/Non_Newtonian,Rheological_model,PAPANASTASIOUS_m,SIMPLE_tauy,SIMPLE_muB,JACOBS_Ky,JACOBS_Kmu,JACOBS_Aclay,
-     & JACOBS_By,JACOBS_Bmu,JACOBS_muw,WINTER_Ay,WINTER_Amu,WINTER_nf,WINTER_af,WINTER_muw,THOMAS_Cy,THOMAS_Cmu,THOMAS_ky,
-     & THOMAS_kmu,THOMAS_Py,THOMAS_Pmu,THOMAS_phi_sand_max,Lambda_init,Kin_eq_a,Kin_eq_b,Kin_eq_lambda_0,
-     & HOUSKA_n,HOUSKA_eta_0,HOUSKA_eta_inf,HOUSKA_tauy_0,HOUSKA_tauy_inf,BAGNOLD_beta,BAGNOLD_phi_max	 
+	NAMELIST /rheology/Non_Newtonian,Rheological_model,PAPANASTASIOUS_m,shear0limit,Apvisc_interp,SIMPLE_tauy,SIMPLE_muB,SIMPLE_climit,
+     & JACOBS_Ky,JACOBS_Kmu,JACOBS_Aclay,JACOBS_By,JACOBS_Bmu,JACOBS_muw,
+     & WINTER_Ay,WINTER_Amu,WINTER_nf,WINTER_af,WINTER_muw,
+     & THOMAS_Cy,THOMAS_Cmu,THOMAS_ky,THOMAS_kmu,THOMAS_Py,THOMAS_Pmu,THOMAS_phi_sand_max,
+     & Lambda_init,Kin_eq_a,Kin_eq_b,Kin_eq_lambda_0,HOUSKA_n,HOUSKA_eta_0,HOUSKA_eta_inf,HOUSKA_tauy_0,HOUSKA_tauy_inf,
+     & BAGNOLD_beta,BAGNOLD_phi_max,rheo_shear_method,Apvisc_shear_relax,Apvisc_force_eq
 
 	!! initialise:
 	!! simulation:
@@ -338,7 +342,15 @@
 	comp_filter_a = 0.5
 	comp_filter_n = 0
 	CNdiffz = 0
+	CNdiff_factor = 0.5
+	CNdiff_dtfactor = 100.
+	CNdiff_ho = 0.
+	CNdiff_pc = 0 !Choice in pre-conditioner of implicit CG 3D CN diffusion solver; 0 no preconditioner (default), 1 DIAG pc, 2 IC(0) pc
+	CNdiff_maxi = 1000 !Maximum number of iterations in implicit CG 3D diffusion solver, default 1000
+	CNdiff_tol = 1.e-12 !Tolerance in implicit CG 3D diffusion solver, default 1.e-12  
+	CNdiff_ini = 1 !1 (default) = starting condition predictor U* just before applying implicit diff; 2 = starting condition U from previous timestep 
 	npresIBM = 0
+	npresIBM_viscupdate = 0
 	npresPRHO = 0
 	oPRHO = 2
 	pres_in_predictor_step = 1
@@ -356,7 +368,8 @@
 	applyVOF=0
 	k_ust_tau=1
 	dUVdn_IBMbed=-1 !default no correction, but with 0 then dUdn and dVdn is made zero over immersed bed and with -2  to apply UV(1:kbed)=0 also for IBM2
-
+	initPhydrostatic = 0 !default 0 no initial hydrostatic pressure; 1 = initialize hydrostatic pressure before first timestep 
+	momentum_exchange_obstacles = 1 !default there is momentum exchange between flow and obstacles, optional 0 makes momenum terms zero in case the advective velocity is inside or at edge obstacle 
 	!! ambient:
 	U_b = -999.
 	V_b = -999.
@@ -386,8 +399,12 @@
 	dpdy=0.
 	dpdx1=0.
 	dpdy1=0.
+	dpdx3=0.
+	dpdy3=0.	
 	Uavold=0.
 	Vavold=0.
+	U3avold=0. 
+	V3avold=0.
 	W_ox=0.
 	Hs=0. 
 	Tp=999.
@@ -625,7 +642,7 @@
 	rot_prop=-9999.
 	rudder=-9
 	draghead='none'
-	Dsp=0.
+	Dsp=0.	
 	xdh=0.
 	perc_dh_suction=0.
 	softnose=0
@@ -633,11 +650,17 @@
 	cutter='not'
 	
 	!! rheology
-	Non_Newtonian = 0.			!Default is 0, Newtonian treatment
+	Non_Newtonian = 0			!Default is 0, Newtonian treatment
 	Rheological_model ='AAARGH'
 	PAPANASTASIOUS_m=9.e18		!if not defined than inf --> model reduces to standard Bingham
+	Apvisc_interp = 1 ! 1 (default) is linear interpolation neighbouring cells for apparent viscosity; 2 is maximum of neighbouring cells 
+	shear0limit = 0. !1/s if not defined then zero and no influence 
+	rheo_shear_method = 1
+	Apvisc_shear_relax=1. !default no relaxation 
+	Apvisc_force_eq = 0 !default no additional direct force terms from rheology 
 	SIMPLE_tauy=0.2
 	SIMPLE_muB=0.1
+	SIMPLE_climit(:) = 0.
 	JACOBS_Ky=6.72e4
 	JACOBS_Kmu=251
 	JACOBS_Aclay=1.0
@@ -738,11 +761,12 @@
 	else
 	  numdiff=numdiff*2.  !needed to get correct value (in advec is a 'hidden' factor 2/4)
 	endif
-	IF (CNdiffz.ne.0.and.CNdiffz.ne.1.and.CNdiffz.ne.2.and.CNdiffz.ne.11.and.CNdiffz.ne.12) CALL writeerror(406)
+	IF (CNdiffz.ne.0.and.CNdiffz.ne.1.and.CNdiffz.ne.2.and.CNdiffz.ne.11.and.CNdiffz.ne.12.and.CNdiffz.ne.31) CALL writeerror(406)
 	IF (npresIBM<0) CALL writeerror(407)
 	pres_in_predictor_step_internal = pres_in_predictor_step
 	IF (k_ust_tau<1.or.k_ust_tau>kmax) CALL writeerror(409)
 	IF (k_pzero<1.or.k_pzero>kmax) CALL writeerror(410)
+	IF (CNdiff_dtfactor.lt.0.9999) CALL writeerror(411) 
 
 	READ (UNIT=1,NML=ambient,IOSTAT=ios)
 	!! check input ambient
@@ -1506,6 +1530,7 @@
 	IF (Non_Newtonian.ne.0.and.Non_Newtonian.ne.1.and.Non_Newtonian.ne.2) CALL writeerror(801)
 	IF (Rheological_model.ne.'SIMPLE'.AND.Rheological_model.ne.'JACOBS'.AND.Rheological_model.ne.'WINTER'
      &  .AND.Rheological_model.ne.'THOMAS') CALL writeerror(802)
+	 IF (Apvisc_shear_relax>1.or.Apvisc_shear_relax<0.) CALL writeerror(803)
 
 	CLOSE(1)
 
@@ -1649,9 +1674,9 @@
 	ALLOCATE(kbed(0:i1,0:j1))
 	ALLOCATE(kbed0(0:i1,0:j1))
 	ALLOCATE(kbedin(0:j1))
-	ALLOCATE(kbed2(0:i1,0:px*jmax+1))
+!!!	ALLOCATE(kbed2(0:i1,0:px*jmax+1))
 	ALLOCATE(kbedt(0:i1,0:j1))
-	ALLOCATE(kbed22(0:i1,0:j1))
+!!!	ALLOCATE(kbed22(0:i1,0:j1))
 	ALLOCATE(zbed(0:i1,0:j1))
 	ALLOCATE(rhocorr_air_z(1:nfrac,0:k1))
 	ALLOCATE(av_slope(1:imax,1:jmax,0:k1))
@@ -1821,6 +1846,8 @@
 	ALLOCATE(phnew(1:imax,1:jmax,1:kmax))
 	ALLOCATE(phdt(1:imax,1:jmax,1:kmax))
 	ALLOCATE(dp(0:i1,0:j1,0:k1))
+	ALLOCATE(viscf(0:i1,0:j1,0:k1))
+
 	if (sgs_model.eq.'DSmag') then
 	  ALLOCATE(Csgrid(1:imax,1:jmax,1:kmax))
 	  Csgrid=0.1 !start with default Cs=0.1

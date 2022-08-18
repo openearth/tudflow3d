@@ -129,22 +129,8 @@
 !	call stress_terms(Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
 !	call diffu_com4(wx,Srr,Spr,Szr,Spp,Ru,Rp,dr,dphi,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 
-	IF (time_int.eq.'AB2'.or.time_int.eq.'AB3'.or.time_int.eq.'ABv') THEN
-      call advecu_CDS2(wx,Uold,Vold,Wold,Rold,Ru,Rp,dr,phiv,dz,
-     +            i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
-      call diffu_CDS2 (wx,Uold,Vold,Wold,ib,ie,jb,je,kb,ke)
-      call advecv_CDS2(wy,Uold,Vold,Wold,Rold,Ru,Rp,dr,phiv,dz,
-     +            i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
-      call diffv_CDS2 (wy,Uold,Vold,Wold,ib,ie,jb,je,kb,ke)
-      call advecw_CDS2(wz,Uold,Vold,Wold,Rold,Ru,Rp,dr,phiv,dz,
-     +            i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
-      call diffw_CDS2 (wz,Uold,Vold,Wold,ib,ie,jb,je,kb,ke)
-	wxold=wx
-	wyold=wy
-	wzold=wz
-	ENDIF
 	pold(:,:,kmax)=0.
-	IF (applyVOF.eq.1) THEN 
+	IF (applyVOF.eq.1.or.initPhydrostatic.eq.1) THEN 
 		do k=kmax-1,1,-1
 			pold(:,:,k)=pold(:,:,k+1)+(rnew(:,:,k)-rho_b)*ABS(gz)*dz
 		enddo
@@ -160,7 +146,6 @@
 	phdt=pold
 	phnew=pold 
 
-		
 	if (Cs>0.or.sgs_model.eq.'MixLe'.or.sgs_model.eq.'ReaKE'.or.sgs_model.eq.'DSmag') then
           if (sgs_model.eq.'SSmag') then
             call LES_smagorinsky(Unew,Vnew,Wnew,rnew)
@@ -202,6 +187,26 @@
 		lambda_new(:,:,:)=0.
 		call Houska_Papanastasiou(ib,ie,jb,je,kb,ke)
 	endif
+
+	IF (time_int.eq.'AB2'.or.time_int.eq.'AB3'.or.time_int.eq.'ABv') THEN
+      call advecu_CDS2(wx,Uold,Vold,Wold,Rold,Ru,Rp,dr,phiv,dz,
+     +            i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
+      call diffu_CDS2 (wx,Uold,Vold,Wold,ib,ie,jb,je,kb,ke)
+      call advecv_CDS2(wy,Uold,Vold,Wold,Rold,Ru,Rp,dr,phiv,dz,
+     +            i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
+      call diffv_CDS2 (wy,Uold,Vold,Wold,ib,ie,jb,je,kb,ke)
+      call advecw_CDS2(wz,Uold,Vold,Wold,Rold,Ru,Rp,dr,phiv,dz,
+     +            i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
+      call diffw_CDS2 (wz,Uold,Vold,Wold,ib,ie,jb,je,kb,ke)
+	  wx=wx+Ppropx
+	  wx=wy+Ppropy
+	  wz=wz+Ppropz
+	wxold=wx
+	wyold=wy
+	wzold=wz
+	ENDIF
+	
+
 	
       call chkdt
 	  if (restart_dir.eq.'') then
@@ -269,6 +274,8 @@
 				call Rheo_Winterwerp_and_Kranenburg
 			elseif (Rheological_model.eq.'THOMAS') then
 				call Rheo_Thomas
+			elseif (Rheological_model.eq.'SIMPLE'.and.MAXVAL(SIMPLE_climit)>1.e-12) then
+				call Simple_Bingham				
 			endif
 			call Bingham_Papanastasiou
 		elseif (Non_Newtonian.eq.2) then
@@ -327,6 +334,11 @@
 			! extra pres-corr loops with IBM boundary for better impermeable IBM objects 
 			! npresIBM=0 -> order 1/1000 Umax in IBM objects (default)
 			! npresIBM=10 -> order 1/100000 Umax in IBM objects
+			IF (npresIBM_viscupdate.eq.1) THEN 
+				Uold=dUdt/rhU 
+				Vold=dVdt/rhV 
+				Wold=dWdt/rhW
+			ENDIF 
 			call fillps2(dudt,dvdt,dwdt,drdt,time_np,dt)
 !			  IF (poissolver.eq.2) THEN
 !			   CALL SOLVEpois_vg_mumps(p)
@@ -337,7 +349,45 @@
 			  ENDIF
 	  
 			call correc2(dudt,dvdt,dwdt,dt)
-			
+			IF (npresIBM_viscupdate.eq.1) THEN 
+				call bound_rhoU(dUdt,dVdt,dWdt,drdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
+				Uold = dUdt/rhU - Uold !fill Uold with difference present iteration and previous iteration 
+				Vold = dVdt/rhV - Vold 
+				Wold = dWdt/rhW - Wold 
+				viscf = 0. 
+				call diffu_CDS2(viscf,Uold,Vold,Wold,ib,ie,jb,je,kb,ke)
+				dUdt = dUdt + dt*viscf
+				viscf = 0. 
+				call diffv_CDS2(viscf,Uold,Vold,Wold,ib,ie,jb,je,kb,ke)
+				dVdt = dVdt + dt*viscf
+				viscf = 0. 
+				call diffw_CDS2(viscf,Uold,Vold,Wold,ib,ie,jb,je,kb,ke)
+				dWdt = dWdt + dt*viscf
+			ELSEIF (npresIBM_viscupdate.eq.2) THEN 
+				call bound_rhoU(dUdt,dVdt,dWdt,drdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
+				Uold = dUdt/rhU!fill Uold with present iteration 
+				Vold = dVdt/rhV 
+				Wold = dWdt/rhW 
+				! first subtract diff-contribution of present iteration, then update diff-contribution implicit 
+				viscf = 0. 
+				call diffu_CDS2(viscf,Uold,Vold,Wold,ib,ie,jb,je,kb,ke)
+				dUdt = dUdt - dt*CNdiff_factor*viscf
+				viscf = 0. 
+				call diffv_CDS2(viscf,Uold,Vold,Wold,ib,ie,jb,je,kb,ke)
+				dVdt = dVdt - dt*CNdiff_factor*viscf
+				viscf = 0. 
+				call diffw_CDS2(viscf,Uold,Vold,Wold,ib,ie,jb,je,kb,ke)
+				dWdt = dWdt - dt*CNdiff_factor*viscf
+				dUdt = dUdt/rhU
+				dVdt = dVdt/rhV 
+				dWdt = dWdt/rhW
+				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+     & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
+				CALL diffuvw_CDS2_3DCNimpl 		
+				dUdt = dUdt*rhU 
+				dVdt = dVdt*rhV 
+				dWdt = dWdt*rhW 
+			ENDIF 			
 			 if (continuity_solver.eq.33.or.continuity_solver.eq.34) then 
 			   pold=p(1:imax,1:jmax,1:kmax)*drdt(1:imax,1:jmax,1:kmax)+pold !scale P back with rho	
 			 elseif  (continuity_solver.eq.35.or.continuity_solver.eq.36) then 
@@ -407,6 +457,10 @@
 		else
 			pres_in_predictor_step = pres_in_predictor_step_internal
 		endif
+		if (Apvisc_force_eq.eq.1) then 
+			Ppropx=0. !initialize zero every time step, in chkdt driving force periodic sims is determined and put in Ppropx,Ppropy
+			Ppropy=0. 	
+		endif 
 		call chkdt
 
 	   	rold=rnew

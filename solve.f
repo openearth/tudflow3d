@@ -121,7 +121,7 @@ c********************************************************************
      & periodicx,periodicy,wf,wd,numdiff2)
 	elseif(convection.eq.'HYB6') then
       call advecu_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2,fc_global)
 	elseif(convection.eq.'HYB4') then
       call advecu_HYB4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2)	 
@@ -170,7 +170,7 @@ c********************************************************************
      & periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecv_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global)
 	elseif(convection.eq.'HYB4') then
       call advecv_HYB4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -218,7 +218,7 @@ c********************************************************************
      &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecw_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global)
 	elseif(convection.eq.'HYB4') then
       call advecw_HYB4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -440,7 +440,7 @@ c********************************************************************
      & ,periodicx,periodicy,wf,wd,numdiff2)
 	elseif(convection.eq.'HYB6') then
       call advecu_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2,fc_global)
 	elseif(convection.eq.'HYB4') then
       call advecu_HYB4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2)	 
@@ -492,7 +492,7 @@ c********************************************************************
      & periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecv_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global)
 	elseif(convection.eq.'HYB4') then
       call advecv_HYB4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -540,7 +540,7 @@ c********************************************************************
      &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecw_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global)
 	elseif(convection.eq.'HYB4') then
       call advecw_HYB4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -687,11 +687,16 @@ c
 	INTEGER, DIMENSION(:), ALLOCATABLE :: seed
 	!real rhU2(0:i1,0:j1,0:k1),rhV2(0:i1,0:j1,0:k1),rhW2(0:i1,0:j1,0:k1)
 !!!	real dUdt2(0:i1,0:j1,0:k1),dVdt2(0:i1,0:j1,0:k1),dWdt2(0:i1,0:j1,0:k1)
-!!!	real ddUU(0:i1,0:j1,0:k1),ddVV(0:i1,0:j1,0:k1),ddWW(0:i1,0:j1,0:k1)
-!	
-!	dUdt1=dudt
-!	dVdt1=dvdt
-!	dWdt1=dwdt
+	real ddd1(0:i1,0:j1,0:k1),ddd2(0:i1,0:j1,0:k1),ddd3(0:i1,0:j1,0:k1)
+!	real eee1(0:i1,0:j1,0:k1),eee2(0:i1,0:j1,0:k1),eee3(0:i1,0:j1,0:k1) !als deze twee regels uitgezet worden dan komen er andere uitkomsten bij CN31?
+!	real fff1(0:i1,0:j1,0:k1),fff2(0:i1,0:j1,0:k1),fff3(0:i1,0:j1,0:k1)
+	real fcg(0:i1,0:px*jmax+1,0:k1)
+
+	if (momentum_exchange_obstacles.eq.100.or.momentum_exchange_obstacles.eq.101) then  !no advection momentum exchange with obstacle-cells
+		fcg=fc_global
+	else 
+		fcg=1. !all momentum interactions are active
+	endif
 
 c********************************************************************
 c     CALCULATE coefficients for AB3 interpolation with variable dt
@@ -706,8 +711,8 @@ c********************************************************************
 		timeAB_desired(i)=time_n-(i-1)*dt
 	enddo
 	
-	IF (CNdiffz.eq.11.or.CNdiffz.eq.12) THEN !switch to AB2 with variable time step:
-	!IF (.false.) THEN !switch to AB3 with variable time step
+	!IF (CNdiffz.eq.11.or.CNdiffz.eq.12) THEN !switch to AB2 with variable time step:
+	IF (.false.) THEN !always use AB3 with variable time step
 !	!	!EE1:
 !	!   facAB3_1=1. !1.5 !23./12.
 !	!   facAB3_2=0. !-0.5 !-4./3.
@@ -1149,7 +1154,7 @@ c********************************************************************
      & ,periodicx,periodicy,wf,wd,numdiff2)
 	elseif(convection.eq.'HYB6') then
       call advecu_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2,fcg)
 	elseif(convection.eq.'HYB4') then
       call advecu_HYB4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2)	 
@@ -1167,14 +1172,16 @@ c********************************************************************
      & rank,px,dt,periodicx,periodicy,numdiff)	 
 	endif
 
-	if (CNdiffz.eq.1.or.CNdiffz.eq.2.or.CNdiffz.eq.11.or.CNdiffz.eq.12) then 
+	if (CNdiffz.eq.1.or.CNdiffz.eq.2.or.CNdiffz.eq.11.or.CNdiffz.eq.12.or.CNdiffz.eq.31) then 
 		!!Hirsch 2007 2nd edition Eq. 9.4.21 p.478 mentions that also explicit part of CN should build on for 3 subsequent directions, hence here the explicit part is skipped
-		!if (CNdiffz.eq.11.or.CNdiffz.eq.12) then
-		if (CNdiffz.eq.12) then
+		if (CNdiffz.eq.11.or.CNdiffz.eq.12.or.CNdiffz.eq.31) then
+		!if (CNdiffz.eq.12) then
 			dnew2=0. 
 		else 
 			if (diffusion.eq.'CDS2') then
-			  call diffu_CDS2_CNexpl (dnew2,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
+			  !call diffu_CDS2_CNexpl (dnew2,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
+			  dnew2=0.
+			  call diffu_CDS2 (dnew2,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
 			elseif(diffusion.eq.'COM4') then
 			  call diffu_com4(dnew2,Srr,Spr,Szr,Spp,Ru,Rp,dr,phipt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 			endif
@@ -1241,7 +1248,7 @@ c********************************************************************
      & ,periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecv_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fcg)
 	elseif(convection.eq.'HYB4') then
       call advecv_HYB4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -1259,14 +1266,16 @@ c********************************************************************
      & rank,px,dt,periodicx,periodicy,numdiff)	 
 	endif
 
-	if (CNdiffz.eq.1.or.CNdiffz.eq.2.or.CNdiffz.eq.11.or.CNdiffz.eq.12) then 
+	if (CNdiffz.eq.1.or.CNdiffz.eq.2.or.CNdiffz.eq.11.or.CNdiffz.eq.12.or.CNdiffz.eq.31) then 
 		!!Hirsch 2007 2nd edition Eq. 9.4.21 p.478 mentions that also explicit part of CN should build on for 3 subsequent directions, hence here the explicit part is skipped
-		!if (CNdiffz.eq.11.or.CNdiffz.eq.12) then
-		if (CNdiffz.eq.12) then
+		if (CNdiffz.eq.11.or.CNdiffz.eq.12.or.CNdiffz.eq.31) then
+		!if (CNdiffz.eq.12) then
 			dnew2=0. 
 		else 
 			if (diffusion.eq.'CDS2') then
-			  call diffv_CDS2_CNexpl (dnew2,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
+			  !call diffv_CDS2_CNexpl (dnew2,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
+			  dnew2=0.
+			  call diffv_CDS2 (dnew2,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
 			elseif(diffusion.eq.'COM4') then
 			  call diffv_com4(dnew2,Spr,Spp,Spz,Ru,Rp,dr,phipt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 			endif
@@ -1332,7 +1341,7 @@ c********************************************************************
      &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecw_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fcg)
 	elseif(convection.eq.'HYB4') then
       call advecw_HYB4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -1350,14 +1359,16 @@ c********************************************************************
      & rank,px,dt,periodicx,periodicy,numdiff)
 	endif
 
-	if (CNdiffz.eq.1.or.CNdiffz.eq.2.or.CNdiffz.eq.11.or.CNdiffz.eq.12) then 
+	if (CNdiffz.eq.1.or.CNdiffz.eq.2.or.CNdiffz.eq.11.or.CNdiffz.eq.12.or.CNdiffz.eq.31) then 
 		!Hirsch 2007 2nd edition Eq. 9.4.21 p.478 mentions that also explicit part of CN should build on for 3 subsequent directions, hence here the explicit part is skipped
-		!if (CNdiffz.eq.11.or.CNdiffz.eq.12) then 
-		if (CNdiffz.eq.12) then
+		if (CNdiffz.eq.11.or.CNdiffz.eq.12.or.CNdiffz.eq.31) then 
+		!if (CNdiffz.eq.12) then
 			dnew2=0. 
 		else 
 			if (diffusion.eq.'CDS2') then
-			  call diffw_CDS2_CNexpl (dnew2,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
+			  !call diffw_CDS2_CNexpl (dnew2,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
+			  dnew2=0.
+			  call diffw_CDS2 (dnew2,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)			  
 			elseif(diffusion.eq.'COM4') then
 			  call diffw_com4(dnew2,Szr,Spz,Szz,Ru,Rp,dr,phipt,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
 			endif
@@ -1492,12 +1503,12 @@ c********************************************************************
       enddo
 
 
-      IF (CNdiffz.eq.1.or.CNdiffz.eq.2.or.CNdiffz.eq.11.or.CNdiffz.eq.12) THEN !CN semi implicit treatment diff-z:
+      IF (CNdiffz.eq.1.or.CNdiffz.eq.2.or.CNdiffz.eq.11.or.CNdiffz.eq.12.or.CNdiffz.eq.31) THEN !CN semi implicit treatment diff-z:
 
 		  ! add source terms for cylindrical coordinate system (following PhD dissertation Pourqeui 1994 TU p. 82)
 		  ! --> LdW 24-5-2021 choice to do it explicitly at start to avoid issues with boundary conditions at 0,i1/0,j1
 		  ! --> in diff_compact.f the diffusion terms are discretised a bit differently (via the stress tensor), but the below source terms are included there as well
-		  IF (CNdiffz.eq.12.or.CNdiffz.eq.11) THEN 
+		  IF (CNdiffz.eq.12.or.CNdiffz.eq.11.or.CNdiffz.eq.31) THEN 
 		 ! IF (.false.) THEN 
 		  !IF (CNdiffz.eq.12) THEN !for now 11 uses 0.5*DIFF(U^n+1-U^n)+1*DIFF(U^n) and therefore no need for this explicit source term
 		  do k=1,kmax ! add source term [-u/r^2 - 2/r^2*dvdphi] to U and [-v/r^2 + 2/r^2*dudphi] to V 
@@ -1506,9 +1517,9 @@ c********************************************************************
             do j=1,jmax 
 				jm=j-1
 				jp=j+1 !MIN(px*jmax+1,j+1)
-				dUdt(i,j,k)=dUdt(i,j,k)-dt*(0.5*(ekm(i,j,k)+ekm(ip,j,k)))*
+				dUdt(i,j,k)=dUdt(i,j,k)-CNdiff_factor*dt*(0.5*(ekm(i,j,k)+ekm(ip,j,k)))*
      &          (Unew(i,j,k)+2.*(Vnew(i,j,k)-Vnew(i,jm,k))/(phiv(j)-phiv(jm)))/(Ru(i)*Ru(i)) 				
-				dVdt(i,j,k)=dVdt(i,j,k)-dt*(0.5*(ekm(i,j,k)+ekm(i,jp,k)))*
+				dVdt(i,j,k)=dVdt(i,j,k)-CNdiff_factor*dt*(0.5*(ekm(i,j,k)+ekm(i,jp,k)))*
      &          (Vnew(i,j,k)-2.*(Unew(i,jp,k)-Unew(i,j,k))/(phip(jp)-phip(j)))/(Rp(i)*Rp(i)) 	 
 			enddo
            enddo
@@ -1518,13 +1529,13 @@ c********************************************************************
 		call bound_rhoU(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
      & 	Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
 
-!apply diffusion on dUdt/rhU with ekm instead on dUdt with ekm/drdt which because of staggering is not the same and in explicit diff the former is done:
+! apply diffusion on dUdt/rhU with ekm instead on dUdt with ekm/drdt which because of staggering is not the same and in explicit diff the former is done:
 		dUdt = dUdt/rhU 
 		dVdt = dVdt/rhV 
 		dWdt = dWdt/rhW 
 		
 		
-		IF (CNdiffz.eq.11.or.CNdiffz.eq.12) THEN
+		IF (CNdiffz.eq.11) THEN
 		  IF (rank.eq.0) THEN 
 			CALL SYSTEM_CLOCK(COUNT=clock)
 			CALL RANDOM_SEED(size = n)
@@ -1539,56 +1550,233 @@ c********************************************************************
 		  call mpi_bcast(dir_order,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 
 		  !randomizer in order of implicit steps to make sure that this will not impact quality of outcome after many time steps
-			IF (dir_order.eq.1) THEN 
+!			IF (dir_order.eq.1) THEN 
+				! CNdiff_factor acts as theta in CN --> 0.5 gives 2nd order dt Douglas-Gunn ADI and 1 gives 1st order Douglass-Rachford; factor 0.5-1 gives blend
+				! Douglas-Gunn and Douglass-Rachford ADI first take 100% explicit diffusion of 2 dirs not implicit
+				call diffuvw_ydir_CDS2_CNexpl(dnew,dnew2,dold,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
+				dUdt = dUdt + (1.-CNdiff_factor)*dt*dnew/rhU  
+				dVdt = dVdt + (1.-CNdiff_factor)*dt*dnew2/rhV
+				dWdt = dWdt + (1.-CNdiff_factor)*dt*dold/rhW				
+				call diffuvw_zdir_CDS2_CNexpl(dnew,dnew2,dold,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
+				dUdt = dUdt + dt*dnew/rhU  
+				dVdt = dVdt + dt*dnew2/rhV
+				dWdt = dWdt + dt*dold/rhW
+				call diffuvw_xdir_CDS2_CNexpl(dnew,dnew2,dold,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
+				dUdt = dUdt + dt*dnew/rhU  
+				dVdt = dVdt + dt*dnew2/rhV
+				dWdt = dWdt + dt*dold/rhW				
+!!!				if (CNdiff_ho>0.and.CNdiff_ho<1.01.and.CNdiff_factor>0.501) then ! high order correction to arrive almost at fully 3D theta-CN based on unew-uold from Douglas-Kim 2001 :
+!!!					call diffuvw_xdir_CDS2_CNexpl(ddd1,eee1,fff1,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
+!!!					call diffuvw_ydir_CDS2_CNexpl(ddd2,eee2,fff2,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
+!!!					call diffuvw_zdir_CDS2_CNexpl(ddd3,eee3,fff3,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
+!!!					ddd1=-ddd1/rhU 
+!!!					ddd2=-ddd2/rhU
+!!!					ddd3=-ddd3/rhU
+!!!					eee1=-eee1/rhV 
+!!!					eee2=-eee2/rhV
+!!!					eee3=-eee3/rhV
+!!!					fff1=-fff1/rhW 
+!!!					fff2=-fff2/rhW
+!!!					fff3=-fff3/rhW					
+!!!					! add correction to RHS of first step Douglas-Gunn according to Douglas-Kim 2001 to obtain >2nd order in time and get close to accuracy full 3D CN
+!!!					! in my own derivation last term AxAyAz should be 1/8dt^3 instead of 2/8 as mentioned in Douglas-Kim 2001 
+!!!					dUdt = dUdt+CNdiff_factor**2*dt*dt*(ddd1*ddd2+ddd1*ddd3+ddd2*ddd3)+CNdiff_factor**3*dt*dt*dt*(ddd1*ddd2*ddd3)  
+!!!					dVdt = dVdt+CNdiff_factor**2*dt*dt*(eee1*eee2+eee1*eee3+eee2*eee3)+CNdiff_factor**3*dt*dt*dt*(eee1*eee2*eee3) 
+!!!					dWdt = dWdt+CNdiff_factor**2*dt*dt*(fff1*fff2+fff1*fff3+fff2*fff3)+CNdiff_factor**3*dt*dt*dt*(fff1*fff2*fff3) 
+!!!					call diffuvw_xdir_CDS2_CNexpl(ddd1,eee1,fff1,Uold,Vold,Wold,ib,ie,jb,je,kb,ke)
+!!!					call diffuvw_ydir_CDS2_CNexpl(ddd2,eee2,fff2,Uold,Vold,Wold,ib,ie,jb,je,kb,ke)
+!!!					call diffuvw_zdir_CDS2_CNexpl(ddd3,eee3,fff3,Uold,Vold,Wold,ib,ie,jb,je,kb,ke)
+!!!					ddd1=ddd1/rhU 
+!!!					ddd2=ddd2/rhU
+!!!					ddd3=ddd3/rhU
+!!!					eee1=eee1/rhV 
+!!!					eee2=eee2/rhV
+!!!					eee3=eee3/rhV
+!!!					fff1=fff1/rhW 
+!!!					fff2=fff2/rhW
+!!!					fff3=fff3/rhW					
+!!!					! add correction to RHS of first step Douglas-Gunn according to Douglas-Kim 2001 to obtain >2nd order in time and get close to accuracy full 3D CN
+!!!					! in my own derivation last term AxAyAz should be 1/8dt^3 instead of 2/8 as mentioned in Douglas-Kim 2001 
+!!!					dUdt = dUdt+(1.-CNdiff_factor)**2*dt*dt*(ddd1*ddd2+ddd1*ddd3+ddd2*ddd3)+(1.-CNdiff_factor)**3*dt*dt*dt*(ddd1*ddd2*ddd3)  
+!!!					dVdt = dVdt+(1.-CNdiff_factor)**2*dt*dt*(eee1*eee2+eee1*eee3+eee2*eee3)+(1.-CNdiff_factor)**3*dt*dt*dt*(eee1*eee2*eee3) 
+!!!					dWdt = dWdt+(1.-CNdiff_factor)**2*dt*dt*(fff1*fff2+fff1*fff3+fff2*fff3)+(1.-CNdiff_factor)**3*dt*dt*dt*(fff1*fff2*fff3) 					
+!!!				elseif (CNdiff_ho>0.and.CNdiff_ho<1.01) then !CNdiff_factor=0.5
+!!!					call diffuvw_xdir_CDS2_CNexpl(ddd1,eee1,fff1,Unew-Uold,Vnew-Vold,Wnew-Wold,ib,ie,jb,je,kb,ke)
+!!!					call diffuvw_ydir_CDS2_CNexpl(ddd2,eee2,fff2,Unew-Uold,Vnew-Vold,Wnew-Wold,ib,ie,jb,je,kb,ke)
+!!!					call diffuvw_zdir_CDS2_CNexpl(ddd3,eee3,fff3,Unew-Uold,Vnew-Vold,Wnew-Wold,ib,ie,jb,je,kb,ke)
+!!!					ddd1=-ddd1/rhU 
+!!!					ddd2=-ddd2/rhU
+!!!					ddd3=-ddd3/rhU
+!!!					eee1=-eee1/rhV 
+!!!					eee2=-eee2/rhV
+!!!					eee3=-eee3/rhV
+!!!					fff1=-fff1/rhW 
+!!!					fff2=-fff2/rhW
+!!!					fff3=-fff3/rhW					
+!!!					! add correction to RHS of first step Douglas-Gunn according to Douglas-Kim 2001 to obtain >2nd order in time and get close to accuracy full 3D CN
+!!!					! in my own derivation last term AxAyAz should be 1/8dt^3 instead of 2/8 as mentioned in Douglas-Kim 2001 
+!!!					dUdt = dUdt+0.25*dt*dt*(ddd1*ddd2+ddd1*ddd3+ddd2*ddd3)+0.125*dt*dt*dt*(ddd1*ddd2*ddd3)  
+!!!					dVdt = dVdt+0.25*dt*dt*(eee1*eee2+eee1*eee3+eee2*eee3)+0.125*dt*dt*dt*(eee1*eee2*eee3) 
+!!!					dWdt = dWdt+0.25*dt*dt*(fff1*fff2+fff1*fff3+fff2*fff3)+0.125*dt*dt*dt*(fff1*fff2*fff3) 				
+!!!				
+!!!				elseif (CNdiff_ho>1.01) then ! high order correction based on dudt-Unew with dudt determined with expl diffusion (my own idea)
+!!!					dUdt = dUdt + CNdiff_factor*dt*dnew/rhU  
+!!!					dVdt = dVdt + CNdiff_factor*dt*dnew2/rhV
+!!!					dWdt = dWdt + CNdiff_factor*dt*dold/rhW	
+!!!					call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+!!!     & 				Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)					
+!!!					call diffuvw_xdir_CDS2_CNexpl(ddd1,eee1,fff1,dUdt-Unew,dVdt-Vnew,dWdt-Wnew,ib,ie,jb,je,kb,ke)
+!!!					call diffuvw_ydir_CDS2_CNexpl(ddd2,eee2,fff2,dUdt-Unew,dVdt-Vnew,dWdt-Wnew,ib,ie,jb,je,kb,ke)
+!!!					call diffuvw_zdir_CDS2_CNexpl(ddd3,eee3,fff3,dUdt-Unew,dVdt-Vnew,dWdt-Wnew,ib,ie,jb,je,kb,ke)
+!!!					ddd1=-ddd1/rhU 
+!!!					ddd2=-ddd2/rhU
+!!!					ddd3=-ddd3/rhU
+!!!					eee1=-eee1/rhV 
+!!!					eee2=-eee2/rhV
+!!!					eee3=-eee3/rhV
+!!!					fff1=-fff1/rhW 
+!!!					fff2=-fff2/rhW
+!!!					fff3=-fff3/rhW					
+!!!					! add correction to RHS of first step Douglas-Gunn according to Douglas-Kim 2001 to obtain >2nd order in time and get close to accuracy full 3D CN
+!!!					! in my own derivation last term AxAyAz should be 1/8dt^3 instead of 2/8 as mentioned in Douglas-Kim 2001 
+!!!					dUdt=dUdt+0.25*dt*dt*(ddd1*ddd2+ddd1*ddd3+ddd2*ddd3)+0.125*dt*dt*dt*(ddd1*ddd2*ddd3)-CNdiff_factor*dt*dnew/rhU    
+!!!					dVdt=dVdt+0.25*dt*dt*(eee1*eee2+eee1*eee3+eee2*eee3)+0.125*dt*dt*dt*(eee1*eee2*eee3)-CNdiff_factor*dt*dnew2/rhV 
+!!!					dWdt=dWdt+0.25*dt*dt*(fff1*fff2+fff1*fff3+fff2*fff3)+0.125*dt*dt*dt*(fff1*fff2*fff3)-CNdiff_factor*dt*dold/rhW	 				
+!!!				endif 
+				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+     & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)	
+				CALL diffuvw_ydir_CDS2_CNimpl
+				
+				! Douglas-Gunn ADI after each direction 50% implicit is finished subtract 50% explicit 
+				! diffuvw_xdir_CDS2_CNexpl was executed as last direction; therefore dnew,dnew2,dold are already correct for xdir_expl:
+				!call diffuvw_xdir_CDS2_CNexpl(dnew,dnew2,dold,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke) 
+				dUdt = dUdt - CNdiff_factor*dt*dnew/rhU  
+				dVdt = dVdt - CNdiff_factor*dt*dnew2/rhV
+				dWdt = dWdt - CNdiff_factor*dt*dold/rhW
+				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+     & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)		 
+				CALL diffuvw_xdir_CDS2_CNimpl 
+				
+				! Douglas-Gunn ADI after each direction 50% implicit is finished subtract 50% explicit 
+				call diffuvw_zdir_CDS2_CNexpl(dnew,dnew2,dold,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
+				dUdt = dUdt - CNdiff_factor*dt*dnew/rhU  
+				dVdt = dVdt - CNdiff_factor*dt*dnew2/rhV
+				dWdt = dWdt - CNdiff_factor*dt*dold/rhW			
+				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+     & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)								
+				CALL diffuvw_zdir_CDS2_CNimpl
+!			ELSEIF (dir_order.eq.2) THEN  
+!				CALL diffuvw_ydir_CDS2_CNimpl
+!				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+!     & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)								
+!				CALL diffuvw_zdir_CDS2_CNimpl
+!				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+!     & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)								
+!				CALL diffuvw_xdir_CDS2_CNimpl 
+!			ELSEIF (dir_order.eq.3) THEN 
+!				CALL diffuvw_xdir_CDS2_CNimpl
+!				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+!     & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)								
+!				CALL diffuvw_ydir_CDS2_CNimpl
+!				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+!     & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)								
+!				CALL diffuvw_zdir_CDS2_CNimpl			
+!			ELSEIF (dir_order.eq.4) THEN 
+!				CALL diffuvw_xdir_CDS2_CNimpl
+!				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+!     & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)								
+!				CALL diffuvw_zdir_CDS2_CNimpl			
+!				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+!     & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)								
+!				CALL diffuvw_ydir_CDS2_CNimpl
+!			ELSEIF (dir_order.eq.5) THEN 
+!				CALL diffuvw_zdir_CDS2_CNimpl
+!				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+!     & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)								
+!				CALL diffuvw_ydir_CDS2_CNimpl
+!				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+!     & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)								
+!				CALL diffuvw_xdir_CDS2_CNimpl						
+!			ELSE 
+!				CALL diffuvw_zdir_CDS2_CNimpl
+!				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+!     & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)								
+!				CALL diffuvw_xdir_CDS2_CNimpl									
+!				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+!     & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)								
+!				CALL diffuvw_ydir_CDS2_CNimpl				
+!			ENDIF 
+		ELSEIF (CNdiffz.eq.12) THEN
+				! Chang 1991 ADI method 
+				CNdiffz=0 !to get 100% explicit diff from diffuvw_.dir_CDS2_CNexpl
+				call diffuvw_xdir_CDS2_CNexpl(dnew,dnew2,dold,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
+				dUdt = dUdt + dt*CNdiff_factor/3.*dnew/rhU  
+				dVdt = dVdt + dt*CNdiff_factor/3.*dnew2/rhV
+				dWdt = dWdt + dt*CNdiff_factor/3.*dold/rhW
+				call diffuvw_zdir_CDS2_CNexpl(dnew,dnew2,dold,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
+				dUdt = dUdt + dt*CNdiff_factor/3.*dnew/rhU  
+				dVdt = dVdt + dt*CNdiff_factor/3.*dnew2/rhV
+				dWdt = dWdt + dt*CNdiff_factor/3.*dold/rhW			
+				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+     & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)	
+				CNdiffz=12 !to get correct implicit diff from diffuvw_.dir_CDS2_CNimpl
 				CALL diffuvw_ydir_CDS2_CNimpl
 				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
      & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)				
+				! Chang 1991 ADI method 
+				CNdiffz=0 !to get 100% explicit diff from diffuvw_.dir_CDS2_CNexpl
+				call diffuvw_ydir_CDS2_CNexpl(dnew,dnew2,dold,dUdt,dVdt,dWdt,ib,ie,jb,je,kb,ke)
+				call diffuvw_zdir_CDS2_CNexpl(ddd1,ddd2,ddd3,dUdt,dVdt,dWdt,ib,ie,jb,je,kb,ke)
+				dUdt = dUdt + dt*CNdiff_factor/3.*dnew/rhU  
+				dVdt = dVdt + dt*CNdiff_factor/3.*dnew2/rhV
+				dWdt = dWdt + dt*CNdiff_factor/3.*dold/rhW
+				dUdt = dUdt + dt*CNdiff_factor/3.*ddd1/rhU  
+				dVdt = dVdt + dt*CNdiff_factor/3.*ddd2/rhV
+				dWdt = dWdt + dt*CNdiff_factor/3.*ddd3/rhW	
+				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+     & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
+				CNdiffz=12 !to get correct implicit diff from diffuvw_.dir_CDS2_CNimpl	 
 				CALL diffuvw_xdir_CDS2_CNimpl 
 				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
-     & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)								
+     & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)				
+				! Chang 1991 ADI method 
+				CNdiffz=0 !to get 100% explicit diff from diffuvw_.dir_CDS2_CNexpl
+				call diffuvw_xdir_CDS2_CNexpl(dnew,dnew2,dold,dUdt,dVdt,dWdt,ib,ie,jb,je,kb,ke)
+				call diffuvw_ydir_CDS2_CNexpl(ddd1,ddd2,ddd3,dUdt,dVdt,dWdt,ib,ie,jb,je,kb,ke)
+				dUdt = dUdt + dt*CNdiff_factor/3.*dnew/rhU  
+				dVdt = dVdt + dt*CNdiff_factor/3.*dnew2/rhV
+				dWdt = dWdt + dt*CNdiff_factor/3.*dold/rhW
+				dUdt = dUdt + dt*CNdiff_factor/3.*ddd1/rhU  
+				dVdt = dVdt + dt*CNdiff_factor/3.*ddd2/rhV
+				dWdt = dWdt + dt*CNdiff_factor/3.*ddd3/rhW	
+				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+     & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
+				CNdiffz=12 !to get correct implicit diff from diffuvw_.dir_CDS2_CNimpl
 				CALL diffuvw_zdir_CDS2_CNimpl
-			ELSEIF (dir_order.eq.2) THEN  
-				CALL diffuvw_ydir_CDS2_CNimpl
-				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
-     & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)								
-				CALL diffuvw_zdir_CDS2_CNimpl
-				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
-     & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)								
-				CALL diffuvw_xdir_CDS2_CNimpl 
-			ELSEIF (dir_order.eq.3) THEN 
-				CALL diffuvw_xdir_CDS2_CNimpl
-				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
-     & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)								
-				CALL diffuvw_ydir_CDS2_CNimpl
-				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
-     & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)								
-				CALL diffuvw_zdir_CDS2_CNimpl			
-			ELSEIF (dir_order.eq.4) THEN 
-				CALL diffuvw_xdir_CDS2_CNimpl
-				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
-     & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)								
-				CALL diffuvw_zdir_CDS2_CNimpl			
-				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
-     & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)								
-				CALL diffuvw_ydir_CDS2_CNimpl
-			ELSEIF (dir_order.eq.5) THEN 
-				CALL diffuvw_zdir_CDS2_CNimpl
-				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
-     & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)								
-				CALL diffuvw_ydir_CDS2_CNimpl
-				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
-     & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)								
-				CALL diffuvw_xdir_CDS2_CNimpl						
-			ELSE 
-				CALL diffuvw_zdir_CDS2_CNimpl
-				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
-     & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)								
-				CALL diffuvw_xdir_CDS2_CNimpl									
-				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
-     & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)								
-				CALL diffuvw_ydir_CDS2_CNimpl				
-			ENDIF 
 		ENDIF 
+		
+		IF (CNdiffz.eq.31) THEN
+			IF (CNdiff_factor<1.) THEN 
+				call diffuvw_ydir_CDS2_CNexpl(dnew,dnew2,dold,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
+				dUdt = dUdt + (1.-CNdiff_factor)*dt*dnew/rhU  
+				dVdt = dVdt + (1.-CNdiff_factor)*dt*dnew2/rhV
+				dWdt = dWdt + (1.-CNdiff_factor)*dt*dold/rhW				
+				call diffuvw_zdir_CDS2_CNexpl(dnew,dnew2,dold,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
+				dUdt = dUdt + (1.-CNdiff_factor)*dt*dnew/rhU  
+				dVdt = dVdt + (1.-CNdiff_factor)*dt*dnew2/rhV
+				dWdt = dWdt + (1.-CNdiff_factor)*dt*dold/rhW
+				call diffuvw_xdir_CDS2_CNexpl(dnew,dnew2,dold,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
+				dUdt = dUdt + (1.-CNdiff_factor)*dt*dnew/rhU  
+				dVdt = dVdt + (1.-CNdiff_factor)*dt*dnew2/rhV
+				dWdt = dWdt + (1.-CNdiff_factor)*dt*dold/rhW		
+			ENDIF 
+			call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+     & 		Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
+			CALL diffuvw_CDS2_3DCNimpl 
+			
+		ENDIF 
+		
+		
 		IF (CNdiffz.eq.1.or.CNdiffz.eq.2) THEN 
 			CALL diffuvw_zdir_CDS2_CNimpl
 		ENDIF 
@@ -1910,7 +2098,7 @@ c********************************************************************
      & periodicx,periodicy,wf,wd,numdiff2)
 	elseif(convection.eq.'HYB6') then
       call advecu_HYB6(k1u,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2,fc_global)
 	elseif(convection.eq.'HYB4') then
       call advecu_HYB4(k1u,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2)	 
@@ -1939,7 +2127,7 @@ c********************************************************************
      & periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecv_HYB6(k1v,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global)
 	elseif(convection.eq.'HYB4') then
       call advecv_HYB4(k1v,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -1968,7 +2156,7 @@ c********************************************************************
      &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecw_HYB6(k1w,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global)
 	elseif(convection.eq.'HYB4') then
       call advecw_HYB4(k1w,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -2406,7 +2594,7 @@ c********************************************************************
      & periodicx,periodicy,wf,wd,numdiff2)
 	elseif(convection.eq.'HYB6') then
       call advecu_HYB6(k2u,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2,fc_global)
 	elseif(convection.eq.'HYB4') then
       call advecu_HYB4(k2u,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2)	 
@@ -2435,7 +2623,7 @@ c********************************************************************
      & periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecv_HYB6(k2v,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global)
 	elseif(convection.eq.'HYB4') then
       call advecv_HYB4(k2v,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -2464,7 +2652,7 @@ c********************************************************************
      &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecw_HYB6(k2w,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global)
 	elseif(convection.eq.'HYB4') then
       call advecw_HYB4(k2w,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -2903,7 +3091,7 @@ c********************************************************************
      & periodicx,periodicy,wf,wd,numdiff2)
 	elseif(convection.eq.'HYB6') then
       call advecu_HYB6(k3u,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2,fc_global)
 	elseif(convection.eq.'HYB4') then
       call advecu_HYB4(k3u,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2)	 
@@ -2933,7 +3121,7 @@ c********************************************************************
      & periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecv_HYB6(k3v,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global)
 	elseif(convection.eq.'HYB4') then
       call advecv_HYB4(k3v,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -2962,7 +3150,7 @@ c********************************************************************
      &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecw_HYB6(k3w,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global)
 	elseif(convection.eq.'HYB4') then
       call advecw_HYB4(k3w,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -3194,10 +3382,13 @@ c
 	real utr(0:i1,0:j1,0:k1),vtr(0:i1,0:j1,0:k1),wtr(0:i1,0:j1,0:k1)	
 !		real dUdt1(0:i1,0:j1,0:k1),dVdt1(0:i1,0:j1,0:k1),dWdt1(0:i1,0:j1,0:k1)
 	real ws(0:i1,0:j1,0:k1),gvector,CNz
-!	
-!	dUdt1=dudt
-!	dVdt1=dvdt
-!	dWdt1=dwdt
+	real fcg(0:i1,0:px*jmax+1,0:k1)
+
+	if (momentum_exchange_obstacles.eq.100.or.momentum_exchange_obstacles.eq.101) then  !no advection momentum exchange with obstacle-cells
+		fcg=fc_global
+	else 
+		fcg=1. !all momentum interactions are active
+	endif
 	
 
 	dcdt = 0.
@@ -3389,7 +3580,7 @@ c********************************************************************
      & periodicx,periodicy,wf,wd,numdiff2)
 	elseif(convection.eq.'HYB6') then
       call advecu_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2,fcg)
 	elseif(convection.eq.'HYB4') then
       call advecu_HYB4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2)	 
@@ -3435,7 +3626,7 @@ c********************************************************************
      &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecv_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,
-     & rank,px,numdiff,periodicx,periodicy,kbed,wf,wd)
+     & rank,px,numdiff,periodicx,periodicy,kbed,wf,wd,fcg)
 	elseif(convection.eq.'HYB4') then
       call advecv_HYB4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,
      & rank,px,numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -3478,7 +3669,7 @@ c********************************************************************
      &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecw_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fcg)
 	elseif(convection.eq.'HYB4') then
       call advecw_HYB4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)
@@ -3697,8 +3888,9 @@ c********************************************************************
 	real rrr2i,rrr2j,rrr2k,rrr2im,rrr2jm,rrr2km,ph_ref
 	integer t,n,ierr
 	real xTSHD(1:4),yTSHD(1:4),phi,ddrr,cin,s_in,dpdt(1:imax,1:jmax,1:kmax)
-	real sum_c_ws,ctot,ws(nfrac)
+	real sum_c_ws,ctot,ws(nfrac),ccc
 	integer inout,n2
+	real upred(0:i1,0:j1,0:k1),vpred(0:i1,0:j1,0:k1),wpred(0:i1,0:j1,0:k1)
 c
 !       include 'param.txt'
 !       include 'common.txt'
@@ -4274,7 +4466,150 @@ c
 	ENDIF
 	ENDDO ! bedplume loop
 	  
-	 enddo	  
+	 enddo	
+
+	ELSEIF (continuity_solver.eq.38) THEN ! Optional: 38 (dudx=0), alternative to 36 (also better treatment variable density in source Poisson) which gives dudx=e-14 and with correction to account for difference Um and Uv
+	  if (applyVOF.eq.1) then 
+		call state_edges(cU,rhU)
+		call state_edges(cV,rhV)
+		call state_edges(cW,rhW)
+	  endif	 
+	 IF (slipvel.eq.2) THEN
+	  do j=1,jmax
+	    do i=1,imax   
+		  do k=kbed(i,j)+1,kmax !1,kmax ! all cells below kbed no correction needed as dwdt=dwdt 	  
+		    sum_c_ws=0.
+			do n=1,nfrac
+				ws(n)=-frac(n)%ws !ws defined positive downwards
+				sum_c_ws=sum_c_ws+ws(n)*(cW(n,i,j,k)*frac(n)%rho/rhW(i,j,k)-cW(n,i,j,k))
+			enddo
+			dWdt(i,j,k)=dWdt(i,j,k)-sum_c_ws*rhW(i,j,k)  !go from mixture velocity (centre of mass velocity) to velocity of volume centre
+          enddo
+        enddo
+      enddo
+	 ELSE
+	  do j=1,jmax
+	    do i=1,imax   
+		  do k=kbed(i,j)+1,kmax !1,kmax ! all cells below kbed no correction needed as dwdt=dwdt  
+		    sum_c_ws=0.
+		    ctot=0.
+		    do n=1,nfrac
+				ctot=cW(n,i,j,k)*frac(n)%dfloc/frac(n)%dpart*0.5*(rhocorr_air_z(n,k)+rhocorr_air_z(n,k+1))+ctot
+			enddo
+			ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
+			do n=1,nfrac
+				ws(n)=-frac(n)%ws*(1.-ctot)**(frac(n)%n) !ws defined positive downwards
+				sum_c_ws=sum_c_ws+ws(n)*(cW(n,i,j,k)*frac(n)%rho/rhW(i,j,k)-cW(n,i,j,k))
+			enddo
+			dWdt(i,j,k)=dWdt(i,j,k)-sum_c_ws*rhW(i,j,k)  !go from mixture velocity (centre of mass velocity) to velocity of volume centre
+          enddo
+        enddo
+      enddo
+	 ENDIF
+	 call bound_rhoU(dUdt,dVdt,dWdt,drdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
+	 IF (oPRHO.eq.1) THEN !use Unew for contribution of u*div(rho)
+			upred = Unew
+			vpred = Vnew
+			wpred = Wnew
+			 IF (slipvel.eq.2) THEN
+			  do j=1,jmax
+				do i=1,imax   
+				  do k=kbed(i,j)+1,kmax !1,kmax ! all cells below kbed no correction needed as dwdt=dwdt 	  
+					sum_c_ws=0.
+					do n=1,nfrac
+						ws(n)=-frac(n)%ws !ws defined positive downwards
+						ccc=0.5*(cnew(n,i,j,k)+cnew(n,i,j,k+1))
+						sum_c_ws=sum_c_ws+ws(n)*(ccc*frac(n)%rho/(0.5*(rnew(i,j,k)+rnew(i,j,k+1)))-ccc)
+					enddo
+					wpred(i,j,k)=wpred(i,j,k)-sum_c_ws  !go from mixture velocity (centre of mass velocity) to velocity of volume centre
+				  enddo
+				enddo
+			  enddo
+			 ELSE
+			  do j=1,jmax
+				do i=1,imax   
+				  do k=kbed(i,j)+1,kmax !1,kmax ! all cells below kbed no correction needed as dwdt=dwdt  
+					sum_c_ws=0.
+					ctot=0.
+					do n=1,nfrac
+						ccc=0.5*(cnew(n,i,j,k)+cnew(n,i,j,k+1))
+						ctot=ccc*frac(n)%dfloc/frac(n)%dpart*0.5*(rhocorr_air_z(n,k)+rhocorr_air_z(n,k+1))+ctot
+					enddo
+					ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
+					do n=1,nfrac
+						ws(n)=-frac(n)%ws*(1.-ctot)**(frac(n)%n) !ws defined positive downwards
+						ccc=0.5*(cnew(n,i,j,k)+cnew(n,i,j,k+1))
+						sum_c_ws=sum_c_ws+ws(n)*(ccc*frac(n)%rho/(0.5*(rnew(i,j,k)+rnew(i,j,k+1)))-ccc)
+					enddo
+					wpred(i,j,k)=wpred(i,j,k)-sum_c_ws  !go from mixture velocity (centre of mass velocity) to velocity of volume centre
+				  enddo
+				enddo
+			  enddo
+			 ENDIF			
+	 ELSE  !use U* for contribution of u*div(rho)
+			upred = dUdt/rhU 
+			vpred = dVdt/rhV
+			wpred = dWdt/rhW
+	 ENDIF
+      do  k=1,kmax
+        do j=1,jmax
+          do i=1,imax
+      p(i,j,k)  =(
+     1  ( Ru(i)*dUdt(i,j,k) - Ru(i-1)*dUdt(i-1,j,k) ) / ( Rp(i)*dr(i) )
+     +              +
+     2  (       dVdt(i,j,k) -         dVdt(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
+     +              +
+     3  (       dWdt(i,j,k) -         dWdt(i,j,k-1) ) / ( dz ) ) / dt - (
+     1  0.5*(upred(i,j,k)+upred(i-1,j,k))*( Ru(i)*rhU(i,j,k) - Ru(i-1)*rhU(i-1,j,k) ) / ( Rp(i)*dr(i) )
+     +              +
+     2  0.5*(vpred(i,j,k)+vpred(i,j-1,k))*(       rhV(i,j,k) -         rhV(i,j-1,k) ) / ( Rp(i)*(phiv(j)-phiv(j-1)) )
+     +              +
+     3  0.5*(wpred(i,j,k)+wpred(i,j,k-1))*(       rhW(i,j,k) -         rhW(i,j,k-1) ) / ( dz ) ) / dt 	 
+          enddo
+        enddo
+      enddo	
+	DO n2=1,nbedplume
+	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
+	! rotation ship for ambient side current
+	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
+	  phi=atan2(V_b,1.e-12)
+	else
+	  phi=atan2(V_b,(U_TSHD-U_b))
+	endif
+      do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
+       do i=1,imax  
+         do j=jmax,1,-1 
+	  xx=Rp(i)*cos_u(j)-schuif_x
+	  yy=Rp(i)*sin_u(j)
+!	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
+		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
+		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
+!!		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+		!! do not use bp(n2)%i,j indices as they are defined from 0,j1 instead of 1,jmax needed for pressure !!
+		if (bp(n2)%radius.gt.0.) then 
+		  inout=0
+		  IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n2)%radius)**2) THEN
+			inout=1
+		  ENDIF
+		else 
+		  CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+		endif 		
+!	  ELSE 
+!	 	inout=0
+!	  ENDIF
+	  if (inout.eq.1) then
+		!  if (continuity_solver.eq.33.or.continuity_solver.eq.34.or.continuity_solver.eq.35.or.continuity_solver.eq.36) THEN
+		!	p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/dt  				  			! div(u)=0 --> total volume flux in 
+		!  else
+			p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/dt  				! div(u)=0 --> total volume flux in 
+		!  endif
+	   endif
+	  enddo
+	 enddo
+	enddo
+	ENDIF
+	ENDDO ! bedplume loop
+	 
 	ELSE !default is 1 (drdt+drudx=0)
 	twodtdt=MAX((3.*time_np-4.*time_n+time_nm)*dt,1.e-12)
 
@@ -5170,6 +5505,51 @@ c
 		rhW=rho_b
 		drdt=rho_b
 	  endif		  
+
+	ELSEIF (continuity_solver.eq.38) THEN 
+	 IF (slipvel.eq.2) THEN
+	  do j=1,jmax
+	    do i=1,imax   
+		  do k=kbed(i,j),kmax !1,kmax ! all cells below kbed no correction needed as dwdt=dwdt
+		    sum_c_ws=0.
+			do n=1,nfrac
+				ws(n)=-frac(n)%ws !ws defined positive downwards
+				sum_c_ws=sum_c_ws+ws(n)*(cW(n,i,j,k)*frac(n)%rho/rhW(i,j,k)-cW(n,i,j,k))
+			enddo
+			dWdt(i,j,k)=dWdt(i,j,k)+sum_c_ws*rhW(i,j,k)  !go from velocity of volume centre to mixture velocity (centre of mass velocity)
+          enddo
+        enddo
+      enddo	  
+	 ELSE
+	  do j=1,jmax
+	    do i=1,imax   
+		  do k=kbed(i,j),kmax !1,kmax ! all cells below kbed no correction needed as dwdt=dwdt 
+		    sum_c_ws=0.
+		    ctot=0.
+		    do n=1,nfrac
+				ctot=cW(n,i,j,k)*frac(n)%dfloc/frac(n)%dpart*0.5*(rhocorr_air_z(n,k)+rhocorr_air_z(n,k+1))+ctot
+			enddo
+			ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
+			do n=1,nfrac
+				ws(n)=-frac(n)%ws*(1.-ctot)**(frac(n)%n) !ws defined positive downwards
+				sum_c_ws=sum_c_ws+ws(n)*(cW(n,i,j,k)*frac(n)%rho/rhW(i,j,k)-cW(n,i,j,k))
+			enddo
+			dWdt(i,j,k)=dWdt(i,j,k)+sum_c_ws*rhW(i,j,k)  !go from velocity of volume centre to mixture velocity (centre of mass velocity)
+          enddo
+        enddo
+      enddo
+	 ENDIF	
+	 
+		Unew(1:imax,1:jmax,1:kmax)=dUdt(1:imax,1:jmax,1:kmax)/rhU(1:imax,1:jmax,1:kmax)
+		Vnew(1:imax,1:jmax,1:kmax)=dVdt(1:imax,1:jmax,1:kmax)/rhV(1:imax,1:jmax,1:kmax)
+		Wnew(1:imax,1:jmax,1:kmax)=dWdt(1:imax,1:jmax,1:kmax)/rhW(1:imax,1:jmax,1:kmax)  
+	  if (applyVOF.eq.1) then !make rhU,rhV,rhW 1 again 
+		rhU=rho_b
+		rhV=rho_b
+		rhW=rho_b
+		drdt=rho_b
+	  endif		  
+
 
 	ELSE
 		Unew(1:imax,1:jmax,1:kmax)=dUdt(1:imax,1:jmax,1:kmax)/rhU(1:imax,1:jmax,1:kmax)

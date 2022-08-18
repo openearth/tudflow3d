@@ -586,6 +586,7 @@
 		write(*,*) '# or 2 (Euler backward implicit diffusion in z dir)           #'
 		write(*,*) '# or 11 (Crank Nicolson semi-implicit diffusion in all dirs)  #'
 		write(*,*) '# or 12 (Euler backward implicit diffusion in all dirs)       #'		
+		write(*,*) '# or 31 fully 3D Crank Nicolson diffusion in all dirs         #'
 	CASE(407)
 		write(*,*) '# namelist &num_scheme                           #'		
 		write(*,*) '# npresIBM must be >0                            #'
@@ -598,6 +599,9 @@
 	CASE(410)
 		write(*,*) '# namelist &num_scheme                           #'		
 		write(*,*) '# k_pzero should be between 1 and kmax           #'	
+	CASE(411)
+		write(*,*) '# namelist &num_scheme                           #'		
+		write(*,*) '# CNdiff_dtfactor should be >=1.                 #'			
 	CASE(501)
 		write(*,*) '# namelist &simulation                           #'			
 		write(*,*) '# imax_grid or jmax_grid is not increasing monotonously       #'	
@@ -687,9 +691,10 @@
 		write(*,*) '# choose ''JACOBS'' for Jacobs and van Kesteren  #'
 		write(*,*) '# choose ''WINTER'' for Winterwerp and Kranenburg#'
 		write(*,*) '# choose ''THOMAS'' for Thomas                   #'
-!	CASE(803)
-!		write(*,*) '# namelist &rheology                             #'
-!		write(*,*) '# thixotropy should be 0 or 1 (default 0)        #'
+	CASE(803)
+		write(*,*) '# namelist &rheology                             #'
+		write(*,*) '# Apvisc_shear_relax should be between 0 or 1    #'
+		write(*,*) '# (default 1 no relaxation)                      #'		
 !	CASE(804)
 !		write(*,*) '# namelist &rheology                             #'
 !		write(*,*) '# thixotropy should be 0 or 1 (default 0)        #'		

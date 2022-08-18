@@ -1389,14 +1389,14 @@ c 	influence of waves on lateral boundaries:
 	  Wjetbc=pi*MAX(radius_j**2,1.e-12)*W_j*perc_dh_suction/(dr(i)*3.*Dsp) !(m3/s)/m2=m/s per suction cell (perc_dh_suction is corrected for number of dragheads)
 	  Wbound(i,j,k)=Wjetbc
        enddo
-!	IF (interaction_bed.ge.4) THEN !	IF (interaction_bed.ge.4) THEN !for interaction_bed.ge.4 zbed is determined in sediment.f so not needed here 
-!	 DO i=1,imax
-!	  DO j=1,jmax
-!		zbed(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(dcdtbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
-!	  ENDDO 
-!	 ENDDO 
-!	 call bound_cbot(zbed)
-!	ENDIF 	
+	IF (interaction_bed.ge.4) THEN !	IF (interaction_bed.ge.4) THEN !for interaction_bed.ge.4 zbed is determined in sediment.f so not needed here 
+	 DO i=1,imax
+	  DO j=1,jmax
+		zbed(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(dcdtbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
+	  ENDDO 
+	 ENDDO 
+	 call bound_cbot(zbed)
+	ENDIF 	
 	IF ((interaction_bed.ge.4.or.bedlevelfile.ne.''.or.nobst>0).and.IBMorder.eq.2) THEN ! order-2 IBM before information is exchanged between partitions (hence only j=1-jmax); order-0 IBM is done at and of this subroutine 
 		DO i=1,imax
 			DO j=1,jmax
@@ -1497,9 +1497,27 @@ c 	influence of waves on lateral boundaries:
 	call shiftb(Wbound,wbb) 	
 	if (periodicy.eq.0.or.periodicy.eq.2) then
 	  if (rank.eq.0) then ! boundaries in j-direction
-
+		do k=0,k1
+		   do i=1,imax	  
+		   !Vbound(i,0,k) = Vbf(i,k)
+		   Vbound(i,j1,k) =Vbb(i,k)
+		   !Ubound(i,0,k) = Ubf(i,k)
+		   Ubound(i,j1,k) =Ubb(i,k)	
+		   !Wbound(i,0,k) = Wbf(i,k)
+		   Wbound(i,j1,k) =Wbb(i,k)	
+		   enddo
+		enddo		   
 	  elseif (rank.eq.px-1) then
-	
+		do k=0,k1
+		   do i=1,imax	  
+		   Vbound(i,0,k) = Vbf(i,k)
+		   !Vbound(i,j1,k) =Vbb(i,k)
+		   Ubound(i,0,k) = Ubf(i,k)
+		   !Ubound(i,j1,k) =Ubb(i,k)	
+		   Wbound(i,0,k) = Wbf(i,k)
+		   !Wbound(i,j1,k) =Wbb(i,k)		
+		   enddo
+		enddo
 	  else
 		do k=0,k1
 		   do i=1,imax
@@ -1748,16 +1766,17 @@ c	x,y,z coordinate system, not in r,theta,z like this code
 	   enddo
 	  enddo
 	 endif
-		 DO i=0,i1
-		  DO j=0,j1
-		   DO k=1,kbed(i,j) !prevent source term at immersed boundary in PPE --> rhW not adapted because dpdn=0 has been enforced in bound_p already
-		    rhU(i,j,k)=rho_b 
-			rhU(MAX(0,i-1),j,k)=rho_b 
-		    rhV(i,j,k)=rho_b 
-			rhV(i,MAX(0,j-1),k)=rho_b 
-		  ENDDO
-		 ENDDO
-		ENDDO  
+	 ! 10 lines below switched off 6-6-2022 because there seems to be no reason to do it, because inside bed c=0 and rho=rho
+!!!		 DO i=0,i1
+!!!		  DO j=0,j1
+!!!		   DO k=1,kbed(i,j) !prevent source term at immersed boundary in PPE --> rhW not adapted because dpdn=0 has been enforced in bound_p already
+!!!		    rhU(i,j,k)=rho_b 
+!!!			rhU(MAX(0,i-1),j,k)=rho_b 
+!!!		    rhV(i,j,k)=rho_b 
+!!!			rhV(i,MAX(0,j-1),k)=rho_b 
+!!!		  ENDDO
+!!!		 ENDDO
+!!!		ENDDO  
 	ENDIF 
 	
 c 	influence of waves on lateral boundaries:
@@ -2701,7 +2720,7 @@ c 	influence of waves on lateral boundaries:
 	else
 	  phi=atan2(V_b,(U_TSHD-U_b))
 	endif
-	 IF (bp(n)%velocity_force.eq.0.) THEN
+	 IF (bp(n)%velocity_force.eq.0) THEN
       do k=MAX(1,CEILING(bp(n)%zbottom/dz)),MIN(kmax,FLOOR(bp(n)%height/dz))! do k=k1,0,-1 !from top to bottom
 	   do tel=1,bp(n)%tmax 
 	     i=bp(n)%i(tel) 
@@ -3011,14 +3030,15 @@ c 	influence of waves on lateral boundaries:
 	  Wbound(i,j,k)=Wjetbc*rhW(i,j,k) !0.5*(rho(i,j,k)+rho(i,j,k+1))
        enddo
 
-!	IF (interaction_bed.ge.4) THEN !for interaction_bed.ge.4 zbed is determined in sediment.f so not needed here 
-!	 DO i=1,imax
-!	  DO j=1,jmax
-!		zbed(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(dcdtbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
-!	  ENDDO 
-!	 ENDDO 
-!	 call bound_cbot(zbed)
-!	ENDIF 
+	
+	IF (interaction_bed.ge.4) THEN !for interaction_bed.ge.4 zbed is determined in sediment.f so not needed here 
+	 DO i=1,imax
+	  DO j=1,jmax
+		zbed(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(dcdtbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
+	  ENDDO 
+	 ENDDO 
+	 call bound_cbot(zbed)
+	ENDIF 
 	IF ((interaction_bed.ge.4.or.bedlevelfile.ne.''.or.nobst>0).and.IBMorder.eq.2) THEN ! order-2 IBM j=1,jmax --> at end bound_rhoU lateral boundaries are exchanged to get j=0 and j=j1 right 
 		DO i=1,imax
 			DO j=1,jmax
@@ -3047,9 +3067,10 @@ c 	influence of waves on lateral boundaries:
 				ELSE !apply tau on second cell (1-1.1)*dz distance from bed based on velocity of that cell, do nothing for cell below: (0-0.1)dz from bed 
 					kp=kpp
 !				  ELSE !apply tau on first cell (0-0.5)*dz distance from bed based on ustar of second cell (kpp) (1-1.5)*dz distance from bed 
-				ENDIF				
+				ENDIF	
+				!kbed22(i,j)=kb + 1000*kp + 100000*kpp !save all three numbers in one 
 				IF (botstress.eq.1.or.botstress.eq.2) THEN	! tests showed it is best to apply tau shear stress at first cell above ibm bed and not prescribe U,V velocity straightaway including influence tau (latter gives too large near bed velocities)			
-				  absU=sqrt(Ubound(i,j,kpp)**2+(0.25*(Vbound(i,j,kpp)+Vbound(i,j-1,kpp)+Vbound(i+1,j,kpp)+Vbound(i+1,j-1,kpp)))**2)
+				  absU=sqrt(Ubound2(i,j,kpp)**2+(0.25*(Vbound2(i,j,kpp)+Vbound2(i,j-1,kpp)+Vbound2(i+1,j,kpp)+Vbound2(i+1,j-1,kpp)))**2)
 				  absU=absU/rhU(i,j,kpp)
 				  ust=0.1*absU
 				  if (kn>0.) then !walls with rougness (log-law used which can be hydr smooth or hydr rough):
@@ -3081,7 +3102,7 @@ c 	influence of waves on lateral boundaries:
 					Ubound(i,j,k)=0.
 				  ENDDO
 				  !Ubound(i,j,kp)=vel_ibm2*rhU(i,j,kp)	
-				  absU=sqrt(Ubound(i,j,kp)**2+(0.25*(Vbound(i,j,kp)+Vbound(i,j-1,kp)+Vbound(i+1,j,kp)+Vbound(i+1,j-1,kp)))**2)
+				  absU=sqrt(Ubound2(i,j,kp)**2+(0.25*(Vbound2(i,j,kp)+Vbound2(i,j-1,kp)+Vbound2(i+1,j,kp)+Vbound2(i+1,j-1,kp)))**2)
 				  absU=absU/rhU(i,j,kp)				
 				  Ubound(i,j,kp) = Ubound(i,j,kp) / (1. + ust*ust*dt/dz/MAX(absU,1.e-9))  ! implicit = more stable	
 				  IF (dUVdn_IBMbed.eq.0.and.distance_to_bed_kp>0.1*dz) THEN
@@ -3092,8 +3113,8 @@ c 	influence of waves on lateral boundaries:
 				  dpdx11=(ppp(i+1,j,kpp)-ppp(i,j,kpp))/(Rp(i+1)-Rp(i))/rr1										!at U-gridpoint
 				  tauu1=tau_fl_Uold(i,j)																		!at U-gridpoint
 				  tauv1=0.25*(tau_fl_Vold(i,j)+tau_fl_Vold(i+1,j)+tau_fl_Vold(i,j-1)+tau_fl_Vold(i+1,j-1))		!at U-gridpoint
-				  uu1=Ubound(i,j,kpp)
-				  vv1=0.25*(Vbound(i,j,kpp)+Vbound(i+1,j,kpp)+Vbound(i,j-1,kpp)+Vbound(i+1,j-1,kpp))
+				  uu1=Ubound2(i,j,kpp)
+				  vv1=0.25*(Vbound2(i,j,kpp)+Vbound2(i+1,j,kpp)+Vbound2(i,j-1,kpp)+Vbound2(i+1,j-1,kpp))
 				  ust1 = ((tauu1/rr1)**2+(tauv1/rr1)**2)**0.25													!at U-gridpoint
 				  scal=2.*distance_to_bed_kpp/dz
 				  IF (slip_bot.eq.3) THEN
@@ -3110,11 +3131,13 @@ c 	influence of waves on lateral boundaries:
 				  IF (dUVdn_IBMbed.eq.0.and.distance_to_bed_kp>0.1*dz) THEN
 					Ubound(i,j,kb) = Ubound(i,j,kp)
 				  ENDIF				  
-				ELSE ! without partial slip bc, simply prescribe 2nd order accurate velocity:
+				ELSEIF(botstress.eq.0.and.slip_bot.eq.0) THEN ! without partial slip bc, simply prescribe 2nd order accurate velocity:
 				  DO k=1,kb
 					Ubound(i,j,k)=0.
 				  ENDDO
-				  Ubound(i,j,kp)=distance_to_bed_kp/distance_to_bed_kpp*Ubound(i,j,kpp) !linear interpolation with zero velocity at bed			
+				  Ubound(i,j,kp)=distance_to_bed_kp/distance_to_bed_kpp*Ubound(i,j,kpp) !linear interpolation with zero velocity at bed	
+			    ELSE 
+				  !do nothing, apply no shear stress
 				ENDIF 
 				zb_V=0.5*(zbed(i,j)+zbed(i,j+1))
 				
@@ -3131,7 +3154,7 @@ c 	influence of waves on lateral boundaries:
 !				  ELSE !apply tau on first cell (0-0.1)*dz distance from bed based on ustar of second cell (kpp) (1-1.1)*dz distance from bed 
 				ENDIF				
 				IF (botstress.eq.1.or.botstress.eq.2) THEN	
-				  absU=sqrt(Vbound(i,j,kpp)**2+(0.25*(Ubound(i,j,kpp)+Ubound(i,j+1,kpp)+Ubound(i-1,j,kpp)+Ubound(i-1,j+1,kpp)))**2)
+				  absU=sqrt(Vbound2(i,j,kpp)**2+(0.25*(Ubound2(i,j,kpp)+Ubound2(i,j+1,kpp)+Ubound2(i-1,j,kpp)+Ubound2(i-1,j+1,kpp)))**2)
 				  absU=absU/rhV(i,j,kpp)
 				  ust=0.1*absU
 				  if (kn>0.) then !walls with rougness (log-law used which can be hydr smooth or hydr rough):
@@ -3163,7 +3186,7 @@ c 	influence of waves on lateral boundaries:
 					Vbound(i,j,k)=0.
 				  ENDDO
 				  !Vbound(i,j,kp)=vel_ibm2*rhV(i,j,kp)
-				  absU=sqrt(Vbound(i,j,kp)**2+(0.25*(Ubound(i,j,kp)+Ubound(i,j+1,kp)+Ubound(i-1,j,kp)+Ubound(i-1,j+1,kp)))**2)
+				  absU=sqrt(Vbound2(i,j,kp)**2+(0.25*(Ubound2(i,j,kp)+Ubound2(i,j+1,kp)+Ubound2(i-1,j,kp)+Ubound2(i-1,j+1,kp)))**2)
 				  absU=absU/rhV(i,j,kp)				  
 				  Vbound(i,j,kp) = Vbound(i,j,kp) / (1. + ust*ust*dt/dz/MAX(absU,1.e-9))  ! implicit = more stable	
 				  IF (dUVdn_IBMbed.eq.0.and.distance_to_bed_kp>0.1*dz) THEN
@@ -3174,8 +3197,8 @@ c 	influence of waves on lateral boundaries:
 				  dpdy22=(ppp(i,j+1,kpp)-ppp(i,j,kpp))/(Rp(i)*(phip(j+1)-phip(j)))/rr2							!at V-gridpoint	
 				  tauu2=0.25*(tau_fl_Uold(i,j)+tau_fl_Uold(i,j+1)+tau_fl_Uold(i-1,j)+tau_fl_Uold(i-1,j+1)) 		!at V-gridpoint
 				  tauv2=tau_fl_Vold(i,j) 																		!at V-gridpoint
-				  uu2=0.25*(Ubound(i,j,kpp)+Ubound(i,j+1,kpp)+Ubound(i-1,j,kpp)+Ubound(i-1,j+1,kpp))
-				  vv2=Vbound(i,j,kpp)
+				  uu2=0.25*(Ubound2(i,j,kpp)+Ubound2(i,j+1,kpp)+Ubound2(i-1,j,kpp)+Ubound2(i-1,j+1,kpp))
+				  vv2=Vbound2(i,j,kpp)
 				  ust2 = ((tauu2/rr2)**2+(tauv2/rr2)**2)**0.25 								!at V-gridpoint	
 				  scal=2.*distance_to_bed_kpp/dz
 				  IF (slip_bot.eq.3) THEN
@@ -3192,11 +3215,13 @@ c 	influence of waves on lateral boundaries:
 				  IF (dUVdn_IBMbed.eq.0.and.distance_to_bed_kp>0.1*dz) THEN
 					Vbound(i,j,kb) = Vbound(i,j,kp)
 				  ENDIF				
-				ELSE ! without partial slip bc, simply prescribe 2nd order accurate velocity:
+				ELSEIF(botstress.eq.0.and.slip_bot.eq.0) THEN ! without partial slip bc, simply prescribe 2nd order accurate velocity:
 				  DO k=1,kb
 					Vbound(i,j,k)=0.
 				  ENDDO
 				  Vbound(i,j,kp)=distance_to_bed_kp/distance_to_bed_kpp*Vbound(i,j,kpp) !linear interpolation with zero velocity at bed
+				ELSE 
+				  !do nothing, apply no shear stress 
 				ENDIF
 			ENDDO
 		ENDDO
@@ -3249,11 +3274,29 @@ c 	influence of waves on lateral boundaries:
 	call shiftb(Wbound,wbb) 	
 	if (periodicy.eq.0.or.periodicy.eq.2) then
 	  if (rank.eq.0) then ! boundaries in j-direction
-
-	  elseif (rank.eq.px-1) then
-	
-	  else
 		do k=0,k1
+		   do i=1,imax
+		   !Vbound(i,0,k) = Vbf(i,k)
+		   Vbound(i,j1,k) =Vbb(i,k)
+		   !Ubound(i,0,k) = Ubf(i,k)
+		   Ubound(i,j1,k) =Ubb(i,k)	
+		   !Wbound(i,0,k) = Wbf(i,k)
+		   Wbound(i,j1,k) =Wbb(i,k)			   
+		   enddo
+		enddo
+	  elseif (rank.eq.px-1) then
+		do k=0,k1
+		   do i=1,imax
+		   Vbound(i,0,k) = Vbf(i,k)
+		   !Vbound(i,j1,k) =Vbb(i,k)
+		   Ubound(i,0,k) = Ubf(i,k)
+		   !Ubound(i,j1,k) =Ubb(i,k)	
+		   Wbound(i,0,k) = Wbf(i,k)
+		   !Wbound(i,j1,k) =Wbb(i,k)			   
+		   enddo
+		enddo	
+	  else
+		do k=1,kmax !0,k1
 		   do i=1,imax
 		   Vbound(i,0,k) = Vbf(i,k)
 		   Vbound(i,j1,k) =Vbb(i,k)
@@ -4065,6 +4108,91 @@ c*************************************************************
 	 
       end
 
+      subroutine bound_intern_and_periodic(Cbound)
+      
+      USE nlist
+
+      implicit none
+
+      real Cbound(0:i1,0:j1,0:k1)
+      real cbf(0:i1,0:k1)
+      real cbb(0:i1,0:k1)
+c
+c
+c*************************************************************
+c
+c     Subroutine bound sets the internal boundary conditions in j-dir for the different partitions and the proper periodic boundaries
+c     All other boundary conditions at x-dir and z-dir are not defined in this subroutine to keep them unchanged at values previously defined in for example bound_rhoU 
+c
+c*************************************************************
+c
+c*************************************************************
+
+	!c get stuff from other CPU's
+	  call shiftf(Cbound,cbf) 
+	  call shiftb(Cbound,cbb) 
+
+
+	!! used for CG iterations on p which is residual, when d.dn boundaries were switched on PCG crashed... 
+	  if (periodicy.eq.0.or.periodicy.eq.2) then
+		if (rank.eq.0) then ! boundaries in j-direction
+			do k=1,kmax
+			   do i=1,imax
+!			   Cbound(i,0,k) = Cbound(i,1,k) !cbf(i,k) !!!
+			   Cbound(i,j1,k) =cbb(i,k) 
+			   enddo
+			enddo
+		elseif (rank.eq.px-1) then
+			do k=1,kmax
+			   do i=1,imax
+			   Cbound(i,0,k) = cbf(i,k)
+!			   Cbound(i,j1,k) = Cbound(i,jmax,k) !cbb(i,k) !!!
+			   enddo
+			enddo	
+		else
+			do k=1,kmax
+			   do i=1,imax
+			   Cbound(i,0,k) = cbf(i,k)
+			   Cbound(i,j1,k) =cbb(i,k) 
+			   enddo
+			enddo
+		endif
+	  elseif (periodicy.eq.1) then ! periodic in y:
+		do k=1,kmax
+		   do i=1,imax
+			   Cbound(i,0,k) = cbf(i,k)
+			   Cbound(i,j1,k) =cbb(i,k) 
+		   enddo
+		enddo
+	  endif
+
+	  if (periodicx.eq.0.or.periodicx.eq.2) then
+!	      do k=1,kmax ! boundaries in i-direction			!!!
+!		 do j=0,j1                                          !!!
+!			   Cbound(0,j,k)    =    Cbound(1,j,k)          !!!
+!			   Cbound(i1,j,k)   =    Cbound(imax,j,k)       !!!
+!		 enddo                                              !!!
+!	      enddo                                             !!!
+	  else ! periodic x boundaries
+	      do k=1,kmax ! boundaries in i-direction
+		 do j=0,j1
+			   Cbound(0,j,k)    =    Cbound(imax,j,k)
+			   Cbound(i1,j,k)   =    Cbound(1,j,k)
+		 enddo   
+	      enddo
+	  endif
+
+!      do j=0,j1 ! boundaries in k-direction					!!!
+!         do i=0,i1                                         !!!
+!         Cbound(i,j,k1)   = Cbound(i,j,kmax)               !!!
+!         Cbound(i,j,0)    = Cbound(i,j,1)                  !!!
+!         enddo                                             !!!
+!       enddo                                               !!!
+
+	 
+      end
+	  
+
 
 		
 	subroutine wall_fun(uu,vv,rr,dz,dt,kn,kappa,nu_mol)
@@ -4545,7 +4673,7 @@ c*************************************************************
 !	ENDDO
 	
 	DO n2=1,nbedplume !make all forces zero before new forces are applied for bedplume
-		IF (bp(n2)%u.ne.-99999.) THEN ! apply bedplume velocity boundary condition: !(bp(n2).h_tseriesfile.ne.''.or.bp(n2).zb_tseriesfile.ne.''.or.bp(n2).nmove>0).and.
+		IF (bp(n2)%u.ne.-99999.and.bp(n2)%velocity_force.eq.1) THEN ! apply bedplume velocity boundary condition: !(bp(n2).h_tseriesfile.ne.''.or.bp(n2).zb_tseriesfile.ne.''.or.bp(n2).nmove>0).and.
 			IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end)) THEN
 				Ppropx=0.
 				Ppropy=0.
@@ -4555,7 +4683,7 @@ c*************************************************************
 	ENDDO	
 	DO n2=1,nbedplume !make all forces zero before new forces are applied for bedplume
 !		IF (bp(n2).h_tseriesfile.ne.''.or.bp(n2).zb_tseriesfile.ne.''.or.bp(n2).nmove>0) THEN ! apply bedplume velocity boundary condition:	
-		   IF (bp(n2)%u.ne.-99999.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end) THEN
+		   IF (bp(n2)%u.ne.-99999.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%velocity_force.eq.1) THEN
 			do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz))! do k=k1,0,-1 !from top to bottom
 			   do tel=1,bp(n2)%tmax 
 				 i=bp(n2)%i(tel) 
@@ -4568,8 +4696,8 @@ c*************************************************************
 !!					yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
 !!					CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
 !!					if (inout.eq.1) then		   
-					  fbx2=ABS(bp(n2)%u)*bp(n2)%u/(bp(n2)%x(2)-bp(n2)%x(1))
-					  fby2=ABS(bp(n2)%v)*bp(n2)%v/(bp(n2)%y(3)-bp(n2)%y(2))
+					  fbx2=ABS(bp(n2)%u)*bp(n2)%u/abs(bp(n2)%x(2)-bp(n2)%x(1))
+					  fby2=ABS(bp(n2)%v)*bp(n2)%v/abs(bp(n2)%y(3)-bp(n2)%y(2))
 					  fbz2=ABS(bp(n2)%w)*bp(n2)%w/(bp(n2)%height-bp(n2)%zbottom)
 					  fbx   =  fbx2 * cos(phi) - fby2 * sin(phi)
 					  fby   =  fbx2 * sin(phi) + fby2 * cos(phi)		
@@ -4588,7 +4716,8 @@ c*************************************************************
 	ENDDO
 	
 	DO n2=1,nbedplume
-		IF (bp(n2).h_tseriesfile.ne.''.or.bp(n2).zb_tseriesfile.ne.''.or.bp(n2).nmove>0) THEN !necessary to update volncells!
+		IF (bp(n2).h_tseriesfile.ne.''.or.bp(n2).zb_tseriesfile.ne.''.or.bp(n2).nmove>0.or.
+     &		(ABS(bp(n2)%move_u)+ABS(bp(n2)%move_v)+ABS(bp(n2)%move_w).gt.0.)) THEN !necessary to update volncells!
 		  IF (bp(n2).h_tseriesfile.ne.'') THEN
 			bp(n2)%height=interpseries(bp(n2)%h_tseries,bp(n2)%h_series,bp(n2)%h_seriesloc,tt)
 		  ENDIF
@@ -4697,7 +4826,7 @@ c*************************************************************
 		  call mpi_allreduce(Whisbp(n2,bp(n2)%istep_bphis_output),globalsum,1,mpi_double_precision,mpi_sum,mpi_comm_world,ierr)
 		  Whisbp(n2,bp(n2)%istep_bphis_output)=globalsum/bp(n2)%volncells				  
 		thisbp(n2,bp(n2)%istep_bphis_output)=tt 
-		zhisbp(n2,bp(n2)%istep_bphis_output)=(MAX(1,CEILING(bp(n2)%zbottom/dz))+MIN(kmax,FLOOR(bp(n2)%height/dz)))/2.*dz+0.5*dz 			
+		zhisbp(n2,bp(n2)%istep_bphis_output)=(MAX(1,CEILING(bp(n2)%zbottom/dz))+MIN(kmax,FLOOR(bp(n2)%height/dz)))/2.*dz-0.5*dz 			
 		ENDIF ! bedplume loop
 
 	ENDDO
@@ -4906,7 +5035,8 @@ c*************************************************************
 	
 	DO n=1,nbedplume
 	  IF ((bp(n)%forever.eq.1.and.time_np.gt.bp(n)%t0.and.time_np.lt.bp(n)%t_end).and.
-     & (bp(n)%move_zbed_criterium(MAX(bp(n)%nmove_present,1))<depth.or.(ABS(bp(n)%move_u)+ABS(bp(n)%move_v).gt.0.))) THEN
+     & (bp(n)%move_zbed_criterium(MAX(bp(n)%nmove_present,1))<depth.or.
+     &	 (ABS(bp(n)%move_u)+ABS(bp(n)%move_v)+ABS(bp(n)%move_w).gt.0.))) THEN
 	    bp(n)%tmax=0
 		! rotation ship for ambient side current
 		if ((U_TSHD-U_b).eq.0.or.LOA<0.) then

@@ -302,8 +302,14 @@ Hfront = 1.5            ! Height of slope at front for streamlining (25% of Drau
 Non_Newtonian=0				!Default is 0, which is Newtonian treatment, 1 is time-independent behaviour, 2 is including time-dependent behaviour (thixotropy)
 Rheological_model='SIMPLE'	!If Non-Newtonian = 1, choose rheological model to determine the Bingham parameters, i.e. yield stress and bingham viscosity. Options are: 'SIMPLE','JACOBS','WINTER','THOMAS'.
 PAPANASTASIOUS_m=400.		!Exponential stress growth parameter of the Papanastasious model 1987
+shear0limit=0.01			!shear0limit [1/s] is subtracted from the actual shear to determine the apparent viscosity, if shear is below shear0limit then maximum apparent viscosity (defined by the Bingham yield stress and PAPANASTASIOUS_m) is applied --> this makes sure that round the yielding/unyielding point a solid patch stays unyielded also numerically
+Apvisc_interp = 1 			! 1 (default) is linear interpolation neighbouring cells for apparent viscosity; 2 is maximum of neighbouring cells; 3 is linear app-visc+max-BYS; 4 is max app-visc+max-BYS 
+Apvisc_shear_relax = 0.9   ! Relaxation factor for determination shear used in calculation of apparent viscosity (default 1.0 --> no relaxation)
 SIMPLE_tauy=0.2				!Bingham yield stress [Pa] is constant
 SIMPLE_muB=0.1				!Bingham dynamic viscosity [kg/m/s] is constant
+SIMPLE_climit=0.01 			!Volume fraction, default 0 for all defined fractions, [-] (length vector must be nfrac large) defining limit for application of SIMPLE_tauy and SIMPLE_muB everywhere in domain where c>SIMPLE_climit
+rheo_shear_method = 1		!1 (default) shear determined from uvw; 2 = shear determined by rurvrw/r; 3 = shear determined by uv; 4 = shear determined by rurv/r; 12= shear determined by cucvcw/c; 21 = use min of neighbouring shear; 31 = force shear to zero at cells with sum(C(1:nfrac))=0  
+Apvisc_force_eq = 1		!0 (default) no dpdx,dpdy force from rheology applied directly in momentum eq., 1 = horizontal force balance used to derive dpdx,dpdy terms directly implemented in mom.eq. and app-visc is determined by a reduced BYS to not account double for this 
 JACOBS_Ky=6.72e4			!Empirical yield stress constant
 JACOBS_Kmu=251				!Empirical Viscosity constant
 JACOBS_Aclay=1.0			!Colloidal activity of clay

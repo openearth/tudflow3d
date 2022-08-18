@@ -715,6 +715,13 @@ c*****************************************************************
       real xx,yy,f,fluc,Wjet
       real divvR,divvL,CNz,CNx,CNy
       integer n,t
+	  real fcg2(0:i1,0:px*jmax+1,0:k1)
+
+	  if (momentum_exchange_obstacles.eq.100.or.momentum_exchange_obstacles.eq.110) then 
+		fcg2=fc_global
+	  else 
+		fcg2=1. !all momentum interactions are active
+	  endif	  
 
 	IF (CNdiffz.eq.1) THEN !CN diff in z-dir is half old, half new timestep (this is half old timestep)
 	  CNz=0.5
@@ -748,16 +755,16 @@ c*****************************************************************
 	  
       eppo = 0.25 * (
      +   ekm(i,j,k) + ekm(ip,j,k) + ekm(ip,jp,k) + ekm(i,jp,k)  )
-!     + * MIN(fc_global(i,j+rank*jmax,k),fc_global(ip,j+rank*jmax,k),fc_global(ip,jp+rank*jmax,k),fc_global(i,jp+rank*jmax,k))	 
+     + * MIN(fcg2(i,j+rank*jmax,k),fcg2(ip,j+rank*jmax,k),fcg2(ip,jp+rank*jmax,k),fcg2(i,jp+rank*jmax,k))	 
       epmo = 0.25 * (
      +   ekm(i,j,k) + ekm(ip,j,k) + ekm(ip,jm,k) + ekm(i,jm,k)  )
-!     + * MIN(fc_global(i,j+rank*jmax,k),fc_global(ip,j+rank*jmax,k),fc_global(ip,jm+rank*jmax,k),fc_global(i,jm+rank*jmax,k))	 
+     + * MIN(fcg2(i,j+rank*jmax,k),fcg2(ip,j+rank*jmax,k),fcg2(ip,jm+rank*jmax,k),fcg2(i,jm+rank*jmax,k))	 
       epop = 0.25 * (
      +   ekm(i,j,k) + ekm(ip,j,k) + ekm(ip,j,kp) + ekm(i,j,kp)  )
-!     + * MIN(fc_global(i,j+rank*jmax,k),fc_global(ip,j+rank*jmax,k),fc_global(ip,j+rank*jmax,kp),fc_global(i,j+rank*jmax,kp))	 
+     + * MIN(fcg2(i,j+rank*jmax,k),fcg2(ip,j+rank*jmax,k),fcg2(ip,j+rank*jmax,kp),fcg2(i,j+rank*jmax,kp))	 
       epom = 0.25 * (
      +   ekm(i,j,k) + ekm(ip,j,k) + ekm(ip,j,km) + ekm(i,j,km)  )
-!     + * MIN(fc_global(i,j+rank*jmax,k),fc_global(ip,j+rank*jmax,k),fc_global(ip,j+rank*jmax,km),fc_global(i,j+rank*jmax,km))	 
+     + * MIN(fcg2(i,j+rank*jmax,k),fcg2(ip,j+rank*jmax,k),fcg2(ip,j+rank*jmax,km),fcg2(i,j+rank*jmax,km))	 
 
       divvL= ( Ru(i)*Uvel(i,j,k) - Ru(i-1)*Uvel(i-1,j,k) ) / ( Rp(i)*dr(i) )
      +              +
@@ -771,11 +778,11 @@ c*****************************************************************
      3  (       Wvel(ip,j,k) -         Wvel(ip,j,k-1) ) * dzi   
 
       putout(i,j,k) = putout(i,j,k) +
-!     1 (  Rp(ip) * ekm(ip,j,k) * fc_global(ip,j+rank*jmax,k) *
-     1 (  Rp(ip) * ekm(ip,j,k)*CNx  *	 
+     1 (  Rp(ip) * ekm(ip,j,k) * fcg2(ip,j+rank*jmax,k)*CNx *
+!     1 (  Rp(ip) * ekm(ip,j,k)*CNx  *	 
      1            ((Uvel(ip,j,k) - Uvel(i,j,k) ) / ( dr(ip) ) - 1./3.*divvR) -
-!     1    Rp(i ) * ekm(i,j,k) * fc_global(i,j+rank*jmax,k) *
-     1    Rp(i ) * ekm(i,j,k)*CNx * 	 
+     1    Rp(i ) * ekm(i,j,k) * fcg2(i,j+rank*jmax,k)*CNx *
+!     1    Rp(i ) * ekm(i,j,k)*CNx * 	 
      1            ((Uvel(i,j,k)  - Uvel(im,j,k)) / ( dr(i)  ) - 1./3.*divvL) )  /
      1 ( 0.5 * Ru(i) * ( drp ) )
      +              +
@@ -795,8 +802,8 @@ c*****************************************************************
      3            + (Wvel(ip,j,km) - Wvel(i,j,km)) / (Rp(ip) - Rp(i))
      3          ) ) * dzi
      +              -
-!     4   (ekm(i,j,k) + ekm(ip,j,k)) * MIN(fc_global(i,j+rank*jmax,k),fc_global(ip,j+rank*jmax,k)) * ( Uvel(i,j,k) +
-     4   CNy*(ekm(i,j,k) + ekm(ip,j,k)) * ( Uvel(i,j,k) +	 
+     4   CNy*(ekm(i,j,k) + ekm(ip,j,k)) * MIN(fcg2(i,j+rank*jmax,k),fcg2(ip,j+rank*jmax,k)) * ( Uvel(i,j,k) +
+!     4   CNy*(ekm(i,j,k) + ekm(ip,j,k)) * ( Uvel(i,j,k) +	 
      4   (Vvel(ip,j,k) + Vvel(i,j,k) - Vvel(ip,jm,k) - Vvel(i,jm,k)) /
      4   (2.0 * (phiv(j)-phiv(jm))) )/ ( Ru(i) * Ru(i) )
             enddo
@@ -871,7 +878,14 @@ c*****************************************************************
       real xx,yy,f,fluc,Wjet
       integer n,t
 	real divvL,divvR,CNz,CNx,CNy
+	  real fcg2(0:i1,0:px*jmax+1,0:k1)
 
+	  if (momentum_exchange_obstacles.eq.100.or.momentum_exchange_obstacles.eq.110) then 
+		fcg2=fc_global
+	  else 
+		fcg2=1. !all momentum interactions are active
+	  endif	
+	  
 	IF (CNdiffz.eq.1) THEN !CN diff in z-dir is half old, half new timestep (this is half old timestep)
 	  CNz=0.5
 	ELSEIF (CNdiffz.eq.2.or.CNdiffz.eq.12) THEN !CN diff in z-dir is 100% new timestep (Euler backward)
@@ -904,16 +918,16 @@ c*****************************************************************
 
       eppo = 0.25 * (
      +   ekm(i,j,k) + ekm(ip,j,k) + ekm(ip,jp,k) + ekm(i,jp,k)  )
-!     + * MIN(fc_global(i,j+rank*jmax,k),fc_global(ip,j+rank*jmax,k),fc_global(ip,jp+rank*jmax,k),fc_global(i,jp+rank*jmax,k))	 
+     + * MIN(fcg2(i,j+rank*jmax,k),fcg2(ip,j+rank*jmax,k),fcg2(ip,jp+rank*jmax,k),fcg2(i,jp+rank*jmax,k))	 
       empo = 0.25 * (
      +   ekm(i,j,k) + ekm(im,j,k) + ekm(i,jp,k)  + ekm(im,jp,k) )
-!     + * MIN(fc_global(i,j+rank*jmax,k),fc_global(im,j+rank*jmax,k),fc_global(i,jp+rank*jmax,k),fc_global(im,jp+rank*jmax,k))	 
+     + * MIN(fcg2(i,j+rank*jmax,k),fcg2(im,j+rank*jmax,k),fcg2(i,jp+rank*jmax,k),fcg2(im,jp+rank*jmax,k))	 
       eopp = 0.25 * (
      +   ekm(i,j,k) + ekm(i,j,kp) + ekm(i,jp,k)  + ekm(i,jp,kp) )
-!     + * MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,kp),fc_global(i,jp+rank*jmax,k),fc_global(i,jp+rank*jmax,kp))	 
+     + * MIN(fcg2(i,j+rank*jmax,k),fcg2(i,j+rank*jmax,kp),fcg2(i,jp+rank*jmax,k),fcg2(i,jp+rank*jmax,kp))	 
       eopm = 0.25 * (
      +   ekm(i,j,k) + ekm(i,j,km) + ekm(i,jp,k)  + ekm(i,jp,km) )
-!     + * MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,km),fc_global(i,jp+rank*jmax,k),fc_global(i,jp+rank*jmax,km))	 
+     + * MIN(fcg2(i,j+rank*jmax,k),fcg2(i,j+rank*jmax,km),fcg2(i,jp+rank*jmax,k),fcg2(i,jp+rank*jmax,km))	 
 
       divvL= ( Ru(i)*Uvel(i,j,k) - Ru(i-1)*Uvel(i-1,j,k) ) / ( Rp(i)*dr(i) )
      +              +
@@ -944,13 +958,13 @@ c*****************************************************************
 !     1        + (Uvel(im,jp,k) - Uvel(im,j,k)) / (Ru(im)*dphi)
 !     1        ) * Ru(im) ) / ( Rp(i) * dr(i) )
      +              +
-!     2 ( ekm(i,jp,k)*fc_global(i,jp+jmax*rank,k) * (   (Uvel(i,jp,k) + Uvel(im,jp,k)) / 2.0
-     2 ( CNy*ekm(i,jp,k) * (   (Uvel(i,jp,k) + Uvel(im,jp,k)) / 2.0	 
+     2 ( CNy*ekm(i,jp,k)*fcg2(i,jp+jmax*rank,k) * (   (Uvel(i,jp,k) + Uvel(im,jp,k)) / 2.0
+!     2 ( CNy*ekm(i,jp,k) * (   (Uvel(i,jp,k) + Uvel(im,jp,k)) / 2.0	 
      2                   + (Vvel(i,jp,k) - Vvel(i,j,k)  ) / (phiv(jp)-phiv(j))
      2                   - 1./3.*divvR*Rp(i)
      2                 )             -
-!     2   ekm(i,j,k)*fc_global(i,j+jmax*rank,k)  * (   (Uvel(i,j,k)  + Uvel(im,j,k) ) / 2.0
-     2   CNy*ekm(i,j,k)  * (   (Uvel(i,j,k)  + Uvel(im,j,k) ) / 2.0	 
+     2   CNy*ekm(i,j,k)*fcg2(i,j+jmax*rank,k)  * (   (Uvel(i,j,k)  + Uvel(im,j,k) ) / 2.0
+!     2   CNy*ekm(i,j,k)  * (   (Uvel(i,j,k)  + Uvel(im,j,k) ) / 2.0	 
      2                   + (Vvel(i,j,k)  - Vvel(i,jm,k) ) / (phiv(j)-phiv(jm))
      2			 - 1./3.*divvL*Rp(i)
      2                 ) ) / ( 0.5 * Rp(i) * Rp(i) * (phip(jp)-phip(j)))
@@ -1020,7 +1034,14 @@ c*****************************************************************
       real xx,yy,f,fluc,Wjet,dzi
       integer n,t
 	real divvR,divvL,CNz,CNx,CNy
+	  real fcg2(0:i1,0:px*jmax+1,0:k1)
 
+	  if (momentum_exchange_obstacles.eq.100.or.momentum_exchange_obstacles.eq.110) then 
+		fcg2=fc_global
+	  else 
+		fcg2=1. !all momentum interactions are active
+	  endif	
+	  
 	IF (CNdiffz.eq.1) THEN !CN diff in z-dir is half old, half new timestep (this is half old timestep)
 	  CNz=0.5
 	ELSEIF (CNdiffz.eq.2.or.CNdiffz.eq.12) THEN !CN diff in z-dir is 100% new timestep (Euler backward)
@@ -1051,16 +1072,16 @@ c*****************************************************************
 	      km=k-1
       epop = 0.25 * (
      +   ekm(i,j,k) + ekm(i,j,kp) + ekm(ip,j,k) + ekm(ip,j,kp) )
-!     + * MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,kp),fc_global(ip,j+rank*jmax,k),fc_global(ip,j+rank*jmax,kp))
+     + * MIN(fcg2(i,j+rank*jmax,k),fcg2(i,j+rank*jmax,kp),fcg2(ip,j+rank*jmax,k),fcg2(ip,j+rank*jmax,kp))
       emop = 0.25 * (
      +   ekm(i,j,k) + ekm(i,j,kp) + ekm(im,j,k) + ekm(im,j,kp) )
-!     + * MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,kp),fc_global(im,j+rank*jmax,k),fc_global(im,j+rank*jmax,kp))	 
+     + * MIN(fcg2(i,j+rank*jmax,k),fcg2(i,j+rank*jmax,kp),fcg2(im,j+rank*jmax,k),fcg2(im,j+rank*jmax,kp))	 
       eopp = 0.25 * (
      +   ekm(i,j,k) + ekm(i,j,kp) + ekm(i,jp,k) + ekm(i,jp,kp) )
-!     + * MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,kp),fc_global(i,jp+rank*jmax,k),fc_global(i,jp+rank*jmax,kp))	 
+     + * MIN(fcg2(i,j+rank*jmax,k),fcg2(i,j+rank*jmax,kp),fcg2(i,jp+rank*jmax,k),fcg2(i,jp+rank*jmax,kp))	 
       eomp = 0.25 * (
      +   ekm(i,j,k) + ekm(i,j,kp) + ekm(i,jm,k) + ekm(i,jm,kp) )
-!     + * MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,kp),fc_global(i,jm+rank*jmax,k),fc_global(i,jm+rank*jmax,kp))	 
+     + * MIN(fcg2(i,j+rank*jmax,k),fcg2(i,j+rank*jmax,kp),fcg2(i,jm+rank*jmax,k),fcg2(i,jm+rank*jmax,kp))	 
 
       divvL= ( Ru(i)*Uvel(i,j,k) - Ru(i-1)*Uvel(i-1,j,k) ) / ( Rp(i)*dr(i) )
      +              +
@@ -1088,10 +1109,10 @@ c*****************************************************************
      2             +(Wvel(i,j,k)   - Wvel(i,jm,k) )/( Rp(i) * (phip(j)-phip(jm)) )
      2           ) ) / ( Rp(i) * (phiv(j)-phiv(jm)) )
      +             +
-!     3 ( ekm(i,j,kp)*fc_global(i,j+rank*jmax,kp) * (CNz*(Wvel(i,j,kp) - Wvel(i,j,k ))*dzi - 1./3.*divvR ) -
-!     3   ekm(i,j,k )*fc_global(i,j+rank*jmax,k) * (CNz*(Wvel(i,j,k)  - Wvel(i,j,km))*dzi - 1./3.*divvL )	 
-     3 ( ekm(i,j,kp)* CNz*((Wvel(i,j,kp) - Wvel(i,j,k ))*dzi - 1./3.*divvR ) -
-     3   ekm(i,j,k )* CNz*((Wvel(i,j,k)  - Wvel(i,j,km))*dzi - 1./3.*divvL )
+     3 ( CNz*ekm(i,j,kp)*fcg2(i,j+rank*jmax,kp) * (CNz*(Wvel(i,j,kp) - Wvel(i,j,k ))*dzi - 1./3.*divvR ) -
+     3   CNz*ekm(i,j,k )*fcg2(i,j+rank*jmax,k) * (CNz*(Wvel(i,j,k)  - Wvel(i,j,km))*dzi - 1./3.*divvL )	 
+!     3 ( ekm(i,j,kp)* CNz*((Wvel(i,j,kp) - Wvel(i,j,k ))*dzi - 1./3.*divvR ) -
+!     3   ekm(i,j,k )* CNz*((Wvel(i,j,k)  - Wvel(i,j,km))*dzi - 1./3.*divvL )
      3  	 ) *2.*dzi 
            enddo
         enddo
@@ -1148,9 +1169,9 @@ c*****************************************************************
 	  CNz=1.
 	ENDIF
 	IF (CNdiffz.eq.11) THEN !CN diff in z-dir is half old, half new timestep (this is half old timestep)
-	  CNx=0.4 !0.5*2. !0.45 !0.5
-	  CNy=0.4 !0.5*2. !0.45 !0.5
-	  CNz=0.4 !0.5*2.
+	  CNx=0.5 !0.5*2. !0.45 !0.5
+	  CNy=0.5 !0.5*2. !0.45 !0.5
+	  CNz=0.5 !0.5*2.
 	ELSEIF (CNdiffz.eq.12) THEN !CN diff in z-dir is 100% new timestep (Euler backward)
 	  CNx=0. 
 	  CNy=0. 
@@ -1253,9 +1274,9 @@ c*****************************************************************
 	  CNz=1.
 	ENDIF
 	IF (CNdiffz.eq.11) THEN !CN diff in z-dir is half old, half new timestep (this is half old timestep)
-	  CNx=0.4 !0.5*2. !0.45 !0.5
-	  CNy=0.4 !0.5*2. !0.45 !0.5
-	  CNz=0.4 !0.5*2.
+	  CNx=0.5 !0.5*2. !0.45 !0.5
+	  CNy=0.5 !0.5*2. !0.45 !0.5
+	  CNz=0.5 !0.5*2.
 	ELSEIF (CNdiffz.eq.12) THEN !CN diff in z-dir is 100% new timestep (Euler backward)
 	  CNx=0. 
 	  CNy=0. 
@@ -1360,9 +1381,9 @@ c*****************************************************************
 	  CNz=1.
 	ENDIF
 	IF (CNdiffz.eq.11) THEN !CN diff in z-dir is half old, half new timestep (this is half old timestep)
-	  CNx=0.4 !0.5*2. !0.45 !0.5
-	  CNy=0.4 !0.5*2. !0.45 !0.5
-	  CNz=0.4 !0.5*2.
+	  CNx=0.5 !0.5*2. !0.45 !0.5
+	  CNy=0.5 !0.5*2. !0.45 !0.5
+	  CNz=0.5 !0.5*2.
 	ELSEIF (CNdiffz.eq.12) THEN !CN diff in z-dir is 100% new timestep (Euler backward)
 	  CNx=0. 
 	  CNy=0. 
@@ -1428,7 +1449,9 @@ c*****************************************************************
 		IF (CNdiffz.eq.1) THEN 
 			CNz=0.5 !0.55
 		ELSEIF (CNdiffz.eq.11) THEN 
-			CNz=0.6 !0.55 
+			CNz=CNdiff_factor !0.5 !0.55 
+		ELSEIF (CNdiffz.eq.12) THEN 
+			CNz=(3.-2.*CNdiff_factor)/3.
 		ELSE 
 			CNz=1.
 		ENDIF 
@@ -1692,7 +1715,9 @@ c*****************************************************************
 		IF (CNdiffz.eq.1) THEN 
 			CNz=0.5 !0.55
 		ELSEIF (CNdiffz.eq.11) THEN 
-			CNz=0.6 !0.55 
+			CNz=CNdiff_factor !0.5 !0.55 
+		ELSEIF (CNdiffz.eq.12) THEN 
+			CNz=(3.-2.*CNdiff_factor)/3.
 		ELSE 
 			CNz=1.
 		ENDIF 
@@ -1997,7 +2022,9 @@ c*****************************************************************
 		IF (CNdiffz.eq.1) THEN 
 			CNz=0.5 !0.55
 		ELSEIF (CNdiffz.eq.11) THEN 
-			CNz=0.6 !0.55 
+			CNz=CNdiff_factor !0.5 !0.55 
+		ELSEIF (CNdiffz.eq.12) THEN 
+			CNz=(3.-2.*CNdiff_factor)/3.
 		ELSE 
 			CNz=1.
 		ENDIF 
@@ -2234,6 +2261,963 @@ c*****************************************************************
 		return
 		end			
 
+
+      subroutine diffuvw_CDS2_3DCNimpl
+
+        USE nlist
+
+        implicit none
+
+        integer  im,ip,jm,jp,km,kp,ib,ie,jb,je,kb,ke
+        real CNz
+		real ekm_min,ekm_plus,rho_min,rho_plus
+		real aaax(0:i1),bbbx(0:i1),cccx(0:i1)
+		real aaay(0:j1),bbby(0:j1),cccy(0:j1)
+		real aaa(0:k1),bbb(0:k1),ccc(0:k1)
+		real rhssx(0:i1),rhssy(0:jmax*px+1),rhss(0:k1)
+		real Ax3D(0:i1,0:j1,0:k1),Ay3D(0:i1,0:j1,0:k1),Az3D(0:i1,0:j1,0:k1)
+		real Cx3D(0:i1,0:j1,0:k1),Cy3D(0:i1,0:j1,0:k1),Cz3D(0:i1,0:j1,0:k1)
+		real DD3D(0:i1,0:j1,0:k1),RHS3D(0:i1,0:j1,0:k1)
+		real u0(0:i1,0:j1,0:k1),v0(0:i1,0:j1,0:k1),w0(0:i1,0:j1,0:k1)
+		
+		CNz = CNdiff_factor
+		! determine start condition iteration:
+		IF(CNdiff_ini.eq.1) THEN
+			u0 = dUdt 
+			v0 = dVdt 
+			w0 = dWdt 
+		ELSEIF (CNdiff_ini.eq.2) THEN  
+			u0 = Unew 
+			v0 = Vnew 
+			w0 = Wnew 
+		ELSEIF (CNdiff_ini.eq.3) THEN  !start iteration with velocity field determined with explicit diffusion terms:
+			ib=1 
+			ie=imax 
+			jb=1 
+			je=jmax 
+			kb=1 
+			ke=kmax		
+			! to reduce memory usage re-use of existing variables: Cx3d==dnew; Cy3d==dnew2; Cz3d==dold 
+			call diffuvw_ydir_CDS2_CNexpl(Cx3D,Cy3D,Cz3D,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
+			u0 = dUdt + CNdiff_factor*dt*Cx3D/rhU  
+			v0 = dVdt + CNdiff_factor*dt*Cy3D/rhV
+			w0 = dWdt + CNdiff_factor*dt*Cz3D/rhW				
+			call diffuvw_zdir_CDS2_CNexpl(Cx3D,Cy3D,Cz3D,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
+			u0 = u0 + CNdiff_factor*dt*Cx3D/rhU  
+			v0 = v0 + CNdiff_factor*dt*Cy3D/rhV
+			w0 = w0 + CNdiff_factor*dt*Cz3D/rhW
+			call diffuvw_xdir_CDS2_CNexpl(Cx3D,Cy3D,Cz3D,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
+			u0 = u0 + CNdiff_factor*dt*Cx3D/rhU  
+			v0 = v0 + CNdiff_factor*dt*Cy3D/rhV
+			w0 = w0 + CNdiff_factor*dt*Cz3D/rhW		
+			
+			call bound_incljet(u0,v0,w0,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+     & 		Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
+		ELSEIF (CNdiff_ini.eq.4) THEN  !start iteration with velocity field determined with implicit ADI diffusion terms:
+			Ax3D = dUdt !backup of dUdt 
+			Ay3D = dVdt !backup of dVdt 
+			Az3D = dWdt !backup of dWdt		
+			! to reduce memory usage re-use of existing variables: Cx3d==dnew; Cy3d==dnew2; Cz3d==dold  
+			! CNdiff_factor acts as theta in CN --> 0.5 gives 2nd order dt Douglas-Gunn ADI and 1 gives 1st order Douglass-Rachford; factor 0.5-1 gives blend
+			! Douglas-Gunn and Douglass-Rachford ADI first take 100% explicit diffusion of 2 dirs not implicit
+			ib=1 
+			ie=imax 
+			jb=1 
+			je=jmax 
+			kb=1 
+			ke=kmax
+			call diffuvw_ydir_CDS2_CNexpl(Cx3D,Cy3D,Cz3D,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
+			dUdt = dUdt + (1.-CNdiff_factor)*dt*Cx3D/rhU  
+			dVdt = dVdt + (1.-CNdiff_factor)*dt*Cy3D/rhV
+			dWdt = dWdt + (1.-CNdiff_factor)*dt*Cz3D/rhW				
+			call diffuvw_zdir_CDS2_CNexpl(Cx3D,Cy3D,Cz3D,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
+			dUdt = dUdt + dt*Cx3D/rhU  
+			dVdt = dVdt + dt*Cy3D/rhV
+			dWdt = dWdt + dt*Cz3D/rhW
+			call diffuvw_xdir_CDS2_CNexpl(Cx3D,Cy3D,Cz3D,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
+			dUdt = dUdt + dt*Cx3D/rhU  
+			dVdt = dVdt + dt*Cy3D/rhV
+			dWdt = dWdt + dt*Cz3D/rhW				
+
+			call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+     & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)	
+			CNdiffz=11 !get right theta inside subroutine:
+			CALL diffuvw_ydir_CDS2_CNimpl
+			CNdiffz=31
+			! Douglas-Gunn ADI after each direction 50% implicit is finished subtract 50% explicit 
+			! diffuvw_xdir_CDS2_CNexpl was executed as last direction; therefore Cx3D,Cy3D,Cz3D are already correct for xdir_expl:
+			!call diffuvw_xdir_CDS2_CNexpl(Cx3D,Cy3D,Cz3D,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke) 
+			dUdt = dUdt - CNdiff_factor*dt*Cx3D/rhU  
+			dVdt = dVdt - CNdiff_factor*dt*Cy3D/rhV
+			dWdt = dWdt - CNdiff_factor*dt*Cz3D/rhW
+			call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+     & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
+			CNdiffz=11 !get right theta inside subroutine:
+			CALL diffuvw_xdir_CDS2_CNimpl 
+			CNdiffz=31 
+			! Douglas-Gunn ADI after each direction 50% implicit is finished subtract 50% explicit 
+			call diffuvw_zdir_CDS2_CNexpl(Cx3D,Cy3D,Cz3D,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
+			dUdt = dUdt - CNdiff_factor*dt*Cx3D/rhU  
+			dVdt = dVdt - CNdiff_factor*dt*Cy3D/rhV
+			dWdt = dWdt - CNdiff_factor*dt*Cz3D/rhW			
+			call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+     & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)								
+			CNdiffz=11 !get right theta inside subroutine:
+			CALL diffuvw_zdir_CDS2_CNimpl		
+			CNdiffz=31 
+			u0 = dUdt 
+			v0 = dVdt 
+			w0 = dWdt	
+			call bound_incljet(u0,v0,w0,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+     & 		Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)			
+			dUdt = Ax3D !put back original dUdt 
+			dVdt = Ay3D 
+			dWdt = Az3D	 
+		ELSE
+			u0 = 0.*dUdt 
+			v0 = 0.*dVdt 
+			w0 = 0.*dWdt 		
+		ENDIF
+		
+
+		!! Prof. Vuik mentions in the CFD2 lecture notes that enforcing boundary condition in PCG can be done naturally via ghost-cells also for the pre-conditioner 
+		! for Dirichlet boundaries this approach is used (otherwise symmetry would get destroyed)
+		! for Neumann type boundares the diagonal and off-diag terms in the matrix A are corrected which leaves a symmetric matrix
+
+
+		!! Fill off-diags and diagonal forming matrix A and RHS3D to solve implicit CN diffusion terms of the form A*velocity=RHS3D 
+		!! U-velocity:
+		Ax3D=0. !off-diagonal i-1 in x-dir 
+		Cx3D=0. !off-diagonal i+1 in x-dir 
+		Ay3D=0. !off-diagonal j-1 in y-dir 
+		Cy3D=0. !off-diagonal j+1 in y-dir 
+		Az3D=0. !off-diagonal k-1 in z-dir 
+		Cz3D=0. !off-diagonal k+1 in z-dir 
+		DD3D=1. !diagonal for xyz-dir combined
+		RHS3D=dUdt 
+		IF (Apvisc_interp.eq.1.or.Apvisc_interp.eq.3) THEN ! use interpolation for apparent viscosity and for moleculair and eddy viscosity:
+		  do k=1,kmax 
+           do j=1,jmax
+            do i=1,imax 
+				!im=MAX(0,i-1)
+				ip=i+1 !MIN(i1,i+1)
+				ekm_min=ekm(i,j,k)!*fc_global(i,j+rank*jmax,k)
+				ekm_plus=ekm(ip,j,k)!*fc_global(ip,j+rank*jmax,k)
+				aaax(i)=-CNz*ekm_min*Rp(i)*dt/(dr(i)*(Rp(ip)-Rp(i))*Ru(i))/rhU(i,j,k) !/drdt(i,j,k)
+				cccx(i)=-CNz*ekm_plus*Rp(ip)*dt/(dr(ip)*(Rp(ip)-Rp(i))*Ru(i))/rhU(i,j,k) !/drdt(ip,j,k)
+				bbbx(i)=1.-aaax(i)-cccx(i) 
+            enddo
+			Ax3D(1:imax,j,k)=Ax3D(1:imax,j,k)+aaax(1:imax)
+			Cx3D(1:imax,j,k)=Cx3D(1:imax,j,k)+cccx(1:imax)
+			DD3D(1:imax,j,k)=DD3D(1:imax,j,k)+bbbx(1:imax)-1.
+           enddo
+		  enddo
+		  do k=1,kmax 
+           do i=1,imax 
+            do j=1,jmax 
+				jm=j-1 !MAX(0,j-1)
+				jp=j+1 !MIN(px*jmax+1,j+1)
+				ekm_min= 0.25*(ekm(i,j,k)+ekm(i,jm,k)+ekm(i+1,j,k)+ekm(i+1,jm,k))
+				ekm_plus=0.25*(ekm(i,j,k)+ekm(i,jp,k)+ekm(i+1,j,k)+ekm(i+1,jp,k))
+				aaay(j)=-CNz*ekm_min*dt/(Ru(i)*(phip(j)-phip(jm))*Ru(i)*dphi2(j))/rhU(i,j,k)
+				cccy(j)=-CNz*ekm_plus*dt/(Ru(i)*(phip(jp)-phip(j))*Ru(i)*dphi2(j))/rhU(i,j,k)				
+				bbby(j)=1.-aaay(j)-cccy(j) 
+			enddo
+			Ay3D(i,1:jmax,k)=Ay3D(i,1:jmax,k)+aaay(1:jmax)
+			Cy3D(i,1:jmax,k)=Cy3D(i,1:jmax,k)+cccy(1:jmax)
+			DD3D(i,1:jmax,k)=DD3D(i,1:jmax,k)+bbby(1:jmax)-1.
+           enddo
+		  enddo
+		  do j=1,jmax
+           do i=1,imax
+            do k=1,kmax !0,k1
+				km=k-1 !MAX(0,k-1)
+				kp=k+1 !MIN(k1,k+1)
+				ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i+1,j,k)+ekm(i+1,j,km))!*MIN(fc_global(i,j+rank*jmax,k),
+!     & 			fc_global(i,j+rank*jmax,km),fc_global(i+1,j+rank*jmax,k),fc_global(i+1,j+rank*jmax,km))
+				ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i+1,j,k)+ekm(i+1,j,kp))!*MIN(fc_global(i,j+rank*jmax,k),
+!     & 			fc_global(i,j+rank*jmax,kp),fc_global(i+1,j+rank*jmax,k),fc_global(i+1,j+rank*jmax,kp))
+				aaa(k)=-CNz*ekm_min*dt/dz**2/rhU(i,j,k) !/rho_min
+				ccc(k)=-CNz*ekm_plus*dt/dz**2/rhU(i,j,k) !/rho_plus
+				bbb(k)=1.-aaa(k)-ccc(k) 				
+            enddo
+			Az3D(i,j,1:kmax)=Az3D(i,j,1:kmax)+aaa(1:kmax)
+			Cz3D(i,j,1:kmax)=Cz3D(i,j,1:kmax)+ccc(1:kmax)
+			DD3D(i,j,1:kmax)=DD3D(i,j,1:kmax)+bbb(1:kmax)-1.
+           enddo
+		  enddo
+		ELSEIF (Apvisc_interp.eq.2.or.Apvisc_interp.eq.4) THEN !use maximum of neighbouring cells for apparent visocity and linear interpolation for mol and turb visc
+		  ekm = ekm - muA 
+		  !! Fill off-diags and diagonal forming matrix A and RHS3D to solve implicit CN diffusion terms of the form A*velocity=RHS3D 
+		  !! U-velocity:
+		  Ax3D=0. !off-diagonal i-1 in x-dir 
+		  Cx3D=0. !off-diagonal i+1 in x-dir 
+		  Ay3D=0. !off-diagonal j-1 in y-dir 
+		  Cy3D=0. !off-diagonal j+1 in y-dir 
+		  Az3D=0. !off-diagonal k-1 in z-dir 
+		  Cz3D=0. !off-diagonal k+1 in z-dir 
+		  DD3D=1. !diagonal for xyz-dir combined
+		  RHS3D=dUdt 
+		  do k=1,kmax 
+           do j=1,jmax
+            do i=1,imax 
+				!im=MAX(0,i-1)
+				ip=i+1 !MIN(i1,i+1)
+				ekm_min=ekm(i,j,k) + muA(i,j,k) !*fc_global(i,j+rank*jmax,k)
+				ekm_plus=ekm(ip,j,k) + muA(ip,j,k) !*fc_global(ip,j+rank*jmax,k)
+				aaax(i)=-CNz*ekm_min*Rp(i)*dt/(dr(i)*(Rp(ip)-Rp(i))*Ru(i))/rhU(i,j,k) !/drdt(i,j,k)
+				cccx(i)=-CNz*ekm_plus*Rp(ip)*dt/(dr(ip)*(Rp(ip)-Rp(i))*Ru(i))/rhU(i,j,k) !/drdt(ip,j,k)
+				bbbx(i)=1.-aaax(i)-cccx(i) 
+            enddo
+			Ax3D(1:imax,j,k)=Ax3D(1:imax,j,k)+aaax(1:imax)
+			Cx3D(1:imax,j,k)=Cx3D(1:imax,j,k)+cccx(1:imax)
+			DD3D(1:imax,j,k)=DD3D(1:imax,j,k)+bbbx(1:imax)-1.
+           enddo
+		  enddo
+		  do k=1,kmax 
+           do i=1,imax 
+            do j=1,jmax 
+				jm=j-1 !MAX(0,j-1)
+				jp=j+1 !MIN(px*jmax+1,j+1)
+				ekm_min= 0.25*(ekm(i,j,k)+ekm(i,jm,k)+ekm(i+1,j,k)+ekm(i+1,jm,k))
+     & 			+ MAX(muA(i,j,k),muA(i,jm,k),muA(i+1,j,k),muA(i+1,jm,k))				
+				ekm_plus=0.25*(ekm(i,j,k)+ekm(i,jp,k)+ekm(i+1,j,k)+ekm(i+1,jp,k))
+     &			+ MAX(muA(i,j,k),muA(i,jp,k),muA(i+1,j,k),muA(i+1,jp,k))				
+				aaay(j)=-CNz*ekm_min*dt/(Ru(i)*(phip(j)-phip(jm))*Ru(i)*dphi2(j))/rhU(i,j,k)
+				cccy(j)=-CNz*ekm_plus*dt/(Ru(i)*(phip(jp)-phip(j))*Ru(i)*dphi2(j))/rhU(i,j,k)				
+				bbby(j)=1.-aaay(j)-cccy(j) 
+			enddo
+			Ay3D(i,1:jmax,k)=Ay3D(i,1:jmax,k)+aaay(1:jmax)
+			Cy3D(i,1:jmax,k)=Cy3D(i,1:jmax,k)+cccy(1:jmax)
+			DD3D(i,1:jmax,k)=DD3D(i,1:jmax,k)+bbby(1:jmax)-1.
+           enddo
+		  enddo
+		  do j=1,jmax
+           do i=1,imax
+            do k=1,kmax !0,k1
+				km=k-1 !MAX(0,k-1)
+				kp=k+1 !MIN(k1,k+1)
+				ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i+1,j,k)+ekm(i+1,j,km))!*MIN(fc_global(i,j+rank*jmax,k),
+     &			+ MAX(muA(i,j,k),muA(i,j,km),muA(i+1,j,k),muA(i+1,j,km))				
+!     & 			fc_global(i,j+rank*jmax,km),fc_global(i+1,j+rank*jmax,k),fc_global(i+1,j+rank*jmax,km))
+				ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i+1,j,k)+ekm(i+1,j,kp))!*MIN(fc_global(i,j+rank*jmax,k),
+     &			+ MAX(muA(i,j,k),muA(i,j,kp),muA(i+1,j,k),muA(i+1,j,kp))				
+!     & 			fc_global(i,j+rank*jmax,kp),fc_global(i+1,j+rank*jmax,k),fc_global(i+1,j+rank*jmax,kp))
+				aaa(k)=-CNz*ekm_min*dt/dz**2/rhU(i,j,k) !/rho_min
+				ccc(k)=-CNz*ekm_plus*dt/dz**2/rhU(i,j,k) !/rho_plus
+				bbb(k)=1.-aaa(k)-ccc(k) 				
+            enddo
+			Az3D(i,j,1:kmax)=Az3D(i,j,1:kmax)+aaa(1:kmax)
+			Cz3D(i,j,1:kmax)=Cz3D(i,j,1:kmax)+ccc(1:kmax)
+			DD3D(i,j,1:kmax)=DD3D(i,j,1:kmax)+bbb(1:kmax)-1.
+           enddo
+		  enddo		
+		ENDIF
+
+		  IF (periodicy.eq.0) THEN !bc defined at both lateral boundaries 
+			jb=1
+			je=jmax			
+			IF (rank.eq.0) THEN 
+				Ax3D(0:i1,0,0:k1)=0.
+				Cx3D(0:i1,0,0:k1)=0.
+				Ay3D(0:i1,0,0:k1)=0.
+				Cy3D(0:i1,0,0:k1)=0.
+				Az3D(0:i1,0,0:k1)=0.
+				Cz3D(0:i1,0,0:k1)=0.				
+				DD3D(0:i1,0,0:k1)=1.
+				jb=1 !leave symmetry and reduce amount of work !0 
+				je=jmax
+			ELSEIF (rank.eq.px-1) THEN 
+				Ax3D(0:i1,j1,0:k1)=0.
+				Cx3D(0:i1,j1,0:k1)=0.
+				Ay3D(0:i1,j1,0:k1)=0.
+				Cy3D(0:i1,j1,0:k1)=0.				
+				Az3D(0:i1,j1,0:k1)=0.
+				Cz3D(0:i1,j1,0:k1)=0.
+				DD3D(0:i1,j1,0:k1)=1.
+				jb=1
+				je=jmax !leave symmetry and reduce amount of work !j1 
+			ENDIF
+		  ELSEIF (periodicy.eq.2) THEN !d.dn=0
+			jb=1
+			je=jmax	
+			IF (rank.eq.0) THEN 
+				DD3D(0:i1,1,0:k1)=DD3D(0:i1,1,0:k1)+Ay3D(0:i1,1,0:k1) !1.-Cy3D(0:i1,1,0:k1) !d.dn=0
+				Ay3D(0:i1,1,0:k1)=0.
+				!Ax3D(0:i1,1,0:k1)=0.
+				!Cx3D(0:i1,1,0:k1)=0.
+				!Az3D(0:i1,1,0:k1)=0.
+				!Cz3D(0:i1,1,0:k1)=0.				
+			ELSEIF (rank.eq.px-1) THEN 
+				DD3D(0:i1,jmax,0:k1)=DD3D(0:i1,jmax,0:k1)+Cy3D(0:i1,jmax,0:k1) !1.-Ay3D(0:i1,jmax,0:k1) !d.dn=0
+				Cy3D(0:i1,jmax,0:k1)=0.
+				!Ax3D(0:i1,jmax,0:k1)=0.
+				!Cx3D(0:i1,jmax,0:k1)=0.
+				!Az3D(0:i1,jmax,0:k1)=0.
+				!Cz3D(0:i1,jmax,0:k1)=0.				
+			ENDIF
+		  ELSEIF (periodicy.eq.1) THEN 
+			jb=1
+			je=jmax			
+		  ENDIF 
+		IF (slip_bot.eq.-1) THEN !no slip bottom, free slip Neumann UV top 
+			DD3D(0:i1,0:j1,kmax)=DD3D(0:i1,0:j1,kmax)+Cz3D(0:i1,0:j1,kmax) !1.-Az3D(0:i1,0:j1,kmax)
+			Cz3D(0:i1,0:j1,kmax)=0.	
+			!Ax3D(0:i1,0:j1,kmax)=0.
+			!Cx3D(0:i1,0:j1,kmax)=0.
+			!Ay3D(0:i1,0:j1,kmax)=0.
+			!Cy3D(0:i1,0:j1,kmax)=0.	
+			DD3D(0:i1,0:j1,1)=DD3D(0:i1,0:j1,1)-Az3D(0:i1,0:j1,1) !1.-2.*Az3D(0:i1,0:j1,1)-Cz3D(0:i1,0:j1,1)
+			Az3D(0:i1,0:j1,1)=0.		
+			!Cz3D(0:i1,0:j1,1)=0.
+			!!RHS3D(0:i1,0:j1,1)=0.
+			!Ax3D(0:i1,0:j1,1)=0.
+			!Cx3D(0:i1,0:j1,1)=0.
+			!Ay3D(0:i1,0:j1,1)=0.
+			!Cy3D(0:i1,0:j1,1)=0.
+			kb=1
+			ke=kmax
+		ELSEIF (slip_bot.eq.-2) THEN !no slip top and bottom 
+			DD3D(0:i1,0:j1,kmax)=DD3D(0:i1,0:j1,kmax)-Cz3D(0:i1,0:j1,kmax) !1.-Az3D(0:i1,0:j1,kmax)-2.*Cz3D(0:i1,0:j1,kmax)
+			Cz3D(0:i1,0:j1,kmax)=0.		
+			!Az3D(0:i1,0:j1,kmax)=0.
+			!!RHS3D(0:i1,0:j1,kmax)=0.
+!			Ax3D(0:i1,0:j1,kmax)=0.
+!			Cx3D(0:i1,0:j1,kmax)=0.
+!			Ay3D(0:i1,0:j1,kmax)=0.
+!			Cy3D(0:i1,0:j1,kmax)=0.			
+			DD3D(0:i1,0:j1,1)=DD3D(0:i1,0:j1,1)-Az3D(0:i1,0:j1,1) !1.-2.*Az3D(0:i1,0:j1,1)-Cz3D(0:i1,0:j1,1)
+			Az3D(0:i1,0:j1,1)=0.		
+			!Cz3D(0:i1,0:j1,1)=0.
+			!!RHS3D(0:i1,0:j1,1)=0.
+!			Ax3D(0:i1,0:j1,1)=0.
+!			Cx3D(0:i1,0:j1,1)=0.
+!			Ay3D(0:i1,0:j1,1)=0.
+!			Cy3D(0:i1,0:j1,1)=0.						
+			kb=1
+			ke=kmax			
+		ELSE !Neuman UV top and bottom
+			DD3D(0:i1,0:j1,kmax)=DD3D(0:i1,0:j1,kmax)+Cz3D(0:i1,0:j1,kmax) !1.-Az3D(0:i1,0:j1,kmax)
+			Cz3D(0:i1,0:j1,kmax)=0.	
+			!Ax3D(0:i1,0:j1,kmax)=0.
+			!Cx3D(0:i1,0:j1,kmax)=0.
+			!Ay3D(0:i1,0:j1,kmax)=0.
+			!Cy3D(0:i1,0:j1,kmax)=0.				
+			DD3D(0:i1,0:j1,1)=DD3D(0:i1,0:j1,1)+Az3D(0:i1,0:j1,1) !1.-Cz3D(0:i1,0:j1,1)
+			Az3D(0:i1,0:j1,1)=0.		
+			!Ax3D(0:i1,0:j1,1)=0.
+			!Cx3D(0:i1,0:j1,1)=0.
+			!Ay3D(0:i1,0:j1,1)=0.
+			!Cy3D(0:i1,0:j1,1)=0.			
+			kb=1
+			ke=kmax			
+		ENDIF 
+		IF (periodicx.eq.0) THEN
+			!RHS3D(0,0:j1,0:k1)=0.
+			DD3D(0,0:j1,0:k1)=1.
+			Ax3D(0,0:j1,0:k1)=0.
+			Cx3D(0,0:j1,0:k1)=0.
+			Ay3D(0,0:j1,0:k1)=0.
+			Cy3D(0,0:j1,0:k1)=0.
+			Az3D(0,0:j1,0:k1)=0.
+			Cz3D(0,0:j1,0:k1)=0.
+			DD3D(imax-1,0:j1,0:k1)=DD3D(imax-1,0:j1,0:k1)+Cx3D(imax-1,0:j1,0:k1) !1.-Ax3D(imax-1,0:j1,0:k1)
+			!Ax3D(imax-1,0:j1,0:k1)=0.
+			Cx3D(imax-1,0:j1,0:k1)=0.
+			!Ay3D(imax-1,0:j1,0:k1)=0.
+			!Cy3D(imax-1,0:j1,0:k1)=0.
+			!Az3D(imax-1,0:j1,0:k1)=0.
+			!Cz3D(imax-1,0:j1,0:k1)=0.
+!			DD3D(imax,0:j1,0:k1)=1.-Ax3D(imax,0:j1,0:k1)
+!			!Ax3D(imax,0:j1,0:k1)=0.
+!			Cx3D(imax,0:j1,0:k1)=0.
+!			Ay3D(imax,0:j1,0:k1)=0.
+!			Cy3D(imax,0:j1,0:k1)=0.
+!			Az3D(imax,0:j1,0:k1)=0.
+!			Cz3D(imax,0:j1,0:k1)=0.
+			ib=1 !leave symmetry and reduce amount of work !0
+			ie=imax-1			
+		ELSEIF (periodicx.eq.2) THEN
+			!RHS3D(0,0:j1,0:k1)=0.
+			DD3D(0,0:j1,0:k1)=1.
+			Ax3D(0,0:j1,0:k1)=0.
+			Cx3D(0,0:j1,0:k1)=0.
+			Ay3D(0,0:j1,0:k1)=0.
+			Cy3D(0,0:j1,0:k1)=0.
+			Az3D(0,0:j1,0:k1)=0.
+			Cz3D(0,0:j1,0:k1)=0.
+			!RHS3D(imax,0:j1,0:k1)=0.
+			DD3D(imax,0:j1,0:k1)=1.
+			Ax3D(imax,0:j1,0:k1)=0.
+			Cx3D(imax,0:j1,0:k1)=0.
+			Ay3D(imax,0:j1,0:k1)=0.
+			Cy3D(imax,0:j1,0:k1)=0.
+			Az3D(imax,0:j1,0:k1)=0.
+			Cz3D(imax,0:j1,0:k1)=0.		
+			ib=1 !leave symmetry and reduce amount of work !0
+			ie=imax-1 !leave symmetry and reduce amount of work !imax
+		ELSEIF (periodicx.eq.1) THEN 
+			ib=1
+			ie=imax		
+		ENDIF	
+		
+		IF (CNdiff_pc.eq.0) THEN !no pre-conditioner
+			call CN3Dcg(dUdt,u0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,i1,j1,k1,ib,ie,jb,je,kb,ke,CNdiff_maxi,CNdiff_tol,rank) 
+			!call CN3Dcg2(dUdt,u0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,ib,ie,jb,je,kb,ke,CNdiff_maxi,CNdiff_tol)
+		ELSEIF (CNdiff_pc.eq.1) THEN !diag pre-conditioner 
+			call CN3Dpcg_d(dUdt,u0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,i1,j1,k1,ib,ie,jb,je,kb,ke,CNdiff_maxi,CNdiff_tol,rank)
+		ELSEIF (CNdiff_pc.eq.2) THEN !incomplete Cholesky pre-conditioner 
+			call CN3Dpcg_ic(dUdt,u0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,i1,j1,k1,ib,ie,jb,je,kb,ke,CNdiff_maxi,CNdiff_tol,rank)			
+		ELSEIF (CNdiff_pc.eq.3) THEN !ILU(0) pre-conditioner 
+			call CN3Dpcg_ilu(dUdt,u0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,i1,j1,k1,ib,ie,jb,je,kb,ke,CNdiff_maxi,CNdiff_tol,rank)			
+		ELSEIF (CNdiff_pc.eq.4) THEN !pol pc 
+			call CN3Dpcg_pol(dUdt,u0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,i1,j1,k1,ib,ie,jb,je,kb,ke,CNdiff_maxi,CNdiff_tol,rank)			
+		ELSEIF (CNdiff_pc.eq.11) THEN !diag pre-conditioner directly imposed 
+			call CN3Dpcg_d2(dUdt,u0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,i1,j1,k1,ib,ie,jb,je,kb,ke,CNdiff_maxi,CNdiff_tol,rank)			
+		ELSEIF (CNdiff_pc.eq.41) THEN !Pol pc without diagional scaling 
+			call CN3Dpcg_pol2(dUdt,u0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,i1,j1,k1,ib,ie,jb,je,kb,ke,CNdiff_maxi,CNdiff_tol,rank)			
+		ENDIF 
+	
+		!! Fill off-diags and diagonal forming matrix A and RHS3D to solve implicit CN diffusion terms of the form A*velocity=RHS3D 
+		!! V-velocity:
+		Ax3D=0. !off-diagonal i-1 in x-dir 
+		Cx3D=0. !off-diagonal i+1 in x-dir 
+		Ay3D=0. !off-diagonal j-1 in y-dir 
+		Cy3D=0. !off-diagonal j+1 in y-dir 
+		Az3D=0. !off-diagonal k-1 in z-dir 
+		Cz3D=0. !off-diagonal k+1 in z-dir 
+		DD3D=1. !diagonal for xyz-dir combined
+		RHS3D=dVdt 
+		IF (Apvisc_interp.eq.1.or.Apvisc_interp.eq.3) THEN ! use interpolation for apparent viscosity and for moleculair and eddy viscosity:   
+		  do k=1,kmax 
+           do j=1,jmax
+            do i=1,imax !0,i1
+				im=i-1 !MAX(0,i-1)
+				ip=i+1 !MIN(i1,i+1)
+				ekm_min=0.25*(ekm(i,j,k)+ekm(im,j,k)+ekm(i,j+1,k)+ekm(im,j+1,k))!*MIN(fc_global(i,j+rank*jmax,k),
+!     & 			fc_global(im,j+rank*jmax,k),fc_global(i,j+1+rank*jmax,k),fc_global(im,j+1+rank*jmax,k))		
+				ekm_plus=0.25*(ekm(i,j,k)+ekm(ip,j,k)+ekm(i,j+1,k)+ekm(ip,j+1,k))!*MIN(fc_global(i,j+rank*jmax,k),
+!     & 			fc_global(ip,j+rank*jmax,k),fc_global(i,j+1+rank*jmax,k),fc_global(ip,j+1+rank*jmax,k))	
+				aaax(i)=-CNz*ekm_min*dt*Ru(im)/((Rp(i)-Rp(im))*dr(i)*Rp(i))/rhV(i,j,k) !/rho_min
+				cccx(i)=-CNz*ekm_plus*dt*Ru(i)/((Rp(ip)-Rp(i))*dr(i)*Rp(i))/rhV(i,j,k) !/rho_plus
+				bbbx(i)=1.-aaax(i)-cccx(i)
+			enddo
+			Ax3D(1:imax,j,k)=Ax3D(1:imax,j,k)+aaax(1:imax)
+			Cx3D(1:imax,j,k)=Cx3D(1:imax,j,k)+cccx(1:imax)
+			DD3D(1:imax,j,k)=DD3D(1:imax,j,k)+bbbx(1:imax)-1.	
+           enddo
+		  enddo
+		  do k=1,kmax 
+           do i=1,imax
+            do j=1,jmax
+				jm=j-1 !MAX(0,j-1)
+				jp=j+1 !MIN(px*jmax+1,j+1)
+				ekm_min= ekm(i,j,k)
+				ekm_plus=ekm(i,jp,k)
+				aaay(j)=-CNz*ekm_min*dt/(Rp(i)*dphi2(j)*Rp(i)*(phip(jp)-phip(j)))/rhV(i,j,k)
+				cccy(j)=-CNz*ekm_plus*dt/(Rp(i)*dphi2(jp)*Rp(i)*(phip(jp)-phip(j)))/rhV(i,j,k)
+				bbby(j)=1.-aaay(j)-cccy(j) 
+			enddo
+			Ay3D(i,1:jmax,k)=Ay3D(i,1:jmax,k)+aaay(1:jmax)
+			Cy3D(i,1:jmax,k)=Cy3D(i,1:jmax,k)+cccy(1:jmax)
+			DD3D(i,1:jmax,k)=DD3D(i,1:jmax,k)+bbby(1:jmax)-1.
+           enddo
+		  enddo		  
+		  do j=1,jmax
+           do i=1,imax
+            do k=1,kmax !0,k1
+				km=k-1 !MAX(0,k-1)
+				kp=k+1 !MIN(k1,k+1)
+				ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i,j+1,k)+ekm(i,j+1,km))!*MIN(fc_global(i,j+rank*jmax,k),
+!     & 			fc_global(i,j+rank*jmax,km),fc_global(i,j+1+rank*jmax,k),fc_global(i,j+1+rank*jmax,km))		
+				ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i,j+1,k)+ekm(i,j+1,kp))!*MIN(fc_global(i,j+rank*jmax,k),
+!     & 			fc_global(i,j+rank*jmax,kp),fc_global(i,j+1+rank*jmax,k),fc_global(i,j+1+rank*jmax,kp))		
+				aaa(k)=-CNz*ekm_min*dt/dz**2/rhV(i,j,k) !/rho_min
+				ccc(k)=-CNz*ekm_plus*dt/dz**2/rhV(i,j,k) !/rho_plus
+				bbb(k)=1.-aaa(k)-ccc(k) 				
+			enddo
+			Az3D(i,j,1:kmax)=Az3D(i,j,1:kmax)+aaa(1:kmax)
+			Cz3D(i,j,1:kmax)=Cz3D(i,j,1:kmax)+ccc(1:kmax)
+			DD3D(i,j,1:kmax)=DD3D(i,j,1:kmax)+bbb(1:kmax)-1.
+           enddo
+		  enddo
+		ELSEIF (Apvisc_interp.eq.2.or.Apvisc_interp.eq.4) THEN !use maximum of neighbouring cells for apparent visocity and linear interpolation for mol and turb visc
+		  do k=1,kmax 
+           do j=1,jmax
+            do i=1,imax !0,i1
+				im=i-1 !MAX(0,i-1)
+				ip=i+1 !MIN(i1,i+1)
+				ekm_min=0.25*(ekm(i,j,k)+ekm(im,j,k)+ekm(i,j+1,k)+ekm(im,j+1,k))!*MIN(fc_global(i,j+rank*jmax,k),
+     & 			+ MAX(muA(i,j,k),muA(im,j,k),muA(i,j+1,k),muA(im,j+1,k))				
+!     & 			fc_global(im,j+rank*jmax,k),fc_global(i,j+1+rank*jmax,k),fc_global(im,j+1+rank*jmax,k))		
+				ekm_plus=0.25*(ekm(i,j,k)+ekm(ip,j,k)+ekm(i,j+1,k)+ekm(ip,j+1,k))!*MIN(fc_global(i,j+rank*jmax,k),
+     &			+ MAX(muA(i,j,k),muA(ip,j,k),muA(i,j+1,k),muA(ip,j+1,k))				
+!     & 			fc_global(ip,j+rank*jmax,k),fc_global(i,j+1+rank*jmax,k),fc_global(ip,j+1+rank*jmax,k))	
+				aaax(i)=-CNz*ekm_min*dt*Ru(im)/((Rp(i)-Rp(im))*dr(i)*Rp(i))/rhV(i,j,k) !/rho_min
+				cccx(i)=-CNz*ekm_plus*dt*Ru(i)/((Rp(ip)-Rp(i))*dr(i)*Rp(i))/rhV(i,j,k) !/rho_plus
+				bbbx(i)=1.-aaax(i)-cccx(i)
+			enddo
+			Ax3D(1:imax,j,k)=Ax3D(1:imax,j,k)+aaax(1:imax)
+			Cx3D(1:imax,j,k)=Cx3D(1:imax,j,k)+cccx(1:imax)
+			DD3D(1:imax,j,k)=DD3D(1:imax,j,k)+bbbx(1:imax)-1.	
+           enddo
+		  enddo
+		  do k=1,kmax 
+           do i=1,imax
+            do j=1,jmax
+				jm=j-1 !MAX(0,j-1)
+				jp=j+1 !MIN(px*jmax+1,j+1)
+				ekm_min= ekm(i,j,k)+muA(i,j,k)
+				ekm_plus=ekm(i,jp,k)+muA(i,jp,k)
+				aaay(j)=-CNz*ekm_min*dt/(Rp(i)*dphi2(j)*Rp(i)*(phip(jp)-phip(j)))/rhV(i,j,k)
+				cccy(j)=-CNz*ekm_plus*dt/(Rp(i)*dphi2(jp)*Rp(i)*(phip(jp)-phip(j)))/rhV(i,j,k)
+				bbby(j)=1.-aaay(j)-cccy(j) 
+			enddo
+			Ay3D(i,1:jmax,k)=Ay3D(i,1:jmax,k)+aaay(1:jmax)
+			Cy3D(i,1:jmax,k)=Cy3D(i,1:jmax,k)+cccy(1:jmax)
+			DD3D(i,1:jmax,k)=DD3D(i,1:jmax,k)+bbby(1:jmax)-1.
+           enddo
+		  enddo		  
+		  do j=1,jmax
+           do i=1,imax
+            do k=1,kmax !0,k1
+				km=k-1 !MAX(0,k-1)
+				kp=k+1 !MIN(k1,k+1)
+				ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i,j+1,k)+ekm(i,j+1,km))!*MIN(fc_global(i,j+rank*jmax,k),
+     &			+ MAX(muA(i,j,k),muA(i,j,km),muA(i,j+1,k),muA(i,j+1,km))				
+!     & 			fc_global(i,j+rank*jmax,km),fc_global(i,j+1+rank*jmax,k),fc_global(i,j+1+rank*jmax,km))		
+				ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i,j+1,k)+ekm(i,j+1,kp))!*MIN(fc_global(i,j+rank*jmax,k),
+     &			+ MAX(muA(i,j,k),muA(i,j,kp),muA(i,j+1,k),muA(i,j+1,kp))				
+!     & 			fc_global(i,j+rank*jmax,kp),fc_global(i,j+1+rank*jmax,k),fc_global(i,j+1+rank*jmax,kp))		
+				aaa(k)=-CNz*ekm_min*dt/dz**2/rhV(i,j,k) !/rho_min
+				ccc(k)=-CNz*ekm_plus*dt/dz**2/rhV(i,j,k) !/rho_plus
+				bbb(k)=1.-aaa(k)-ccc(k) 				
+			enddo
+			Az3D(i,j,1:kmax)=Az3D(i,j,1:kmax)+aaa(1:kmax)
+			Cz3D(i,j,1:kmax)=Cz3D(i,j,1:kmax)+ccc(1:kmax)
+			DD3D(i,j,1:kmax)=DD3D(i,j,1:kmax)+bbb(1:kmax)-1.
+           enddo
+		  enddo		
+		ENDIF 
+
+
+			kb=1 
+			ke=kmax 
+		IF (slip_bot.eq.-1) THEN !no slip bottom, free slip Neumann UV top 
+			DD3D(0:i1,0:j1,kmax)=DD3D(0:i1,0:j1,kmax)+Cz3D(0:i1,0:j1,kmax) !1.-Az3D(0:i1,0:j1,kmax)
+			Cz3D(0:i1,0:j1,kmax)=0.	
+			!Ax3D(0:i1,0:j1,kmax)=0.
+			!Cx3D(0:i1,0:j1,kmax)=0.
+			!Ay3D(0:i1,0:j1,kmax)=0.
+			!Cy3D(0:i1,0:j1,kmax)=0.	
+			DD3D(0:i1,0:j1,1)=DD3D(0:i1,0:j1,1)-Az3D(0:i1,0:j1,1) !1.-2.*Az3D(0:i1,0:j1,1)-Cz3D(0:i1,0:j1,1)
+			Az3D(0:i1,0:j1,1)=0.		
+			!Cz3D(0:i1,0:j1,1)=0.
+			!!RHS3D(0:i1,0:j1,1)=0.
+			!Ax3D(0:i1,0:j1,1)=0.
+			!Cx3D(0:i1,0:j1,1)=0.
+			!Ay3D(0:i1,0:j1,1)=0.
+			!Cy3D(0:i1,0:j1,1)=0.
+			kb=1 
+			ke=kmax 
+		ELSEIF (slip_bot.eq.-2) THEN !no slip top and bottom 
+			DD3D(0:i1,0:j1,kmax)=DD3D(0:i1,0:j1,kmax)-Cz3D(0:i1,0:j1,kmax) !1.-Az3D(0:i1,0:j1,kmax)-2.*Cz3D(0:i1,0:j1,kmax)
+			Cz3D(0:i1,0:j1,kmax)=0.		
+			!Az3D(0:i1,0:j1,kmax)=0.
+			!!RHS3D(0:i1,0:j1,kmax)=0.
+!			Ax3D(0:i1,0:j1,kmax)=0.
+!			Cx3D(0:i1,0:j1,kmax)=0.
+!			Ay3D(0:i1,0:j1,kmax)=0.
+!			Cy3D(0:i1,0:j1,kmax)=0.			
+			DD3D(0:i1,0:j1,1)=DD3D(0:i1,0:j1,1)-Az3D(0:i1,0:j1,1) !1.-2.*Az3D(0:i1,0:j1,1)-Cz3D(0:i1,0:j1,1)
+			Az3D(0:i1,0:j1,1)=0.		
+			!Cz3D(0:i1,0:j1,1)=0.
+			!!RHS3D(0:i1,0:j1,1)=0.
+!			Ax3D(0:i1,0:j1,1)=0.
+!			Cx3D(0:i1,0:j1,1)=0.
+!			Ay3D(0:i1,0:j1,1)=0.
+!			Cy3D(0:i1,0:j1,1)=0.						
+			kb=1 
+			ke=kmax 			
+		ELSE !Neuman UV top and bottom
+			DD3D(0:i1,0:j1,kmax)=DD3D(0:i1,0:j1,kmax)+Cz3D(0:i1,0:j1,kmax) !1.-Az3D(0:i1,0:j1,kmax)
+			Cz3D(0:i1,0:j1,kmax)=0.	
+			!Ax3D(0:i1,0:j1,kmax)=0.
+			!Cx3D(0:i1,0:j1,kmax)=0.
+			!Ay3D(0:i1,0:j1,kmax)=0.
+			!Cy3D(0:i1,0:j1,kmax)=0.				
+			DD3D(0:i1,0:j1,1)=DD3D(0:i1,0:j1,1)+Az3D(0:i1,0:j1,1) !1.-Cz3D(0:i1,0:j1,1)
+			Az3D(0:i1,0:j1,1)=0.		
+			!Ax3D(0:i1,0:j1,1)=0.
+			!Cx3D(0:i1,0:j1,1)=0.
+			!Ay3D(0:i1,0:j1,1)=0.
+			!Cy3D(0:i1,0:j1,1)=0.			
+			kb=1 
+			ke=kmax 			
+		ENDIF 
+
+	  IF (periodicy.eq.0.or.periodicy.eq.2) THEN !bc defined at both lateral boundaries, which is V=0 for periodicy.eq.2; and periodicy.eq.1 do nothing	
+		jb=1 
+		je=jmax		  
+		IF (rank.eq.0) THEN
+			DD3D(0:i1,0,0:k1)=1.
+			Ax3D(0:i1,0,0:k1)=0.
+			Cx3D(0:i1,0,0:k1)=0.
+			Ay3D(0:i1,0,0:k1)=0.
+			Cy3D(0:i1,0,0:k1)=0.			
+			Az3D(0:i1,0,0:k1)=0.
+			Cz3D(0:i1,0,0:k1)=0.
+			jb=1 !leave symmetry and reduce amount of work !0 
+			je=jmax 
+		ELSEIF (rank.eq.px-1) THEN
+			DD3D(0:i1,jmax,0:k1)=1.
+			Ax3D(0:i1,jmax,0:k1)=0.
+			Cx3D(0:i1,jmax,0:k1)=0.
+			Ay3D(0:i1,jmax,0:k1)=0.
+			Cy3D(0:i1,jmax,0:k1)=0.			
+			Az3D(0:i1,jmax,0:k1)=0.
+			Cz3D(0:i1,jmax,0:k1)=0.
+			jb=1 
+			je=jmax-1 !leave symmetry and reduce amount of work !jmax			
+		ENDIF 
+	  ELSEIF (periodicy.eq.1) THEN  
+		jb=1 
+		je=jmax		  
+	  ENDIF	
+
+		IF (periodicx.eq.0) THEN
+			!RHS3D(0,0:j1,0:k1)=0.
+			DD3D(0,0:j1,0:k1)=1.
+			Ax3D(0,0:j1,0:k1)=0.
+			Cx3D(0,0:j1,0:k1)=0.
+			Ay3D(0,0:j1,0:k1)=0.
+			Cy3D(0,0:j1,0:k1)=0.
+			Az3D(0,0:j1,0:k1)=0.
+			Cz3D(0,0:j1,0:k1)=0.
+			DD3D(imax,0:j1,0:k1)=DD3D(imax,0:j1,0:k1)+Cx3D(imax,0:j1,0:k1) !1.-Ax3D(imax,0:j1,0:k1)
+			!Ax3D(imax,0:j1,0:k1)=0.
+			Cx3D(imax,0:j1,0:k1)=0.
+			!Ay3D(imax,0:j1,0:k1)=0.
+			!Cy3D(imax,0:j1,0:k1)=0.
+			!Az3D(imax,0:j1,0:k1)=0.
+			!Cz3D(imax,0:j1,0:k1)=0.	
+			ib=1 !leave symmetry and reduce amount of work !0 
+			ie=imax 
+		ELSEIF (periodicx.eq.2) THEN 
+			DD3D(1,0:j1,0:k1)=DD3D(1,0:j1,0:k1)-Ax3D(1,0:j1,0:k1) !1.-2.*Ax3D(1,0:j1,0:k1)-Cx3D(1,0:j1,0:k1)
+			Ax3D(1,0:j1,0:k1)=0.
+!			!Cx3D(1,0:j1,0:k1)=0.
+!			Ay3D(1,0:j1,0:k1)=0.
+!			Cy3D(1,0:j1,0:k1)=0.
+!			Az3D(1,0:j1,0:k1)=0.
+!			Cz3D(1,0:j1,0:k1)=0.	
+			DD3D(imax,0:j1,0:k1)=DD3D(imax,0:j1,0:k1)-Cx3D(imax,0:j1,0:k1) !1.-Ax3D(imax,0:j1,0:k1)-2.*Cx3D(imax,0:j1,0:k1)
+!			!Ax3D(imax,0:j1,0:k1)=0.
+			Cx3D(imax,0:j1,0:k1)=0.
+!			Ay3D(imax,0:j1,0:k1)=0.
+!			Cy3D(imax,0:j1,0:k1)=0.
+!			Az3D(imax,0:j1,0:k1)=0.
+!			Cz3D(imax,0:j1,0:k1)=0.
+			ib=1 
+			ie=imax	
+		ELSEIF (periodicx.eq.1) THEN 
+			ib=1 
+			ie=imax			
+		ENDIF
+		
+		IF (CNdiff_pc.eq.0) THEN !no pre-conditioner
+			call CN3Dcg(dVdt,v0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,i1,j1,k1,ib,ie,jb,je,kb,ke,CNdiff_maxi,CNdiff_tol,rank) 
+			!call CN3Dcg2(dVdt,v0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,ib,ie,jb,je,kb,ke,CNdiff_maxi,CNdiff_tol)
+		ELSEIF (CNdiff_pc.eq.1) THEN !diag pre-conditioner 
+			call CN3Dpcg_d(dVdt,v0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,i1,j1,k1,ib,ie,jb,je,kb,ke,CNdiff_maxi,CNdiff_tol,rank)
+		ELSEIF (CNdiff_pc.eq.2) THEN !incomplete Cholesky pre-conditioner 
+			call CN3Dpcg_ic(dVdt,v0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,i1,j1,k1,ib,ie,jb,je,kb,ke,CNdiff_maxi,CNdiff_tol,rank)			
+		ELSEIF (CNdiff_pc.eq.3) THEN !ILU(0) pre-conditioner 
+			call CN3Dpcg_ilu(dVdt,v0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,i1,j1,k1,ib,ie,jb,je,kb,ke,CNdiff_maxi,CNdiff_tol,rank)			
+		ELSEIF (CNdiff_pc.eq.4) THEN !pol pc 
+			call CN3Dpcg_pol(dVdt,v0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,i1,j1,k1,ib,ie,jb,je,kb,ke,CNdiff_maxi,CNdiff_tol,rank)			
+		ELSEIF (CNdiff_pc.eq.11) THEN !diag pre-conditioner directly imposed 
+			call CN3Dpcg_d2(dVdt,v0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,i1,j1,k1,ib,ie,jb,je,kb,ke,CNdiff_maxi,CNdiff_tol,rank)			
+		ELSEIF (CNdiff_pc.eq.41) THEN !Pol pc without diagional scaling 
+			call CN3Dpcg_pol2(dVdt,v0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,i1,j1,k1,ib,ie,jb,je,kb,ke,CNdiff_maxi,CNdiff_tol,rank)			
+		ENDIF 
+	  
+	  
+
+		!! Fill off-diags and diagonal forming matrix A and RHS3D to solve implicit CN diffusion terms of the form A*velocity=RHS3D 
+		!! W-velocity:
+		Ax3D=0. !off-diagonal i-1 in x-dir 
+		Cx3D=0. !off-diagonal i+1 in x-dir 
+		Ay3D=0. !off-diagonal j-1 in y-dir 
+		Cy3D=0. !off-diagonal j+1 in y-dir 
+		Az3D=0. !off-diagonal k-1 in z-dir 
+		Cz3D=0. !off-diagonal k+1 in z-dir 
+		DD3D=1. !diagonal for xyz-dir combined
+		RHS3D=dWdt 
+		
+		IF (Apvisc_interp.eq.1.or.Apvisc_interp.eq.3) THEN !use linear interpolation of neighbouring cells for apparent visocity and mol and turb visc
+		  do k=1,kmax 
+           do j=1,jmax
+            do i=1,imax !0,i1
+				im=i-1 !MAX(0,i-1)
+				ip=i+1 !MIN(i1,i+1)
+				ekm_min=0.25*(ekm(i,j,k)+ekm(im,j,k)+ekm(i,j,k+1)+ekm(im,j,k+1))!*MIN(fc_global(i,j+rank*jmax,k),
+!     & 			fc_global(im,j+rank*jmax,k),fc_global(i,j+rank*jmax,k+1),fc_global(im,j+rank*jmax,k+1))		
+				ekm_plus=0.25*(ekm(i,j,k)+ekm(ip,j,k)+ekm(i,j,k+1)+ekm(ip,j,k+1))!*MIN(fc_global(i,j+rank*jmax,k),
+!     & 			fc_global(ip,j+rank*jmax,k),fc_global(i,j+rank*jmax,k+1),fc_global(ip,j+rank*jmax,k+1))	
+				aaax(i)=-CNz*ekm_min*dt*Ru(im)/((Rp(i)-Rp(im))*dr(i)*Rp(i))/rhW(i,j,k) !/rho_min
+				cccx(i)=-CNz*ekm_plus*dt*Ru(i)/((Rp(ip)-Rp(i))*dr(i)*Rp(i))/rhW(i,j,k) !/rho_plus
+				bbbx(i)=1.-aaax(i)-cccx(i)				
+            enddo
+			Ax3D(1:imax,j,k)=Ax3D(1:imax,j,k)+aaax(1:imax)
+			Cx3D(1:imax,j,k)=Cx3D(1:imax,j,k)+cccx(1:imax)
+			DD3D(1:imax,j,k)=DD3D(1:imax,j,k)+bbbx(1:imax)-1. 	 
+		   enddo
+		  enddo	
+		  do k=1,kmax 
+           do i=1,imax
+            do j=1,jmax 
+				jm=j-1 !MAX(0,j-1)
+				jp=j+1 !MIN(px*jmax+1,j+1)
+				ekm_min= 0.25*(ekm(i,j,k)+ekm(i,jm,k)+ekm(i,j,k+1)+ekm(i,jm,k+1))
+				ekm_plus=0.25*(ekm(i,j,k)+ekm(i,jp,k)+ekm(i,j,k+1)+ekm(i,jp,k+1))
+				aaay(j)=-CNz*ekm_min*dt/(Rp(i)*(phip(j)-phip(jm))*Rp(i)*dphi2(j))/rhW(i,j,k)
+				cccy(j)=-CNz*ekm_plus*dt/(Rp(i)*(phip(jp)-phip(j))*Rp(i)*dphi2(j))/rhW(i,j,k)				
+				bbby(j)=1.-aaay(j)-cccy(j) 	
+			enddo
+			Ay3D(i,1:jmax,k)=Ay3D(i,1:jmax,k)+aaay(1:jmax)
+			Cy3D(i,1:jmax,k)=Cy3D(i,1:jmax,k)+cccy(1:jmax)
+			DD3D(i,1:jmax,k)=DD3D(i,1:jmax,k)+bbby(1:jmax)-1.
+           enddo
+		  enddo		
+		  ! all slip_bot values give same boundary condition for W:
+		  do j=1,jmax
+           do i=1,imax
+            do k=1,kmax!-1 !0,k1
+				!km=k-1 !MAX(0,k-1)
+				kp=k+1 !MIN(k1,k+1)
+				ekm_min=ekm(i,j,k)!*fc_global(i,j+rank*jmax,k)
+				ekm_plus=ekm(i,j,kp)!*fc_global(i,j+rank*jmax,kp)
+				aaa(k)=-CNz*ekm_min*dt/dz**2/rhW(i,j,k) !/drdt(i,j,k)
+				ccc(k)=-CNz*ekm_plus*dt/dz**2/rhW(i,j,k) !/drdt(i,j,kp)
+				bbb(k)=1.-aaa(k)-ccc(k) 
+            enddo
+			Az3D(i,j,1:kmax)=Az3D(i,j,1:kmax)+aaa(1:kmax)
+			Cz3D(i,j,1:kmax)=Cz3D(i,j,1:kmax)+ccc(1:kmax)
+			DD3D(i,j,1:kmax)=DD3D(i,j,1:kmax)+bbb(1:kmax)-1.
+           enddo
+		  enddo		
+		ELSEIF (Apvisc_interp.eq.2.or.Apvisc_interp.eq.4) THEN !use maximum of neighbouring cells for apparent visocity and linear interpolation for mol and turb visc
+		  do k=1,kmax 
+           do j=1,jmax
+            do i=1,imax !0,i1
+				im=i-1 !MAX(0,i-1)
+				ip=i+1 !MIN(i1,i+1)
+				ekm_min=0.25*(ekm(i,j,k)+ekm(im,j,k)+ekm(i,j,k+1)+ekm(im,j,k+1))!*MIN(fc_global(i,j+rank*jmax,k),
+     & 			+ MAX(muA(i,j,k),muA(im,j,k),muA(i,j,k+1),muA(im,j,k+1))				
+!     & 			fc_global(im,j+rank*jmax,k),fc_global(i,j+rank*jmax,k+1),fc_global(im,j+rank*jmax,k+1))		
+				ekm_plus=0.25*(ekm(i,j,k)+ekm(ip,j,k)+ekm(i,j,k+1)+ekm(ip,j,k+1))!*MIN(fc_global(i,j+rank*jmax,k),
+     &			+ MAX(muA(i,j,k),muA(ip,j,k),muA(i,j,k+1),muA(ip,j,k+1))				
+!     & 			fc_global(ip,j+rank*jmax,k),fc_global(i,j+rank*jmax,k+1),fc_global(ip,j+rank*jmax,k+1))	
+				aaax(i)=-CNz*ekm_min*dt*Ru(im)/((Rp(i)-Rp(im))*dr(i)*Rp(i))/rhW(i,j,k) !/rho_min
+				cccx(i)=-CNz*ekm_plus*dt*Ru(i)/((Rp(ip)-Rp(i))*dr(i)*Rp(i))/rhW(i,j,k) !/rho_plus
+				bbbx(i)=1.-aaax(i)-cccx(i)				
+            enddo
+			Ax3D(1:imax,j,k)=Ax3D(1:imax,j,k)+aaax(1:imax)
+			Cx3D(1:imax,j,k)=Cx3D(1:imax,j,k)+cccx(1:imax)
+			DD3D(1:imax,j,k)=DD3D(1:imax,j,k)+bbbx(1:imax)-1. 	 
+		   enddo
+		  enddo	
+		  do k=1,kmax 
+           do i=1,imax
+            do j=1,jmax 
+				jm=j-1 !MAX(0,j-1)
+				jp=j+1 !MIN(px*jmax+1,j+1)
+				ekm_min= 0.25*(ekm(i,j,k)+ekm(i,jm,k)+ekm(i,j,k+1)+ekm(i,jm,k+1))
+     &			+ MAX(muA(i,j,k),muA(i,jm,k),muA(i,j,k+1),muA(i,jm,k+1))				
+				ekm_plus=0.25*(ekm(i,j,k)+ekm(i,jp,k)+ekm(i,j,k+1)+ekm(i,jp,k+1))
+     &			+ MAX(muA(i,j,k),muA(i,jp,k),muA(i,j,k+1),muA(i,jp,k+1))				
+				aaay(j)=-CNz*ekm_min*dt/(Rp(i)*(phip(j)-phip(jm))*Rp(i)*dphi2(j))/rhW(i,j,k)
+				cccy(j)=-CNz*ekm_plus*dt/(Rp(i)*(phip(jp)-phip(j))*Rp(i)*dphi2(j))/rhW(i,j,k)				
+				bbby(j)=1.-aaay(j)-cccy(j) 	
+			enddo
+			Ay3D(i,1:jmax,k)=Ay3D(i,1:jmax,k)+aaay(1:jmax)
+			Cy3D(i,1:jmax,k)=Cy3D(i,1:jmax,k)+cccy(1:jmax)
+			DD3D(i,1:jmax,k)=DD3D(i,1:jmax,k)+bbby(1:jmax)-1.
+           enddo
+		  enddo		
+		  ! all slip_bot values give same boundary condition for W:
+		  do j=1,jmax
+           do i=1,imax
+            do k=1,kmax!-1 !0,k1
+				!km=k-1 !MAX(0,k-1)
+				kp=k+1 !MIN(k1,k+1)
+				ekm_min=ekm(i,j,k)+muA(i,j,k) !*fc_global(i,j+rank*jmax,k)
+				ekm_plus=ekm(i,j,kp)+muA(i,j,kp) !*fc_global(i,j+rank*jmax,kp)
+				aaa(k)=-CNz*ekm_min*dt/dz**2/rhW(i,j,k) !/drdt(i,j,k)
+				ccc(k)=-CNz*ekm_plus*dt/dz**2/rhW(i,j,k) !/drdt(i,j,kp)
+				bbb(k)=1.-aaa(k)-ccc(k) 
+            enddo
+			Az3D(i,j,1:kmax)=Az3D(i,j,1:kmax)+aaa(1:kmax)
+			Cz3D(i,j,1:kmax)=Cz3D(i,j,1:kmax)+ccc(1:kmax)
+			DD3D(i,j,1:kmax)=DD3D(i,j,1:kmax)+bbb(1:kmax)-1.
+           enddo
+		  enddo
+		ekm = ekm + muA 
+		ENDIF 
+		IF (periodicy.eq.0) THEN !bc defined at both lateral boundaries 
+			jb=1
+			je=jmax			
+			IF (rank.eq.0) THEN 
+				Ax3D(0:i1,0,0:k1)=0.
+				Cx3D(0:i1,0,0:k1)=0.
+				Ay3D(0:i1,0,0:k1)=0.
+				Cy3D(0:i1,0,0:k1)=0.
+				Az3D(0:i1,0,0:k1)=0.
+				Cz3D(0:i1,0,0:k1)=0.				
+				DD3D(0:i1,0,0:k1)=1.
+				jb=1 !leave symmetry and reduce amount of work !0 
+				je=jmax
+			ELSEIF (rank.eq.px-1) THEN 
+				Ax3D(0:i1,j1,0:k1)=0.
+				Cx3D(0:i1,j1,0:k1)=0.
+				Ay3D(0:i1,j1,0:k1)=0.
+				Cy3D(0:i1,j1,0:k1)=0.				
+				Az3D(0:i1,j1,0:k1)=0.
+				Cz3D(0:i1,j1,0:k1)=0.
+				DD3D(0:i1,j1,0:k1)=1.
+				jb=1
+				je=jmax !leave symmetry and reduce amount of work !j1 
+			ENDIF
+		ELSEIF (periodicy.eq.2) THEN !d.dn=0
+			jb=1
+			je=jmax			
+			IF (rank.eq.0) THEN 
+				DD3D(0:i1,1,0:k1)=DD3D(0:i1,1,0:k1)+Ay3D(0:i1,1,0:k1) !1.-Cy3D(0:i1,1,0:k1) !d.dn=0
+				Ay3D(0:i1,1,0:k1)=0.
+				!Ax3D(0:i1,1,0:k1)=0.
+				!Cx3D(0:i1,1,0:k1)=0.
+				!Az3D(0:i1,1,0:k1)=0.
+				!Cz3D(0:i1,1,0:k1)=0.								
+				jb=1
+				je=jmax					
+			ELSEIF (rank.eq.px-1) THEN 
+				DD3D(0:i1,jmax,0:k1)=DD3D(0:i1,jmax,0:k1)+Cy3D(0:i1,jmax,0:k1) !1.-Ay3D(0:i1,jmax,0:k1) !DD3D(0:i1,jmax,0:k1)+Cy3D(0:i1,jmax,0:k1) !d.dn=0
+				Cy3D(0:i1,jmax,0:k1)=0.
+				!Ax3D(0:i1,jmax,0:k1)=0.
+				!Cx3D(0:i1,jmax,0:k1)=0.
+				!Az3D(0:i1,jmax,0:k1)=0.
+				!Cz3D(0:i1,jmax,0:k1)=0.				
+				jb=1
+				je=jmax					
+			ENDIF
+		ELSEIF (periodicy.eq.1) THEN 
+			jb=1
+			je=jmax			
+		ENDIF !periodicy.eq.1 to nothing
+
+		IF (periodicx.eq.0) THEN
+			DD3D(0,0:j1,0:k1)=1.
+			Ax3D(0,0:j1,0:k1)=0.
+			Cx3D(0,0:j1,0:k1)=0.
+			Ay3D(0,0:j1,0:k1)=0.
+			Cy3D(0,0:j1,0:k1)=0.
+			Az3D(0,0:j1,0:k1)=0.
+			Cz3D(0,0:j1,0:k1)=0.
+			DD3D(imax,0:j1,0:k1)=DD3D(imax,0:j1,0:k1)+Cx3D(imax,0:j1,0:k1) !1.-Ax3D(imax,0:j1,0:k1)
+			!Ax3D(imax,0:j1,0:k1)=0.
+			Cx3D(imax,0:j1,0:k1)=0.
+!			Ay3D(imax,0:j1,0:k1)=0.
+!			Cy3D(imax,0:j1,0:k1)=0.
+!			Az3D(imax,0:j1,0:k1)=0.
+!			Cz3D(imax,0:j1,0:k1)=0.	
+			ib = 1 !leave symmetry and reduce amount of work !0 
+			ie = imax 
+		ELSEIF (periodicx.eq.2) THEN 
+			DD3D(1,0:j1,0:k1)=DD3D(1,0:j1,0:k1)-Ax3D(1,0:j1,0:k1) !1.-2.*Ax3D(1,0:j1,0:k1)-Cx3D(1,0:j1,0:k1)
+			Ax3D(1,0:j1,0:k1)=0.
+!			!Cx3D(1,0:j1,0:k1)=0.
+!			Ay3D(1,0:j1,0:k1)=0.
+!			Cy3D(1,0:j1,0:k1)=0.
+!			Az3D(1,0:j1,0:k1)=0.
+!			Cz3D(1,0:j1,0:k1)=0.		
+		!this is needed, when done inside loop DD3D still contains contributions from z-dir and y-dir and this gives wrong bc at imax
+			RHS3D(imax,0:j1,0:k1)=dWdt(imax,0:j1,0:k1)-2.*Cx3D(imax,0:j1,0:k1)*W_ox 
+!			!RHS3D(imax,0:j1,0:k1)=W_ox-2.*Cx3D(imax,0:j1,0:k1)*W_ox 
+!			DD3D(imax,0:j1,0:k1)=1.-Ax3D(imax,0:j1,0:k1)-2.*Cx3D(imax,0:j1,0:k1)!-Az3D(imax,0:j1,0:k1)-Cz3D(imax,0:j1,0:k1)  
+			DD3D(imax,0:j1,0:k1)=DD3D(imax,0:j1,0:k1)-Cx3D(imax,0:j1,0:k1) !+Ay3D(imax,0:j1,0:k1)+Cy3D(imax,0:j1,0:k1)
+!			!Ax3D(imax,0:j1,0:k1)=0.
+			Cx3D(imax,0:j1,0:k1)=0.			
+!			Ay3D(imax,0:j1,0:k1)=0. !have to switch off diffusion in y-dir and z-dir for this boundary condition; otherwise bizar near wall W velocity sdc for high viscosity?
+!			Cy3D(imax,0:j1,0:k1)=0.
+!			Az3D(imax,0:j1,0:k1)=0.
+!			Cz3D(imax,0:j1,0:k1)=0.
+!			!!DD3D(imax,0:j1,1)=DD3D(imax,0:j1,1)+Az3D(imax,0:j1,1)
+!			!!Az3D(imax,0:j1,1)=0.
+!			!!DD3D(imax,0:j1,kmax-1)=DD3D(imax,0:j1,kmax-1)+Cz3D(imax,0:j1,kmax-1)
+!			!!Cz3D(imax,0:j1,kmax-1)=0.
+
+!			DD3D(imax,0:j1,0:k1)=DD3D(imax,0:j1,0:k1)-Cx3D(imax,0:j1,0:k1)  
+!			RHS3D(imax,0:j1,0:k1)=dWdt(imax,0:j1,0:k1)-2.*Cx3D(imax,0:j1,0:k1)*W_ox
+!			Cx3D(imax,0:j1,0:k1)=0.
+			
+!			RHS3D(imax,0:j1,0:k1)=W_ox-0.5*(Wnew(imax,0:j1,0:k1)-Wnew(imax-1,0:j1,0:k1)) !approximate bc which is stable for a not so important test case 
+!			DD3D(imax,0:j1,0:k1)=1.
+!			Ax3D(imax,0:j1,0:k1)=0.
+!			Cx3D(imax,0:j1,0:k1)=0.			
+!			Ay3D(imax,0:j1,0:k1)=0. !have to switch off diffusion in y-dir and z-dir for this boundary condition; otherwise bizar near wall W velocity sdc for high viscosity?
+!			Cy3D(imax,0:j1,0:k1)=0.
+!			Az3D(imax,0:j1,0:k1)=0.
+!			Cz3D(imax,0:j1,0:k1)=0.
+			
+			
+			ib = 1 
+			ie = imax	
+		ELSEIF (periodicx.eq.1) THEN 
+			ib = 1 
+			ie = imax		
+		ENDIF	
+		! for all slip_bot values W=0 top and bottom:
+		DD3D(0:i1,0:j1,0)=1. 
+		Ax3D(0:i1,0:j1,0)=0.
+		Cx3D(0:i1,0:j1,0)=0.			
+		Ay3D(0:i1,0:j1,0)=0.
+		Cy3D(0:i1,0:j1,0)=0.
+		Az3D(0:i1,0:j1,0)=0.
+		Cz3D(0:i1,0:j1,0)=0.
+		DD3D(0:i1,0:j1,kmax)=1. 
+		Ax3D(0:i1,0:j1,kmax)=0.
+		Cx3D(0:i1,0:j1,kmax)=0.			
+		Ay3D(0:i1,0:j1,kmax)=0.
+		Cy3D(0:i1,0:j1,kmax)=0.
+		Az3D(0:i1,0:j1,kmax)=0.
+		Cz3D(0:i1,0:j1,kmax)=0.
+		kb = 1 !leave symmetry and reduce amount of work ! 0 
+		ke = kmax-1 !leave symmetry and reduce amount of work !kmax 		
+		
+		IF (CNdiff_pc.eq.0) THEN !no pre-conditioner
+			call CN3Dcg(dWdt,w0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,i1,j1,k1,ib,ie,jb,je,kb,ke,CNdiff_maxi,CNdiff_tol,rank) 
+			!call CN3Dcg2(dWdt,w0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,ib,ie,jb,je,kb,ke,CNdiff_maxi,CNdiff_tol)
+		ELSEIF (CNdiff_pc.eq.1) THEN !diag pre-conditioner 
+			call CN3Dpcg_d(dWdt,w0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,i1,j1,k1,ib,ie,jb,je,kb,ke,CNdiff_maxi,CNdiff_tol,rank)
+		ELSEIF (CNdiff_pc.eq.2) THEN !incomplete Cholesky pre-conditioner 
+			call CN3Dpcg_ic(dWdt,w0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,i1,j1,k1,ib,ie,jb,je,kb,ke,CNdiff_maxi,CNdiff_tol,rank)			
+		ELSEIF (CNdiff_pc.eq.3) THEN !ILU(0) pre-conditioner 
+			call CN3Dpcg_ilu(dWdt,w0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,i1,j1,k1,ib,ie,jb,je,kb,ke,CNdiff_maxi,CNdiff_tol,rank)			
+		ELSEIF (CNdiff_pc.eq.4) THEN !pol pc 
+			call CN3Dpcg_pol(dWdt,w0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,i1,j1,k1,ib,ie,jb,je,kb,ke,CNdiff_maxi,CNdiff_tol,rank)			
+		ELSEIF (CNdiff_pc.eq.11) THEN !diag pre-conditioner directly imposed 
+			call CN3Dpcg_d2(dWdt,w0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,i1,j1,k1,ib,ie,jb,je,kb,ke,CNdiff_maxi,CNdiff_tol,rank)			
+		ELSEIF (CNdiff_pc.eq.41) THEN !Pol pc without diagional scaling 
+			call CN3Dpcg_pol2(dWdt,w0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,i1,j1,k1,ib,ie,jb,je,kb,ke,CNdiff_maxi,CNdiff_tol,rank)			
+		ENDIF  
+		
+		return
+		end	
+		
+
+
+
       subroutine diffuvw_xdir_CDS2_CNexpl(putoutu,putoutv,putoutw,Uvel,Vvel,Wvel,ib,ie,jb,je,kb,ke)
 
       USE nlist
@@ -2282,9 +3266,9 @@ c*****************************************************************
 	  CNz=1.
 	ENDIF
 	IF (CNdiffz.eq.11) THEN !CN diff in z-dir is half old, half new timestep (this is half old timestep)
-	  CNx=0.5 !0.5*2. !0.45 !0.5
-	  CNy=0.5 !0.5*2. !0.45 !0.5
-	  CNz=0.5 !0.5*2.
+	  CNx=1. !0.5 !0.5*2. !0.45 !0.5
+	  CNy=1. !0.5 !0.5*2. !0.45 !0.5
+	  CNz=1. !0.5 !0.5*2.
 	ELSEIF (CNdiffz.eq.12) THEN !CN diff in z-dir is 100% new timestep (Euler backward)
 	  CNx=0. 
 	  CNy=0. 
@@ -2292,6 +3276,11 @@ c*****************************************************************
 	  CNx=1.
 	  CNy=1. 
 	ENDIF	
+	IF (CNdiffz.eq.31) THEN 
+	  CNx=1.
+	  CNy=1. 
+	  CNz=1. 
+	ENDIF 	
       dzi =1./dz
       do i=ib,ie
       ip=i+1
@@ -2383,9 +3372,9 @@ c*****************************************************************
 	  CNz=1.
 	ENDIF
 	IF (CNdiffz.eq.11) THEN !CN diff in z-dir is half old, half new timestep (this is half old timestep)
-	  CNx=0.5 !0.5*2. !0.45 !0.5
-	  CNy=0.5 !0.5*2. !0.45 !0.5
-	  CNz=0.5 !0.5*2.
+	  CNx=1. !0.5 !0.5*2. !0.45 !0.5
+	  CNy=1. !0.5 !0.5*2. !0.45 !0.5
+	  CNz=1. !0.5 !0.5*2.
 	ELSEIF (CNdiffz.eq.12) THEN !CN diff in z-dir is 100% new timestep (Euler backward)
 	  CNx=0. 
 	  CNy=0. 
@@ -2393,6 +3382,11 @@ c*****************************************************************
 	  CNx=1.
 	  CNy=1. 
 	ENDIF	
+	IF (CNdiffz.eq.31) THEN 
+	  CNx=1.
+	  CNy=1.
+	  CNz=1.
+	ENDIF 
       dzi =1./dz
       do i=ib,ie
       ip=i+1
@@ -2481,9 +3475,9 @@ c*****************************************************************
 	  CNz=1.
 	ENDIF
 	IF (CNdiffz.eq.11) THEN !CN diff in z-dir is half old, half new timestep (this is half old timestep)
-	  CNx=0.5 !0.5*2. !0.45 !0.5
-	  CNy=0.5 !0.5*2. !0.45 !0.5
-	  CNz=0.5 !0.5*2.
+	  CNx=1. !0.5 !0.5*2. !0.45 !0.5
+	  CNy=1. !0.5 !0.5*2. !0.45 !0.5
+	  CNz=1. !0.5 !0.5*2.
 	ELSEIF (CNdiffz.eq.12) THEN !CN diff in z-dir is 100% new timestep (Euler backward)
 	  CNx=0. 
 	  CNy=0. 
@@ -2491,6 +3485,11 @@ c*****************************************************************
 	  CNx=1.
 	  CNy=1. 
 	ENDIF	
+	IF (CNdiffz.eq.31) THEN 
+	  CNx=1.
+	  CNy=1. 
+	  CNz=1. 
+	ENDIF 	
       dzi =1./dz
       do i=ib,ie
       ip=i+1
