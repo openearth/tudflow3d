@@ -419,7 +419,7 @@
 
       END SUBROUTINE slipvelocity_bed
 
-	  
+ 
 
        subroutine erosion_deposition(ccnew,cbotnew,ucfd,vcfd,wcfd,rcfd,ccfd,cbotcfd,ddt,dz)
 
@@ -450,10 +450,10 @@
 	REAL qb,MMM,MME,flux,ucr,qbf(1:nfrac),uuRrel,uuLrel,vvRrel,vvLrel,Shields,absUbl,ve_check,ustbl
       integer clock,nnn,k_maxU
       INTEGER, DIMENSION(:), ALLOCATABLE :: seed	
-	  INTEGER kbedp(0:i1,0:j1),ibeg,iend,kppE,kppW,kppN,kppS
+	  INTEGER kbedp(0:i1,0:j1),ibeg,iend,kppE,kppW,kppN,kppS,kbed_new(0:i1,0:j1)
 	  REAL dzbed_dx,dzbed_dy,dzbed_dn,dzbed_ds,bedslope_angle,bedslope_alpha,Shields_cr_bl,fnorm,dzbed_dl,fcor_slope
 	  REAL ppp(0:i1,0:j1,0:k1),Fix,Fiy,ddzzE,ddzzW,ddzzS,ddzzN,ustu2,ustv2,ww,c_adjust1,c_adjust2,dz1
-	  REAL dzbed_dl2,dzbed_dl3
+	  REAL dzbed_dl2,dzbed_dl3,vwal_x,vwal_y,dzB
 	
 	erosion=0.
 	deposition=0.
@@ -1165,14 +1165,14 @@
 					TT = (ust*ust-ustc2)/(MAX(ustc2,1.e-12))
 					TT = MAX(TT,0.) !TT must be positive
 					phipp = calibfac_sand_pickup*0.00033*Dstar**0.3*TT**1.5   ! general pickup function	
-					Shields_eff = ust**2/(delta*gvector*d50)
+					Shields_eff = ust**2/(delta*gvector*d50) !there is a typo in VR2019 memo/paper missing rho_b; this line in the code is correct 
 					phipp = phipp/(MAX(Shields_eff,1.)) ! correction: reduced pickup for high speed erosion
 				ELSEIF (pickup_formula.eq.'VR2019_Cbed') THEN
 					ustc2 = Shields_cr * gvector*delta*d50
 					TT = (ust*ust-ustc2)/(MAX(ustc2,1.e-12))
 					TT = MAX(TT,0.) !TT must be positive
 					phipp = calibfac_sand_pickup*0.00033*Dstar**0.3*TT**1.5   ! general pickup function	
-					Shields_eff = ust**2/(delta*gvector*d50)
+					Shields_eff = ust**2/(delta*gvector*d50) !there is a typo in VR2019 memo/paper missing rho_b; this line in the code is correct 
 					phipp = phipp/(MAX(Shields_eff,1.))*(cfixedbed-cbed)/(cfixedbed) ! correction: reduced pickup for high speed erosion and reduction for cbed according to VanRhee and Talmon 2010
 				ELSEIF (pickup_formula.eq.'VR1984_Cbed') THEN
 					ustc2 = Shields_cr * gvector*delta*d50
@@ -1194,27 +1194,26 @@
 !     &  *MIN(bednotfixed(i,j+1,kbed(i,j+1)),bednotfixed(i,j-1,kbed(i,j-1)))					
 !					  dzbed_dl=sqrt(dzbed_dx**2+dzbed_dy**2)
 					  
-					  ! 3-6-2022 LdW, implement max of four slopes including diagonal corner cells to get 3D breach dome shape correct:
+					  ! 23-8-2022 LdW, implemented 2 contributions of breaching from slope_x and slope_y; now corner gets double vwal-contribution to make shell shape and middle part and 2DV application get one vwal-contribution which was already validated
 					  dzbed_dx=-(zbed(i+1,j)-zbed(i-1,j))/(Rp(i+1)-Rp(i-1)) !defined with z positive down
      &  *MIN(bednotfixed(i+1,j,kbed(i+1,j)),bednotfixed(i-1,j,kbed(i-1,j)))					
 					  dzbed_dy=-(zbed(i,j+1)-zbed(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1))) !defined with z positive down
      &  *MIN(bednotfixed(i,j+1,kbed(i,j+1)),bednotfixed(i,j-1,kbed(i,j-1)))	
 
-					  dzbed_dl2=-(zbed(i+1,j+1)-zbed(i-1,j-1))/sqrt((Rp(i+1)-Rp(i-1))**2+(Rp(i+1)*phip(j+1)-Rp(i-1)*phip(j-1))**2) 
-     &  *MIN(bednotfixed(i+1,j+1,kbed(i+1,j+1)),bednotfixed(i-1,j-1,kbed(i-1,j-1)))					
-					  dzbed_dl3=-(zbed(i+1,j-1)-zbed(i-1,j+1))/sqrt((Rp(i+1)-Rp(i-1))**2+(Rp(i+1)*phip(j-1)-Rp(i-1)*phip(j+1))**2) 
-     &  *MIN(bednotfixed(i+1,j-1,kbed(i+1,j-1)),bednotfixed(i-1,j+1,kbed(i-1,j+1)))
-
-					  dzbed_dl=MAX(abs(dzbed_dx),abs(dzbed_dy),abs(dzbed_dl2),abs(dzbed_dl3))
-					  
-					  bedslope_angle=atan(dzbed_dl)					
-					  vwal = (-cfixedbed*delta*sin(MIN(phi_sediment-bedslope_angle,0.))/sin(phi_sediment))/(delta_nsed/permeability_kl)
+					  bedslope_angle=atan(abs(dzbed_dx))	
+					  vwal_x = (-cfixedbed*delta*sin(MIN(phi_sediment-bedslope_angle,0.))/sin(phi_sediment))/(delta_nsed/permeability_kl)
+					  bedslope_angle=atan(abs(dzbed_dy))	
+					  vwal_y = (-cfixedbed*delta*sin(MIN(phi_sediment-bedslope_angle,0.))/sin(phi_sediment))/(delta_nsed/permeability_kl)					  
+					  vwal=sqrt(vwal_x**2+vwal_y**2)
+					  !ve = 0.5*vwal+vs*sqrt((0.5*vwal/vs)**2+fcor*phipp*delta/delta_nsed*(permeability_kl/vs))
+					  ve = vwal   !leave out phipp pickup contribution 
+					ELSE 
+					  !ve = 0.5*vwal+vs*sqrt((0.5*vwal/vs)**2+fcor*phipp*delta/delta_nsed*(permeability_kl/vs))
+				      ve = vwal !leave out phipp pickup contribution 					
 					ENDIF 
-					
-					ve = 0.5*vwal+vs*sqrt((0.5*vwal/vs)**2+fcor*phipp*delta/delta_nsed*(permeability_kl/vs))
-					phipp = ve*cfixedbed/vs
-					
-					IF (wbed_correction.eq.1) Wbed(i,j)=MAX(vwal*bs_geo,0.)
+					!phipp = ve*cfixedbed/vs 
+					phipp = ve*cfixedbed/vs + phipp !simple linear addition vwal and original pickup without flow-slide influence
+					IF (wbed_correction.eq.1) Wbed(i,j)=MAX(ve*bs_geo,0.)
 				ELSEIF (pickup_correction.eq.'MBvdBerg2003_vecheck') THEN 
 					vs = MAX(sqrt(gvector*delta*d50),1.e-12)
 					!vwal = (-cfixedbed*delta*sin(phi-alpha)/sin(phi))/(delta_nsed/permeability_kt) !vwal is user input, here Eq.6 from MastBergenvdBerg2003 is mentioned to know how to calculate it (in Eq. 6 the minus sign was forgotten)
@@ -1230,24 +1229,26 @@
 					  dzbed_dy=-(zbed(i,j+1)-zbed(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1))) !defined with z positive down
      &  *MIN(bednotfixed(i,j+1,kbed(i,j+1)),bednotfixed(i,j-1,kbed(i,j-1)))	
 
-					  dzbed_dl2=-(zbed(i+1,j+1)-zbed(i-1,j-1))/sqrt((Rp(i+1)-Rp(i-1))**2+(Rp(i+1)*phip(j+1)-Rp(i-1)*phip(j-1))**2) 
-     &  *MIN(bednotfixed(i+1,j+1,kbed(i+1,j+1)),bednotfixed(i-1,j-1,kbed(i-1,j-1)))					
-					  dzbed_dl3=-(zbed(i+1,j-1)-zbed(i-1,j+1))/sqrt((Rp(i+1)-Rp(i-1))**2+(Rp(i+1)*phip(j-1)-Rp(i-1)*phip(j+1))**2) 
-     &  *MIN(bednotfixed(i+1,j-1,kbed(i+1,j-1)),bednotfixed(i-1,j+1,kbed(i-1,j+1)))
 	 
-					  dzbed_dl=MAX(abs(dzbed_dx),abs(dzbed_dy),abs(dzbed_dl2),abs(dzbed_dl3))					  
-					  bedslope_angle=atan(dzbed_dl)					
-					  vwal = (-cfixedbed*delta*sin(MIN(phi_sediment-bedslope_angle,0.))/sin(phi_sediment))/(delta_nsed/permeability_kl)
+					  !dzbed_dl=MAX(abs(dzbed_dx),abs(dzbed_dy),abs(dzbed_dl2),abs(dzbed_dl3))					  
+					  !bedslope_angle=atan(dzbed_dl)					
+					  !vwal = (-cfixedbed*delta*sin(MIN(phi_sediment-bedslope_angle,0.))/sin(phi_sediment))/(delta_nsed/permeability_kl)
+					  bedslope_angle=atan(abs(dzbed_dx))	
+					  vwal_x = (-cfixedbed*delta*sin(MIN(phi_sediment-bedslope_angle,0.))/sin(phi_sediment))/(delta_nsed/permeability_kl)
+					  bedslope_angle=atan(abs(dzbed_dy))	
+					  vwal_y = (-cfixedbed*delta*sin(MIN(phi_sediment-bedslope_angle,0.))/sin(phi_sediment))/(delta_nsed/permeability_kl)					  
+					  vwal=sqrt(vwal_x**2+vwal_y**2)
+					  !ve = 0.5*vwal+vs*sqrt((0.5*vwal/vs)**2+fcor*phipp*delta/delta_nsed*(permeability_kl/vs))
+					  ve = vwal !leave out phipp pickup contribution 
+					ELSE 
+					  ve = 0.5*vwal+vs*sqrt((0.5*vwal/vs)**2+fcor*phipp*delta/delta_nsed*(permeability_kl/vs))
 					ENDIF 
-					
-					ve = 0.5*vwal+vs*sqrt((0.5*vwal/vs)**2+fcor*phipp*delta/delta_nsed*(permeability_kl/vs))
 					phipp = ve*cfixedbed/vs 
-					
 					ve_check = phipp*(delta*gvector*d50)**0.5*morfac*bs_geo +  ! this is erosion (positive value)
      & 					SUM(ccnew(1:nfrac,i,j,kplus))*(MIN(0.,Wsed(n,i,j,kbed(i,j))))*morfac ! this is depo (neg value) in m/s 
 					ve_check = ve_check/cfixedbed  ! correction needed for pore volume 
-					phipp = phipp + MAX(vwal*bs_geo-ve_check,0.)/((delta*gvector*d50)**0.5*morfac*bs_geo)*cfixedbed
-					IF (wbed_correction.eq.1) Wbed(i,j)=ve_check+MAX(vwal*bs_geo-ve_check,0.)				
+					phipp = phipp + MAX(ve*bs_geo-ve_check,0.)/((delta*gvector*d50)**0.5*morfac*bs_geo)*cfixedbed
+					IF (wbed_correction.eq.1) Wbed(i,j)=ve_check+MAX(ve*bs_geo-ve_check,0.)				
 				ENDIF
 				IF (pickup_fluctuations.eq.1) THEN
 					!1 add white noise to pickup
@@ -1357,13 +1358,13 @@
 					erosion_avg(n) = phipp * (delta*gvector*d50)**0.5*ddt*bednotfixed(i,j,kbed(i,j))*morfac*bs_geo  !*rho_sand/rho_sand ! erosion flux in kg/m2/(kg/m3)= m3/m2=m
 					IF ((interaction_bed.ge.6.and.kbed(i,j).eq.0).or.interaction_bed.eq.7) THEN !unlimited erosion in case kbed.eq.0
 						erosionf(n) = erosion_avg(n) * (c_bed(n)/cfixedbed) !erosion per fraction
-						erosionf(n) = erosionf(n) + ccnew(n,i,j,kplus)*MAX(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))*ddt !when wsed upward (e.g. fine fractions) then add negative deposition to erosion
+						!erosionf(n) = erosionf(n) + ccnew(n,i,j,kplus)*MAX(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))*ddt !when wsed upward (e.g. fine fractions) then add negative deposition to erosion
 !						erosionf(n) = erosionf(n) 
 !     &					-MIN(0.,ddt*0.5*(Diffcof(i,j,kplus)+Diffcof(i,j,kplus2))*(ccnew(n,i,j,kplus2)-ccnew(n,i,j,kplus))/dz)  !add upward diffusion to erosion flux
 						qbf(n) = qb * (c_bed(n)/cfixedbed)
 					ELSEIF (cbottot_sand>0.) THEN
 						erosionf(n) = erosion_avg(n) * (cbotnew(n,i,j)/cbottot_sand) !erosion per fraction
-						erosionf(n) = erosionf(n) + ccnew(n,i,j,kplus)*MAX(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))*ddt !when wsed upward (e.g. fine fractions) then add negative deposition to erosion
+						!erosionf(n) = erosionf(n) + ccnew(n,i,j,kplus)*MAX(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))*ddt !when wsed upward (e.g. fine fractions) then add negative deposition to erosion
 !						erosionf(n) = erosionf(n) 
 !     &					-MIN(0.,ddt*0.5*(Diffcof(i,j,kplus)+Diffcof(i,j,kplus2))*(ccnew(n,i,j,kplus2)-ccnew(n,i,j,kplus))/dz)  !add upward diffusion to erosion flux
 						erosionf(n) = MIN(erosionf(n),(cbotnew(n,i,j)+SUM(Clivebed(n,i,j,0:kbed(i,j))))*dz/morfac2) ! m3/m2, not more material can be eroded as available 
@@ -1371,7 +1372,7 @@
 						qbf(n) = qb * (cbotnew(n,i,j)/cbottot_sand)
 					ELSEIF (cbedtot_sand>0.0) THEN
 						erosionf(n) = erosion_avg(n) * (Clivebed(n,i,j,kbed(i,j))/cbedtot_sand) !erosion per fraction
-						erosionf(n) = erosionf(n) + ccnew(n,i,j,kplus)*MAX(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))*ddt !when wsed upward (e.g. fine fractions) then add negative deposition to erosion
+						!erosionf(n) = erosionf(n) + ccnew(n,i,j,kplus)*MAX(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))*ddt !when wsed upward (e.g. fine fractions) then add negative deposition to erosion
 !						erosionf(n) = erosionf(n) 
 !     &					-MIN(0.,ddt*0.5*(Diffcof(i,j,kplus)+Diffcof(i,j,kplus2))*(ccnew(n,i,j,kplus2)-ccnew(n,i,j,kplus))/dz)  !add upward diffusion to erosion flux
 						erosionf(n) = MIN(erosionf(n),(cbotnew(n,i,j)+SUM(Clivebed(n,i,j,0:kbed(i,j))))*dz/morfac2) ! m3/m2, not more material can be eroded as available 
@@ -1436,6 +1437,7 @@
 							d_cbotnew(n,i,j-1) = d_cbotnew(n,i,j-1) - flux/(rho_sand*dr(i)*Rp(i)*dphi2(j-1)*dz)
 						ENDIF						
 					ENDIF 
+					erosionf(n)=erosionf(n)*ero_factor !below erosionf(n) is used to redistribute SSC lowest fluid cell, should be including ero_factor  
 				ENDDO
 			ENDIF	
 	
@@ -1461,36 +1463,48 @@
 				ELSEIF (cbotnewtot.lt.0.and.(kbed(i,j)-1).ge.0) THEN !erosion of 1 layer dz:
 				! this is at 0.5*dz
 					kplus = MIN(kbed(i,j)+1,k1)
-					drdt(i,j,kbed(i,j))=rho_b
-					rnew(i,j,kbed(i,j))=rho_b
-					rold(i,j,kbed(i,j))=rho_b	
-					DO k=kbed(i,j)+1,kmax
+					DO k=kbed(i,j),kplus 
 						drdt(i,j,k)=rho_b
 						rnew(i,j,k)=rho_b
 						rold(i,j,k)=rho_b
-					ENDDO
-				
+					ENDDO	
+					IF (erosion_cbed_start.ne.0) THEN 
+						DO k=kplus+1,kmax
+							drdt(i,j,k)=rho_b
+							rnew(i,j,k)=rho_b
+							rold(i,j,k)=rho_b
+						ENDDO
+					ENDIF 
 					DO n=1,nfrac ! also cbotnew(n,i,j) is le 0:
 						cbotnew(n,i,j)=cbotnew(n,i,j)+Clivebed(n,i,j,kbed(i,j)) !top layer is now previous top cel bed minus (erosion>top-layer)
-						!ccnew(n,i,j,kbed(i,j))=(erosionf(n)+depositionf(n))/(dz) !assign all erosion+depo as new sediment concentration new bottom layer fluid
-						!ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus)-(erosionf(n)+depositionf(n))/(dz) !remove erosion+depo from previous bottom layer fluid
-						
-						!improved 2 lines above by giving new lowest fluid cell same concentration as old lowest fluid cell and taking away this sediment from cells above (11-10-2021)
-						cctot=0.
-						DO k=kbed(i,j)+1,kmax 
+						IF (erosion_cbed_start.eq.0) THEN 
+						    ccnew(n,i,j,kbed(i,j))=(erosionf(n)+depositionf(n))/(dz) !assign all erosion+depo as new sediment concentration new bottom layer fluid
+						    ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus)-(erosionf(n)+depositionf(n))/(dz) !remove erosion+depo from previous bottom layer fluid
+							DO k=kbed(i,j),kplus 
+							   drdt(i,j,k) = drdt(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+							   rnew(i,j,k) = rnew(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+							   rold(i,j,k) = rold(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density							
+							ENDDO						  
+						ELSE 						
+						  !improved 2 lines above by giving new lowest fluid cell same concentration as old lowest fluid cell and taking away this sediment from cells above (11-10-2021)
+						  cctot=0.
+						  DO k=kplus,kmax 
 							cctot=cctot+MAX(ccfd(n,i,j,k),0.)
-						ENDDO	
-						ccnew(n,i,j,kbed(i,j)) = ccnew(n,i,j,kplus) !new lowest fluid cell gets same concentration as old lowest fluid cell 
-						DO k=kbed(i,j)+1,kmax 
+						  ENDDO	
+						  ccnew(n,i,j,kbed(i,j)) = ccnew(n,i,j,kplus) !new lowest fluid cell gets same concentration as old lowest fluid cell 
+						  DO k=kbed(i,j),kbed(i,j) 
+						   drdt(i,j,k) = drdt(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						   rnew(i,j,k) = rnew(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						   rold(i,j,k) = rold(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density							
+						  ENDDO	
+						  DO k=kbed(i,j)+1,kmax 
 						   ccnew(n,i,j,k) = ccnew(n,i,j,k) - MAX(ccfd(n,i,j,k),0.)/(cctot+1.e-12)*ccnew(n,i,j,kbed(i,j)) !remove same quantity from cells above in weighted avg manner
 						   drdt(i,j,k) = drdt(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 						   rnew(i,j,k) = rnew(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 						   rold(i,j,k) = rold(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density							
-						ENDDO 
+						  ENDDO
+						ENDIF 
 						Clivebed(n,i,j,kbed(i,j))=0. ! not bed anymore but fluid
-						drdt(i,j,kbed(i,j)) = drdt(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-						rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-						rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 					ENDDO
 					!kbed(i,j)=MAX(kbed(i,j)-1,0)  !update bed level at end		
 					kbed(i,j)=kbed(i,j)-1
@@ -1538,9 +1552,9 @@
 						 ENDIF
 						ENDIF
 						ccnew(n,i,j,kbed(i,j))=0. 
-						drdt(i,j,kbed(i,j)) = drdt(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-						rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-						rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density							
+						!drdt(i,j,kbed(i,j)) = drdt(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						!rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						!rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density							
 					ENDDO	
 				ELSEIF (ctot_firstcel.ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.
      &             (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed-1.e-9.or.kbed(i,j).eq.0)) THEN
@@ -1586,9 +1600,9 @@
 						 ENDIF
 						ENDIF
 						ccnew(n,i,j,kbed(i,j))=0. 
-						drdt(i,j,kbed(i,j)) = drdt(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-						rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-						rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density							
+						!drdt(i,j,kbed(i,j)) = drdt(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						!rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						!rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density							
 					ENDDO	
 				ELSEIF (cbotnewtot_pos.ge.0.5*cfixedbed.and.kbed(i,j)+1.le.kmax) THEN
 				! Clivebed not completely full; therefore no bedupdate kbed+1, but only redistribution from cbotnew tot Clivebed 
@@ -1877,7 +1891,7 @@
 					ENDDO
 				ENDDO
 			ENDDO	
-		ENDIF 
+		ENDIF !endif IF (bedload_formula.ne.'nonenon0000') THEN 
 		IF (U_TSHD>0.) THEN !reset "inflow" bedlevel
 			kbed(1,0:j1)=kbedin(0:j1)
 			kbedt(1,0:j1)=kbedin(0:j1)
@@ -1902,7 +1916,7 @@
 					enddo					
 				enddo
 			enddo		  			
-		ENDIF	
+		ENDIF	!endif U_TSHD>0
 		call bound_cbot_integer(kbed) ! apply correct boundary conditions for updated kbed
 		kbedt=kbed		
 			
@@ -1914,9 +1928,10 @@
 		ELSE 
 			n_av=MAX(NINT(morfac2),NINT(morfac))
 		ENDIF		
-		IF (MAXVAL(av_slope).gt.0) THEN
+		IF (MAXVAL(av_slope).gt.0.) THEN
 		 DO tel=1,n_av ! normally avalanche 1 time every timestep; with morfac more times avalanche every timestep
 		  IF (have_avalanched>0.1) then !.true.) then !have_avalanched>0.1) THEN
+		    kbed_new=kbed 
 			nav=nav+1
 			d_cbotnew = 0.
 			DO i=1,imax
@@ -2087,9 +2102,6 @@
 							ENDDO 
 						ELSE !avalanche full cbotnew
 							kplus = MIN(kbed(i,j)+1,k1)
-							drdt(i,j,kbed(i,j))=rho_b
-							rnew(i,j,kbed(i,j))=rho_b
-							rold(i,j,kbed(i,j))=rho_b		
 							dz1=SUM(Clivebed(1:nfrac,i,j,kbed(i,j)))/cfixedbed*dz !maximum possible bed change given how much is in Clivebed of this cell 
 							DO n1=1,nfr_sand !avalanche sand fractions only, not silt/mud/clay
 								n=nfrac_sand(n1)
@@ -2101,16 +2113,19 @@
 								d_cbotnew(n,i,j) = d_cbotnew(n,i,j) + Clivebed(n,i,j,kbed(i,j)) - c_adjust ! erosion one layer dz, after that avalanche
 								Clivebed(n,i,j,kbed(i,j))=0. ! not bed anymore but fluid --> old Clivebed is added tot cbotnew [sediment budget OK]
 								d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt) + c_adjust*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt) ! dump all avalanche in cbotnew, next timestep it can be added to fixed bed in routine above	
-								!ccnew(n,i,j,kbed(i,j))= 0. !start with fluid cell without sediment concentration
-								!giving new lowest fluid cell same concentration as old lowest fluid cell and taking away this sediment from cells above (11-10-2021)
-								cctot=0.
-								DO k=kbed(i,j)+1,kmax 
-									cctot=cctot+MAX(ccfd(n,i,j,k),0.)
-								ENDDO
-								ccnew(n,i,j,kbed(i,j)) = ccnew(n,i,j,kplus) !new lowest fluid cell gets same concentration as old lowest fluid cell 
-								DO k=kbed(i,j)+1,kmax 
-								   ccnew(n,i,j,k) = ccnew(n,i,j,k) - MAX(ccfd(n,i,j,k),0.)/(cctot+1.e-12)*ccnew(n,i,j,kbed(i,j)) !remove same quantity from cells above in weighted avg manner
-								ENDDO 
+								IF (erosion_cbed_start.eq.0) THEN 
+									ccnew(n,i,j,kbed(i,j))= 0. !start with fluid cell without sediment concentration
+								ELSE
+									!giving new lowest fluid cell same concentration as old lowest fluid cell and taking away this sediment from cells above (11-10-2021)
+									cctot=0.
+									DO k=kbed(i,j)+1,kmax 
+										cctot=cctot+MAX(ccfd(n,i,j,k),0.)
+									ENDDO
+									ccnew(n,i,j,kbed(i,j)) = ccnew(n,i,j,kplus) !new lowest fluid cell gets same concentration as old lowest fluid cell 
+									DO k=kbed(i,j)+1,kmax 
+									   ccnew(n,i,j,k) = ccnew(n,i,j,k) - MAX(ccfd(n,i,j,k),0.)/(cctot+1.e-12)*ccnew(n,i,j,kbed(i,j)) !remove same quantity from cells above in weighted avg manner
+									ENDDO 
+								ENDIF 
 							ENDDO
 							DO n1=1,nfr_silt
 								n=nfrac_silt(n1) 
@@ -2136,14 +2151,20 @@
 								ELSE 
 									ccnew(n,i,j,kbed(i,j))= ccnew(n,i,j,kbed(i,j)) + c_adjust1 + c_adjust2 
 								ENDIF 
+							ENDDO
+							DO k=kbed(i,j),kmax 
+								drdt(i,j,k)=rho_b 
+								rnew(i,j,k)=rho_b 
+								rold(i,j,k)=rho_b 
 							ENDDO 
-							DO n=1,nfrac !initialize correct fluid cell concentration 
-								drdt(i,j,kbed(i,j)) = drdt(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-								rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-								rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density					
-							ENDDO	
-							kbed(i,j)=kbed(i,j)-1  !update bed level at end	
-							kbedt(i,j)=kbed(i,j)
+							DO k=kbed(i,j),kmax
+							  DO n=1,nfrac !initialize correct fluid cell concentration 
+								drdt(i,j,k) = drdt(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+								rnew(i,j,k) = rnew(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+								rold(i,j,k) = rold(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density					
+							  ENDDO	
+							ENDDO 
+							kbed_new(i,j)=kbed_new(i,j)-1  !update bed level at end	
 							!have_avalanched=have_avalanched+1.	
 						ENDIF
 					ENDIF
@@ -2197,6 +2218,7 @@
 					ENDDO
 				ENDDO
 			ENDDO
+			kbed=kbed_new 
 			call bound_cbot_integer(kbed) ! apply correct boundary conditions for updated kbed
 			kbedt=kbed
 		  ENDIF  ! end have_avalanched 
@@ -2205,7 +2227,243 @@
 			 IF (rank.eq.0.and.MOD(istep,10).eq.0) THEN
 				write(*,*),'istep,avalanche steps:',istep,nav
 			 ENDIF		 
-		ENDIF !ENDIF ((interaction_bed.eq.4.or.interaction_bed.eq.6).and.time_n.ge.tstart_morf.and.time_n.ge.tstart_morf2) THEN
+		ENDIF !ENDIF MAXVAL(av).gt.0.
+		call bound_cbot_integer(kbed) ! apply correct boundary conditions for updated kbed
+		kbedt=kbed		
+		DO i=1,imax
+		  DO j=1,jmax
+			zbed(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(cbotnew(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
+		  ENDDO 
+		ENDDO 
+		call bound_cbot(zbed)		
+		IF (pickup_correction.eq.'breach_via_avalanche') THEN 
+			kbed_new=kbed 
+			delta = (rho_sand-rho_b)/rho_b !(rho_sand-rcfd(i,j,kplus))/rcfd(i,j,kplus) !switched to using rho_b instead of rcfd 13-2-2019
+			delta = MAX(delta,0.1) ! rho_sand must be > 2*rho_fluid
+			d_cbotnew = 0.
+			DO i=1,imax
+				DO j=1,jmax
+					zb_all(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+ (SUM(cbotnew(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz !breach works on all sediment fractions
+				ENDDO
+			ENDDO
+		! mpi boundary for zb_all:
+			call shiftf_l(zb_all,zbf) 
+			call shiftb_l(zb_all,zbb) 
+
+			if (periodicy.eq.0.or.periodicy.eq.2) then
+				if (rank.eq.0) then ! boundaries in j-direction
+				   do i=1,imax
+				   zb_all(i,0) = zb_all(i,1) 
+				   zb_all(i,j1) =zbb(i) 
+				   enddo
+				elseif (rank.eq.px-1) then
+				   do i=1,imax
+				   zb_all(i,0) = zbf(i)
+				   zb_all(i,j1) =zb_all(i,jmax)  
+				   enddo
+				else
+				   do i=1,imax
+				   zb_all(i,0) = zbf(i)
+				   zb_all(i,j1) =zbb(i) 
+				   enddo
+				endif
+			else
+			   do i=1,imax
+				   zb_all(i,0) = zbf(i)
+				   zb_all(i,j1) =zbb(i) 
+			   enddo
+			endif
+			 ! boundaries in i-direction
+			if (periodicx.eq.0.or.periodicx.eq.2) then
+				 do j=0,j1
+				   zb_all(0,j)    =    zb_all(1,j)
+				   zb_all(i1,j)   =    zb_all(imax,j)
+				 enddo   
+			else 
+				 do j=0,j1
+				   zb_all(0,j)    =    zb_all(imax,j)
+				   zb_all(i1,j)   =    zb_all(1,j)
+				 enddo   
+			endif			
+
+			DO i=1,imax
+				DO j=1,jmax
+					sl1=(Rp(i)-Rp(i-1))/MAX((zb_all(i,j)-zb_all(i-1,j))
+     & *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed_depo(i-1,j,kbed(i-1,j))),1.e-18)
+					sl2=(Rp(i+1)-Rp(i))/MAX((zb_all(i,j)-zb_all(i+1,j))
+     & *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed_depo(i+1,j,kbed(i+1,j))),1.e-18)					
+					sl3=(Rp(i)*phip(j)-Rp(i)*phip(j-1))/MAX((zb_all(i,j)-zb_all(i,j-1))
+     & *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed_depo(i,j-1,kbed(i,j-1))),1.e-18)					
+					sl4=(Rp(i)*phip(j+1)-Rp(i)*phip(j))/MAX((zb_all(i,j)-zb_all(i,j+1))
+     & *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed_depo(i,j+1,kbed(i,j+1))),1.e-18)					
+					sl5=SQRT((Rp(i)*phip(j+1)-Rp(i)*phip(j))**2+(Rp(i)-Rp(i-1))**2)/MAX((zb_all(i,j)-zb_all(i-1,j+1))
+     & *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed_depo(i-1,j+1,kbed(i-1,j+1))),1.e-18)					
+					sl6=SQRT((Rp(i)*phip(j+1)-Rp(i)*phip(j))**2+(Rp(i)-Rp(i+1))**2)/MAX((zb_all(i,j)-zb_all(i+1,j+1))
+     & *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed_depo(i+1,j+1,kbed(i+1,j+1))),1.e-18)					
+					sl7=SQRT((Rp(i)*phip(j-1)-Rp(i)*phip(j))**2+(Rp(i)-Rp(i+1))**2)/MAX((zb_all(i,j)-zb_all(i+1,j-1))
+     & *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed_depo(i+1,j-1,kbed(i+1,j-1))),1.e-18)					
+					sl8=SQRT((Rp(i)*phip(j-1)-Rp(i)*phip(j))**2+(Rp(i)-Rp(i-1))**2)/MAX((zb_all(i,j)-zb_all(i-1,j-1))
+     & *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed_depo(i-1,j-1,kbed(i-1,j-1))),1.e-18)
+	 
+					maxbedslope(i,j)=MIN(sl1,sl2,sl3,sl4,sl5,sl6,sl7,sl8)
+						IF (sl1.le.maxbedslope(i,j)) THEN !find steepest slope
+							itrgt=i-1
+							jtrgt=j
+							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
+							dl = Rp(i)-Rp(i-1)
+						ELSEIF (sl2.le.maxbedslope(i,j)) THEN
+							itrgt=i+1
+							jtrgt=j
+							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
+							dl = Rp(i+1)-Rp(i)							
+						ELSEIF (sl3.le.maxbedslope(i,j)) THEN
+							itrgt=i
+							jtrgt=j-1
+							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
+							dl = Rp(i)*phip(j)-Rp(i)*phip(j-1)							
+						ELSEIF (sl4.le.maxbedslope(i,j)) THEN
+							itrgt=i
+							jtrgt=j+1
+							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
+							dl = Rp(i)*phip(j+1)-Rp(i)*phip(j)
+						ELSEIF (sl5.le.maxbedslope(i,j)) THEN
+							itrgt=i-1
+							jtrgt=j+1
+							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
+							dl = SQRT((Rp(i)*phip(j)-Rp(i)*phip(jtrgt))**2+(Rp(i)-Rp(itrgt))**2)	
+						ELSEIF (sl6.le.maxbedslope(i,j)) THEN
+							itrgt=i+1
+							jtrgt=j+1
+							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
+							dl = SQRT((Rp(i)*phip(j)-Rp(i)*phip(jtrgt))**2+(Rp(i)-Rp(itrgt))**2)		
+						ELSEIF (sl7.le.maxbedslope(i,j)) THEN
+							itrgt=i+1
+							jtrgt=j-1
+							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
+							dl = SQRT((Rp(i)*phip(j)-Rp(i)*phip(jtrgt))**2+(Rp(i)-Rp(itrgt))**2)
+						ELSEIF (sl8.le.maxbedslope(i,j)) THEN
+							itrgt=i-1
+							jtrgt=j-1
+							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
+							dl = SQRT((Rp(i)*phip(j)-Rp(i)*phip(jtrgt))**2+(Rp(i)-Rp(itrgt))**2)								
+						ELSE
+							write(*,*),'Steepest breach slope not found,i,j:',i,j
+							CYCLE 
+						ENDIF
+						IF (pickup_bedslope_geo.eq.1) THEN 
+						!determine bs_geo with slope_x and slope_y over two cells i-1 to i+1 and j-1 to j+1 because it relates to complete cell
+						!vwal is determined with steepest slope over one cell at the edge 
+							bed_slope = atan((zb_all(i+1,j)-zb_all(i-1,j))/(Rp(i+1)-Rp(i-1)))
+     &  *MIN(bednotfixed(i+1,j,kbed(i+1,j)),bednotfixed(i-1,j,kbed(i-1,j)))
+!							uu2 = uu*cos(bed_slope)+wcfd(i,j,kbedp(i,j))*sin(bed_slope)
+							facx = 1./cos(bed_slope)
+							bed_slope = atan((zb_all(i,j+1)-zb_all(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1))))
+     &  *MIN(bednotfixed(i,j+1,kbed(i,j+1)),bednotfixed(i,j-1,kbed(i,j-1)))				
+!							vv2 = vv*cos(bed_slope)+wcfd(i,j,kbedp(i,j))*sin(bed_slope)
+							facy = 1./cos(bed_slope)
+							bs_geo = facx*facy ! increase in dx and dy (area) over which pickup and deposition take place
+!							absU = sqrt((uu2)**2+(vv2)**2)					
+						ELSE 
+!							absU=sqrt((uu)**2+(vv)**2)	
+							bs_geo = 1.
+						ENDIF						
+					    bedslope_angle=atan(dbed/dl) !positive value 
+						vwal = (-cfixedbed*delta*sin(MIN(phi_sediment-bedslope_angle,0.))/sin(phi_sediment))/(delta_nsed/permeability_kl)
+						dbed_adjust = vwal * ddt*bednotfixed(i,j,kbed(i,j))*morfac*bs_geo !positive layer thickness [m] to take away from cell i,j and bring in suspension to itrgt,jtrgt 
+
+						!dbed_allowed = dl/MAX(av_slope(i,j,kbed(i,j))*bednotfixed(i,j,kbed(i,j)),1.e-18)
+						!dbed_adjust = vol_Vp(itrgt,jtrgt)/(vol_Vp(i,j)+vol_Vp(itrgt,jtrgt))*(dbed - dbed_allowed)
+						dz_botlayer =SUM(cbotnew(1:nfrac,i,j))/cfixedbed*dz !dz_botlayer can be <0 because buffer cbotnew can be +/-0.5*dz 
+						dz1=SUM(Clivebed(1:nfrac,i,j,kbed(i,j)))/cfixedbed*dz !maximum possible bed change given how much is in Clivebed of this cell 
+						dzB = MAX(dbed_adjust-dz1-dz_botlayer,0.) !missing erosion layer which must occur because of vwal, but cbotnew and first bed-cell don't contain enough sediment
+						IF (dbed_adjust.le.dz_botlayer) THEN ! only cbotnew adjusted
+						    kplus = MIN(kbed(i,j)+1,k1)
+							DO n=1,nfrac !breach all fractions, sand and silt
+								c_adjust = dbed_adjust/MAX(dz_botlayer,1.e-18)*cbotnew(n,i,j) !has the unit of cbotnew which is vol-conc of a fictitious cell of dz thickness 
+								d_cbotnew(n,i,j) = d_cbotnew(n,i,j) - c_adjust
+								ccnew(n,itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1)) = 
+     &							ccnew(n,itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1))+c_adjust*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt) ! add to suspension of cell down the slope 
+							ENDDO
+						ELSE !not enough sediment available in cbotnew and underlying bed-cell; pls mind dz_botlayer can be <0 because buffer cbotnew can be +/-0.5*dz 
+							kplus = MIN(kbed(i,j)+1,k1)
+							DO n=1,nfrac !avalanche all fractions, sand and silt
+								c_adjust = cbotnew(n,i,j) !avalanche complete cbotnew 
+								d_cbotnew(n,i,j)=d_cbotnew(n,i,j) - c_adjust
+								!d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt) + c_adjust*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt)
+								ccnew(n,itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1)) = 
+     &							ccnew(n,itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1))+c_adjust*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt) ! add to suspension of cell down the slope 
+								c_adjust = MIN(dz1,dbed_adjust-dz_botlayer)/dz1*Clivebed(n,i,j,kbed(i,j)) !never more than one dz layer is eroded by avalanche
+								c_adjustB = dzB/dz1*Clivebed(n,i,j,kbed(i,j)) !missing erosion; use sediment composition of kbed layer 
+								d_cbotnew(n,i,j) = d_cbotnew(n,i,j) + Clivebed(n,i,j,kbed(i,j)) - c_adjust - c_adjustB ! erosion one layer dz, after that avalanche
+								Clivebed(n,i,j,kbed(i,j))=0. ! not bed anymore but fluid --> old Clivebed is added tot cbotnew [sediment budget OK]
+								ccnew(n,itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1)) = 
+     &							ccnew(n,itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1))+c_adjust*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt) 
+     &	 						+c_adjustB*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt)  ! add to suspension of cell down the slope 
+							ENDDO
+							kbed_new(i,j)=kbed_new(i,j)-1  !update bed level at end								
+						ENDIF
+							drdt(itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1)) = rho_b
+							rnew(itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1)) = rho_b
+							rold(itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1)) = rho_b
+							DO n=1,nfrac !initialize correct fluid cell concentration 
+								drdt(itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1)) = drdt(itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1))
+     &								+ccnew(n,itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+								rnew(itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1)) = rnew(itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1))
+     &								+ccnew(n,itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density								
+								rold(itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1)) = rold(itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1))					
+     &								+ccnew(n,itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density								
+							ENDDO						
+				ENDDO
+			ENDDO
+
+!! mpi transfer sum d_cbotnew over edges:
+			call shiftf_lreverse(d_cbotnew,cbf) 
+			call shiftb_lreverse(d_cbotnew,cbb) 
+
+			if (periodicy.eq.0.or.periodicy.eq.2) then
+				if (rank.eq.0) then ! boundaries in j-direction
+				  do n=1,nfrac
+				   do i=1,imax
+					   d_cbotnew(n,i,1) = d_cbotnew(n,i,1) - d_cbotnew(n,i,0) ! undo avalanche to j=0
+					   d_cbotnew(n,i,jmax) = d_cbotnew(n,i,jmax) + cbb(n,i) 
+				   enddo
+				  enddo
+				elseif (rank.eq.px-1) then
+				  do n=1,nfrac
+				   do i=1,imax
+					   d_cbotnew(n,i,1) = d_cbotnew(n,i,1) + cbf(n,i)
+					   d_cbotnew(n,i,jmax) = d_cbotnew(n,i,jmax) - d_cbotnew(n,i,j1) ! undo avalanche to j1
+				   enddo
+				  enddo		   
+				else
+				  do n=1,nfrac
+				   do i=1,imax
+					   d_cbotnew(n,i,1) = d_cbotnew(n,i,1) + cbf(n,i)
+					   d_cbotnew(n,i,jmax) = d_cbotnew(n,i,jmax) + cbb(n,i) 
+				   enddo
+				  enddo
+				endif
+			else
+			  do n=1,nfrac
+			   do i=1,imax
+				   d_cbotnew(n,i,1) = d_cbotnew(n,i,1) + cbf(n,i)
+				   d_cbotnew(n,i,jmax) = d_cbotnew(n,i,jmax) + cbb(n,i) 
+			   enddo
+			  enddo
+			endif
+	
+!! add c_cbotnew with original cbotnew:
+			DO i=1,imax
+				DO j=1,jmax
+					DO n=1,nfrac
+						cbotnew(n,i,j)=cbotnew(n,i,j)+d_cbotnew(n,i,j)
+					ENDDO
+				ENDDO
+			ENDDO
+			kbed=kbed_new 
+			call bound_cbot_integer(kbed) ! apply correct boundary conditions for updated kbed
+			kbedt=kbed
+		ENDIF !(pickup_correction.eq.'breach_via_avalanche')
 		call bound_cbot_integer(kbed) ! apply correct boundary conditions for updated kbed
 		kbedt=kbed		
 		DO i=1,imax
@@ -2243,19 +2501,22 @@
 	   
       include 'mpif.h'
       integer ierr
-	integer n,ib,ie,jb,je,kb,ke,k2,kk,ketmp
+	integer n,ib,ie,jb,je,kb,ke,k2,kk,ketmp,kplus
 	REAL ccnew(1:nfrac,0:i1,0:j1,0:k1),cbotnew(1:nfrac,0:i1,0:j1),Cadvec(0:i1,0:j1,0:k1),ddtt
-	REAL c_adjust,cbotnewtot,ctot_firstcel,c_adjustA,c_adjustB
+	REAL c_adjust,cbotnewtot,ctot_firstcel,c_adjustA,c_adjustB,cctot,ccfd(1:nfrac,0:i1,0:j1,0:k1),c_adjust2
 
+
+	ccfd=ccnew  !concentrations before this subroutine does it job
 	 IF ((interaction_bed.eq.4.or.interaction_bed.eq.6).and.ABS(U_TSHD).gt.1e-6) THEN ! bring Clivebed to lowest possible gridcell to adjust for advected with U_TSHD	
 	ib=1
 	ie=imax
 	jb=1
 	je=jmax
 	kb=1
-	ke=MAXVAL(kbed(ib:ie,jb:je)) !kmax
-	ketmp=ke
-	call mpi_allreduce(ketmp,ke,1,mpi_integer,mpi_max,mpi_comm_world,ierr)
+	ke=kmax !MAXVAL(kbed(ib:ie,jb:je)) !kmax
+	!ketmp=ke
+	!call mpi_allreduce(ketmp,ke,1,mpi_integer,mpi_max,mpi_comm_world,ierr)
+	
 	DO n=1,nfrac
 		Cadvec=0.
 		call adveccbot3d_TVD(Cadvec(:,:,:),Clivebed(n,:,:,:),Ubot_TSHD,Vbot_TSHD,Ru,Rp,dr,phiv,phipt,dz,
@@ -2265,6 +2526,10 @@
 			 DO k=kb,ke 
 				Clivebed(n,i,j,k)= Clivebed(n,i,j,k) + ddtt*Cadvec(i,j,k) ! time update EE1 (stable and conserving TVD advec scheme)
 			 ENDDO
+			 IF (kbed(i,j)>0) THEN 
+				Clivebed(n,i,j,kbed(i,j))=Clivebed(n,i,j,kbed(i,j))+cbotnew(n,i,j) ! all bed sediment is now in Clivebed and in code below it is redistributed between Clivebed and cbotnew in the right manner
+				cbotnew(n,i,j)=0.
+			 ENDIF 
 		  ENDDO
 		ENDDO
 	ENDDO
@@ -2274,28 +2539,75 @@
 			 DO k=1,ke !kmax 
 				DO k2=k+1,ke !kmax
 				  c_adjust= MAX(MIN(cfixedbed-SUM(Clivebed(1:nfrac,i,j,k)),SUM(Clivebed(1:nfrac,i,j,k2))),0.)
-     &					/(MAX(SUM(Clivebed(1:nfrac,i,j,k2)),1e-18))
+     &					/(MAX(SUM(Clivebed(1:nfrac,i,j,k2)),1e-12)) !positive in case Clivebed(k) is not full, otherwise 0, never more than Clivebed(k2), when Clivebed(k2)<0 it is 0
+				  c_adjustB= MIN(cfixedbed-SUM(Clivebed(1:nfrac,i,j,k)),0.)
+     &					/(MAX(SUM(Clivebed(1:nfrac,i,j,k)),1e-12)) !negative in case Clivebed(k) contains too much sediment otherwise zero	 
 				  DO n=1,nfrac
-					Clivebed(n,i,j,k)=Clivebed(n,i,j,k)+c_adjust*Clivebed(n,i,j,k2)      !top op Clivebed(k) up to cfixedbed from all above cells
-					Clivebed(n,i,j,k2)=Clivebed(n,i,j,k2)-c_adjust*Clivebed(n,i,j,k2)
+					c_adjust2=c_adjustB*Clivebed(n,i,j,k)
+					Clivebed(n,i,j,k)=Clivebed(n,i,j,k)  +c_adjust*Clivebed(n,i,j,k2)+c_adjust2      !top op Clivebed(k) up to cfixedbed from all above cells
+					Clivebed(n,i,j,k2)=Clivebed(n,i,j,k2)-c_adjust*Clivebed(n,i,j,k2)-c_adjust2
 				  ENDDO
 				ENDDO
 			 ENDDO
-		 
+			 ! with loop above Clivebed may end up negative when it is top bed cell and no filled Clivebed above to compensate
+			 ! that must be brought back to cbotnew because Clivebed may never be negative
+			 DO k=1,ke
+				IF (SUM(Clivebed(1:nfrac,i,j,k))<0.) THEN 
+					DO n=1,nfrac				
+						cbotnew(n,i,j)=cbotnew(n,i,j)+SUM(Clivebed(n,i,j,k:ke))
+						Clivebed(n,i,j,k:ke)=0.
+					ENDDO 
+					EXIT 
+				ENDIF
+			 ENDDO 
 			 IF (SUM(Clivebed(1:nfrac,i,j,1)).ge.cfixedbed) THEN
 			  DO k=1,ke !kmax
-			   IF (SUM(Clivebed(1:nfrac,i,j,k)).ge.cfixedbed.and.SUM(Clivebed(1:nfrac,i,j,k+1)).lt.cfixedbed) THEN
+			   IF (SUM(Clivebed(1:nfrac,i,j,k)).ge.cfixedbed.and.SUM(Clivebed(1:nfrac,i,j,k+1)).lt.cfixedbed-1.e-9) THEN
 !			   IF (SUM(Clivebed(1:nfrac,i,j,k))+SUM(cbotnew(1:nfrac,i,j)).ge.cfixedbed.and.
 !     &			   SUM(Clivebed(1:nfrac,i,j,k+1))+SUM(cbotnew(1:nfrac,i,j)).lt.cfixedbed) THEN 
-			   
-			      IF (k>kbed(i,j)) THEN
+			      IF (k>kbed(i,j)) THEN !new bed-level is higher than previous bed-level 
+				    IF (movebed_absorb_cfluid.eq.0) THEN
+					  kplus=MIN(k1,k+k_layer_pickup)
+					  drdt(i,j,k+1:kplus) = rho_b
+					  rnew(i,j,k+1:kplus) = rho_b
+					  rold(i,j,k+1:kplus) = rho_b					
+					  DO n=1,nfrac 
+						cctot=0.
+						DO k2=k+1,kplus  
+							cctot=cctot+MAX(ccfd(n,i,j,k2),0.)
+						ENDDO
+						c_adjust=MAX(SUM(ccnew(n,i,j,kbed(i,j)+1:k)),0.)
+						IF (cctot.le.1.e-12.or.k_layer_pickup.eq.1) THEN 
+							ccnew(n,i,j,k+1)=ccnew(n,i,j,k+1)+c_adjust  ! add all suspended sediment of fluidcells now covered inside bed to lowest fluid cell after bed-update
+							drdt(i,j,k+1) = drdt(i,j,k+1)+ccnew(n,i,j,k+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+							rnew(i,j,k+1) = rnew(i,j,k+1)+ccnew(n,i,j,k+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+							rold(i,j,k+1) = rold(i,j,k+1)+ccnew(n,i,j,k+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density	
+						ELSE 
+							DO k2=k+1,kplus  
+							  ccnew(n,i,j,k2)=ccnew(n,i,j,k2)+c_adjust*MAX(ccfd(n,i,j,k2),0.)/cctot  ! add all suspended sediment of fluidcells now covered inside bed to k_layer_pickup fluid cells after bed-update
+							  drdt(i,j,k2) = drdt(i,j,k2)+ccnew(n,i,j,k2)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+							  rnew(i,j,k2) = rnew(i,j,k2)+ccnew(n,i,j,k2)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+							  rold(i,j,k2) = rold(i,j,k2)+ccnew(n,i,j,k2)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density 
+							ENDDO 					
+						ENDIF					
+						ccnew(n,i,j,kbed(i,j)+1:k)=0.
+					  ENDDO 
+					ELSE 
+				     DO n=1,nfrac
+					  cbotnew(n,i,j)=cbotnew(n,i,j)+SUM(ccnew(n,i,j,kbed(i,j)+1:k))  ! add all suspended sediment of fluidcells now covered inside bed to cbotnew
+					  ccnew(n,i,j,kbed(i,j)+1:k)=0.
+					 ENDDO
+					ENDIF 
+					drdt(i,j,kbed(i,j)+1:k) = rho_b  ! prevent large source in pres-corr by sudden increase in density
+					rnew(i,j,kbed(i,j)+1:k) = rho_b  ! prevent large source in pres-corr by sudden increase in density
+					rold(i,j,kbed(i,j)+1:k) = rho_b  ! prevent large source in pres-corr by sudden increase in density						
+				  ELSEIF(k<kbed(i,j)) THEN !new bed-level is lower than previous bed-level 
 				    DO n=1,nfrac
-					  cbotnew(n,i,j)=cbotnew(n,i,j)+SUM(ccnew(n,i,j,kbed(i,j):k))  ! add all suspended sediment of fluidcells now covered inside bed to cbotnew
-					  ccnew(n,i,j,kbed(i,j):k)=0.
-					ENDDO
-					drdt(i,j,kbed(i,j):k) = rho_b  ! prevent large source in pres-corr by sudden increase in density
-					rnew(i,j,kbed(i,j):k) = rho_b  ! prevent large source in pres-corr by sudden increase in density
-					rold(i,j,kbed(i,j):k) = rho_b  ! prevent large source in pres-corr by sudden increase in density						
+					  ccnew(n,i,j,k+1:kbed(i,j))=0. !initialize without sediment, should not be needed 
+					ENDDO					
+					drdt(i,j,k+1:kbed(i,j)) = rho_b  ! prevent large source in pres-corr by sudden increase in density
+					rnew(i,j,k+1:kbed(i,j)) = rho_b  ! prevent large source in pres-corr by sudden increase in density
+					rold(i,j,k+1:kbed(i,j)) = rho_b  ! prevent large source in pres-corr by sudden increase in density					
 				  ENDIF
 				  DO n=1,nfrac
 				    cbotnew(n,i,j)=cbotnew(n,i,j)+SUM(Clivebed(n,i,j,k+1:kmax))! add all partially filled bed-cells above the bed to cbotnew
@@ -2306,6 +2618,143 @@
 				  EXIT
 			   ENDIF
 			  ENDDO
+			  DO k=1,kbed(i,j) !this loop should not be needed, but to be sure:
+				c_adjust =MAX(cfixedbed-SUM(Clivebed(1:nfrac,i,j,k)),0.)/MAX(SUM(Clivebed(1:nfrac,i,j,k)),1.e-12) !positive in case Clivebed(k) is not full, otherwise 0
+			    c_adjustB=MIN(cfixedbed-SUM(Clivebed(1:nfrac,i,j,k)),0.)/MAX(SUM(Clivebed(1:nfrac,i,j,k)),1.e-12) !negative in case Clivebed(k) contains too much sediment otherwise zero
+				DO n=1,nfrac
+				  cbotnew(n,i,j)=cbotnew(n,i,j)-c_adjust*Clivebed(n,i,j,k)-c_adjustB*Clivebed(n,i,j,k)   ! take this sediment from cbotnew
+				  Clivebed(n,i,j,k)=Clivebed(n,i,j,k)+c_adjust*Clivebed(n,i,j,k)+c_adjustB*Clivebed(n,i,j,k)  !top off Clivebed inside bed to exactly cfixedbed				  
+				ENDDO				
+			  ENDDO 			  
+		  ! below is series of checks on cbotnew and update kbed when too full or too empty corresponding to framework used in bedupdate 
+		  ! cbotnew=0-0.5 (gradually) filled with Clivebed(kbed)=0.5 or 1 filled 
+		  ! leading to gradually bed level -0.5..+0.5*dz around kbed level 
+			  !IF ((SUM(cbotnew(1:nfrac,i,j))+SUM(ccnew(1:nfrac,i,j,MIN(kbed(i,j)+1,k1)))).gt.cfixedbed) THEN  !increase kbed+1 and make Clivebed(kbed) full
+			  IF (SUM(cbotnew(1:nfrac,i,j)).gt.cfixedbed) THEN  !increase kbed+1 and make Clivebed(kbed) full
+			   !DO WHILE ((SUM(cbotnew(1:nfrac,i,j))+SUM(ccnew(1:nfrac,i,j,MIN(kbed(i,j)+1,k1)))).gt.cfixedbed)			   
+			   DO WHILE (SUM(cbotnew(1:nfrac,i,j)).gt.cfixedbed.and.kbed(i,j)<kmax)
+				kbed(i,j)=kbed(i,j)+1 ! adjust kbed
+				kbedt(i,j)=kbed(i,j)
+				c_adjust=MIN(cfixedbed,SUM(cbotnew(1:nfrac,i,j)))/MAX(SUM(cbotnew(1:nfrac,i,j)),1.e-12)
+				c_adjustB=MAX(0.,cfixedbed-SUM(cbotnew(1:nfrac,i,j)))/MAX(SUM(ccnew(1:nfrac,i,j,kbed(i,j))),1.e-12)
+				DO n=1,nfrac 
+				  Clivebed(n,i,j,kbed(i,j))=c_adjust*cbotnew(n,i,j)+c_adjustB*ccnew(n,i,j,kbed(i,j)) !fill Clivebed(kbed) full 
+				  cbotnew(n,i,j)=cbotnew(n,i,j)-c_adjust*cbotnew(n,i,j)+(1.-c_adjustB)*ccnew(n,i,j,kbed(i,j))
+				  ccnew(n,i,j,kbed(i,j))=0.
+				ENDDO 
+				drdt(i,j,kbed(i,j)) = rho_b  ! prevent large source in pres-corr by sudden increase in density
+				rnew(i,j,kbed(i,j)) = rho_b  ! prevent large source in pres-corr by sudden increase in density
+				rold(i,j,kbed(i,j)) = rho_b  ! prevent large source in pres-corr by sudden increase in density	
+			   ENDDO 
+			  !ELSEIF ((SUM(cbotnew(1:nfrac,i,j))+SUM(ccnew(1:nfrac,i,j,MIN(kbed(i,j)+1,k1)))).gt.0.5*cfixedbed) THEN  !increase kbed+1 and make Clivebed(kbed) half full to bring in line with erosion_sedimentation routine 
+			  ELSEIF (SUM(cbotnew(1:nfrac,i,j)).gt.0.5*cfixedbed.and.kbed(i,j)<kmax) THEN  !increase kbed+1 and make Clivebed(kbed) half full to bring in line with erosion_sedimentation routine 
+				kbed(i,j)=kbed(i,j)+1 ! adjust kbed
+				kbedt(i,j)=kbed(i,j)
+				c_adjust=MIN(0.5*cfixedbed,SUM(cbotnew(1:nfrac,i,j)))/MAX(SUM(cbotnew(1:nfrac,i,j)),1.e-12)
+				c_adjustB=MAX(0.,0.5*cfixedbed-SUM(cbotnew(1:nfrac,i,j)))/MAX(SUM(ccnew(1:nfrac,i,j,kbed(i,j))),1.e-12)
+				DO n=1,nfrac 
+				  Clivebed(n,i,j,kbed(i,j))=c_adjust*cbotnew(n,i,j)+c_adjustB*ccnew(n,i,j,kbed(i,j)) !fill Clivebed(kbed) half 
+				  cbotnew(n,i,j)=cbotnew(n,i,j)-c_adjust*cbotnew(n,i,j)+(1.-c_adjustB)*ccnew(n,i,j,kbed(i,j))
+				  ccnew(n,i,j,kbed(i,j))=0.
+				ENDDO 
+				drdt(i,j,kbed(i,j)) = rho_b  ! prevent large source in pres-corr by sudden increase in density
+				rnew(i,j,kbed(i,j)) = rho_b  ! prevent large source in pres-corr by sudden increase in density
+				rold(i,j,kbed(i,j)) = rho_b  ! prevent large source in pres-corr by sudden increase in density	
+				
+				! it can happen that after absorbing ccnew into cbotnew it grows above 0.5*cfixedbed again, then make Clivebed(kbed) full:
+				IF (SUM(cbotnew(1:nfrac,i,j)).gt.0.5*cfixedbed) THEN 
+				    c_adjust=(cfixedbed-SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/MAX(SUM(cbotnew(1:nfrac,i,j)),1.e-12)
+					DO n=1,nfrac 
+						Clivebed(n,i,j,kbed(i,j))=Clivebed(n,i,j,kbed(i,j))+c_adjust*cbotnew(n,i,j)
+						cbotnew(n,i,j)=cbotnew(n,i,j)-c_adjust*cbotnew(n,i,j)
+					ENDDO 
+				ENDIF 
+			  ELSEIF (SUM(cbotnew(1:nfrac,i,j)).lt.0) THEN 
+			    IF (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).gt.cfixedbed-1.e-9) THEN
+					!add half cell sediment on cbot account for further erosion without lowering 1 dz yet (because otherwise flipflop between ero-1dz and depo+1dz)
+					! this is at 1*dz			
+					DO n=1,nfrac ! also cbotnew(n,i,j) is le 0:
+						cbotnew(n,i,j)=cbotnew(n,i,j)+0.5*Clivebed(n,i,j,kbed(i,j)) 
+						Clivebed(n,i,j,kbed(i,j))=0.5*Clivebed(n,i,j,kbed(i,j)) 
+					ENDDO				
+				ELSEIF((kbed(i,j)-1).ge.0) THEN !erosion of 1 layer dz:
+				! this is at 0.5*dz
+					kplus = MIN(kbed(i,j)+1,k1)
+					DO k=kbed(i,j),kbed(i,j) ! kplus 
+						drdt(i,j,k)=rho_b
+						rnew(i,j,k)=rho_b
+						rold(i,j,k)=rho_b
+					ENDDO	
+					IF (erosion_cbed_start.ne.0) THEN 
+						DO k=kplus,kmax !kplus+1,kmax
+							drdt(i,j,k)=rho_b
+							rnew(i,j,k)=rho_b
+							rold(i,j,k)=rho_b
+						ENDDO
+					ENDIF 
+					DO n=1,nfrac ! also cbotnew(n,i,j) is le 0:
+						cbotnew(n,i,j)=cbotnew(n,i,j)+Clivebed(n,i,j,kbed(i,j)) 
+						Clivebed(n,i,j,kbed(i,j))=0. ! not bed anymore but fluid
+						IF (erosion_cbed_start.eq.0) THEN 
+							! in this loop erosionf/depositionf are not available 
+							ccnew(n,i,j,kbed(i,j))=0.
+!						    ccnew(n,i,j,kbed(i,j))=(erosionf(n)+depositionf(n))/(dz) !assign all erosion+depo as new sediment concentration new bottom layer fluid
+!						    ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus)-(erosionf(n)+depositionf(n))/(dz) !remove erosion+depo from previous bottom layer fluid
+							DO k=kbed(i,j),kbed(i,j) !kplus 
+							   drdt(i,j,k) = drdt(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+							   rnew(i,j,k) = rnew(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+							   rold(i,j,k) = rold(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density							
+							ENDDO						  
+						ELSE 						
+						  !improved 2 lines above by giving new lowest fluid cell same concentration as old lowest fluid cell and taking away this sediment from cells above (11-10-2021)
+						  cctot=0.
+						  DO k=kplus,kmax 
+							cctot=cctot+MAX(ccfd(n,i,j,k),0.)
+						  ENDDO	
+						  ccnew(n,i,j,kbed(i,j)) = ccnew(n,i,j,kplus) !new lowest fluid cell gets same concentration as old lowest fluid cell 
+						  DO k=kbed(i,j),kbed(i,j) 
+						   drdt(i,j,k) = drdt(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						   rnew(i,j,k) = rnew(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						   rold(i,j,k) = rold(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density							
+						  ENDDO	
+						  DO k=kbed(i,j)+1,kmax 
+						   ccnew(n,i,j,k) = ccnew(n,i,j,k) - MAX(ccfd(n,i,j,k),0.)/(cctot+1.e-12)*ccnew(n,i,j,kbed(i,j)) !remove same quantity from cells above in weighted avg manner
+						   drdt(i,j,k) = drdt(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						   rnew(i,j,k) = rnew(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+						   rold(i,j,k) = rold(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density							
+						  ENDDO
+						ENDIF 
+					ENDDO
+					!kbed(i,j)=MAX(kbed(i,j)-1,0)  !update bed level at end		
+					kbed(i,j)=kbed(i,j)-1
+					kbedt(i,j)=kbed(i,j)				
+				ENDIF 
+			  ENDIF 				
+!			  IF (SUM(cbotnew(1:nfrac,i,j)).gt.cfixedbed) THEN  !increase kbed+1 and make Clivebed(kbed) full
+!				kbed(i,j)=kbed(i,j)+1 ! adjust kbed
+!				kbedt(i,j)=kbed(i,j)
+!				c_adjust=(cfixedbed)/SUM(cbotnew(1:nfrac,i,j))
+!				DO n=1,nfrac 
+!				  Clivebed(n,i,j,kbed(i,j))=c_adjust*cbotnew(n,i,j) !fill Clivebed(kbed) full 
+!				  cbotnew(n,i,j)=cbotnew(n,i,j)-c_adjust*cbotnew(n,i,j)+ccnew(n,i,j,kbed(i,j))
+!				  ccnew(n,i,j,kbed(i,j))=0.
+!				ENDDO 
+!				drdt(i,j,kbed(i,j)) = rho_b  ! prevent large source in pres-corr by sudden increase in density
+!				rnew(i,j,kbed(i,j)) = rho_b  ! prevent large source in pres-corr by sudden increase in density
+!				rold(i,j,kbed(i,j)) = rho_b  ! prevent large source in pres-corr by sudden increase in density				
+!			  ELSEIF (SUM(cbotnew(1:nfrac,i,j)).gt.0.5*cfixedbed) THEN  !increase kbed+1 and make Clivebed(kbed) half full to bring in line with erosion_sedimentation routine 
+!				kbed(i,j)=kbed(i,j)+1 ! adjust kbed
+!				kbedt(i,j)=kbed(i,j)
+!				c_adjust=(0.5*cfixedbed)/SUM(cbotnew(1:nfrac,i,j))
+!				DO n=1,nfrac 
+!				  Clivebed(n,i,j,kbed(i,j))=c_adjust*cbotnew(n,i,j) !fill Clivebed(kbed) half 
+!				  cbotnew(n,i,j)=cbotnew(n,i,j)-c_adjust*cbotnew(n,i,j)+ccnew(n,i,j,kbed(i,j))
+!				  ccnew(n,i,j,kbed(i,j))=0.
+!				ENDDO 
+!				drdt(i,j,kbed(i,j)) = rho_b  ! prevent large source in pres-corr by sudden increase in density
+!				rnew(i,j,kbed(i,j)) = rho_b  ! prevent large source in pres-corr by sudden increase in density
+!				rold(i,j,kbed(i,j)) = rho_b  ! prevent large source in pres-corr by sudden increase in density				
+!			  ENDIF 			  
 			 ELSE
 			  DO n=1,nfrac
 				  cbotnew(n,i,j)=cbotnew(n,i,j)+SUM(Clivebed(n,i,j,1:kmax))! add all partially filled bed-cells above the bed to cbotnew
@@ -2314,19 +2763,23 @@
 			  kbed(i,j)=0 
 			  kbedt(i,j)=0
 			 ENDIF
- 			 DO k=1,kbed(i,j)
-			   c_adjust= MIN(cfixedbed-SUM(Clivebed(1:nfrac,i,j,k)),0.) !negative in case Clivebed contains too much sediment otherwise zero
-     &					/(SUM(Clivebed(1:nfrac,i,j,k)))			 
-			   DO n=1,nfrac
-					cbotnew(n,i,j)=cbotnew(n,i,j)-c_adjust*Clivebed(n,i,j,k) 
-					Clivebed(n,i,j,k)=Clivebed(n,i,j,k)+c_adjust*Clivebed(n,i,j,k)       
-			   ENDDO
-			 ENDDO 
-
+!!! this loop forces Clivebed(1:kbed) to exactly 0.6 and makes cbotnew a positive or negative buffer, but that is not correct  			 
+!!!			  DO k=1,kbed(i,j) !this loop should not be needed, but to be sure:
+!!!				c_adjust =MAX(cfixedbed-SUM(Clivebed(1:nfrac,i,j,k)),0.)/MAX(SUM(Clivebed(1:nfrac,i,j,k)),1.e-12) !positive in case Clivebed(kbed) is not full, otherwise 0
+!!!			    c_adjustB=MIN(cfixedbed-SUM(Clivebed(1:nfrac,i,j,k)),0.)/MAX(SUM(Clivebed(1:nfrac,i,j,k)),1.e-12) !negative in case Clivebed contains too much sediment, otherwise 0
+!!!				DO n=1,nfrac
+!!!				  cbotnew(n,i,j)=cbotnew(n,i,j)-c_adjust*Clivebed(n,i,j,k)-c_adjustB*Clivebed(n,i,j,k)   ! take this sediment from cbotnew
+!!!				  Clivebed(n,i,j,k)=Clivebed(n,i,j,k)+c_adjust*Clivebed(n,i,j,k)+c_adjustB*Clivebed(n,i,j,k)  !top off Clivebed inside bed to exactly cfixedbed				  
+!!!				ENDDO				
+!!!			  ENDDO
+			  
+			 ! DO WHILE loop below probably is only needed for kbed.eq.0 
 !			 IF (SUM(cbotnew(1:nfrac,i,j)).ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.
 !     &			 (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed.or.kbed(i,j).eq.0)) THEN
-			  DO WHILE (SUM(cbotnew(1:nfrac,i,j)).ge.(cfixedbed-1.e-12).and.kbed(i,j)+1.le.kmax.and.
-     &			 (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.(cfixedbed-1.e-12).or.kbed(i,j).eq.0))
+			  DO WHILE (SUM(cbotnew(1:nfrac,i,j)).ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.
+     &			 (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.(cfixedbed-1.e-9).or.kbed(i,j).eq.0))
+!			  IF (SUM(cbotnew(1:nfrac,i,j)).ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.
+!     &			 (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.(cfixedbed-1.e-9).or.kbed(i,j).eq.0))	THEN
 				kbed(i,j)=kbed(i,j)+1
 				kbedt(i,j)=kbed(i,j)
 					drdt(i,j,kbed(i,j))=rho_b
@@ -2334,15 +2787,15 @@
 					rold(i,j,kbed(i,j))=rho_b	
 					cbotnewtot=SUM(cbotnew(1:nfrac,i,j))
 					ctot_firstcel=SUM(ccnew(1:nfrac,i,j,kbed(i,j)))
-					c_adjustA = MAX(cfixedbed-ctot_firstcel,0.)/MAX(cbotnewtot,1.e-12)
-					c_adjustB = MIN(cfixedbed-ctot_firstcel,0.)/MAX(ctot_firstcel,1.e-12)					
+					c_adjustA = MAX(cfixedbed-ctot_firstcel,0.)/MAX(cbotnewtot,1.e-12)		!positive when ctot_firstcel<cfixedbed and 0 when ctot_firstcel>cfixedbed
+					c_adjustB = MIN(cfixedbed-ctot_firstcel,0.)/MAX(ctot_firstcel,1.e-12)	!0 when ctot_firstcel<cfixedbed and negative when ctot_firstcel>cfixedbed				
 					DO n=1,nfrac 
-						Clivebed(n,i,j,kbed(i,j))=ccnew(n,i,j,kbed(i,j))+c_adjustA*cbotnew(n,i,j)+c_adjustB*ccnew(n,i,j,kbed(i,j))
-						cbotnew(n,i,j)=cbotnew(n,i,j)-c_adjustA*cbotnew(n,i,j)-c_adjustB*ccnew(n,i,j,kbed(i,j))
+						Clivebed(n,i,j,kbed(i,j))=ccnew(n,i,j,kbed(i,j))+c_adjustA*cbotnew(n,i,j)+c_adjustB*ccnew(n,i,j,kbed(i,j)) 	!force Clivebed to cfixedbed
+						cbotnew(n,i,j)=cbotnew(n,i,j)-c_adjustA*cbotnew(n,i,j)-c_adjustB*ccnew(n,i,j,kbed(i,j))						!take this sediment from fluid and cbotnew
 						ccnew(n,i,j,kbed(i,j))=0.
 					ENDDO
 !				write(*,*),'WHILE rank,i,j,kbed',rank,i,j,kbed(i,j),SUM(Clivebed(1:nfrac,i,j,kbed(i,j))),SUM(cbotnew(1:nfrac,i,j))	
-			  ENDDO
+			 ENDDO
 			 !ENDIF
 
 			 !IF (kbed(i,j)>1) THEN

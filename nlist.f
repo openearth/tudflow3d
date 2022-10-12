@@ -72,7 +72,7 @@
 	  REAL dt_factor_avg,CNdiff_factor,CNdiff_ho,CNdiff_dtfactor,CNdiff_tol,Apvisc_shear_relax
 	  INTEGER n_dtavg,CNdiff_pc,CNdiff_maxi,CNdiff_ini,initPhydrostatic,npresIBM_viscupdate,rheo_shear_method,Apvisc_force_eq
 	  INTEGER tmax_inPpuntTSHDini,tmax_inUpuntTSHDini,tmax_inVpuntTSHDini,tmax_inWpuntTSHDini
-	  INTEGER nobst_files,nobst_file,momentum_exchange_obstacles
+	  INTEGER nobst_files,nobst_file,momentum_exchange_obstacles,erosion_cbed_start,movebed_absorb_cfluid
 	  CHARACTER(len=256) :: obst_file_series(5000)
 	  REAL :: obst_starttimes(5000) 
 	  
@@ -194,7 +194,7 @@
 	REAL stat_time_count	
 
 	type fractions
-	    REAL ::	ws,rho,c,dpart,dfloc,n,tau_d,tau_e,M,kn_sed,ws_dep,zair_ref_belowsurf,CD
+	    REAL ::	ws,rho,c,dpart,dfloc,n,tau_d,tau_e,M,kn_sed,ws_dep,zair_ref_belowsurf,CD,cmax
 	    INTEGER :: type
 	end type fractions
 	type bed_obstacles
@@ -203,7 +203,7 @@
 	type bed_plumes
 	    REAL ::	x(4),y(4),height,u,v,w,c(30),t0,t_end,zbottom,Q,sedflux(30),volncells,changesedsuction !c(30) matches with size frac_init
 		REAL :: move_zbed_criterium(100000),move_dx_series(100000),move_dy_series(100000),move_dz_series(100000)
-		INTEGER :: move_zbed_type(100000)
+		INTEGER*2 :: move_zbed_type(100000)
 		REAL :: move_nx_series(100000),move_ny_series(100000),x2(4),y2(4),move_dx2_series(100000),move_dy2_series(100000)
 		REAL :: move_outputfile_series(100000),uinput,dt_history,t_bphis_output,move_dz_height_factor,move_dz_zbottom_factor
 	    INTEGER :: forever,h_seriesloc,zb_seriesloc,Q_seriesloc,S_seriesloc,c_seriesloc,velocity_force
@@ -217,7 +217,7 @@
 		REAL :: h_tseries(10000),h_series(10000),zb_tseries(10000),zb_series(10000)
 		REAL :: Q_tseries(10000),c_tseries(10000),S_tseries(10000),Q_series(10000),c_series(30,10000),S_series(30,10000)
 		REAL :: move_zbed_criterium(100000),move_dx_series(100000),move_dy_series(100000),move_dz_series(100000)
-		INTEGER :: move_zbed_type(100000)
+		INTEGER*2 :: move_zbed_type(100000)
 		REAL :: move_nx_series(100000),move_ny_series(100000),x2(4),y2(4),move_dx2_series(100000),move_dy2_series(100000)
 		REAL :: move_outputfile_series(100000),uinput,dt_history,t_bphis_output,move_dz_height_factor,move_dz_zbottom_factor
 		REAL :: u_tseries(10000),v_tseries(10000),w_tseries(10000)
@@ -228,7 +228,7 @@
 		CHARACTER*256 :: u_tseriesfile,v_tseriesfile,w_tseriesfile
 !		INTEGER :: tmax_iP,tmax_iU,iP_inbp(10000),jP_inbp(10000),kP_inbp(10000),iU_inbp(10000),jU_inbp(10000),kU_inbp(10000)
 		REAL :: move_u,move_v,move_w,radius,radius2
-		INTEGER*2 :: i(10000),j(10000) 
+		INTEGER*2 :: i(100000),j(100000) 
 	end type bed_plumes2
 	
 	TYPE(fractions), DIMENSION(:), ALLOCATABLE :: frac
@@ -251,7 +251,7 @@
 
 	integer ios,n,n1,n2,n3,n4
 	type frac_init
-	  real :: ws,c,rho,dpart,dfloc,tau_d,tau_e,M,kn_sed,ws_dep,zair_ref_belowsurf,CD
+	  real :: ws,c,rho,dpart,dfloc,tau_d,tau_e,M,kn_sed,ws_dep,zair_ref_belowsurf,CD,cmax
 	  integer :: type
 	end type frac_init
 	TYPE(frac_init), DIMENSION(30) :: fract
@@ -281,7 +281,8 @@
      &	av_slope_z,calibfac_Shields_cr,reduction_sedimentation_shields,morfac,morfac2,avalanche_until_done,avfile,
      & settling_along_gvector,vwal,nl,permeability_kl,pickup_fluctuations_ampl,pickup_fluctuations,pickup_correction,cbed_method,
      & z_tau_sed,k_layer_pickup,pickup_bedslope_geo,bedload_formula,kn_d50_multiplier_bl,calibfac_sand_bedload,bl_relax,fcor,
-     & wbed_correction,bedslope_effect,bedslope_mu_s,alfabs_bl,alfabn_bl,phi_sediment,wallmodel_tau_sed,nrmsbed,ndtbed
+     & wbed_correction,bedslope_effect,bedslope_mu_s,alfabs_bl,alfabn_bl,phi_sediment,wallmodel_tau_sed,nrmsbed,ndtbed,
+     & erosion_cbed_start,movebed_absorb_cfluid	 
 	NAMELIST /fractions_in_plume/fract
 	NAMELIST /ship/U_TSHD,LOA,Lfront,Breadth,Draught,Lback,Hback,xfront,yfront,kn_TSHD,nprop,Dprop,xprop,yprop,zprop,
      &   Pprop,rudder,rot_prop,draghead,Dsp,xdh,perc_dh_suction,softnose,Hfront,cutter
@@ -550,6 +551,7 @@
 	fract(:)%zair_ref_belowsurf=-999.
 	fract(:)%type=1
 	fract(:)%CD=0.
+	fract(:)%cmax=100.
 	nfrac=0
 	nfr_silt=0
 	nfr_sand=0
@@ -622,6 +624,8 @@
 	alfabs_bl=1.0 
 	alfabn_bl=1.5 
 	phi_sediment=30.
+	erosion_cbed_start = 1 !
+	movebed_absorb_cfluid = 1 !default 1 absorb cfluid in bed when bed moves and new bed is higher than previous timestep (like in avalanche and regular bed-update), 0 = add cfluid buried in new bed to first fluid cell above new bed
 	!! ship
 	U_TSHD=-999.
 	LOA=-999.
@@ -713,7 +717,7 @@
 	IF (depth<0.) CALL writeerror(10)
 	IF (mod(jmax,px).ne.0) CALL writeerror(11)
 	IF (mod(kmax,px).ne.0) CALL writeerror(12)
-	IF (sym_grid_y.ne.0.and.sym_grid_y.ne.1) CALL writeerror(13)
+	IF (sym_grid_y.ne.0.and.sym_grid_y.ne.1.and.sym_grid_y.ne.-1) CALL writeerror(13)
 	jmax=jmax/px
 	READ (UNIT=1,NML=times,IOSTAT=ios)
 	!! check input times  
@@ -910,7 +914,8 @@
 	  frac(n)%ws_dep=fract(n)%ws_dep
 	  frac(n)%zair_ref_belowsurf=fract(n)%zair_ref_belowsurf	  
 	  frac(n)%type = fract(n)%type
-	  frac(n)%CD=fract(n)%CD	
+	  frac(n)%CD=fract(n)%CD
+	  frac(n)%cmax=fract(n)%cmax	  
 	!! check input fractions_in_plume
 	  IF (frac(n)%ws.eq.-999.) THEN
 		write(*,*)'Fraction:',n
@@ -1476,7 +1481,8 @@
 	IF (calibfac_Shields_cr<0.) CALL writeerror(99)
 	IF (morfac<0.) CALL writeerror(101)
 	IF (morfac2<1.) CALL writeerror(102)
-	IF (pickup_correction.eq.'MastBergenvdBerg2003'.or.pickup_correction.eq.'MBvdBerg2003_vecheck') THEN 
+	IF (pickup_correction.eq.'MastBergenvdBerg2003'.or.pickup_correction.eq.'MBvdBerg2003_vecheck'
+     &	.or.pickup_correction.eq.'breach_via_avalanche') THEN 
 		vwal2=vwal 
 		IF (vwal<0) CALL writeerror(103)
 		IF (nl<0.or.nl<(1.-cfixedbed)) CALL writeerror(104)

@@ -55,8 +55,9 @@
        integer :: x_dimid, y_dimid, z_dimid, nfrac_dimid, par_dimid,dimids3(NDIMS3),dimids5(NDIMS5)
        integer :: dimids4(NDIMS),varid20,varid21,t
 	   integer :: varid22,varid23	   
-	character(1024) :: svnversion
-	character(1024) :: svnurl
+	character(1024) :: gitversion
+	character(1024) :: url
+	character(1024) :: date_make
       include 'version.inc'
      
 !       ! This is the data array we will write. It will just be filled with
@@ -139,12 +140,13 @@
 	   
 
 	! also add svn info in output files:
-       CALL check( nf90_put_att(ncid,nf90_global, "svnversion", trim(svnversion)))
-       CALL check( nf90_put_att(ncid,nf90_global, "svnurl", trim(svnurl)))
+       CALL check( nf90_put_att(ncid,nf90_global, "gitversion", trim(gitversion)))
+       CALL check( nf90_put_att(ncid,nf90_global, "url", trim(url)))
+	   CALL check( nf90_put_att(ncid,nf90_global, "date make", trim(date_make)))
      
        ! End define mode. This tells netCDF we are done defining metadata.
-       call check( nf90_enddef(ncid) )
-     
+       call check( nf90_enddef(ncid) ) 
+      
        ! Write the pretend data to the file. Although netCDF supports
        ! reading and writing subsets of data, in this case we write all the
        ! data in one operation.
@@ -285,8 +287,9 @@
 	integer ios
 	character*120 FILE_NAME
 	character*200 tline
-	character(1024) :: svnversion
-	character(1024) :: svnurl
+	character(1024) :: gitversion
+	character(1024) :: url
+	character(1024) :: date_make
       include 'version.inc'
 
 	!! read input file line by line and place in txt file in output dir to always be able to find input:
@@ -300,8 +303,10 @@
 	OPEN(2,FILE='Dflow3d.input_of_this_run',IOSTAT=ios,ACTION='write')	
 
 
-	WRITE(2,'(a,a)'),'Dflow3d svn version:',TRIM(svnversion)
-	WRITE(2,'(a,a)'),'Dflow3d svn ',TRIM(svnurl)
+	WRITE(2,'(a,a)'),'TUDflow3d git version: ',TRIM(gitversion)
+	WRITE(2,'(a,a)'),'TUDflow3d url ',TRIM(url)
+	WRITE(2,'(a,a)'),'TUDflow3d date make: ',TRIM(date_make)
+	
 	ios=0
 	DO WHILE (ios.eq.0)
 		READ(1,'(a)',iostat=ios) tline  ! read full inputfile 
@@ -355,8 +360,9 @@
 	   integer :: varid24,varid25,varid26,varid27,varid28,varid29
        integer :: varid30,varid31,varid32,varid33,varid34,varid35,varid36,varid37,varid38
 
-	character(1024) :: svnversion
-	character(1024) :: svnurl
+	character(1024) :: gitversion
+	character(1024) :: url
+	character(1024) :: date_make
       include 'version.inc'
 
       do k=1,kmax
@@ -542,8 +548,9 @@
        call check( nf90_put_att(ncid, varid23, 'long_name', 'If cell is in obstacle 1 else 0') )
 	   
 	! also add svn info in output files:
-       CALL check( nf90_put_att(ncid,nf90_global, "svnversion", trim(svnversion)))
-       CALL check( nf90_put_att(ncid,nf90_global, "svnurl", trim(svnurl)))
+       CALL check( nf90_put_att(ncid,nf90_global, "gitversion", trim(gitversion)))
+       CALL check( nf90_put_att(ncid,nf90_global, "url", trim(url)))
+	   CALL check( nf90_put_att(ncid,nf90_global, "date make", trim(date_make)))
 
        ! End define mode. This tells netCDF we are done defining metadata.
        call check( nf90_enddef(ncid) )
@@ -661,8 +668,9 @@
        integer :: varid11,varid12,varid13,varid14,varid15,varid16,varid17,varid18,varid19
 	   integer :: varid20,varid21,varid22,varid23,varid24,varid25,varid26,varid27
        integer :: x_dimid, y_dimid, z_dimid, nfrac_dimid, par_dimid
-		character(1024) :: svnversion
-		character(1024) :: svnurl
+		character(1024) :: gitversion
+		character(1024) :: url
+		character(1024) :: date_make
       include 'version.inc'       
 
 		WRITE(FILE_NAME,'(a,i9.9,a,i4.4,a)')'movie3D_',INT(istap),'_',INT(rank),'.nc'
@@ -766,8 +774,9 @@
        call check( nf90_put_att(ncid, varid8, 'long_name', 'Time from start simulation') )
 
 	! also add svn info in output files:
-       CALL check( nf90_put_att(ncid,nf90_global, "svnversion", trim(svnversion)))
-       CALL check( nf90_put_att(ncid,nf90_global, "svnurl", trim(svnurl)))
+       CALL check( nf90_put_att(ncid,nf90_global, "gitversion", trim(gitversion)))
+       CALL check( nf90_put_att(ncid,nf90_global, "url", trim(url)))
+	   CALL check( nf90_put_att(ncid,nf90_global, "date make", trim(date_make)))
 
        ! End define mode. This tells netCDF we are done defining metadata.
        call check( nf90_enddef(ncid) )
@@ -929,8 +938,9 @@
 	   integer :: varid26,varid27,varid28,varid29,varid30,varid31,varid32,varid33
        integer :: dimids(NDIMS), dimids2(NDIMS2),dimids3(NDIMS3)
        integer :: x_dimid, y_dimid, z_dimid, nfrac_dimid, par_dimid
-	character(1024) :: svnversion
-	character(1024) :: svnurl
+	character(1024) :: gitversion
+	character(1024) :: url
+	character(1024) :: date_make
       include 'version.inc'
 
 	do i=1,imax
@@ -1132,8 +1142,9 @@
        call check( nf90_put_att(ncid, varid17, 'long_name', 'Time over which average is determined') )
 
 	! also add svn info in output files:
-       CALL check( nf90_put_att(ncid,nf90_global, "svnversion", trim(svnversion)))
-       CALL check( nf90_put_att(ncid,nf90_global, "svnurl", trim(svnurl)))
+       CALL check( nf90_put_att(ncid,nf90_global, "gitversion", trim(gitversion)))
+       CALL check( nf90_put_att(ncid,nf90_global, "url", trim(url)))
+	   CALL check( nf90_put_att(ncid,nf90_global, "date make", trim(date_make)))
 
        ! End define mode. This tells netCDF we are done defining metadata.
        call check( nf90_enddef(ncid) )
@@ -1229,8 +1240,9 @@
        integer :: ncid, varid1,varid2,varid3,varid4,varid5,varid6
        integer :: dimids2(NDIMS2),dimids3(NDIMS3)
        integer :: nhis_dimid,time_dimid,nfrac_dimid,istep2
-	character(1024) :: svnversion
-	character(1024) :: svnurl
+	character(1024) :: gitversion
+	character(1024) :: url
+	character(1024) :: date_make
       include 'version.inc'
 
        ! Create the netCDF file. The nf90_clobber parameter tells netCDF to
@@ -1281,8 +1293,9 @@
 
 
 	! also add svn info in output files:
-       CALL check( nf90_put_att(ncid,nf90_global, "svnversion", trim(svnversion)))
-       CALL check( nf90_put_att(ncid,nf90_global, "svnurl", trim(svnurl)))
+       CALL check( nf90_put_att(ncid,nf90_global, "gitversion", trim(gitversion)))
+       CALL check( nf90_put_att(ncid,nf90_global, "url", trim(url)))
+	   CALL check( nf90_put_att(ncid,nf90_global, "date make", trim(date_make)))
 
        ! End define mode. This tells netCDF we are done defining metadata.
        call check( nf90_enddef(ncid) )

@@ -40,12 +40,18 @@ LIBMKL = -L$MKLPATH -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpth
 FC = $(F77) $(FLAGS)
 RM = rm -f
 
-# commandos to obtain github info in fortran program:
-#VR1 = $(shell echo "      svnversion = '`git rev-parse --short HEAD`'" > version.inc)
-#VR2 = #$(shell echo "      svnurl = https://github.com/openearth/tudflow3d.git" >> version.inc )
-#temporary switched off because this test is not in github path:
-VR1 = 
-VR2 = 
+# commandos to obtain github info in fortran program and trace version of code for each simulation:
+VR1 = $(shell echo "      gitversion = '`git rev-parse --short HEAD`'" > version.inc)
+VR2 = $(shell echo "      url = 'https://github.com/openearth/tudflow3d'" >> version.inc )
+VR3 = $(shell echo "      date_make = '`date`'" >> version.inc)
+
+
+
+
+
+#VR1 = 
+#VR2 = 
+#VR3 = 
 
 
 PROGRAM = TUDflow3d_vg_h7.exe
@@ -132,4 +138,4 @@ rheology.o: rheology.f makefile
 clean:
 	$(RM) a.out core *.mod $(PROGRAM) $(OBJS)
 
-version: $(VR1) $(VR2) 
+version: $(VR1) $(VR2) $(VR3) 

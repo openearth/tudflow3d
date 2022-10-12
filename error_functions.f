@@ -92,7 +92,7 @@
 		write(*,*) '# adjust kmax and/or px                          #'
 	CASE(013)
 		write(*,*) '# namelist &simulation                           #'			
-		write(*,*) '# sym_grid_y is not equal to 0 or 1              #'			
+		write(*,*) '# sym_grid_y is not equal to 0,-1,1              #'			
 	CASE(030)
 		write(*,*) '# namelist &times                                #'			
 		write(*,*) '# t_end is not defined                           #'			
@@ -481,7 +481,7 @@
 		write(*,*) '# hindered_settling should be 1,2,3              #'		
 	CASE(281)
 		write(*,*) '# namelist &plume                                #'			
-		write(*,*) '# bedplume covers >10000 cells in x,y plane      #'		
+		write(*,*) '# bedplume covers >100000 cells in x,y plane     #'		
 	CASE(282)
 		write(*,*) '# namelist &plume                                #'			
 		write(*,*) '# hindered_settling_c should be 0,1              #'		

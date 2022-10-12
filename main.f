@@ -31,8 +31,9 @@
 	  !integer cput1,cput2,cr
       real     bulk ,pold_ref
       real A(3,3)
-	character(1024) :: svnversion
-	character(1024) :: svnurl
+	character(1024) :: gitversion
+	character(1024) :: url
+	character(1024) :: date_make
 		CHARACTER*20 username,hostname
 		INTEGER(4) istat,istat2,GETPID,HOSTNAM
 	
@@ -555,8 +556,9 @@
 		WRITE(*,'(a,i12,a,f12.2,a)') ' # Run time : ',floor((cput2-cput1)/3600),' h ',
      &          (cput2-cput1-floor((cput2-cput1)/3600)*3600)/60,' m         #' 				
 		WRITE(*,*) '####################################################'
-		WRITE(*,'(a,a,a)') ' # TUDflow3d svn revision:',TRIM(svnversion),'                  '
-!		WRITE(*,'(a,a,a)') ' # TUDflow3d svn ',TRIM(svnurl),''
+		WRITE(*,'(a,a,a)') ' # TUDflow3d git revision : ',TRIM(gitversion),'                  '
+		WRITE(*,'(a,a,a)') ' # TUDflow3d url ',TRIM(url),''
+		WRITE(*,'(a,a,a)') ' # TUDflow3d date make : ',TRIM(date_make),' '		
 		WRITE(*,'(a,a,a)') ' # User                  : ',username,'                           ' 
 		WRITE(*,'(a,a,a)') ' # Machine               : ',hostname,'                           ' 
 		WRITE(*,*) '####################################################'		

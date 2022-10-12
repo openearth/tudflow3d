@@ -203,6 +203,9 @@ c******************************************************************
 		schuifphi=(phipt(jmax*px+1)+phipt(0))/2.+pi
 	ELSE 
 		schuifphi=(phipt(jmax*px+1)+phipt(0))/2.
+	ENDIF
+	IF (sym_grid_y.eq.-1) THEN 
+		schuifphi = 0. !use lateral grid starting at y=0, not centre at y=0
 	ENDIF 
 	phivt=phivt-schuifphi
 	phipt=phipt-schuifphi
@@ -1534,11 +1537,11 @@ C ...  Locals
 
 	! in case periodic x flow then Ppropx is used as driving force:
 	if (periodicx.eq.1) then
-		Ppropx=dpdx
+		Ppropx=Ppropx+dpdx
 	endif
 	! in case periodic y flow then Ppropy is used as driving force:
 	if (periodicy.eq.1) then
-		Ppropy=dpdy
+		Ppropy=Ppropy+dpdy
 	endif
 
 	end

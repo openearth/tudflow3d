@@ -273,6 +273,15 @@
 		
 	  dt=MIN(dt,dtold*1.1) !change in time step never more than +10% in one timestep for extra stability
 
+	if (isnan(dt).or.dt<1.e-12) then
+		call output_nc('flow3D_',999999999,time_np)
+		rnew=rold 
+		cnew=cold 
+		unew=uold
+		vnew=vold
+		wnew=wold
+		call output_nc('flow3D_',999999998,time_np) !output file with rcuvw from previous timestep (hopefully not crashed)
+	endif 
 	  
 	if (isnan(dt)) stop 'ERROR, QUITING TUDFLOW3D: "dt" is a NaN'
 	if (dt<1.e-12) stop 'ERROR, QUITING TUDFLOW3D: "dt" is smaller than 1e-12'
@@ -855,8 +864,9 @@
        integer :: varid9,varid10,varid11,varid12,varid13
        integer :: dimids1(NDIMS1), dimids2(NDIMS2),dimids3(NDIMS3),dimids4(NDIMS4)
        integer :: nhis_dimid,time_dimid,nfrac_dimid,istep2
-	character(1024) :: svnversion
-	character(1024) :: svnurl
+	character(1024) :: gitversion
+	character(1024) :: url
+	character(1024) :: date_make
       include 'version.inc'
 
 
@@ -994,8 +1004,9 @@
        call check( nf90_put_att(ncid, varid13, 'long_name', 'Time series of history') )
 
 	! also add svn info in output files:
-       CALL check( nf90_put_att(ncid,nf90_global, "svnversion", trim(svnversion)))
-       CALL check( nf90_put_att(ncid,nf90_global, "svnurl", trim(svnurl)))
+       CALL check( nf90_put_att(ncid,nf90_global, "gitversion", trim(gitversion)))
+       CALL check( nf90_put_att(ncid,nf90_global, "url", trim(url)))
+	   CALL check( nf90_put_att(ncid,nf90_global, "date make", trim(date_make)))
 
        ! End define mode. This tells netCDF we are done defining metadata.
        call check( nf90_enddef(ncid) )
