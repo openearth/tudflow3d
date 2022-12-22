@@ -414,8 +414,8 @@
        if (nfrac>0) then
        	dimids2 =  (/ nfrac_dimid, x_dimid, y_dimid, z_dimid /)
 	dimids4 =  (/ nfrac_dimid, x_dimid, y_dimid /)
-	   dimids5 =  (/ x_dimid, y_dimid  /) 
 		endif
+	   dimids5 =  (/ x_dimid, y_dimid  /)		
        dimids3 =  (/ par_dimid  /) 
 
 
@@ -433,6 +433,10 @@
        call check( nf90_put_att(ncid, varid3, 'units', 'm/s') )
        call check( nf90_put_att(ncid, varid3, 'long_name', 'W velocity') )
 
+	   	call check( nf90_def_var(ncid, "tau_flow", NF90_REAL, dimids5, varid25) )
+		call check( nf90_put_att(ncid, varid25, 'units', 'N/m2') )
+		call check( nf90_put_att(ncid, varid25, 'long_name', 'Flow bed shear stress') )
+		
        if (nfrac>0) then
        call check( nf90_def_var(ncid, "C", NF90_REAL, dimids2, varid4) )
        call check( nf90_put_att(ncid, varid4, 'units', '-') )
@@ -440,9 +444,6 @@
        call check( nf90_def_var(ncid, "mass_bed", NF90_REAL, dimids4, varid20) )
        call check( nf90_put_att(ncid, varid20, 'units', 'kg/m2') )
        call check( nf90_put_att(ncid, varid20, 'long_name', 'Mass per m2 sediment fractions in bed') )
-	   	call check( nf90_def_var(ncid, "tau_flow", NF90_REAL, dimids5, varid25) )
-		call check( nf90_put_att(ncid, varid25, 'units', 'N/m2') )
-		call check( nf90_put_att(ncid, varid25, 'long_name', 'Flow bed shear stress') )
 	   	call check( nf90_def_var(ncid, "tau_mud", NF90_REAL, dimids5, varid26) )
 		call check( nf90_put_att(ncid, varid26, 'units', 'N/m2') )
 		call check( nf90_put_att(ncid, varid26, 'long_name', 'Mud bed shear stress') )	
@@ -566,7 +567,6 @@
 	   call check( nf90_put_var(ncid, varid3, uu(1:imax,1:jmax,1:kmax)) )
        
 
-	   
        if (nfrac>0) then
        	call check( nf90_put_var(ncid, varid4, Cnew(1:nfrac,1:imax,1:jmax,1:kmax)) ) 
 		call check( nf90_put_var(ncid, varid20, mass_bed(1:nfrac,1:imax,1:jmax)) ) 
@@ -578,9 +578,6 @@
 		  call check( nf90_put_var(ncid, varid12, qbU(1:nfrac,1:imax,1:jmax) ))
 		  call check( nf90_put_var(ncid, varid13, qbV(1:nfrac,1:imax,1:jmax) ))
 		endif
-		zzbed=sqrt((0.5*(tau_fl_Unew(1:imax,1:jmax)+tau_fl_Unew(0:imax-1,1:jmax)))**2
-     &   +(0.5*(tau_fl_Vnew(1:imax,1:jmax)+tau_fl_Vnew(1:imax,0:jmax-1)))**2)
-		call check( nf90_put_var(ncid, varid25,zzbed  ))
 		call check( nf90_put_var(ncid, varid26,ust_mud_new(1:imax,1:jmax)*ust_mud_new(1:imax,1:jmax)*rho_b  ))
 		call check( nf90_put_var(ncid, varid27,ust_sl_new(1:imax,1:jmax)*ust_sl_new(1:imax,1:jmax)*rho_b  ))		
 		call check( nf90_put_var(ncid, varid28,ust_bl_new(1:imax,1:jmax)*ust_bl_new(1:imax,1:jmax)*rho_b  ))
@@ -592,6 +589,10 @@
 		call check( nf90_put_var(ncid, varid6, uu(1:imax,1:jmax,1:kmax)) )
 		uu=p(1:imax,1:jmax,1:kmax)+pold(1:imax,1:jmax,1:kmax)
 		call check( nf90_put_var(ncid, varid7, uu(1:imax,1:jmax,1:kmax)) )
+		
+		zzbed=sqrt((0.5*(tau_fl_Unew(1:imax,1:jmax)+tau_fl_Unew(0:imax-1,1:jmax)))**2
+     &   +(0.5*(tau_fl_Vnew(1:imax,1:jmax)+tau_fl_Vnew(1:imax,0:jmax-1)))**2)
+		call check( nf90_put_var(ncid, varid25,zzbed  ))		
        !call check( nf90_put_var(ncid, varid5, rnew(1:imax,1:jmax,1:kmax)) )
        !call check( nf90_put_var(ncid, varid6, ekm(1:imax,1:jmax,1:kmax)) )
        !call check( nf90_put_var(ncid, varid7, p(1:imax,1:jmax,1:kmax)+pold(1:imax,1:jmax,1:kmax)) )
@@ -914,6 +915,7 @@
 	real uv_shear(1:imax,1:jmax,1:kmax)
 	real vw_shear(1:imax,1:jmax,1:kmax)
 	real uw_shear(1:imax,1:jmax,1:kmax)
+	real tau_flow_rms(1:imax,1:jmax)
 	real uc_avg(nfrac,1:imax,1:jmax,1:kmax),vc_avg(nfrac,1:imax,1:jmax,1:kmax),wc_avg(nfrac,1:imax,1:jmax,1:kmax)
 	real uc_rms(nfrac,1:imax,1:jmax,1:kmax),vc_rms(nfrac,1:imax,1:jmax,1:kmax),wc_rms(nfrac,1:imax,1:jmax,1:kmax)
 	real tt
@@ -928,6 +930,7 @@
        integer, parameter :: NDIMS = 3
        integer, parameter :: NDIMS2 = 4
        integer, parameter :: NDIMS3 = 1
+	   integer, parameter :: NDIMS4 = 2
 !       integer, parameter :: NX = imax, NY = jmax, NZ = kmax
      
        ! When we create netCDF files, variables and dimensions, we get back
@@ -935,8 +938,8 @@
        integer :: ncid, varid1,varid2,varid3, varid4, varid5, varid6, varid7, varid8 
        integer :: varid9,varid10,varid11, varid12, varid13, varid14, varid15, varid16, varid17
        integer :: varid18,varid19,varid20,varid21,varid22,varid23,varid24,varid25
-	   integer :: varid26,varid27,varid28,varid29,varid30,varid31,varid32,varid33
-       integer :: dimids(NDIMS), dimids2(NDIMS2),dimids3(NDIMS3)
+	   integer :: varid26,varid27,varid28,varid29,varid30,varid31,varid32,varid33,varid34,varid35
+       integer :: dimids(NDIMS), dimids2(NDIMS2),dimids3(NDIMS3),dimids4(NDIMS4)
        integer :: x_dimid, y_dimid, z_dimid, nfrac_dimid, par_dimid
 	character(1024) :: gitversion
 	character(1024) :: url
@@ -981,7 +984,10 @@
 	    enddo
 	  enddo
 	enddo
-
+	tau_flow_avg = tau_flow_avg/stat_time_count 
+	tau_flow_rms = sqrt(ABS(sig_tau_flow2/stat_time_count - tau_flow_avg*tau_flow_avg))
+	
+	
 	WRITE(FILE_NAME,'(a,i4.4,a)')'Stat_output_',INT(rank),'.nc'
 	
        ! Create the netCDF file. The nf90_clobber parameter tells netCDF to
@@ -1005,7 +1011,7 @@
        dimids2 =  (/ nfrac_dimid, x_dimid, y_dimid, z_dimid /)
 	endif
        dimids3 =  (/ par_dimid  /) 
-    
+	   dimids4 =  (/ x_dimid, y_dimid /)	
        ! Define the variable. The type of the variable in this case is
        ! NF90_DOUBLE (4-byte double).
        call check( nf90_def_var(ncid, "Urms", NF90_REAL, dimids, varid1) )
@@ -1091,6 +1097,13 @@
        call check( nf90_put_att(ncid, varid13, 'units', 'kg/(sm)') )
        call check( nf90_put_att(ncid, varid13, 'long_name', 'AVG Dynamic eddy viscosity') )
 
+	   call check( nf90_def_var(ncid, "tau_flow_avg", NF90_REAL, dimids4, varid34) )
+       call check( nf90_put_att(ncid, varid34, 'units', 'Pa') )
+       call check( nf90_put_att(ncid, varid34, 'long_name', 'AVG tau-flow') )
+	   call check( nf90_def_var(ncid, "tau_flow_rms", NF90_REAL, dimids4, varid35) )
+       call check( nf90_put_att(ncid, varid35, 'units', 'Pa') )
+       call check( nf90_put_att(ncid, varid35, 'long_name', 'RMS tau-flow') )
+	   
        if (nfrac>0) then
        call check( nf90_def_var(ncid, "Cavg", NF90_REAL, dimids2, varid14) )
        call check( nf90_put_att(ncid, varid14, 'units', '-') )
@@ -1173,7 +1186,9 @@
        call check( nf90_put_var(ncid, varid11, uw_shear(1:imax,1:jmax,1:kmax)) )
        call check( nf90_put_var(ncid, varid12, Pavg(1:imax,1:jmax,1:kmax)) )
        call check( nf90_put_var(ncid, varid13, muavg(1:imax,1:jmax,1:kmax)) )
-
+	   call check( nf90_put_var(ncid, varid34, tau_flow_avg(1:imax,1:jmax)) )
+	   call check( nf90_put_var(ncid, varid35, tau_flow_rms(1:imax,1:jmax)) )
+	   
        if (nfrac>0) then
        call check( nf90_put_var(ncid, varid14, Cavg(1:nfrac,1:imax,1:jmax,1:kmax)) )
        call check( nf90_put_var(ncid, varid15, Crms(1:nfrac,1:imax,1:jmax,1:kmax)) )

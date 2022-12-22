@@ -661,6 +661,7 @@
 	!REAL uu,vv,ww,uudt,vvdt,wwdt
 	REAL uu(1:imax,1:jmax,1:kmax),vv(1:imax,1:jmax,1:kmax),ww(1:imax,1:jmax,1:kmax)
 	REAL uudt(1:imax,1:jmax,1:kmax),vvdt(1:imax,1:jmax,1:kmax),wwdt(1:imax,1:jmax,1:kmax)
+	REAL tau_flow_temp(1:imax,1:jmax)
 	INTEGER n
 
 	stat_count=stat_count+1
@@ -679,7 +680,9 @@
 			  enddo		  
 			enddo
 		  enddo
-		enddo		  
+		enddo	
+		tau_flow_temp=sqrt((0.5*(tau_fl_Unew(1:imax,1:jmax)+tau_fl_Unew(0:imax-1,1:jmax)))**2
+     &   +(0.5*(tau_fl_Vnew(1:imax,1:jmax)+tau_fl_Vnew(1:imax,0:jmax-1)))**2)		
 		  uudt=uu*dt
 		  vvdt=vv*dt
 		  wwdt=ww*dt
@@ -691,7 +694,8 @@
 		  sigUV = sigUV + uu*vvdt
 		  sigUW = sigUW + uu*wwdt
 		  sigVW = sigVW + vv*wwdt
-
+		  sig_tau_flow2 = sig_tau_flow2+tau_flow_temp*tau_flow_temp*dt
+		  
 		  Uavg  = Uavg + uudt
 		  Vavg  = Vavg + vvdt
 		  Wavg  = Wavg + wwdt
@@ -707,6 +711,8 @@
 		  Pavg  = Pavg + (p(1:imax,1:jmax,1:kmax)+pold(1:imax,1:jmax,1:kmax))*dt
 		  muavg = muavg + ekm(1:imax,1:jmax,1:kmax)*dt
 		  Cavg  = Cavg + Cnew(1:nfrac,1:imax,1:jmax,1:kmax)*dt
+		  tau_flow_avg = tau_flow_avg+tau_flow_temp*dt
+		  
 		  do n=1,nfrac
 			  sigC2(n,:,:,:) = sigC2(n,:,:,:) + Cnew(n,1:imax,1:jmax,1:kmax)*Cnew(n,1:imax,1:jmax,1:kmax)*dt
 			  sigUC(n,:,:,:) = sigUC(n,:,:,:) + Cnew(n,1:imax,1:jmax,1:kmax)*uudt

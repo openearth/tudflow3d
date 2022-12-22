@@ -239,6 +239,7 @@ ekm_mol = 1.e-3					! Moleculair dyn. viscosity [kg/(sm)]
 calibfac_sand_pickup = 1. 		! Calibration factor for sand pickup, default 1. [-].
 calibfac_Shields_cr = 1. 		! Calibration factor to adjust Shields_cr curve for start motion sand pickup, default 1. [-].
 pickup_formula = 'vanrijn1984' 	!options are 'vanrijn1984' (default),'vanrijn2019' (=VR1984 including simple high speed erosion correction),'VR2019_Cbed' (=VR1984 including simple high speed erosion correction and reduction pickup for C_near_bed),'VR1984_Cbed' (=VR1984 including reduction pickup for C_near_bed),'nielsen1992','okayasu2010'
+power_VR2019 = 1.				! 1. (default) power to scale the denomitator of the VR2019 correction and reduce the high-speed erosion reduction 
 kn_d50_multiplier = 2. 			! Defines Nikuradse bedroughness for sand pickup function (not for flow shear stress), default 2.; kn=2*d50 defined in paper Van Rijn 1984
 avalanche_slope = 2. 			! Max bedslope 1:as; all slopes steeper avalanche towards 1:as (0=vertical slope, wet sand=30deg=1.7--15deg=3.7)
 av_slope_z =         			! To define variable avalanche_slope over depth --> make av_slope_z and avalanche_slope series over vertical; when av_slope_z not defined a uniform avalanche_slope is used

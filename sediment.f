@@ -453,7 +453,7 @@
 	  INTEGER kbedp(0:i1,0:j1),ibeg,iend,kppE,kppW,kppN,kppS,kbed_new(0:i1,0:j1)
 	  REAL dzbed_dx,dzbed_dy,dzbed_dn,dzbed_ds,bedslope_angle,bedslope_alpha,Shields_cr_bl,fnorm,dzbed_dl,fcor_slope
 	  REAL ppp(0:i1,0:j1,0:k1),Fix,Fiy,ddzzE,ddzzW,ddzzS,ddzzN,ustu2,ustv2,ww,c_adjust1,c_adjust2,dz1
-	  REAL dzbed_dl2,dzbed_dl3,vwal_x,vwal_y,dzB
+	  REAL dzbed_dl2,dzbed_dl3,vwal_x,vwal_y,dzB,bwal
 	
 	erosion=0.
 	deposition=0.
@@ -1166,14 +1166,14 @@
 					TT = MAX(TT,0.) !TT must be positive
 					phipp = calibfac_sand_pickup*0.00033*Dstar**0.3*TT**1.5   ! general pickup function	
 					Shields_eff = ust**2/(delta*gvector*d50) !there is a typo in VR2019 memo/paper missing rho_b; this line in the code is correct 
-					phipp = phipp/(MAX(Shields_eff,1.)) ! correction: reduced pickup for high speed erosion
+					phipp = phipp/(MAX(Shields_eff,1.))**power_VR2019 ! correction: reduced pickup for high speed erosion
 				ELSEIF (pickup_formula.eq.'VR2019_Cbed') THEN
 					ustc2 = Shields_cr * gvector*delta*d50
 					TT = (ust*ust-ustc2)/(MAX(ustc2,1.e-12))
 					TT = MAX(TT,0.) !TT must be positive
 					phipp = calibfac_sand_pickup*0.00033*Dstar**0.3*TT**1.5   ! general pickup function	
 					Shields_eff = ust**2/(delta*gvector*d50) !there is a typo in VR2019 memo/paper missing rho_b; this line in the code is correct 
-					phipp = phipp/(MAX(Shields_eff,1.))*(cfixedbed-cbed)/(cfixedbed) ! correction: reduced pickup for high speed erosion and reduction for cbed according to VanRhee and Talmon 2010
+					phipp = phipp/(MAX(Shields_eff,1.))**power_VR2019*(cfixedbed-cbed)/(cfixedbed) ! correction: reduced pickup for high speed erosion and reduction for cbed according to VanRhee and Talmon 2010
 				ELSEIF (pickup_formula.eq.'VR1984_Cbed') THEN
 					ustc2 = Shields_cr * gvector*delta*d50
 					TT = (ust*ust-ustc2)/(MAX(ustc2,1.e-12))
@@ -1205,14 +1205,14 @@
 					  bedslope_angle=atan(abs(dzbed_dy))	
 					  vwal_y = (-cfixedbed*delta*sin(MIN(phi_sediment-bedslope_angle,0.))/sin(phi_sediment))/(delta_nsed/permeability_kl)					  
 					  vwal=sqrt(vwal_x**2+vwal_y**2)
-					  !ve = 0.5*vwal+vs*sqrt((0.5*vwal/vs)**2+fcor*phipp*delta/delta_nsed*(permeability_kl/vs))
-					  ve = vwal   !leave out phipp pickup contribution 
+					  ve = 0.5*vwal+vs*sqrt((0.5*vwal/vs)**2+fcor*phipp*delta/delta_nsed*(permeability_kl/vs))
+					  !ve = vwal   !leave out phipp pickup contribution 
 					ELSE 
-					  !ve = 0.5*vwal+vs*sqrt((0.5*vwal/vs)**2+fcor*phipp*delta/delta_nsed*(permeability_kl/vs))
-				      ve = vwal !leave out phipp pickup contribution 					
+					  ve = 0.5*vwal+vs*sqrt((0.5*vwal/vs)**2+fcor*phipp*delta/delta_nsed*(permeability_kl/vs))
+				      !ve = vwal !leave out phipp pickup contribution 					
 					ENDIF 
-					!phipp = ve*cfixedbed/vs 
-					phipp = ve*cfixedbed/vs + phipp !simple linear addition vwal and original pickup without flow-slide influence
+					phipp = ve*cfixedbed/vs 
+					!phipp = ve*cfixedbed/vs + phipp !simple linear addition vwal and original pickup without flow-slide influence
 					IF (wbed_correction.eq.1) Wbed(i,j)=MAX(ve*bs_geo,0.)
 				ELSEIF (pickup_correction.eq.'MBvdBerg2003_vecheck') THEN 
 					vs = MAX(sqrt(gvector*delta*d50),1.e-12)
@@ -1238,8 +1238,8 @@
 					  bedslope_angle=atan(abs(dzbed_dy))	
 					  vwal_y = (-cfixedbed*delta*sin(MIN(phi_sediment-bedslope_angle,0.))/sin(phi_sediment))/(delta_nsed/permeability_kl)					  
 					  vwal=sqrt(vwal_x**2+vwal_y**2)
-					  !ve = 0.5*vwal+vs*sqrt((0.5*vwal/vs)**2+fcor*phipp*delta/delta_nsed*(permeability_kl/vs))
-					  ve = vwal !leave out phipp pickup contribution 
+					  ve = 0.5*vwal+vs*sqrt((0.5*vwal/vs)**2+fcor*phipp*delta/delta_nsed*(permeability_kl/vs))
+					  !ve = vwal !leave out phipp pickup contribution 
 					ELSE 
 					  ve = 0.5*vwal+vs*sqrt((0.5*vwal/vs)**2+fcor*phipp*delta/delta_nsed*(permeability_kl/vs))
 					ENDIF 
@@ -2306,113 +2306,195 @@
      & *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed_depo(i-1,j-1,kbed(i-1,j-1))),1.e-18)
 	 
 					maxbedslope(i,j)=MIN(sl1,sl2,sl3,sl4,sl5,sl6,sl7,sl8)
+					IF (maxbedslope(i,j).lt.1./tan(phi_sediment).and.kbed(i,j).ge.1) THEN 
+						! steeper than the angle of repose: breach possible				
 						IF (sl1.le.maxbedslope(i,j)) THEN !find steepest slope
 							itrgt=i-1
 							jtrgt=j
 							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
 							dl = Rp(i)-Rp(i-1)
+							bwal = ABS(Rp(i)*(phiv(j)-phiv(j-1)))							
 						ELSEIF (sl2.le.maxbedslope(i,j)) THEN
 							itrgt=i+1
 							jtrgt=j
 							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
-							dl = Rp(i+1)-Rp(i)							
+							dl = Rp(i+1)-Rp(i)					
+							bwal = ABS(Rp(i)*(phiv(j)-phiv(j-1)))							
 						ELSEIF (sl3.le.maxbedslope(i,j)) THEN
 							itrgt=i
 							jtrgt=j-1
 							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
 							dl = Rp(i)*phip(j)-Rp(i)*phip(j-1)							
+							bwal = ABS(Ru(i+1)-Ru(i))
 						ELSEIF (sl4.le.maxbedslope(i,j)) THEN
 							itrgt=i
 							jtrgt=j+1
 							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
 							dl = Rp(i)*phip(j+1)-Rp(i)*phip(j)
+							bwal = ABS(Ru(i+1)-Ru(i))
 						ELSEIF (sl5.le.maxbedslope(i,j)) THEN
 							itrgt=i-1
 							jtrgt=j+1
 							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
-							dl = SQRT((Rp(i)*phip(j)-Rp(i)*phip(jtrgt))**2+(Rp(i)-Rp(itrgt))**2)	
+							dl = SQRT((Rp(i)*phip(j)-Rp(i)*phip(jtrgt))**2+(Rp(i)-Rp(itrgt))**2)
+							bwal = sqrt(ABS(Ru(i)-Ru(itrgt))*ABS(Rp(i)*(phiv(j)-phiv(jtrgt)))) 							
 						ELSEIF (sl6.le.maxbedslope(i,j)) THEN
 							itrgt=i+1
 							jtrgt=j+1
 							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
-							dl = SQRT((Rp(i)*phip(j)-Rp(i)*phip(jtrgt))**2+(Rp(i)-Rp(itrgt))**2)		
+							dl = SQRT((Rp(i)*phip(j)-Rp(i)*phip(jtrgt))**2+(Rp(i)-Rp(itrgt))**2)
+							bwal = sqrt(ABS(Ru(i)-Ru(itrgt))*ABS(Rp(i)*(phiv(j)-phiv(jtrgt)))) 							
 						ELSEIF (sl7.le.maxbedslope(i,j)) THEN
 							itrgt=i+1
 							jtrgt=j-1
 							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
 							dl = SQRT((Rp(i)*phip(j)-Rp(i)*phip(jtrgt))**2+(Rp(i)-Rp(itrgt))**2)
+							bwal = sqrt(ABS(Ru(i)-Ru(itrgt))*ABS(Rp(i)*(phiv(j)-phiv(jtrgt)))) 
 						ELSEIF (sl8.le.maxbedslope(i,j)) THEN
 							itrgt=i-1
 							jtrgt=j-1
 							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
-							dl = SQRT((Rp(i)*phip(j)-Rp(i)*phip(jtrgt))**2+(Rp(i)-Rp(itrgt))**2)								
+							dl = SQRT((Rp(i)*phip(j)-Rp(i)*phip(jtrgt))**2+(Rp(i)-Rp(itrgt))**2)	
+							bwal = sqrt(ABS(Ru(i)-Ru(itrgt))*ABS(Rp(i)*(phiv(j)-phiv(jtrgt)))) 							
 						ELSE
 							write(*,*),'Steepest breach slope not found,i,j:',i,j
 							CYCLE 
 						ENDIF
-						IF (pickup_bedslope_geo.eq.1) THEN 
-						!determine bs_geo with slope_x and slope_y over two cells i-1 to i+1 and j-1 to j+1 because it relates to complete cell
-						!vwal is determined with steepest slope over one cell at the edge 
-							bed_slope = atan((zb_all(i+1,j)-zb_all(i-1,j))/(Rp(i+1)-Rp(i-1)))
-     &  *MIN(bednotfixed(i+1,j,kbed(i+1,j)),bednotfixed(i-1,j,kbed(i-1,j)))
-!							uu2 = uu*cos(bed_slope)+wcfd(i,j,kbedp(i,j))*sin(bed_slope)
-							facx = 1./cos(bed_slope)
-							bed_slope = atan((zb_all(i,j+1)-zb_all(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1))))
-     &  *MIN(bednotfixed(i,j+1,kbed(i,j+1)),bednotfixed(i,j-1,kbed(i,j-1)))				
-!							vv2 = vv*cos(bed_slope)+wcfd(i,j,kbedp(i,j))*sin(bed_slope)
-							facy = 1./cos(bed_slope)
-							bs_geo = facx*facy ! increase in dx and dy (area) over which pickup and deposition take place
-!							absU = sqrt((uu2)**2+(vv2)**2)					
-						ELSE 
-!							absU=sqrt((uu)**2+(vv)**2)	
-							bs_geo = 1.
-						ENDIF						
+						!! new manner to treat breach as nearly vertical wall moving sideways:
+						!bedslope_angle=pi/2.  !positive value 
 					    bedslope_angle=atan(dbed/dl) !positive value 
 						vwal = (-cfixedbed*delta*sin(MIN(phi_sediment-bedslope_angle,0.))/sin(phi_sediment))/(delta_nsed/permeability_kl)
-						dbed_adjust = vwal * ddt*bednotfixed(i,j,kbed(i,j))*morfac*bs_geo !positive layer thickness [m] to take away from cell i,j and bring in suspension to itrgt,jtrgt 
-
-						!dbed_allowed = dl/MAX(av_slope(i,j,kbed(i,j))*bednotfixed(i,j,kbed(i,j)),1.e-18)
-						!dbed_adjust = vol_Vp(itrgt,jtrgt)/(vol_Vp(i,j)+vol_Vp(itrgt,jtrgt))*(dbed - dbed_allowed)
+!						dbed_adjust = vwal * dbed * bwal * ddt*bednotfixed(i,j,kbed(i,j))*morfac !m3 volume (incl pores) to take away from cell i,j and bring in suspension to itrgt,jtrgt 
+						dbed_adjust = vwal/sin(bedslope_angle) * dbed * bwal * ddt*bednotfixed(i,j,kbed(i,j))*morfac !m3 volume (incl pores) to take away from cell i,j and bring in suspension to itrgt,jtrgt 
+						
+						dbed_adjust = dbed_adjust/(vol_Vp(i,j)/dz) !positive layer thickness [m] to take away from cell i,j and bring in suspension to itrgt,jtrgt 
+						
 						dz_botlayer =SUM(cbotnew(1:nfrac,i,j))/cfixedbed*dz !dz_botlayer can be <0 because buffer cbotnew can be +/-0.5*dz 
 						dz1=SUM(Clivebed(1:nfrac,i,j,kbed(i,j)))/cfixedbed*dz !maximum possible bed change given how much is in Clivebed of this cell 
 						dzB = MAX(dbed_adjust-dz1-dz_botlayer,0.) !missing erosion layer which must occur because of vwal, but cbotnew and first bed-cell don't contain enough sediment
-						IF (dbed_adjust.le.dz_botlayer) THEN ! only cbotnew adjusted
+						
+						IF (dbed_adjust-SUM(d_cbotdelay(1:nfrac,i,j))/cfixedbed*dz<dbed) THEN 
+						!total breach bedupdate of this dt and enough previous dt's must exceed dbed otherwise the breach will die out numerically 
+						! bed update for breach is only performed when dbed can be done in one bed-update
+						! ccnew is updated every time step 
+						! so bed-update is delayed up to when complete dbed can be done, but raining out of sediment from breach into suspension is done continuously
+							IF (dz_botlayer>0.1*dz) THEN ! top layer is cbotnew, use that for PSD division over 1:nfrac 
+							  DO n=1,nfrac 
+								c_adjust = dbed_adjust * cbotnew(n,i,j)/dz_botlayer
+								d_cbotdelay(n,i,j)=d_cbotdelay(n,i,j)-c_adjust 
+								c_adjust = c_adjust / MAX(1.,DBLE(MIN(kbed(i,j),k1)-kbed(itrgt,jtrgt)+1)) !when first k is smaller then last k then next do-loop will do nothing
+								DO k=kbed(itrgt,jtrgt)+1,MIN(kbed(i,j),k1) !linearly distribute SSC along vertical breach slope 
+								  ccnew(n,itrgt,jtrgt,k)=ccnew(n,itrgt,jtrgt,k)+c_adjust*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt) ! add to suspension of cells along the slope	
+								ENDDO 
+!								ccnew(n,itrgt,jtrgt,MIN(MAX(kbed(itrgt,jtrgt)+1,kbed(i,j)),k1)) = 
+!     &					ccnew(n,itrgt,jtrgt,MIN(MAX(kbed(itrgt,jtrgt)+1,kbed(i,j)),k1))+c_adjust*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt) ! add to suspension of cell down the slope								
+							  ENDDO 
+							ELSE ! cbotnew is empty, use Clivebed(kbed) for PSD division over 1:nfrac
+							  DO n=1,nfrac 
+								c_adjust = dbed_adjust * Clivebed(n,i,j,kbed(i,j))/dz
+								d_cbotdelay(n,i,j)=d_cbotdelay(n,i,j)-c_adjust 
+								c_adjust = c_adjust / MAX(1.,DBLE(MIN(kbed(i,j),k1)-kbed(itrgt,jtrgt)+1)) !when first k is smaller then last k then next do-loop will do nothing
+								DO k=kbed(itrgt,jtrgt)+1,MIN(kbed(i,j),k1) !linearly distribute SSC along vertical breach slope 
+								  ccnew(n,itrgt,jtrgt,k)=ccnew(n,itrgt,jtrgt,k)+c_adjust*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt) ! add to suspension of cells along the slope	
+								ENDDO 								
+!								ccnew(n,itrgt,jtrgt,MIN(MAX(kbed(itrgt,jtrgt)+1,kbed(i,j)),k1)) = 
+!     &					ccnew(n,itrgt,jtrgt,MIN(MAX(kbed(itrgt,jtrgt)+1,kbed(i,j)),k1))+c_adjust*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt) ! add to suspension of cell down the slope								
+							  ENDDO 
+							ENDIF 
+						ELSE
+						  DO n=1,nfrac	
+						    d_cbotnew(n,i,j)=d_cbotnew(n,i,j) + d_cbotdelay(n,i,j) !do sum of several previous bedupdates as well
+						    d_cbotdelay(n,i,j) = 0. 
+						  ENDDO 
+						  IF (dbed_adjust.le.dz_botlayer) THEN ! only cbotnew adjusted
 						    kplus = MIN(kbed(i,j)+1,k1)
 							DO n=1,nfrac !breach all fractions, sand and silt
 								c_adjust = dbed_adjust/MAX(dz_botlayer,1.e-18)*cbotnew(n,i,j) !has the unit of cbotnew which is vol-conc of a fictitious cell of dz thickness 
 								d_cbotnew(n,i,j) = d_cbotnew(n,i,j) - c_adjust
-								ccnew(n,itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1)) = 
-     &							ccnew(n,itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1))+c_adjust*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt) ! add to suspension of cell down the slope 
+								c_adjust = c_adjust / MAX(1.,DBLE(MIN(kbed(i,j),k1)-kbed(itrgt,jtrgt)+1)) !when first k is smaller then last k then next do-loop will do nothing
+								DO k=kbed(itrgt,jtrgt)+1,MIN(kbed(i,j),k1) !linearly distribute SSC along vertical breach slope 
+								  ccnew(n,itrgt,jtrgt,k)=ccnew(n,itrgt,jtrgt,k)+c_adjust*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt) ! add to suspension of cells along the slope	
+								ENDDO 								
+!								ccnew(n,itrgt,jtrgt,MIN(MAX(kbed(itrgt,jtrgt)+1,kbed(i,j)),k1)) = 
+!     &					ccnew(n,itrgt,jtrgt,MIN(MAX(kbed(itrgt,jtrgt)+1,kbed(i,j)),k1))+c_adjust*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt) ! add to suspension of cell down the slope 
 							ENDDO
-						ELSE !not enough sediment available in cbotnew and underlying bed-cell; pls mind dz_botlayer can be <0 because buffer cbotnew can be +/-0.5*dz 
+						  ELSE !not enough sediment available in cbotnew and underlying bed-cell; pls mind dz_botlayer can be <0 because buffer cbotnew can be +/-0.5*dz 
 							kplus = MIN(kbed(i,j)+1,k1)
 							DO n=1,nfrac !avalanche all fractions, sand and silt
 								c_adjust = cbotnew(n,i,j) !avalanche complete cbotnew 
 								d_cbotnew(n,i,j)=d_cbotnew(n,i,j) - c_adjust
-								!d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt) + c_adjust*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt)
-								ccnew(n,itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1)) = 
-     &							ccnew(n,itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1))+c_adjust*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt) ! add to suspension of cell down the slope 
+								c_adjust = c_adjust / MAX(1.,DBLE(MIN(kbed(i,j),k1)-kbed(itrgt,jtrgt)+1)) !when first k is smaller then last k then next do-loop will do nothing
+								DO k=kbed(itrgt,jtrgt)+1,MIN(kbed(i,j),k1) !linearly distribute SSC along vertical breach slope 
+								  ccnew(n,itrgt,jtrgt,k)=ccnew(n,itrgt,jtrgt,k)+c_adjust*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt) ! add to suspension of cells along the slope	
+								ENDDO 								
+!								ccnew(n,itrgt,jtrgt,MIN(MAX(kbed(itrgt,jtrgt)+1,kbed(i,j)),k1)) = 
+!     &					ccnew(n,itrgt,jtrgt,MIN(MAX(kbed(itrgt,jtrgt)+1,kbed(i,j)),k1))+c_adjust*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt) ! add to suspension of cell down the slope 
 								c_adjust = MIN(dz1,dbed_adjust-dz_botlayer)/dz1*Clivebed(n,i,j,kbed(i,j)) !never more than one dz layer is eroded by avalanche
 								c_adjustB = dzB/dz1*Clivebed(n,i,j,kbed(i,j)) !missing erosion; use sediment composition of kbed layer 
 								d_cbotnew(n,i,j) = d_cbotnew(n,i,j) + Clivebed(n,i,j,kbed(i,j)) - c_adjust - c_adjustB ! erosion one layer dz, after that avalanche
 								Clivebed(n,i,j,kbed(i,j))=0. ! not bed anymore but fluid --> old Clivebed is added tot cbotnew [sediment budget OK]
-								ccnew(n,itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1)) = 
-     &							ccnew(n,itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1))+c_adjust*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt) 
-     &	 						+c_adjustB*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt)  ! add to suspension of cell down the slope 
+								c_adjust = c_adjust / MAX(1.,DBLE(MIN(kbed(i,j),k1)-kbed(itrgt,jtrgt)+1)) !when first k is smaller then last k then next do-loop will do nothing
+								c_adjustB = c_adjustB / MAX(1.,DBLE(MIN(kbed(i,j),k1)-kbed(itrgt,jtrgt)+1)) !when first k is smaller then last k then next do-loop will do nothing
+								DO k=kbed(itrgt,jtrgt)+1,MIN(kbed(i,j),k1) !linearly distribute SSC along vertical breach slope 
+								 ccnew(n,itrgt,jtrgt,k)=ccnew(n,itrgt,jtrgt,k)+(c_adjust+c_adjustB)*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt) ! add to suspension of cells along the slope	
+								ENDDO 
+!								ccnew(n,itrgt,jtrgt,MIN(MAX(kbed(itrgt,jtrgt)+1,kbed(i,j)),k1)) = 
+!     &					ccnew(n,itrgt,jtrgt,MIN(MAX(kbed(itrgt,jtrgt)+1,kbed(i,j)),k1))+c_adjust*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt) 
+!     &	 						+c_adjustB*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt)  ! add to suspension of cell down the slope 
 							ENDDO
 							kbed_new(i,j)=kbed_new(i,j)-1  !update bed level at end								
-						ENDIF
-							drdt(itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1)) = rho_b
-							rnew(itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1)) = rho_b
-							rold(itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1)) = rho_b
-							DO n=1,nfrac !initialize correct fluid cell concentration 
-								drdt(itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1)) = drdt(itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1))
-     &								+ccnew(n,itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
-								rnew(itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1)) = rnew(itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1))
-     &								+ccnew(n,itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density								
-								rold(itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1)) = rold(itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1))					
-     &								+ccnew(n,itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density								
-							ENDDO						
+						  ENDIF
+						ENDIF 
+						
+						
+!!!!!						if (vwal>1.e-8) then 
+!!!!!						write(*,*),'rank,i,j,kbed,vwal,bs_geo,ddt,dbed_adjust,dz_botlayer,dz1,dzB',
+!!!!!     &						rank,i,j,kbed(i,j),vwal,bs_geo,ddt,dbed_adjust,dz_botlayer,dz1,dzB
+!!!!!						endif 
+!!!!						IF (dbed_adjust.le.dz_botlayer) THEN ! only cbotnew adjusted
+!!!!						    kplus = MIN(kbed(i,j)+1,k1)
+!!!!							DO n=1,nfrac !breach all fractions, sand and silt
+!!!!								c_adjust = dbed_adjust/MAX(dz_botlayer,1.e-18)*cbotnew(n,i,j) !has the unit of cbotnew which is vol-conc of a fictitious cell of dz thickness 
+!!!!								d_cbotnew(n,i,j) = d_cbotnew(n,i,j) - c_adjust
+!!!!!								ccnew(n,itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1)) = 
+!!!!!     &							ccnew(n,itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1))+c_adjust*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt) ! add to suspension of cell down the slope 
+!!!!								ccnew(n,itrgt,jtrgt,MIN(MAX(kbed(itrgt,jtrgt)+1,kbed(i,j)),k1)) = 
+!!!!     &					ccnew(n,itrgt,jtrgt,MIN(MAX(kbed(itrgt,jtrgt)+1,kbed(i,j)),k1))+c_adjust*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt) ! add to suspension of cell down the slope 
+!!!!							ENDDO
+!!!!						ELSE !not enough sediment available in cbotnew and underlying bed-cell; pls mind dz_botlayer can be <0 because buffer cbotnew can be +/-0.5*dz 
+!!!!							kplus = MIN(kbed(i,j)+1,k1)
+!!!!							DO n=1,nfrac !avalanche all fractions, sand and silt
+!!!!								c_adjust = cbotnew(n,i,j) !avalanche complete cbotnew 
+!!!!								d_cbotnew(n,i,j)=d_cbotnew(n,i,j) - c_adjust
+!!!!								!d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt) + c_adjust*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt)
+!!!!!								ccnew(n,itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1)) = 
+!!!!!    &							ccnew(n,itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1))+c_adjust*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt) ! add to suspension of cell down the slope 
+!!!!								ccnew(n,itrgt,jtrgt,MIN(MAX(kbed(itrgt,jtrgt)+1,kbed(i,j)),k1)) = 
+!!!!     &					ccnew(n,itrgt,jtrgt,MIN(MAX(kbed(itrgt,jtrgt)+1,kbed(i,j)),k1))+c_adjust*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt) ! add to suspension of cell down the slope 
+!!!!								c_adjust = MIN(dz1,dbed_adjust-dz_botlayer)/dz1*Clivebed(n,i,j,kbed(i,j)) !never more than one dz layer is eroded by avalanche
+!!!!								c_adjustB = dzB/dz1*Clivebed(n,i,j,kbed(i,j)) !missing erosion; use sediment composition of kbed layer 
+!!!!								d_cbotnew(n,i,j) = d_cbotnew(n,i,j) + Clivebed(n,i,j,kbed(i,j)) - c_adjust - c_adjustB ! erosion one layer dz, after that avalanche
+!!!!								Clivebed(n,i,j,kbed(i,j))=0. ! not bed anymore but fluid --> old Clivebed is added tot cbotnew [sediment budget OK]
+!!!!!								ccnew(n,itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1)) = 
+!!!!!     &							ccnew(n,itrgt,jtrgt,MIN(kbed(itrgt,jtrgt)+1,k1))+c_adjust*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt) 
+!!!!!     &	 						+c_adjustB*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt)  ! add to suspension of cell down the slope 
+!!!!								ccnew(n,itrgt,jtrgt,MIN(MAX(kbed(itrgt,jtrgt)+1,kbed(i,j)),k1)) = 
+!!!!     &					ccnew(n,itrgt,jtrgt,MIN(MAX(kbed(itrgt,jtrgt)+1,kbed(i,j)),k1))+c_adjust*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt) 
+!!!!     &	 						+c_adjustB*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt)  ! add to suspension of cell down the slope 
+!!!!							ENDDO
+!!!!							kbed_new(i,j)=kbed_new(i,j)-1  !update bed level at end								
+!!!!						ENDIF
+							DO k=kbed(itrgt,jtrgt)+1,MIN(kbed(i,j),k1)
+							  drdt(itrgt,jtrgt,k) = rho_b
+							  rnew(itrgt,jtrgt,k) = rho_b
+							  rold(itrgt,jtrgt,k) = rho_b
+							  DO n=1,nfrac !initialize correct fluid cell concentration 
+								drdt(itrgt,jtrgt,k) = drdt(itrgt,jtrgt,k)+ccnew(n,itrgt,jtrgt,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+								rnew(itrgt,jtrgt,k) = rnew(itrgt,jtrgt,k)+ccnew(n,itrgt,jtrgt,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density								
+								rold(itrgt,jtrgt,k) = rold(itrgt,jtrgt,k)+ccnew(n,itrgt,jtrgt,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density								
+							  ENDDO
+							ENDDO 
+					ENDIF 
 				ENDDO
 			ENDDO
 

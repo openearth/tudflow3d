@@ -64,7 +64,7 @@
       CHARACTER*256 plumeQtseriesfile,plumectseriesfile,avfile,obstfile     
       REAL Q_j,plumeQseries(1:10000),plumeQtseries(1:10000),plumectseries(1:10000),plumecseries(30,1:10000) !c(30) matches with size frac_init
       REAL Aplume,driftfluxforce_calfac
-	  REAL vwal,vwal2,delta_nsed,nl,permeability_kl,pickup_fluctuations_ampl,z_tau_sed,kn_d50_multiplier_bl,bl_relax
+	  REAL vwal,vwal2,delta_nsed,nl,permeability_kl,pickup_fluctuations_ampl,z_tau_sed,kn_d50_multiplier_bl,bl_relax,power_VR2019
 	  INTEGER pickup_fluctuations,cbed_method,k_layer_pickup,nu_minimum_wall,pickup_bedslope_geo,wbed_correction,bedslope_effect
 	  INTEGER wallmodel_tau_sed,ndtbed,nrmsbed,telUVWbed,tel_dt
 	  REAL Const1eps,Const2,Sc_k,Sc_eps,Cal_buoyancy_k,Cal_buoyancy_eps,Cs_relax
@@ -156,7 +156,7 @@
       REAL, DIMENSION(:,:),ALLOCATABLE, TARGET :: lhs,LUBs,ubot
       INTEGER, DIMENSION(:),ALLOCATABLE, TARGET :: jco3,iro3,beg3,di3 
       REAL, DIMENSION(:),ALLOCATABLE, TARGET :: lhs3,sigtbed 
-      REAL, DIMENSION(:,:,:),ALLOCATABLE :: rhs3
+      REAL, DIMENSION(:,:,:),ALLOCATABLE :: rhs3,d_cbotdelay
 	  REAL, DIMENSION(:,:,:),ALLOCATABLE :: rhU,rhV,rhW
 	  REAL, DIMENSION(:,:,:,:),ALLOCATABLE :: cU,cV,cW
 	  REAL, DIMENSION(:,:),ALLOCATABLE :: thisbp,zhisbp
@@ -190,6 +190,7 @@
 		REAL, DIMENSION(:,:,:), ALLOCATABLE :: Umax,Vmax,Wmax,Uhormax,U3dmax !,Umin,Vmin,Wmin
 	  REAL, DIMENSION(:,:,:), ALLOCATABLE :: sigU2,sigV2,sigW2,sigR2,sigUV,sigUW,sigVW
 	  REAL, DIMENSION(:,:,:,:), ALLOCATABLE :: sigC2,Cavg,sigUC,sigVC,sigWC,Cmax,Cmin
+	  REAL, DIMENSION(:,:), ALLOCATABLE :: sig_tau_flow2,tau_flow_avg
 	  INTEGER stat_count
 	REAL stat_time_count	
 
@@ -282,7 +283,7 @@
      & settling_along_gvector,vwal,nl,permeability_kl,pickup_fluctuations_ampl,pickup_fluctuations,pickup_correction,cbed_method,
      & z_tau_sed,k_layer_pickup,pickup_bedslope_geo,bedload_formula,kn_d50_multiplier_bl,calibfac_sand_bedload,bl_relax,fcor,
      & wbed_correction,bedslope_effect,bedslope_mu_s,alfabs_bl,alfabn_bl,phi_sediment,wallmodel_tau_sed,nrmsbed,ndtbed,
-     & erosion_cbed_start,movebed_absorb_cfluid	 
+     & erosion_cbed_start,movebed_absorb_cfluid,power_VR2019	 
 	NAMELIST /fractions_in_plume/fract
 	NAMELIST /ship/U_TSHD,LOA,Lfront,Breadth,Draught,Lback,Hback,xfront,yfront,kn_TSHD,nprop,Dprop,xprop,yprop,zprop,
      &   Pprop,rudder,rot_prop,draghead,Dsp,xdh,perc_dh_suction,softnose,Hfront,cutter
@@ -626,6 +627,7 @@
 	phi_sediment=30.
 	erosion_cbed_start = 1 !
 	movebed_absorb_cfluid = 1 !default 1 absorb cfluid in bed when bed moves and new bed is higher than previous timestep (like in avalanche and regular bed-update), 0 = add cfluid buried in new bed to first fluid cell above new bed
+	power_VR2019 = 1.
 	!! ship
 	U_TSHD=-999.
 	LOA=-999.
@@ -1501,6 +1503,7 @@
 	IF (wallmodel_tau_sed.ne.1.and.wallmodel_tau_sed.ne.3.and.wallmodel_tau_sed.ne.4.and.wallmodel_tau_sed.ne.5.
      &	and.wallmodel_tau_sed.ne.11) THEN 
 		CALL writeerror(145)
+	IF (power_VR2019<0.) CALL writeerror(146)
 	ENDIF 
 	 
 	READ (UNIT=1,NML=ship,IOSTAT=ios)
@@ -1788,6 +1791,8 @@
 	  ALLOCATE(bednotfixed_depo(0:i1,0:j1,0:k1))
 	  bednotfixed=1. !default avalanche or erosion is allowed everywhere, only in obstacles connected to bed not allowed, see init.f
 	  bednotfixed_depo=1. !default deposition is allowed everywhere, only in obstacles connected to bed not allowed, see init.f
+	  ALLOCATE(d_cbotdelay(nfrac,0:i1,0:j1))
+	  d_cbotdelay = 0.
 	ENDIF
 	IF (interaction_bed.ge.4) THEN
 	  ALLOCATE(Clivebed(nfrac,0:i1,0:j1,0:k1))
@@ -2069,7 +2074,8 @@
      1                sigWC(nfrac,1:imax,1:jmax,1:kmax),Cmax(nfrac,1:imax,1:jmax,1:kmax),
      1                Cmin(nfrac,1:imax,1:jmax,1:kmax),
      1            Umax(1:imax,1:jmax,1:kmax),Vmax(1:imax,1:jmax,1:kmax),Wmax(1:imax,1:jmax,1:kmax),
-     1            Uhormax(1:imax,1:jmax,1:kmax),U3dmax(1:imax,1:jmax,1:kmax))
+     1            Uhormax(1:imax,1:jmax,1:kmax),U3dmax(1:imax,1:jmax,1:kmax),
+     1            sig_tau_flow2(1:imax,1:jmax),tau_flow_avg(1:imax,1:jmax))
 !     1            Umin(1:imax,1:jmax,1:kmax),Vmin(1:imax,1:jmax,1:kmax),Wmin(1:imax,1:jmax,1:kmax))
  !    1 			,fUavg(1:imax,1:jmax,1:kmax),sigfU2(1:imax,1:jmax,1:kmax))
 
@@ -2086,6 +2092,7 @@
 		sigUC=0.	
 		sigVC=0.
 		sigWC=0.
+		sig_tau_flow2=0.
 
 		Uavg=0.
 		Vavg=0.
@@ -2101,6 +2108,7 @@
 		Wmax=0.
 		Uhormax=0.
 		U3dmax=0.
+		tau_flow_avg=0.
 !		sigfU2=0.
 !		fUavg=0.
 	endif  

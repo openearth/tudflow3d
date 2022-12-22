@@ -525,10 +525,10 @@ c******************************************************************
 
 	if (restart_dir.ne.'') then
 		WRITE(*,*) 'Listing restart files with system call'
-		WRITE(command,'(a,a,a,i4.4,a)')'ls ',TRIM(restart_dir),' > restart_temp',INT(rank),'.txt'
+		WRITE(command,'(a,a,a,a,i4.4,a)')'ls ',TRIM(restart_dir),' > restart_temp_',TRIM(inpfile),INT(rank),'.txt'
 		CALL SYSTEM(command) 
 		
-		WRITE(command,'(a,i4.4,a)')'restart_temp',INT(rank),'.txt'
+		WRITE(command,'(a,a,i4.4,a)')'restart_temp_',TRIM(inpfile),INT(rank),'.txt'
 		OPEN(unit=25,file=command) 
 		
 		nfound = 0
@@ -2830,10 +2830,10 @@ C ...  Locals
 	
 		IF (nobst_files.eq.0) THEN !first time check how many files
 		WRITE(*,*) 'Listing obstacle files with system call'
-		WRITE(command,'(a,a,a,i4.4,a)')'ls ',TRIM(obstfile),' > obstfiles_temp',INT(rank),'.txt'
+		WRITE(command,'(a,a,a,a,i4.4,a)')'ls ',TRIM(obstfile),' > obstfiles_temp_',TRIM(inpfile),INT(rank),'.txt'
 		CALL SYSTEM(command) 
 		
-		WRITE(command,'(a,i4.4,a)')'obstfiles_temp',INT(rank),'.txt'
+		WRITE(command,'(a,a,i4.4,a)')'obstfiles_temp_',TRIM(inpfile),INT(rank),'.txt'
 		OPEN(unit=25,file=command) 
 		
 		DO

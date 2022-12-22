@@ -386,9 +386,9 @@
 		write(*,*) '# namelist &constants                            #'			
 		write(*,*) '# wallmodel_tau_sed must be 1,3,4,5 or 11        #'		
 		write(*,*) '# default wallmodel_tau_sed = 1                  #'		
-		
-		
-		
+	CASE(146)
+		write(*,*) '# namelist &constants                            #'			
+		write(*,*) '# power_VR2019 must be >0                        #'		
 	CASE(171)
 		write(*,*) '# namelist &fractions_in_plume                   #'			
 		write(*,*) '# type must be 1 (default),2,3 or -1             #'	
