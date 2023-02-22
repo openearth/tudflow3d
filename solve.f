@@ -4893,47 +4893,47 @@ c
           enddo
         enddo
       enddo	
-!!	DO n2=1,nbedplume
-!!	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
-!!	! rotation ship for ambient side current
-!!	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-!!	  phi=atan2(V_b,1.e-12)
-!!	else
-!!	  phi=atan2(V_b,(U_TSHD-U_b))
-!!	endif
-!!      do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
-!!       do i=1,imax  
-!!         do j=jmax,1,-1 
-!!	  xx=Rp(i)*cos_u(j)-schuif_x
-!!	  yy=Rp(i)*sin_u(j)
-!!!	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
-!!		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
-!!		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
-!!!!		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
-!!		!! do not use bp(n2)%i,j indices as they are defined from 0,j1 instead of 1,jmax needed for pressure !!
-!!		if (bp(n2)%radius.gt.0.) then 
-!!		  inout=0
-!!		  IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n2)%radius)**2) THEN
-!!			inout=1
-!!		  ENDIF
-!!		else 
-!!		  CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
-!!		endif 		
-!!!	  ELSE 
-!!!	 	inout=0
-!!!	  ENDIF
-!!	  if (inout.eq.1) then
-!!		!  if (continuity_solver.eq.33.or.continuity_solver.eq.34.or.continuity_solver.eq.35.or.continuity_solver.eq.36) THEN
-!!			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				  			! div(u)=0 --> total volume flux in 
-!!		!  else
-!!		!	p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				! div(u)=0 --> total volume flux in 
-!!		!  endif
-!!	   endif
-!!	  enddo
-!!	 enddo
-!!	enddo
-!!	ENDIF
-!!	ENDDO ! bedplume loop	  
+	DO n2=1,nbedplume
+	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
+	! rotation ship for ambient side current
+	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
+	  phi=atan2(V_b,1.e-12)
+	else
+	  phi=atan2(V_b,(U_TSHD-U_b))
+	endif
+      do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
+       do i=1,imax  
+         do j=jmax,1,-1 
+	  xx=Rp(i)*cos_u(j)-schuif_x
+	  yy=Rp(i)*sin_u(j)
+!	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
+		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
+		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
+!!		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+		!! do not use bp(n2)%i,j indices as they are defined from 0,j1 instead of 1,jmax needed for pressure !!
+		if (bp(n2)%radius.gt.0.) then 
+		  inout=0
+		  IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n2)%radius)**2) THEN
+			inout=1
+		  ENDIF
+		else 
+		  CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+		endif 		
+!	  ELSE 
+!	 	inout=0
+!	  ENDIF
+	  if (inout.eq.1) then
+		!  if (continuity_solver.eq.33.or.continuity_solver.eq.34.or.continuity_solver.eq.35.or.continuity_solver.eq.36) THEN
+			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				  			! div(u)=0 --> total volume flux in 
+		!  else
+		!	p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				! div(u)=0 --> total volume flux in 
+		!  endif
+	   endif
+	  enddo
+	 enddo
+	enddo
+	ENDIF
+	ENDDO ! bedplume loop	  
 	 do n=1,npresPRHO
 	  ! 2nd iteration loop with updated P-predictor:
 	  IF (poissolver.eq.3) THEN
@@ -4963,47 +4963,47 @@ c
           enddo
         enddo
       enddo
-!!	DO n2=1,nbedplume
-!!	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
-!!	! rotation ship for ambient side current
-!!	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-!!	  phi=atan2(V_b,1.e-12)
-!!	else
-!!	  phi=atan2(V_b,(U_TSHD-U_b))
-!!	endif
-!!      do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
-!!       do i=1,imax  
-!!         do j=jmax,1,-1 
-!!	  xx=Rp(i)*cos_u(j)-schuif_x
-!!	  yy=Rp(i)*sin_u(j)
-!!!	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
-!!		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
-!!		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
-!!!!		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
-!!		!! do not use bp(n2)%i,j indices as they are defined from 0,j1 instead of 1,jmax needed for pressure !!
-!!		if (bp(n2)%radius.gt.0.) then 
-!!		  inout=0
-!!		  IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n2)%radius)**2) THEN
-!!			inout=1
-!!		  ENDIF
-!!		else 
-!!		  CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
-!!		endif 		
-!!!	  ELSE 
-!!!	 	inout=0
-!!!	  ENDIF
-!!	  if (inout.eq.1) then
-!!		!  if (continuity_solver.eq.33.or.continuity_solver.eq.34.or.continuity_solver.eq.35.or.continuity_solver.eq.36) THEN
-!!			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				  			! div(u)=0 --> total volume flux in 
-!!		!  else
-!!		!	p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				! div(u)=0 --> total volume flux in 
-!!		!  endif
-!!	   endif
-!!	  enddo
-!!	 enddo
-!!	enddo
-!!	ENDIF
-!!	ENDDO ! bedplume loop	  
+	DO n2=1,nbedplume
+	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
+	! rotation ship for ambient side current
+	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
+	  phi=atan2(V_b,1.e-12)
+	else
+	  phi=atan2(V_b,(U_TSHD-U_b))
+	endif
+      do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
+       do i=1,imax  
+         do j=jmax,1,-1 
+	  xx=Rp(i)*cos_u(j)-schuif_x
+	  yy=Rp(i)*sin_u(j)
+!	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
+		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
+		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
+!!		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+		!! do not use bp(n2)%i,j indices as they are defined from 0,j1 instead of 1,jmax needed for pressure !!
+		if (bp(n2)%radius.gt.0.) then 
+		  inout=0
+		  IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n2)%radius)**2) THEN
+			inout=1
+		  ENDIF
+		else 
+		  CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+		endif 		
+!	  ELSE 
+!	 	inout=0
+!	  ENDIF
+	  if (inout.eq.1) then
+		!  if (continuity_solver.eq.33.or.continuity_solver.eq.34.or.continuity_solver.eq.35.or.continuity_solver.eq.36) THEN
+			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				  			! div(u)=0 --> total volume flux in 
+		!  else
+		!	p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				! div(u)=0 --> total volume flux in 
+		!  endif
+	   endif
+	  enddo
+	 enddo
+	enddo
+	ENDIF
+	ENDDO ! bedplume loop	  
 	 enddo
 	 	   
 	ELSEIF (continuity_solver.eq.36) THEN ! Optional: 36 (dudx=0) improved version of 34 (better treatment variable density in source Poisson) which gives dudx=e-14 and with correction to account for difference Um and Uv
@@ -5069,47 +5069,47 @@ c
           enddo
         enddo
       enddo	
-!!	DO n2=1,nbedplume
-!!	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
-!!	! rotation ship for ambient side current
-!!	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-!!	  phi=atan2(V_b,1.e-12)
-!!	else
-!!	  phi=atan2(V_b,(U_TSHD-U_b))
-!!	endif
-!!      do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
-!!       do i=1,imax  
-!!         do j=jmax,1,-1 
-!!	  xx=Rp(i)*cos_u(j)-schuif_x
-!!	  yy=Rp(i)*sin_u(j)
-!!!	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
-!!		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
-!!		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
-!!!!		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
-!!		!! do not use bp(n2)%i,j indices as they are defined from 0,j1 instead of 1,jmax needed for pressure !!
-!!		if (bp(n2)%radius.gt.0.) then 
-!!		  inout=0
-!!		  IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n2)%radius)**2) THEN
-!!			inout=1
-!!		  ENDIF
-!!		else 
-!!		  CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
-!!		endif 		
-!!!	  ELSE 
-!!!	 	inout=0
-!!!	  ENDIF
-!!	  if (inout.eq.1) then
-!!		!  if (continuity_solver.eq.33.or.continuity_solver.eq.34.or.continuity_solver.eq.35.or.continuity_solver.eq.36) THEN
-!!			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				  			! div(u)=0 --> total volume flux in 
-!!		!  else
-!!		!	p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				! div(u)=0 --> total volume flux in 
-!!		!  endif
-!!	   endif
-!!	  enddo
-!!	 enddo
-!!	enddo
-!!	ENDIF
-!!	ENDDO ! bedplume loop
+	DO n2=1,nbedplume
+	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
+	! rotation ship for ambient side current
+	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
+	  phi=atan2(V_b,1.e-12)
+	else
+	  phi=atan2(V_b,(U_TSHD-U_b))
+	endif
+      do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
+       do i=1,imax  
+         do j=jmax,1,-1 
+	  xx=Rp(i)*cos_u(j)-schuif_x
+	  yy=Rp(i)*sin_u(j)
+!	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
+		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
+		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
+!!		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+		!! do not use bp(n2)%i,j indices as they are defined from 0,j1 instead of 1,jmax needed for pressure !!
+		if (bp(n2)%radius.gt.0.) then 
+		  inout=0
+		  IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n2)%radius)**2) THEN
+			inout=1
+		  ENDIF
+		else 
+		  CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+		endif 		
+!	  ELSE 
+!	 	inout=0
+!	  ENDIF
+	  if (inout.eq.1) then
+		!  if (continuity_solver.eq.33.or.continuity_solver.eq.34.or.continuity_solver.eq.35.or.continuity_solver.eq.36) THEN
+			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				  			! div(u)=0 --> total volume flux in 
+		!  else
+		!	p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				! div(u)=0 --> total volume flux in 
+		!  endif
+	   endif
+	  enddo
+	 enddo
+	enddo
+	ENDIF
+	ENDDO ! bedplume loop
 	
 	 do n=1,npresPRHO
 	  ! 2nd iteration loop with updated P-predictor:
@@ -5140,47 +5140,47 @@ c
           enddo
         enddo
       enddo	
-!!	DO n2=1,nbedplume
-!!	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
-!!	! rotation ship for ambient side current
-!!	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-!!	  phi=atan2(V_b,1.e-12)
-!!	else
-!!	  phi=atan2(V_b,(U_TSHD-U_b))
-!!	endif
-!!      do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
-!!       do i=1,imax  
-!!         do j=jmax,1,-1 
-!!	  xx=Rp(i)*cos_u(j)-schuif_x
-!!	  yy=Rp(i)*sin_u(j)
-!!!	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
-!!		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
-!!		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
-!!!!		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
-!!		!! do not use bp(n2)%i,j indices as they are defined from 0,j1 instead of 1,jmax needed for pressure !!
-!!		if (bp(n2)%radius.gt.0.) then 
-!!		  inout=0
-!!		  IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n2)%radius)**2) THEN
-!!			inout=1
-!!		  ENDIF
-!!		else 
-!!		  CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
-!!		endif 		
-!!!	  ELSE 
-!!!	 	inout=0
-!!!	  ENDIF
-!!	  if (inout.eq.1) then
-!!		!  if (continuity_solver.eq.33.or.continuity_solver.eq.34.or.continuity_solver.eq.35.or.continuity_solver.eq.36) THEN
-!!			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				  			! div(u)=0 --> total volume flux in 
-!!		!  else
-!!		!	p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				! div(u)=0 --> total volume flux in 
-!!		!  endif
-!!	   endif
-!!	  enddo
-!!	 enddo
-!!	enddo
-!!	ENDIF
-!!	ENDDO ! bedplume loop	  
+	DO n2=1,nbedplume
+	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
+	! rotation ship for ambient side current
+	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
+	  phi=atan2(V_b,1.e-12)
+	else
+	  phi=atan2(V_b,(U_TSHD-U_b))
+	endif
+      do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
+       do i=1,imax  
+         do j=jmax,1,-1 
+	  xx=Rp(i)*cos_u(j)-schuif_x
+	  yy=Rp(i)*sin_u(j)
+!	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
+		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
+		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
+!!		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+		!! do not use bp(n2)%i,j indices as they are defined from 0,j1 instead of 1,jmax needed for pressure !!
+		if (bp(n2)%radius.gt.0.) then 
+		  inout=0
+		  IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n2)%radius)**2) THEN
+			inout=1
+		  ENDIF
+		else 
+		  CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+		endif 		
+!	  ELSE 
+!	 	inout=0
+!	  ENDIF
+	  if (inout.eq.1) then
+		!  if (continuity_solver.eq.33.or.continuity_solver.eq.34.or.continuity_solver.eq.35.or.continuity_solver.eq.36) THEN
+			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				  			! div(u)=0 --> total volume flux in 
+		!  else
+		!	p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				! div(u)=0 --> total volume flux in 
+		!  endif
+	   endif
+	  enddo
+	 enddo
+	enddo
+	ENDIF
+	ENDDO ! bedplume loop	  
 	 enddo	  
 	ELSE !default is 1 (drdt+drudx=0)
 	twodtdt=MAX((3.*tt-4.*time_n+time_nm)*ddtt,1.e-12)
@@ -5202,66 +5202,66 @@ c
       enddo
 	ENDIF
 	
-!!	DO n2=1,nbedplume
-!!	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
-!!	! rotation ship for ambient side current
-!!	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-!!	  phi=atan2(V_b,1.e-12)
-!!	else
-!!	  phi=atan2(V_b,(U_TSHD-U_b))
-!!	endif
-!!      do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
-!!       do i=1,imax  
-!!         do j=jmax,1,-1 
-!!	  xx=Rp(i)*cos_u(j)-schuif_x
-!!	  yy=Rp(i)*sin_u(j)
-!!!	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
-!!		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
-!!		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
-!!!!		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
-!!		!! do not use bp(n2)%i,j indices as they are defined from 0,j1 instead of 1,jmax needed for pressure !!
-!!		if (bp(n2)%radius.gt.0.) then 
-!!		  inout=0
-!!		  IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n2)%radius)**2) THEN
-!!			inout=1
-!!		  ENDIF
-!!		else 
-!!		  CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
-!!		endif 		
-!!!	  ELSE 
-!!!	 	inout=0
-!!!	  ENDIF
-!!	  if (inout.eq.1) then
-!!!		cin=0.
-!!!		s_in=0.
-!!!		ddrr=0.		
-!!!		do n=1,nfrac
-!!!		  cin = cin + bp(n2)%sedflux(n)/(frac(n)%rho*bp(n2)%Q)
-!!!		  s_in = s_in + bp(n2)%sedflux(n) 
-!!!		  ddrr = ddrr + bp(n2)%sedflux(n)*dt/bp(n2)%volncells +
-!!!     &		  dcdt(n,i,j,k)*MIN(0.,bp(n2)%Q*bp(n2)%changesedsuction)*frac(n)%rho*dt/bp(n2)%volncells  
-!!!			! change of rho in cell due to sedflux or suction Q --> correct determination drhodt in continuity equation for this
-!!!			! IMPLICIT: c^n+1-c^n=-Qout_cel/Vol_cel*dt*c^n+1 --> c^n+1 = c^n/(1+Qout_cel/Vol_cel*dt)
-!!!			!when Q negative, remove sediment from cell as well   IMPLICIT 		  
-!!!		enddo	
-!!		  if (continuity_solver.eq.33.or.continuity_solver.eq.34) THEN
-!!			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				  			! div(u)=0 --> total volume flux in 
-!!		  elseif (continuity_solver.eq.35.or.continuity_solver.eq.36) THEN 
-!!			! bp%Q already added to p input in lines above 
-!!		  else
-!!			p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				! div(u)=0 --> total volume flux in 
-!!		  endif
-!!!!			p(i,j,k)=p(i,j,k)-(s_in+(1.-MIN(cin,1.))*drdt(i,j,k)*bp(n2)%Q)/bp(n2)%volncells/dt  ! total mass flux in 
-!!!			p(i,j,k)=p(i,j,k)-((1.-MIN(cin,1.))*drdt(i,j,k)*bp(n2)%Q)/bp(n2)%volncells/dt  ! total mass flux in 
-!!!!			p(i,j,k)=p(i,j,k)-rho_b*bp(n2)%Q/bp(n2)%volncells/dt
-!!!		  endif
-!!!		  !bp(n2)%Q positive means influx
-!!	   endif
-!!	  enddo
-!!	 enddo
-!!	enddo
-!!	ENDIF
-!!	ENDDO ! bedplume loop
+	DO n2=1,nbedplume
+	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
+	! rotation ship for ambient side current
+	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
+	  phi=atan2(V_b,1.e-12)
+	else
+	  phi=atan2(V_b,(U_TSHD-U_b))
+	endif
+      do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
+       do i=1,imax  
+         do j=jmax,1,-1 
+	  xx=Rp(i)*cos_u(j)-schuif_x
+	  yy=Rp(i)*sin_u(j)
+!	  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
+		xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
+		yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
+!!		CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+		!! do not use bp(n2)%i,j indices as they are defined from 0,j1 instead of 1,jmax needed for pressure !!
+		if (bp(n2)%radius.gt.0.) then 
+		  inout=0
+		  IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n2)%radius)**2) THEN
+			inout=1
+		  ENDIF
+		else 
+		  CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+		endif 		
+!	  ELSE 
+!	 	inout=0
+!	  ENDIF
+	  if (inout.eq.1) then
+!		cin=0.
+!		s_in=0.
+!		ddrr=0.		
+!		do n=1,nfrac
+!		  cin = cin + bp(n2)%sedflux(n)/(frac(n)%rho*bp(n2)%Q)
+!		  s_in = s_in + bp(n2)%sedflux(n) 
+!		  ddrr = ddrr + bp(n2)%sedflux(n)*dt/bp(n2)%volncells +
+!     &		  dcdt(n,i,j,k)*MIN(0.,bp(n2)%Q*bp(n2)%changesedsuction)*frac(n)%rho*dt/bp(n2)%volncells  
+!			! change of rho in cell due to sedflux or suction Q --> correct determination drhodt in continuity equation for this
+!			! IMPLICIT: c^n+1-c^n=-Qout_cel/Vol_cel*dt*c^n+1 --> c^n+1 = c^n/(1+Qout_cel/Vol_cel*dt)
+!			!when Q negative, remove sediment from cell as well   IMPLICIT 		  
+!		enddo	
+		  if (continuity_solver.eq.33.or.continuity_solver.eq.34) THEN
+			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				  			! div(u)=0 --> total volume flux in 
+		  elseif (continuity_solver.eq.35.or.continuity_solver.eq.36) THEN 
+			! bp%Q already added to p input in lines above 
+		  else
+			p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				! div(u)=0 --> total volume flux in 
+		  endif
+!!			p(i,j,k)=p(i,j,k)-(s_in+(1.-MIN(cin,1.))*drdt(i,j,k)*bp(n2)%Q)/bp(n2)%volncells/dt  ! total mass flux in 
+!			p(i,j,k)=p(i,j,k)-((1.-MIN(cin,1.))*drdt(i,j,k)*bp(n2)%Q)/bp(n2)%volncells/dt  ! total mass flux in 
+!!			p(i,j,k)=p(i,j,k)-rho_b*bp(n2)%Q/bp(n2)%volncells/dt
+!		  endif
+!		  !bp(n2)%Q positive means influx
+	   endif
+	  enddo
+	 enddo
+	enddo
+	ENDIF
+	ENDDO ! bedplume loop
  
       return
       end

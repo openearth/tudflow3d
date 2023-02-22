@@ -28,6 +28,7 @@
 	  double precision Tadapt,Uav,Vav,localsum,globalsum,du,duu,wsettlingmax,wsettlingmin
 	  real Wmaxx,tmp11,tmp12,tmp13,tmp4,tmp11global,tmp12global,tmp13global
 	  real dtnew,tmp10,tmp10global,Umaxx,Vmaxx
+	  double precision localsum_Vol_V,globalsum_Vol_V
 
 	  
 !		IF (nobst>0.and.bp(1)%forever.eq.0.and.time_np+dt.gt.bp(1)%t0.and.counter<10) THEN
@@ -302,31 +303,44 @@
 !	    dt=dt_max
 !	  endif
 !	endif
-	if (periodicx.eq.1.and.ABS(dpdx).lt.1.e-12) THEN ! test determination correct dpdx and dpdy based on wanted u or v
+	if (periodicx.eq.1.and.ABS(dpdx).lt.1.e-12) THEN ! determination correct dpdx and dpdy based on wanted u or v
 	   if (surf_layer>1.e-12) then !two different driving forces in the vertical are used 
 	    localsum=0.
+		localsum_Vol_V=0.
         do k=1,ksurf_bc !kmax
           do j=1,jmax
              do i=1,imax	  
 		       localsum=localsum+Unew(i,j,k)*(Rp(i+1)-Rp(i))*(phiv(j)-phiv(j-1))*Ru(i)*dz*fc_global(i,j+jmax*rank,k)	
+			   localsum_Vol_V=localsum_Vol_V+Vol_V(i,j+rank*jmax)*fc_global(i,j+jmax*rank,k)
 			 enddo
 		  enddo
 	    enddo
 		call mpi_allreduce(localsum,globalsum,1,mpi_double_precision,mpi_sum,mpi_comm_world,ierr)
-		
-		Uav = globalsum/(SUM(Vol_V)*REAL(ksurf_bc)) 
+		call mpi_allreduce(localsum_Vol_V,globalsum_Vol_V,1,mpi_double_precision,mpi_sum,mpi_comm_world,ierr)
+		Uav = globalsum/(globalsum_Vol_V+1.e-12)
 		if (istep>1) THEN
 			du = Uav-Uavold
 		else
 			du = 0.
 		endif
 		Uavold = Uav
-		Tadapt = 100.*depth/sqrt(MAX(U_b,U_b3)**2+MAX(V_b,V_b3)**2+1.e-18) 
+!		IF ((MAX(U_b,U_b3)**2+MAX(V_b,V_b3)**2)>1.e-18) THEN 
+!			Tadapt = 100.*depth/sqrt(MAX(U_b,U_b3)**2+MAX(V_b,V_b3)**2+1.e-18) 
+!		ELSE 
+			Tadapt = 1000.*dt 
+!		ENDIF
 		duu = Tadapt*du/dt !30 seconds worked
 		Uav = Uav + duu 
 		dpdx1 = dpdx1 + ABS(U_b-Uav)*(U_b-Uav)/depth*dt/Tadapt
 		!dpdx1 = dpdx1 + MIN(ABS(ABS(U_b)*(U_b-Uav)/depth*dt/Tadapt),0.1*ABS(dpdx1))*SIGN(1.,ABS(U_b)*(U_b-Uav)/depth*dt/Tadapt)
-		Ppropx(:,:,1:ksurf_bc) = dpdx1*rhU(:,:,1:ksurf_bc) !rnew !with variable density important to use rnew and not rho_b 
+		do i=1,imax
+		  do j=1,jmax
+		    do k=1,ksurf_bc 
+			  Ppropx(i,j,k) = dpdx1*rhU(i,j,k)*fc_global(i,j+jmax*rank,k) !rnew !with variable density important to use rnew and not rho_b 
+		    enddo
+		  enddo
+		enddo
+!		Ppropx(:,:,1:ksurf_bc) = dpdx1*rhU(:,:,1:ksurf_bc) !rnew !with variable density important to use rnew and not rho_b 
 		Uav = Uav - duu
 		if (rank.eq.0) then
 			if (mod(istep,10) .eq.0) then   
@@ -334,28 +348,41 @@
 			endif  
 		endif
 	    localsum=0.
+		localsum_Vol_V=0.
         do k=ksurf_bc+1,kmax !kmax
           do j=1,jmax
              do i=1,imax	  
 		       localsum=localsum+Unew(i,j,k)*(Rp(i+1)-Rp(i))*(phiv(j)-phiv(j-1))*Ru(i)*dz*fc_global(i,j+jmax*rank,k)
+			   localsum_Vol_V=localsum_Vol_V+Vol_V(i,j+rank*jmax)*fc_global(i,j+jmax*rank,k)
 			 enddo
 		  enddo
 	    enddo
 		call mpi_allreduce(localsum,globalsum,1,mpi_double_precision,mpi_sum,mpi_comm_world,ierr)
-		
-		Uav = globalsum/(SUM(Vol_V)*REAL(kmax-ksurf_bc)) 
+		call mpi_allreduce(localsum_Vol_V,globalsum_Vol_V,1,mpi_double_precision,mpi_sum,mpi_comm_world,ierr)
+		Uav = globalsum/(globalsum_Vol_V+1.e-12)
 		if (istep>1) THEN
 			du = Uav-U3avold
 		else
 			du = 0.
 		endif
 		U3avold = Uav
-		Tadapt = 100.*depth/sqrt(MAX(U_b,U_b3)**2+MAX(V_b,V_b3)**2+1.e-18)
+!		IF ((MAX(U_b,U_b3)**2+MAX(V_b,V_b3)**2)>1.e-18) THEN 
+!			Tadapt = 100.*depth/sqrt(MAX(U_b,U_b3)**2+MAX(V_b,V_b3)**2+1.e-18) 
+!		ELSE 
+			Tadapt = 1000.*dt 
+!		ENDIF		
 		duu = Tadapt*du/dt !30 seconds worked
 		Uav = Uav + duu 
 		dpdx3 = dpdx3 + ABS(U_b3-Uav)*(U_b3-Uav)/depth*dt/Tadapt
 		!dpdx1 = dpdx1 + MIN(ABS(ABS(U_b)*(U_b-Uav)/depth*dt/Tadapt),0.1*ABS(dpdx1))*SIGN(1.,ABS(U_b)*(U_b-Uav)/depth*dt/Tadapt)
-		Ppropx(:,:,ksurf_bc+1:kmax) = dpdx3*rhU(:,:,ksurf_bc+1:kmax) !rnew !with variable density important to use rnew and not rho_b 
+		do i=1,imax
+		  do j=1,jmax
+		    do k=ksurf_bc+1,kmax 
+			  Ppropx(i,j,k) = dpdx3*rhU(i,j,k)*fc_global(i,j+jmax*rank,k) !rnew !with variable density important to use rnew and not rho_b 
+		    enddo
+		  enddo
+		enddo		
+!		Ppropx(:,:,ksurf_bc+1:kmax) = dpdx3*rhU(:,:,ksurf_bc+1:kmax) !rnew !with variable density important to use rnew and not rho_b 
 		Uav = Uav - duu
 		if (rank.eq.0) then
 			if (mod(istep,10) .eq.0) then   
@@ -364,28 +391,41 @@
 		endif		
 	   else ! one driving force over whole vertical
 	    localsum=0.
+		localsum_Vol_V=0.
         do k=1,kmax
           do j=1,jmax
              do i=1,imax	  
 		       localsum=localsum+Unew(i,j,k)*(Rp(i+1)-Rp(i))*(phiv(j)-phiv(j-1))*Ru(i)*dz*fc_global(i,j+jmax*rank,k)
+			   localsum_Vol_V=localsum_Vol_V+Vol_V(i,j+rank*jmax)*fc_global(i,j+jmax*rank,k)
 			 enddo
 		  enddo
 	    enddo
 		call mpi_allreduce(localsum,globalsum,1,mpi_double_precision,mpi_sum,mpi_comm_world,ierr)
-		
-		Uav = globalsum/(SUM(Vol_V)*REAL(kmax)) 
+		call mpi_allreduce(localsum_Vol_V,globalsum_Vol_V,1,mpi_double_precision,mpi_sum,mpi_comm_world,ierr)
+		Uav = globalsum/(globalsum_Vol_V+1.e-12)
 		if (istep>1) THEN
 			du = Uav-Uavold
 		else
 			du = 0.
 		endif
 		Uavold = Uav
-		Tadapt = 100.*depth/sqrt(U_b**2+V_b**2+1.e-18) !for test just take a value
+!		IF ((U_b**2+V_b**2)>1.e-18) THEN 
+!			Tadapt = 100.*depth/sqrt(U_b**2+V_b**2+1.e-18)
+!		ELSE 
+			Tadapt = 1000.*dt 
+!		ENDIF		
 		duu = Tadapt*du/dt !30 seconds worked
 		Uav = Uav + duu 
 		dpdx1 = dpdx1 + ABS(U_b-Uav)*(U_b-Uav)/depth*dt/Tadapt
-		!dpdx1 = dpdx1 + MIN(ABS(ABS(U_b)*(U_b-Uav)/depth*dt/Tadapt),0.1*ABS(dpdx1))*SIGN(1.,ABS(U_b)*(U_b-Uav)/depth*dt/Tadapt)
-		Ppropx = dpdx1*rhU !rnew !with variable density important to use rnew and not rho_b 
+		do i=1,imax
+		  do j=1,jmax
+		    do k=1,kmax 
+			  Ppropx(i,j,k) = dpdx1*rhU(i,j,k)*fc_global(i,j+jmax*rank,k) !rnew !with variable density important to use rnew and not rho_b 
+		    enddo
+		  enddo
+		enddo		
+!		Ppropx = dpdx1*rhU !rnew !with variable density important to use rnew and not rho_b 
+		
 		Uav = Uav - duu
 		if (rank.eq.0) then
 			if (mod(istep,10) .eq.0) then   
@@ -398,27 +438,40 @@
 	if (periodicy.eq.1.and.ABS(dpdy).lt.1.e-12) THEN ! test determination correct dpdx and dpdy based on wanted u or v
 	   if (surf_layer>1.e-12) then !two different driving forces in the vertical are used 
 	    localsum=0.
+		localsum_Vol_V=0.
         do k=1,ksurf_bc !kmax
           do j=1,jmax
              do i=1,imax	  
 		       localsum=localsum+Vnew(i,j,k)*(Ru(i)-Ru(i-1))*(phip(j+1)-phip(j))*Rp(i)*dz*fc_global(i,j+jmax*rank,k)
+			   localsum_Vol_V=localsum_Vol_V+Vol_V(i,j+rank*jmax)*fc_global(i,j+jmax*rank,k)
 			 enddo
 		  enddo
 	    enddo
 		call mpi_allreduce(localsum,globalsum,1,mpi_double_precision,mpi_sum,mpi_comm_world,ierr)	
-		Vav = globalsum/(SUM(Vol_V)*REAL(ksurf_bc)) 
+		call mpi_allreduce(localsum_Vol_V,globalsum_Vol_V,1,mpi_double_precision,mpi_sum,mpi_comm_world,ierr)
+		Vav = globalsum/(globalsum_Vol_V+1.e-12)
 		if (istep>1) THEN
 			du = Vav-Vavold
 		else
 			du = 0.
 		endif
 		Vavold = Vav
-		Tadapt = 100.*depth/sqrt(MAX(U_b,U_b3)**2+MAX(V_b,V_b3)**2+1.e-18)
+!		IF ((MAX(U_b,U_b3)**2+MAX(V_b,V_b3)**2)>1.e-18) THEN 
+!			Tadapt = 100.*depth/sqrt(MAX(U_b,U_b3)**2+MAX(V_b,V_b3)**2+1.e-18) 
+!		ELSE 
+			Tadapt = 1000.*dt 
+!		ENDIF
 		duu = Tadapt*du/dt !30 seconds worked
 		Vav = Vav + duu 
 		dpdy1 = dpdy1 + ABS(V_b-Vav)*(V_b-Vav)/depth*dt/Tadapt 
-		!dpdy1 = dpdy1 + MIN(ABS(ABS(V_b)*(V_b-Vav)/depth*dt/Tadapt),0.1*ABS(dpdy1))*SIGN(1.,ABS(V_b)*(V_b-Vav)/depth*dt/Tadapt)
-		Ppropy(:,:,1:ksurf_bc) = dpdy1*rhV(:,:,1:ksurf_bc) !rnew !with variable density important to use rnew and not rho_b
+		do i=1,imax
+		  do j=1,jmax
+		    do k=1,ksurf_bc 
+			  Ppropy(i,j,k) = dpdy1*rhV(i,j,k)*fc_global(i,j+jmax*rank,k) !rnew !with variable density important to use rnew and not rho_b 
+		    enddo
+		  enddo
+		enddo
+		!Ppropy(:,:,1:ksurf_bc) = dpdy1*rhV(:,:,1:ksurf_bc) !rnew !with variable density important to use rnew and not rho_b
 		Vav = Vav - duu
 		if (rank.eq.0) then
 			if (mod(istep,10) .eq.0) then   
@@ -426,27 +479,40 @@
 			endif  
 		endif	
 	    localsum=0.
+		localsum_Vol_V=0.
         do k=ksurf_bc+1,kmax !kmax
           do j=1,jmax
              do i=1,imax	  
 		       localsum=localsum+Vnew(i,j,k)*(Ru(i)-Ru(i-1))*(phip(j+1)-phip(j))*Rp(i)*dz*fc_global(i,j+jmax*rank,k)
+			   localsum_Vol_V=localsum_Vol_V+Vol_V(i,j+rank*jmax)*fc_global(i,j+jmax*rank,k)
 			 enddo
 		  enddo
 	    enddo
 		call mpi_allreduce(localsum,globalsum,1,mpi_double_precision,mpi_sum,mpi_comm_world,ierr)	
-		Vav = globalsum/(SUM(Vol_V)*REAL(kmax-ksurf_bc)) 
+		call mpi_allreduce(localsum_Vol_V,globalsum_Vol_V,1,mpi_double_precision,mpi_sum,mpi_comm_world,ierr)
+		Vav = globalsum/(globalsum_Vol_V+1.e-12)
 		if (istep>1) THEN
 			du = Vav-V3avold
 		else
 			du = 0.
 		endif
 		V3avold = Vav
-		Tadapt = 100.*depth/sqrt(MAX(U_b,U_b3)**2+MAX(V_b,V_b3)**2+1.e-18)
+!		IF ((MAX(U_b,U_b3)**2+MAX(V_b,V_b3)**2)>1.e-18) THEN 
+!			Tadapt = 100.*depth/sqrt(MAX(U_b,U_b3)**2+MAX(V_b,V_b3)**2+1.e-18) 
+!		ELSE 
+			Tadapt = 1000.*dt 
+!		ENDIF
 		duu = Tadapt*du/dt !30 seconds worked
 		Vav = Vav + duu 
 		dpdy3 = dpdy3 + ABS(V_b3-Vav)*(V_b3-Vav)/depth*dt/Tadapt 
-		!dpdy1 = dpdy1 + MIN(ABS(ABS(V_b)*(V_b-Vav)/depth*dt/Tadapt),0.1*ABS(dpdy1))*SIGN(1.,ABS(V_b)*(V_b-Vav)/depth*dt/Tadapt)
-		Ppropy(:,:,ksurf_bc+1:kmax) = dpdy3*rhV(:,:,ksurf_bc+1:kmax) !rnew !with variable density important to use rnew and not rho_b
+		do i=1,imax
+		  do j=1,jmax
+		    do k=ksurf_bc+1,kmax
+			  Ppropy(i,j,k) = dpdy3*rhV(i,j,k)*fc_global(i,j+jmax*rank,k) !rnew !with variable density important to use rnew and not rho_b 
+		    enddo
+		  enddo
+		enddo
+		!Ppropy(:,:,ksurf_bc+1:kmax) = dpdy3*rhV(:,:,ksurf_bc+1:kmax) !rnew !with variable density important to use rnew and not rho_b
 		Vav = Vav - duu
 		if (rank.eq.0) then
 			if (mod(istep,10) .eq.0) then   
@@ -455,27 +521,40 @@
 		endif		
 	   else ! one driving force over whole vertical
 	    localsum=0.
+		localsum_Vol_V=0.
         do k=1,kmax
           do j=1,jmax
              do i=1,imax	  
 		       localsum=localsum+Vnew(i,j,k)*(Ru(i)-Ru(i-1))*(phip(j+1)-phip(j))*Rp(i)*dz*fc_global(i,j+jmax*rank,k)
+			   localsum_Vol_V=localsum_Vol_V+Vol_V(i,j+rank*jmax)*fc_global(i,j+jmax*rank,k)
 			 enddo
 		  enddo
 	    enddo
 		call mpi_allreduce(localsum,globalsum,1,mpi_double_precision,mpi_sum,mpi_comm_world,ierr)	
-		Vav = globalsum/(SUM(Vol_V)*REAL(kmax)) 
+		call mpi_allreduce(localsum_Vol_V,globalsum_Vol_V,1,mpi_double_precision,mpi_sum,mpi_comm_world,ierr)
+		Vav = globalsum/(globalsum_Vol_V+1.e-12)
 		if (istep>1) THEN
 			du = Vav-Vavold
 		else
 			du = 0.
 		endif
 		Vavold = Vav
-		Tadapt = 100.*depth/sqrt(U_b**2+V_b**2+1.e-18) !for test just take a value
+!		IF ((U_b**2+V_b**2)>1.e-18) THEN 
+!			Tadapt = 100.*depth/sqrt(U_b**2+V_b**2+1.e-18)
+!		ELSE 
+			Tadapt = 1000.*dt 
+!		ENDIF
 		duu = Tadapt*du/dt !30 seconds worked
 		Vav = Vav + duu 
 		dpdy1 = dpdy1 + ABS(V_b-Vav)*(V_b-Vav)/depth*dt/Tadapt 
-		!dpdy1 = dpdy1 + MIN(ABS(ABS(V_b)*(V_b-Vav)/depth*dt/Tadapt),0.1*ABS(dpdy1))*SIGN(1.,ABS(V_b)*(V_b-Vav)/depth*dt/Tadapt)
-		Ppropy = dpdy1*rhV !rnew !with variable density important to use rnew and not rho_b
+		do i=1,imax
+		  do j=1,jmax
+		    do k=1,kmax 
+			  Ppropy(i,j,k) = dpdy1*rhV(i,j,k)*fc_global(i,j+jmax*rank,k) !rnew !with variable density important to use rnew and not rho_b 
+		    enddo
+		  enddo
+		enddo		
+		!Ppropy = dpdy1*rhV !rnew !with variable density important to use rnew and not rho_b
 		Vav = Vav - duu
 		if (rank.eq.0) then
 			if (mod(istep,10) .eq.0) then   

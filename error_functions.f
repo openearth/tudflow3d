@@ -654,7 +654,10 @@
 		write(*,*) '# please note that unlike V_b, V_w is defined in earth fixed x,y coordinate system !    #'	
 	CASE(613)
 		write(*,*) '# namelist &ambient                              #'			
-		write(*,*) '# istart_morf2, i_periodicx must be >0 and <imax  #'			
+		write(*,*) '# istart_morf2, i_periodicx must be >0 and <imax  #'		
+	CASE(614)
+		write(*,*) '# namelist &ambient                              #'			
+		write(*,*) '# kn_flow_file contains NaN or negative value    #'			
 	CASE(620)
 		write(*,*) '# namelist &ambient                              #'			
 		write(*,*) '# nmax3 is not defined                           #'			

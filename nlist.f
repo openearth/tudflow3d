@@ -61,9 +61,9 @@
       INTEGER ksurf_bc,kmaxTSHD_ind,nair
       INTEGER poissolver,nm1,istep_output_bpmove,avalanche_until_done,IBMorder
       INTEGER iparm(64)
-      CHARACTER*256 plumeQtseriesfile,plumectseriesfile,avfile,obstfile     
+      CHARACTER*256 plumeQtseriesfile,plumectseriesfile,avfile,obstfile,kn_flow_file      
       REAL Q_j,plumeQseries(1:10000),plumeQtseries(1:10000),plumectseries(1:10000),plumecseries(30,1:10000) !c(30) matches with size frac_init
-      REAL Aplume,driftfluxforce_calfac
+      REAL Aplume,driftfluxforce_calfac,kn_flow_d50_multiplier
 	  REAL vwal,vwal2,delta_nsed,nl,permeability_kl,pickup_fluctuations_ampl,z_tau_sed,kn_d50_multiplier_bl,bl_relax,power_VR2019
 	  INTEGER pickup_fluctuations,cbed_method,k_layer_pickup,nu_minimum_wall,pickup_bedslope_geo,wbed_correction,bedslope_effect
 	  INTEGER wallmodel_tau_sed,ndtbed,nrmsbed,telUVWbed,tel_dt
@@ -74,7 +74,7 @@
 	  INTEGER tmax_inPpuntTSHDini,tmax_inUpuntTSHDini,tmax_inVpuntTSHDini,tmax_inWpuntTSHDini
 	  INTEGER nobst_files,nobst_file,momentum_exchange_obstacles,erosion_cbed_start,movebed_absorb_cfluid
 	  CHARACTER(len=256) :: obst_file_series(5000)
-	  REAL :: obst_starttimes(5000) 
+	  REAL :: obst_starttimes(5000)
 	  
 	  
 	  !new variables rheology
@@ -128,7 +128,7 @@
 
       INTEGER*2, DIMENSION(:,:,:),ALLOCATABLE :: llist1,llist2,llist3
       INTEGER*2, DIMENSION(:,:),ALLOCATABLE :: llmax1,llmax2,llmax3 !,kbed,kbedt,kbed2
-      INTEGER*8, DIMENSION(:,:),ALLOCATABLE :: kbed,kbedt,kbed0 !,kbed2,kbed22
+      INTEGER*8, DIMENSION(:,:),ALLOCATABLE :: kbed,kbedt,kbed0,kbedold !,kbed2,kbed22
       INTEGER, DIMENSION(:,:),ALLOCATABLE :: Xkk,Tii
       INTEGER, DIMENSION(:),ALLOCATABLE :: Xii,Tkk,nfrac_air,nfrac_silt,nfrac_sand,nfrac_air2
 	  INTEGER*8, DIMENSION(:),ALLOCATABLE :: kbedin
@@ -165,7 +165,7 @@
 	  REAL*8, DIMENSION(:,:,:),ALLOCATABLE :: fc_global
 	  REAL, DIMENSION(:,:),ALLOCATABLE :: uuR_relax,uuL_relax,vvR_relax,vvL_relax,tau2Vold,tau2Vnew,tau2Wold,tau2Wnew,qb_relax
 	  REAL, DIMENSION(:,:),ALLOCATABLE :: tau_fl_Uold,tau_fl_Vold,tau_fl_Unew,tau_fl_Vnew,ust_sl_new,ust_sl_old,ust_bl_new,ust_bl_old
-	  REAL, DIMENSION(:,:),ALLOCATABLE :: ust_mud_new,ust_mud_old
+	  REAL, DIMENSION(:,:),ALLOCATABLE :: ust_mud_new,ust_mud_old,kn_flow
 	  REAL, DIMENSION(:,:,:),ALLOCATABLE :: qbU,qbV,ust_frac_old,ust_frac_new,sigUWbed,sigVWbed,sigUbed,sigVbed,sigWbed
 
  !     REAL, DIMENSION(:,:,:),ALLOCATABLE :: Uf,Vf,Wf
@@ -272,7 +272,7 @@
 	NAMELIST /ambient/U_b,V_b,W_b,bcfile,rho_b,SEM,nmax2,nmax1,nmax3,lm_min,lm_min3,slip_bot,kn,interaction_bed,
      & periodicx,periodicy,dpdx,dpdy,W_ox,Hs,Tp,nx_w,ny_w,obst,bc_obst_h,U_b3,V_b3,surf_layer,wallup,bedlevelfile,
      & U_bSEM,V_bSEM,U_w,V_w,c_bed,cfixedbed,U_init,V_init,initconditionsfile,rho_b2,monopile,kn_mp,kn_sidewalls,obstfile
-     & ,istart_morf2,i_periodicx
+     & ,istart_morf2,i_periodicx,kn_flow_file,kn_flow_d50_multiplier
 	NAMELIST /plume/W_j,plumetseriesfile,Awjet,Aujet,Avjet,Strouhal,azi_n,kjet,radius_j,Sc,slipvel,outflow_overflow_down,
      & U_j2,plumetseriesfile2,Awjet2,Aujet2,Avjet2,Strouhal2,azi_n2,radius_j2,zjet2,bedplume,radius_inner_j,xj,yj,W_j_powerlaw,
      & plume_z_outflow_belowsurf,hindered_settling,hindered_settling_c,Q_j,plumeQtseriesfile,plumectseriesfile
@@ -391,6 +391,8 @@
 	lm_min3 = -999.
 	slip_bot = -999
 	kn = -999.
+	kn_flow_file=''
+	kn_flow_d50_multiplier = -2.
 	interaction_bed=-999
 	periodicx=0
 	periodicy=0
@@ -770,6 +772,9 @@
 	IF (CNdiffz.ne.0.and.CNdiffz.ne.1.and.CNdiffz.ne.2.and.CNdiffz.ne.11.and.CNdiffz.ne.12.and.CNdiffz.ne.31) CALL writeerror(406)
 	IF (npresIBM<0) CALL writeerror(407)
 	pres_in_predictor_step_internal = pres_in_predictor_step
+	IF (pres_in_predictor_step_internal.eq.3.or.pres_in_predictor_step_internal.eq.4) THEN !make Pold in bed zero every timestep; use pres_in_predictor_step=1 in the rest of the code
+		pres_in_predictor_step = 1 
+	ENDIF 
 	IF (k_ust_tau<1.or.k_ust_tau>kmax) CALL writeerror(409)
 	IF (k_pzero<1.or.k_pzero>kmax) CALL writeerror(410)
 	IF (CNdiff_dtfactor.lt.0.9999) CALL writeerror(411) 
@@ -1683,6 +1688,7 @@
 	ALLOCATE(kbed(0:i1,0:j1))
 	ALLOCATE(kbed0(0:i1,0:j1))
 	ALLOCATE(kbedin(0:j1))
+	ALLOCATE(kbedold(0:i1,0:j1))
 !!!	ALLOCATE(kbed2(0:i1,0:px*jmax+1))
 	ALLOCATE(kbedt(0:i1,0:j1))
 !!!	ALLOCATE(kbed22(0:i1,0:j1))
@@ -1972,7 +1978,9 @@
 	ust_mud_new=0.
 	ust_mud_old=0.
 	ust_frac_new=0.
-	ust_frac_old=0.	
+	ust_frac_old=0.
+	ALLOCATE(kn_flow(0:i1,0:j1))	
+	kn_flow(0:i1,0:j1) = kn !default use kn defined in input file; in main.f subroutine determine_kn_flow is called once when kn_flow_file is defined or every timestep when kn_flow_d50_multiplies is defined
 	
 	!new variables rheology
 	IF (Non_Newtonian.eq.1.or.Non_Newtonian.eq.2) THEN

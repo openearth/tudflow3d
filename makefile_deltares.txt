@@ -121,7 +121,7 @@ extra_functions.o: extra_functions.f makefile
 	$(F77) $(FLAGS) -c -I$(netcdfdir)/include extra_functions.f
 
 bound.o: bound.f makefile	
-	$(F77) $(FLAGS) -c bound.f
+	$(F77) $(FLAGS) -I$(netcdfdir)/include -c bound.f
 
 init.o: init.f makefile	
 	$(F77) $(FLAGS) -c -I$(netcdfdir)/include init.f

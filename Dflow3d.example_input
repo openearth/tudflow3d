@@ -50,7 +50,7 @@ continuity_solver =36   			!default is 1 (drdt+drudx=0). Optional:  35 (dudx=0 U
 npresIBM = 0						! number of extra pres-correction steps to make IBM objects better impermeable (default 0)
 npresPRHO = 0						! number of extra pres-correction steps to get predicted P^n+1 as input in variable-density-Poisson-solver more accurate (default 0)
 oPRHO = 2							! (default 2) 2 = linear extrapolation for predicted P*; 1 = predicted P* equal to P^n; 3 = linear extrapolation for predicted P* using 2dt before to reduce wiggles in time; 4 = high order extrapolation for dPdt to get predicted P*
-pres_in_predictor_step = 1 			! 1 (default) = apply P^n in predictor step and apply corrector step with dP; 0 = predictor step without pressure and apply corrector step with P^n+1; 2 = like 1, but every 100th timestep like 0
+pres_in_predictor_step = 1 			! 1 (default) = apply P^n in predictor step and apply corrector step with dP; 0 = predictor step without pressure and apply corrector step with P^n+1; 2 = like 1, but every 100th timestep like 0; 3 = apply spatial filter on P^n in predictor step for more stable results with morphological bed-update; 4 = like 3 but filter only inside bed
 Poutflow=0 							! 0 (default, most robust) Poutflow is zero for complete outflow crosssection at rmax; 1 (optional) Poutflow is zero at just one grid-location at rmax --> sometimes better but less robust
 k_pzero=1 							! default 1, defines vertical level where p=0 when Poutflow=1 is used
 Uoutflow=0 							! 0 (default) Neumann outflow dUdn=0 (for U,V,W); 2 means convective outflow condition dUdt+U_normal*dUdn=0 (for U,V,W)
@@ -83,7 +83,9 @@ lm_min = 0.02 						! Minimal Lm SEM eddies [m] (1/10*depth)
 nmax3= 0 							!Number of SEM eddies jet inflow
 lm_min3 = 0.03						! Minimal Lm SEM eddies jet pipe [m] (1/10*radius_j)
 slip_bot = 1						! 1 = partial slip (law of the wall) bottom with log-U inflow profile , 0 = free slip bottom, 2 partial slip with constant U profile over vertical, 3 is partial slip TBL wall-model including dpdx, 4 is partial slip TBL wall-model excluding dpdx, 5 is partial slip wall-model based on VanDriest U-profile, -1 is no slip bottom, -2 is no slip bottom and top
-kn = 0.1							! Nikkuradse roughness flow [m]
+kn = 0.1							! Nikkuradse roughness flow [m], used for tau_flow in partial slip condition and for inflow U,V profiles and inflow SEM eddies 
+kn_flow_file = '' 					! Input netcdf file for spatially variable kn (filled with kn_flow(1:imax,0:jmax*px+1) [m]), even when a kn_flow_file is defined kn defined in this inputfile is still being used for inflow U,V profiles and inflow SEM eddies and for tau_flow top of domain (when wallup = 1 or 2)
+kn_flow_d50_multiplier = -2. 				! Multiplier (default <0, not used) to relate kn_flow to the sediment d50 (based on only sand fractions, silt/mud or air fractions are not considered in calculation of d50) in the uppermost cell of the bed -> kn_flow=kn_flow_d50_multiplier*d50 -> can be used to harmonize tau of sediment pickup and bedload and tau_flow (for sediment-pickup values of multiplier=2-2.5 are common), even when kn_flow_d50_multiplier is defined kn defined in this inputfile is still being used for inflow U,V profiles and inflow SEM eddies and for tau_flow top of domain (when wallup = 1 or 2). kn_flow_d50_multiplier overrules kn_flow_file
 interaction_bed = 4					! 0 no erosion/sedimentation, 1 only deposition, 2 deposition & unlimited erosion, 3 deposition & erosion previously deposited material, 4 depo&ero including bed-update, 5 depo&ero excluding bed-update, 6 depo&ero including bed-update & unlimited erosion base layer, 7 depo&ero excluding bed-update & unlimited erosion base layer
 periodicx = 0						! 1 periodic in x dir; 0 not periodic (default 0); 2 closed box (in and outflow in x-dir is zero)
 periodicy = 0						! 1 periodic in y dir; 0 not periodic; 2 is free slip lateral boundaries (default 0)
@@ -107,7 +109,7 @@ U_b3 = -0.47						! Ambient bc U velocity [m/s] in surf_layer with respect to TS
 V_b3 = -0.29						! Ambient bc V velocity [m/s] in surf_layer with respect to TSHD motion: positive means current from starboard  
 surf_layer = 0.						! Layer depth [m] from free surface with U_b3,V_b3 ambient current (default 0)
 wallup=0							! 0 wall is down; 1 wall is up; 2 wall both up and down (default 0)
-bedlevelfile = ''					! Input netcdf file for bedlevel which are simulated by IBM obstacles (filled with zbed(1:imax,0:jmax*px+1) [m])Input netcdf file for bedlevel which are simulated by IBM obstacles (filled with zbed(1:imax,0:jmax*px+1) [m])
+bedlevelfile = ''					! Input netcdf file for bedlevel which are simulated by IBM obstacles (filled with zbed(1:imax,0:jmax*px+1) [m])
 c_bed= 0.1 							! Initial volume fractions inside bed [-] (length vector must be nfrac large and sum must be equal to cfixedbed)
 cfixedbed = 0.6						! Volume concentration threshold for fixed bed (default 0.6)
 Hs=0.7								! Significant waveheigth [m] (using linear wave theory to mimic wave-orbital velocity)

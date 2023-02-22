@@ -2596,14 +2596,14 @@ c 	influence of waves on lateral boundaries:
 			ust1 = ((tauu1/rr1)**2+(tauv1/rr1)**2)**0.25								!at U-gridpoint
 			ust2 = ((tauu2/rr2)**2+(tauv2/rr2)**2)**0.25 								!at V-gridpoint	
 			IF (slip_bot.eq.3) THEN 
-			 call wall_fun_rho_TBL(uu1,vv1,dpdx11,rr1,dz,1.,dt,kn,kappa,nu_mol,ust1,tau_fl_Unew(i,j))
-			 call wall_fun_rho_TBL(vv2,uu2,dpdy22,rr2,dz,1.,dt,kn,kappa,nu_mol,ust2,tau_fl_Vnew(i,j))
+			 call wall_fun_rho_TBL(uu1,vv1,dpdx11,rr1,dz,1.,dt,kn_flow(i,j),kappa,nu_mol,ust1,tau_fl_Unew(i,j))
+			 call wall_fun_rho_TBL(vv2,uu2,dpdy22,rr2,dz,1.,dt,kn_flow(i,j),kappa,nu_mol,ust2,tau_fl_Vnew(i,j))
 			ELSEIF (slip_bot.eq.4) THEN 
-			 call wall_fun_rho_TBL(uu1,vv1,0.,rr1,dz,1.,dt,kn,kappa,nu_mol,ust1,tau_fl_Unew(i,j))
-			 call wall_fun_rho_TBL(vv2,uu2,0.,rr2,dz,1.,dt,kn,kappa,nu_mol,ust2,tau_fl_Vnew(i,j))
+			 call wall_fun_rho_TBL(uu1,vv1,0.,rr1,dz,1.,dt,kn_flow(i,j),kappa,nu_mol,ust1,tau_fl_Unew(i,j))
+			 call wall_fun_rho_TBL(vv2,uu2,0.,rr2,dz,1.,dt,kn_flow(i,j),kappa,nu_mol,ust2,tau_fl_Vnew(i,j))
 			ELSEIF (slip_bot.eq.5) THEN 
-			 call wall_fun_rho_VD(uu1,vv1,rr1,dz,1.,dt,kn,kappa,nu_mol,ust1,tau_fl_Unew(i,j))
-			 call wall_fun_rho_VD(vv2,uu2,rr2,dz,1.,dt,kn,kappa,nu_mol,ust2,tau_fl_Vnew(i,j))
+			 call wall_fun_rho_VD(uu1,vv1,rr1,dz,1.,dt,kn_flow(i,j),kappa,nu_mol,ust1,tau_fl_Unew(i,j))
+			 call wall_fun_rho_VD(vv2,uu2,rr2,dz,1.,dt,kn_flow(i,j),kappa,nu_mol,ust2,tau_fl_Vnew(i,j))
 			ENDIF 
 			Ubound(i,j,kbedt(i,j)+1)=uu1+Ubot_TSHD(j)*rr1 !Ubound adjusted 1:imax,1:jmax; but later bc 0,i1,0,0,j1 applied
 			Vbound(i,j,kbedt(i,j)+1)=vv2+Vbot_TSHD(j)*rr2 !Vbound adjusted 1:imax,1:jmax; but later bc 0,i1,0,0,j1 applied
@@ -2642,9 +2642,9 @@ c 	influence of waves on lateral boundaries:
 			uu2=0.25*(Ubound2(i,j,kbedt(i,j)+1)+Ubound2(i,j+1,kbedt(i,j)+1)+Ubound2(i-1,j,kbedt(i,j)+1)
      &                      +Ubound2(i-1,j+1,kbedt(i,j)+1))-Ubot_TSHD(j)*rr2
 			vv2=Vbound(i,j,kbedt(i,j)+1)-Vbot_TSHD(j)*rr2
-			call wall_fun_rho(uu1,vv1,rr1,dz,1.,dt,kn,kappa,nu_mol,tau)
+			call wall_fun_rho(uu1,vv1,rr1,dz,1.,dt,kn_flow(i,j),kappa,nu_mol,tau)
 			tau_fl_Unew(i,j)=tau
-			call wall_fun_rho(vv2,uu2,rr2,dz,1.,dt,kn,kappa,nu_mol,tau)
+			call wall_fun_rho(vv2,uu2,rr2,dz,1.,dt,kn_flow(i,j),kappa,nu_mol,tau)
 			tau_fl_Vnew(i,j)=tau
 			Ubound(i,j,kbedt(i,j)+1)=uu1+Ubot_TSHD(j)*rr1
 			Vbound(i,j,kbedt(i,j)+1)=vv2+Vbot_TSHD(j)*rr2
@@ -2657,9 +2657,9 @@ c 	influence of waves on lateral boundaries:
 		uu2=0.25*(Ubound2(i,j,kmax-kjet-1)+Ubound2(i,j+1,kmax-kjet-1)+Ubound2(i-1,j,kmax-kjet-1)+Ubound2(i-1,j+1,kmax-kjet-1))
 		vv2=0.25*(Vbound2(i,j,kmax-kjet-1)+Vbound2(i+1,j,kmax-kjet-1)+Vbound2(i,j-1,kmax-kjet-1)+Vbound2(i+1,j-1,kmax-kjet-1))
 
-	    call wall_fun_rho(Vbound(i,j,kmax-kjet-1),uu2,rr2,dz,1.,dt,kn,kappa,nu_mol,tau)
+	    call wall_fun_rho(Vbound(i,j,kmax-kjet-1),uu2,rr2,dz,1.,dt,kn_flow(i,j),kappa,nu_mol,tau)
 		tau_fl_Vnew(i,j)=tau
-	    call wall_fun_rho(Ubound(i,j,kmax-kjet-1),vv2,rr1,dz,1.,dt,kn,kappa,nu_mol,tau)
+	    call wall_fun_rho(Ubound(i,j,kmax-kjet-1),vv2,rr1,dz,1.,dt,kn_flow(i,j),kappa,nu_mol,tau)
 		tau_fl_Unew(i,j)=tau
 
 	   endif
@@ -3122,13 +3122,13 @@ c 	influence of waves on lateral boundaries:
 				  ust1 = ((tauu1/rr1)**2+(tauv1/rr1)**2)**0.25													!at U-gridpoint
 				  scal=2.*distance_to_bed_kpp/dz
 				  IF (botstress.eq.1.or.botstress.eq.2) THEN
-				   call wall_fun_rho(uu1,vv1,rr1,2.*distance_to_bed_kpp,scal,dt,kn,kappa,nu_mol,tau_fl_Unew(i,j))	
+				   call wall_fun_rho(uu1,vv1,rr1,2.*distance_to_bed_kpp,scal,dt,kn_flow(i,j),kappa,nu_mol,tau_fl_Unew(i,j))	
 				  ELSEIF (slip_bot.eq.3) THEN
-				   call wall_fun_rho_TBL(uu1,vv1,dpdx11,rr1,2.*distance_to_bed_kpp,scal,dt,kn,kappa,nu_mol,ust1,tau_fl_Unew(i,j))
+				   call wall_fun_rho_TBL(uu1,vv1,dpdx11,rr1,2.*distance_to_bed_kpp,scal,dt,kn_flow(i,j),kappa,nu_mol,ust1,tau_fl_Unew(i,j))
 				  ELSEIF (slip_bot.eq.4) THEN 
-				   call wall_fun_rho_TBL(uu1,vv1,0.,rr1,2.*distance_to_bed_kpp,scal,dt,kn,kappa,nu_mol,ust1,tau_fl_Unew(i,j))
+				   call wall_fun_rho_TBL(uu1,vv1,0.,rr1,2.*distance_to_bed_kpp,scal,dt,kn_flow(i,j),kappa,nu_mol,ust1,tau_fl_Unew(i,j))
 				  ELSEIF (slip_bot.eq.5) THEN 
-				   call wall_fun_rho_VD(uu1,vv1,rr1,2.*distance_to_bed_kpp,scal,dt,kn,kappa,nu_mol,ust1,tau_fl_Unew(i,j))				   
+				   call wall_fun_rho_VD(uu1,vv1,rr1,2.*distance_to_bed_kpp,scal,dt,kn_flow(i,j),kappa,nu_mol,ust1,tau_fl_Unew(i,j))				   
 				  ENDIF
 				  DO k=1,kb
 					Ubound(i,j,k)=Ubot_TSHD(j)*rr1
@@ -3208,13 +3208,13 @@ c 	influence of waves on lateral boundaries:
 				  ust2 = ((tauu2/rr2)**2+(tauv2/rr2)**2)**0.25 								!at V-gridpoint	
 				  scal=2.*distance_to_bed_kpp/dz
 				  IF (botstress.eq.1.or.botstress.eq.2) THEN
-				   call wall_fun_rho(vv2,uu2,rr2,2.*distance_to_bed_kpp,scal,dt,kn,kappa,nu_mol,tau_fl_Vnew(i,j))				  
+				   call wall_fun_rho(vv2,uu2,rr2,2.*distance_to_bed_kpp,scal,dt,kn_flow(i,j),kappa,nu_mol,tau_fl_Vnew(i,j))				  
 				  ELSEIF (slip_bot.eq.3) THEN
-				   call wall_fun_rho_TBL(vv2,uu2,dpdy22,rr2,2.*distance_to_bed_kpp,scal,dt,kn,kappa,nu_mol,ust2,tau_fl_Vnew(i,j))
+				   call wall_fun_rho_TBL(vv2,uu2,dpdy22,rr2,2.*distance_to_bed_kpp,scal,dt,kn_flow(i,j),kappa,nu_mol,ust2,tau_fl_Vnew(i,j))
 				  ELSEIF (slip_bot.eq.4) THEN 
-				   call wall_fun_rho_TBL(vv2,uu2,0.,rr2,2.*distance_to_bed_kpp,scal,dt,kn,kappa,nu_mol,ust2,tau_fl_Vnew(i,j))
+				   call wall_fun_rho_TBL(vv2,uu2,0.,rr2,2.*distance_to_bed_kpp,scal,dt,kn_flow(i,j),kappa,nu_mol,ust2,tau_fl_Vnew(i,j))
 				  ELSEIF (slip_bot.eq.5) THEN 
-				   call wall_fun_rho_VD(vv2,uu2,rr2,2.*distance_to_bed_kpp,scal,dt,kn,kappa,nu_mol,ust2,tau_fl_Vnew(i,j))
+				   call wall_fun_rho_VD(vv2,uu2,rr2,2.*distance_to_bed_kpp,scal,dt,kn_flow(i,j),kappa,nu_mol,ust2,tau_fl_Vnew(i,j))
 				  ENDIF 
 				  DO k=1,kb
 					Vbound(i,j,k)=Vbot_TSHD(j)*rr2
@@ -5836,3 +5836,110 @@ c      endif
 
       end
 	  
+	  
+
+	subroutine determine_kn_flow
+
+	USE netcdf
+	USE nlist
+
+	implicit none
+	
+	integer :: ncid, rhVarId, status2,n1,n
+	REAL PSD_bot_sand_massfrac(nfr_sand),PSD_bot_sand_massfrac2(nfr_sand),PSD_bed_sand_massfrac(nfr_sand)
+	REAL diameter_sand_PSD(0:nfr_sand),PSD_sand(0:nfr_sand)
+	REAL mbottot_sand2,mbottot_sand,mbedtot_sand,factor,d50
+	 
+	if (kn_flow_file.ne.''.and.kn_flow_d50_multiplier<0.) then
+       	status2 = nf90_open(kn_flow_file, nf90_NoWrite, ncid) 
+		IF (status2/= nf90_noerr) THEN
+			write(*,*),'kn_flow_file =',kn_flow_file
+			CALL writeerror(606)
+		ENDIF
+		call check( nf90_inq_varid(ncid, "kn_flow",rhVarid) )
+		call check( nf90_get_var(ncid,rhVarid,kn_flow(1:imax,0:j1),start=(/1,rank*jmax+1/),count=(/imax,jmax+2/)) )
+		call check( nf90_close(ncid) )
+	
+		! kn_flow_file has no i=0 or i=i1 in kn_flow, but do have j=0 and j=j1
+		kn_flow(0,0:j1)=kn_flow(1,0:j1)
+		kn_flow(i1,0:j1)=kn_flow(imax,0:j1)
+		IF (MINVAL(kn_flow)<0.or.ISNAN(MINVAL(kn_flow))) THEN 
+			CALL writeerror(614)
+		ENDIF 
+	endif !endif kn_flow_file
+	if (kn_flow_d50_multiplier>0.) then 
+		do i=1,imax
+		  do j=1,jmax 
+			IF (nfr_sand>1) THEN		  
+			  mbottot_sand=0.
+			  mbottot_sand2=0.
+			  mbedtot_sand=0.
+			  PSD_sand=0.
+			  DO n1=1,nfr_sand
+				n=nfrac_sand(n1)
+				IF (n1<nfr_sand) THEN
+					diameter_sand_PSD(n1)=0.5*(frac(nfrac_sand(n1))%dpart+frac(nfrac_sand(n1+1))%dpart)
+				ELSEIF (n1>1) THEN
+					diameter_sand_PSD(n1)=frac(nfrac_sand(n1))%dpart+( frac(nfrac_sand(n1))%dpart-diameter_sand_PSD(n1-1) )
+				ELSE
+					diameter_sand_PSD(n1)=frac(n)%dpart
+				ENDIF
+				IF (nfr_sand>1) THEN
+					diameter_sand_PSD(0)=frac(nfrac_sand(1))%dpart+( frac(nfrac_sand(1))%dpart-diameter_sand_PSD(1) )
+				ELSE
+					diameter_sand_PSD(0)=0.
+				ENDIF					
+				mbottot_sand=mbottot_sand+MAX(dcdtbot(n,i,j),0.)*frac(n)%rho
+				mbottot_sand2=mbottot_sand2+c_bed(n)*frac(n)%rho
+				mbedtot_sand=mbedtot_sand+Clivebed(n,i,j,kbed(i,j))*frac(n)%rho
+				PSD_bot_sand_massfrac(n1)=mbottot_sand
+				PSD_bot_sand_massfrac2(n1)=mbottot_sand2
+				PSD_bed_sand_massfrac(n1)=mbedtot_sand
+			  ENDDO
+			  IF ((interaction_bed.ge.6.and.kbed(i,j).eq.0).or.interaction_bed.eq.7) THEN !unlimited erosion in case kbed.eq.0
+				PSD_sand(1:nfr_sand)=PSD_bot_sand_massfrac2/mbottot_sand2
+
+			  ELSEIF (mbottot_sand>0.) THEN
+				PSD_sand(1:nfr_sand)=PSD_bot_sand_massfrac/mbottot_sand
+			  ELSEIF (mbedtot_sand>0.) THEN
+				PSD_sand(1:nfr_sand)=PSD_bed_sand_massfrac/mbedtot_sand
+			  ELSE
+				PSD_sand=0. ! there is no sand, hence there will be no erosion either therefore choice in PSD and resulting d50 is not important
+			  ENDIF
+
+				! determine d50 based on different input fractions
+				! PSD and d50 is calculated under the assumption that each concentration is valid in the range of dpart  AVG(d_n-1;d_n)..AVG(d_n+1;d_n)
+				! for the first and last fraction the assumption is that the provided dpart is exactly the middle of the particle size range of this bin
+				! Example A: dpart=15,100,200mu and conc=0.06,0.3,0.24 gives PSD=0,0.1,0.6,1 for particle size class edges -27.5,57.5,150,250mu  --> d50=131.5 mu
+				! Please note that the first negative number is only for correct interpolation, never will it result in a negative d50.
+				! Example B: dpart=dpart=15,100,200mu and conc=0.55,0.05,0.0 gives PSD=0,0.9167,1,1 for particle size class edges -27.5,57.5,150,250mu  --> d50=18.9 mu
+				! Example C: dpart=dpart=15,100,200mu and conc=0.05,0.0,0.55 gives PSD=0,0.0833,0.0833,1 for particle size class edges -27.5,57.5,150,250mu  --> d50=195 mu
+				! Example D: dpart=dpart=15,100,200mu and conc=0.00,0.0,0.6 gives PSD=0,0,0,1 for particle size class edges -27.5,57.5,150,250mu  --> d50=200 mu
+				! Example E: dpart=dpart=15,100,200mu and conc=0.60,0.0,0.0 gives PSD=1,0,0,0 for particle size class edges -27.5,57.5,150,250mu  --> d50=15 mu
+				! Example F: dpart=dpart=15,100,200mu and conc=0.00,0.60,0 gives PSD=0,0,1,1 for particle size class edges -27.5,57.5,150,250mu  --> d50=103.75 mu (this is centre of middle PSD, which complies with the median d50 definition however it is not exactly 100 mu because of choice in not perfectly symmetrical bins)
+				! Example G: dpart=dpart=15,100,185mu and conc=0.00,0.60,0 gives PSD=0,0,1,1 for particle size class edges -27.5,57.5,142.5,227.5mu  --> d50=100 mu (this new input dpart is symmetric!)
+			  DO 	n1=1,nfr_sand
+					IF (PSD_sand(n1).ge.0.5) THEN
+!							IF (n1.eq.1) THEN
+!								d50=frac(nfrac_sand(n1))%dpart
+!								EXIT
+!							ELSE
+							factor=(PSD_sand(n1)-0.5)/(PSD_sand(n1)-PSD_sand(n1-1))
+							!d50=factor*frac(nfrac_sand(n1-1))%dpart+(1.-factor)*frac(nfrac_sand(n1))%dpart
+							d50=factor*diameter_sand_PSD(n1-1)+(1.-factor)*diameter_sand_PSD(n1)
+							EXIT
+!							ENDIF
+					ELSE ! concentration is zero, no d50 found, assign d50 as largest dpart, doesn't matter there can't be erosion anyway:
+						d50=frac(nfrac_sand(nfr_sand))%dpart
+					ENDIF
+			  ENDDO
+			ELSE
+				d50=frac(nfrac_sand(1))%dpart
+			ENDIF !if nfr_sand>1
+		    kn_flow(i,j)=kn_flow_d50_multiplier*d50
+		  enddo 
+		enddo 
+		call bound_cbot(kn_flow) 
+	endif !endif kn_flow_d50_multiplier>0.
+	
+	end subroutine determine_kn_flow

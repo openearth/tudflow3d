@@ -29,7 +29,7 @@
       real     cput10a,cput10b,cput11a,cput11b
 	  !real     cput1b,cput2b,t_output,t_output_movie,crate
 	  !integer cput1,cput2,cr
-      real     bulk ,pold_ref
+      real     bulk ,pold_ref,p_ref
       real A(3,3)
 	character(1024) :: gitversion
 	character(1024) :: url
@@ -76,7 +76,7 @@
 	  call init_location_bedplume
 	  call update_fc_global
 	  call fkdat
-	  
+	  call determine_kn_flow	  
 	  
 
       dt    = MIN(dt_ini,dt_max) 
@@ -146,6 +146,7 @@
 	pold3=pold
 	phdt=pold
 	phnew=pold 
+	kbedold=kbed
 
 	if (Cs>0.or.sgs_model.eq.'MixLe'.or.sgs_model.eq.'ReaKE'.or.sgs_model.eq.'DSmag') then
           if (sgs_model.eq.'SSmag') then
@@ -200,7 +201,7 @@
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px)
       call diffw_CDS2 (wz,Uold,Vold,Wold,ib,ie,jb,je,kb,ke)
 	  wx=wx+Ppropx
-	  wx=wy+Ppropy
+	  wy=wy+Ppropy
 	  wz=wz+Ppropz
 	wxold=wx
 	wyold=wy
@@ -288,6 +289,7 @@
 		if ((interaction_bed.eq.4.or.interaction_bed.eq.6).and.time_n.ge.tstart_morf2) then 
 			call update_fc_global
 		endif 		
+		if (kn_flow_d50_multiplier>0.) call determine_kn_flow
 		if (SEM.eq.1) then
 		  call SEM_turb_bc
 		  call move_eddies_SEM
@@ -456,8 +458,46 @@
 				pres_in_predictor_step = 0 ! use no Pold in predictor step every 100 time steps to remove spurious strange pressure relicts in immersed boundary zero flow zones
 			endif 
 		else
+		  if (pres_in_predictor_step_internal.ne.3.or.pres_in_predictor_step_internal.ne.4) then 
 			pres_in_predictor_step = pres_in_predictor_step_internal
+		  endif 
 		endif
+		if (pres_in_predictor_step_internal.eq.3) then !spatial filter for Pold to remove spikes especially round obstacles/bed every timestep; use pres_in_predictor_step=1 in the rest of the code
+		  dp(1:imax,1:jmax,1:kmax)=pold+p 
+		  call bound_p(dp)
+		  do i=1,imax
+			do j=1,jmax
+			  do k=1,kmax !MIN(kmax,kbed(i,j))
+			    pold(i,j,k) = (dp(i-1,j,k)+dp(i+1,j,k)+dp(i,j-1,k)+dp(i,j+1,k)+dp(i,j,k)+dp(i,j,k-1)+dp(i,j,k+1))/7.-p(i,j,k) 
+				! filter pold 
+			  enddo
+			enddo	
+		  enddo	
+		  !!    Make pressure zero at one point in outflow:
+		  if (rank.eq.0) then
+			pold_ref=pold(imax,1,k_pzero)+p(imax,1,k_pzero)
+		  endif
+		  call mpi_bcast(pold_ref,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+		  pold=pold-pold_ref			  
+		elseif (pres_in_predictor_step_internal.eq.4) then !spatial filter for Pold only in bed to remove spikes especially; use pres_in_predictor_step=1 in the rest of the code
+		  dp(1:imax,1:jmax,1:kmax)=pold+p 
+		  call bound_p(dp)
+		  do i=1,imax
+			do j=1,jmax
+			  do k=1,MIN(kmax,kbed(i,j))
+			    pold(i,j,k) = (dp(i-1,j,k)+dp(i+1,j,k)+dp(i,j-1,k)+dp(i,j+1,k)+dp(i,j,k)+dp(i,j,k-1)+dp(i,j,k+1))/7.-p(i,j,k) 
+				! filter pold 
+			  enddo
+			enddo	
+		  enddo
+		  !!    Make pressure zero at one point in outflow:
+		  if (rank.eq.0) then
+			pold_ref=pold(imax,1,k_pzero)+p(imax,1,k_pzero)
+		  endif
+		  call mpi_bcast(pold_ref,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+		  pold=pold-pold_ref		  
+		endif 
+		
 		if (Apvisc_force_eq.eq.1) then 
 			Ppropx=0. !initialize zero every time step, in chkdt driving force periodic sims is determined and put in Ppropx,Ppropy
 			Ppropy=0. 	

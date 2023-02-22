@@ -453,7 +453,7 @@
 	  INTEGER kbedp(0:i1,0:j1),ibeg,iend,kppE,kppW,kppN,kppS,kbed_new(0:i1,0:j1)
 	  REAL dzbed_dx,dzbed_dy,dzbed_dn,dzbed_ds,bedslope_angle,bedslope_alpha,Shields_cr_bl,fnorm,dzbed_dl,fcor_slope
 	  REAL ppp(0:i1,0:j1,0:k1),Fix,Fiy,ddzzE,ddzzW,ddzzS,ddzzN,ustu2,ustv2,ww,c_adjust1,c_adjust2,dz1
-	  REAL dzbed_dl2,dzbed_dl3,vwal_x,vwal_y,dzB,bwal
+	  REAL dzbed_dl2,dzbed_dl3,vwal_x,vwal_y,dzB,bwal,fluxA,fluxB,fluxC,fluxD
 	
 	erosion=0.
 	deposition=0.
@@ -554,7 +554,7 @@
 			ENDIF
 			ust=0.1*absU
 			do tel=1,10 ! 10 iter is more than enough
-				z0=MAX(kn/30.+0.11*nu_mol/MAX(ust,1.e-9),1e-9) 
+				z0=MAX(kn_flow(i,j)/30.+0.11*nu_mol/MAX(ust,1.e-9),1e-9) 
 				ust=absU/MAX(1./kappa*log(MAX(distance_to_bed/z0,1.001)),2.) !ust maximal 0.5*absU
 			enddo
 			distance_to_bed=z_tau_sed
@@ -799,12 +799,12 @@
 				
 			ust=0.1*absU
 			do tel=1,10 ! 10 iter is more than enough
-				z0=MAX(kn/30.+0.11*nu_mol/MAX(ust,1.e-9),1e-9) 
+				z0=MAX(kn_flow(i,j)/30.+0.11*nu_mol/MAX(ust,1.e-9),1e-9) 
 				ust=absU/MAX(1./kappa*log(MAX(distance_to_bed/z0,1.001)),2.) !ust maximal 0.5*absU
 			enddo
 			ustbl=0.1*absUbl
 			do tel=1,10 ! 10 iter is more than enough
-				z0=MAX(kn/30.+0.11*nu_mol/MAX(ust,1.e-9),1e-9) 
+				z0=MAX(kn_flow(i,j)/30.+0.11*nu_mol/MAX(ust,1.e-9),1e-9) 
 				ustbl=absUbl/MAX(1./kappa*log(MAX(distance_to_bed/z0,1.001)),2.) !ust maximal 0.5*absU
 			enddo			
 			distance_to_bed=z_tau_sed
@@ -1369,7 +1369,7 @@
 !     &					-MIN(0.,ddt*0.5*(Diffcof(i,j,kplus)+Diffcof(i,j,kplus2))*(ccnew(n,i,j,kplus2)-ccnew(n,i,j,kplus))/dz)  !add upward diffusion to erosion flux
 						erosionf(n) = MIN(erosionf(n),(cbotnew(n,i,j)+SUM(Clivebed(n,i,j,0:kbed(i,j))))*dz/morfac2) ! m3/m2, not more material can be eroded as available 
 						erosionf(n) = MAX(erosionf(n),0.)
-						qbf(n) = qb * (cbotnew(n,i,j)/cbottot_sand)
+						qbf(n) = qb * MAX(cbotnew(n,i,j)/cbottot_sand,0.)
 					ELSEIF (cbedtot_sand>0.0) THEN
 						erosionf(n) = erosion_avg(n) * (Clivebed(n,i,j,kbed(i,j))/cbedtot_sand) !erosion per fraction
 						!erosionf(n) = erosionf(n) + ccnew(n,i,j,kplus)*MAX(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))*ddt !when wsed upward (e.g. fine fractions) then add negative deposition to erosion
@@ -1377,13 +1377,13 @@
 !     &					-MIN(0.,ddt*0.5*(Diffcof(i,j,kplus)+Diffcof(i,j,kplus2))*(ccnew(n,i,j,kplus2)-ccnew(n,i,j,kplus))/dz)  !add upward diffusion to erosion flux
 						erosionf(n) = MIN(erosionf(n),(cbotnew(n,i,j)+SUM(Clivebed(n,i,j,0:kbed(i,j))))*dz/morfac2) ! m3/m2, not more material can be eroded as available 
 						erosionf(n) = MAX(erosionf(n),0.)
-						qbf(n) = qb * (Clivebed(n,i,j,kbed(i,j))/cbedtot_sand)
+						qbf(n) = qb * MAX(Clivebed(n,i,j,kbed(i,j))/cbedtot_sand,0.)
 					ELSE
 						erosionf(n) = 0.
 						qbf(n) = qb * (c_bed(n)/cfixedbed) !don't make qb zero this is not robust 
 					ENDIF
-					qbU(n,i,j) = qbf(n)*uuRrel-qbf(n)*vvRrel*fnorm
-					qbV(n,i,j) = qbf(n)*vvRrel+qbf(n)*uuRrel*fnorm	
+					qbU(n,i,j) = qbf(n)*uuRrel-qbf(n)*0.5*(vvLrel+vvRrel)*fnorm
+					qbV(n,i,j) = qbf(n)*vvRrel+qbf(n)*0.5*(uuLrel+uuRrel)*fnorm	
 					cctot=0.
 					DO k=kplus,kbed(i,j)+k_layer_pickup 
 						cctot=cctot+MAX(ccfd(n,i,j,k),0.)
@@ -1416,23 +1416,36 @@
 					ctot_firstcel=ccnew(n,i,j,kplus)+ctot_firstcel
 					ENDIF
 					IF ((bedload_formula.ne.'nonenon0000').and.time_n.ge.tstart_morf2) THEN
-						flux = (uuRrel*qbf(n)-qbf(n)*vvRrel*fnorm)*Ru(i)*dphi2(j)*ddt ![kg] change in mass over this edge
+						IF ((interaction_bed.ge.6.and.kbed(i,j).eq.0).or.interaction_bed.eq.7) THEN !unlimited erosion in case kbed.eq.0
+						ELSE					
+							! add all out-going bedload fluxes of cell i,j:
+							fluxA= MAX((uuRrel*qbf(n)-qbf(n)*0.5*(vvLrel+vvRrel)*fnorm)*Ru(i)*dphi2(j)*ddt,0.) 		![kg] change in mass over this edge
+							fluxB= MAX(-(uuLrel*qbf(n)-qbf(n)*0.5*(vvLrel+vvRrel)*fnorm)*Ru(i-1)*dphi2(j)*ddt,0.)	![kg] change in mass over this edge
+							fluxC= MAX((vvRrel*qbf(n)+qbf(n)*0.5*(uuLrel+uuRrel)*fnorm)*dr(i)*ddt,0.) 				![kg] change in mass over this edge						
+							fluxD= MAX(-(vvLrel*qbf(n)+qbf(n)*0.5*(uuLrel+uuRrel)*fnorm)*dr(i)*ddt,0.)				![kg] change in mass over this edge
+							! limit amount of outgoing bedload with amount of available material in cell i,j:
+							flux = MIN(fluxA+fluxB+fluxC+fluxD,(cbotnew(n,i,j)+SUM(Clivebed(n,i,j,0:kbed(i,j))))
+     &						*(rho_sand*dr(i)*Rp(i)*dphi2(j)*dz)) ! kg, not more material can be eroded as available 
+							qbf(n) = qbf(n) * flux/(fluxA+fluxB+fluxC+fluxD+1e-12) !scale qbf(n) with available material in cell
+						ENDIF
+						!now determine bedload-fluxes over all four edges:
+						flux = (uuRrel*qbf(n)-qbf(n)*0.5*(vvLrel+vvRrel)*fnorm)*Ru(i)*dphi2(j)*ddt ![kg] change in mass over this edge
 						IF (flux>0.) THEN !upwind 
 							d_cbotnew(n,i,j) = d_cbotnew(n,i,j) - flux/(rho_sand*dr(i)*Rp(i)*dphi2(j)*dz)
 							d_cbotnew(n,i+1,j) = d_cbotnew(n,i+1,j) + flux/(rho_sand*dr(i+1)*Rp(i+1)*dphi2(j)*dz)
 						ENDIF 
-						flux = (uuLrel*qbf(n)-qbf(n)*vvRrel*fnorm)*Ru(i-1)*dphi2(j)*ddt ![kg] change in mass over this edge
+						flux = (uuLrel*qbf(n)-qbf(n)*0.5*(vvLrel+vvRrel)*fnorm)*Ru(i-1)*dphi2(j)*ddt ![kg] change in mass over this edge
 						IF (flux<0.) THEN
 							d_cbotnew(n,i,j) = d_cbotnew(n,i,j) + flux/(rho_sand*dr(i)*Rp(i)*dphi2(j)*dz)
 							d_cbotnew(n,i-1,j) = d_cbotnew(n,i-1,j) - flux/(rho_sand*dr(i-1)*Rp(i-1)*dphi2(j)*dz)
 						ENDIF 						
-						flux = (vvRrel*qbf(n)+qbf(n)*uuRrel*fnorm)*dr(i)*ddt ![kg] change in mass over this edge
+						flux = (vvRrel*qbf(n)+qbf(n)*0.5*(uuLrel+uuRrel)*fnorm)*dr(i)*ddt ![kg] change in mass over this edge
 						IF (flux>0.) THEN 
 							d_cbotnew(n,i,j) = d_cbotnew(n,i,j) - flux/(rho_sand*dr(i)*Rp(i)*dphi2(j)*dz)
 							d_cbotnew(n,i,j+1) = d_cbotnew(n,i,j+1) + flux/(rho_sand*dr(i)*Rp(i)*dphi2(j+1)*dz)
 						ENDIF 
-						flux = (vvLrel*qbf(n)+qbf(n)*uuRrel*fnorm)*dr(i)*ddt ![kg] change in mass over this edge
-						IF (flux<0.) THEN 
+						flux = (vvLrel*qbf(n)+qbf(n)*0.5*(uuLrel+uuRrel)*fnorm)*dr(i)*ddt ![kg] change in mass over this edge
+						IF (flux<0.) THEN
 							d_cbotnew(n,i,j) = d_cbotnew(n,i,j) + flux/(rho_sand*dr(i)*Rp(i)*dphi2(j)*dz)
 							d_cbotnew(n,i,j-1) = d_cbotnew(n,i,j-1) - flux/(rho_sand*dr(i)*Rp(i)*dphi2(j-1)*dz)
 						ENDIF						
@@ -1936,9 +1949,10 @@
 			d_cbotnew = 0.
 			DO i=1,imax
 				DO j=1,jmax
-					!zb_all(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+ (SUM(cbotnew(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
-					zb_all(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+ (SUM(cbotnew(nfrac_sand(1:nfr_sand),i,j))
-     &					+SUM(Clivebed(nfrac_sand(1:nfr_sand),i,j,kbed(i,j))))/cfixedbed*dz !determine zbed with sand/gravel top layer only because only sand/gravel of top layer avalanche 
+					zb_all(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+ (SUM(cbotnew(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
+					!25-1-2023 turned back to line above defining zb_all for avalanche for all fractions
+!					zb_all(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+ (SUM(cbotnew(nfrac_sand(1:nfr_sand),i,j))
+!     &					+SUM(Clivebed(nfrac_sand(1:nfr_sand),i,j,kbed(i,j))))/cfixedbed*dz !determine zbed with sand/gravel top layer only because only sand/gravel of top layer avalanche 
 				ENDDO
 			ENDDO
 		! mpi boundary for zb_all:
@@ -2288,6 +2302,9 @@
 
 			DO i=1,imax
 				DO j=1,jmax
+					!3D simulation with all 8 neighbours included gives too much breaching in corners. 
+					!in such situation it gives breaching in x-dir plus breaching in y-dir which is correct, but additionally also breaching along xy diagonal and that is extra artificial breaching
+					! so switch to breaching of 4 neighbours which actually share an interface (9-1-2023)
 					sl1=(Rp(i)-Rp(i-1))/MAX((zb_all(i,j)-zb_all(i-1,j))
      & *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed_depo(i-1,j,kbed(i-1,j))),1.e-18)
 					sl2=(Rp(i+1)-Rp(i))/MAX((zb_all(i,j)-zb_all(i+1,j))
@@ -2296,16 +2313,17 @@
      & *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed_depo(i,j-1,kbed(i,j-1))),1.e-18)					
 					sl4=(Rp(i)*phip(j+1)-Rp(i)*phip(j))/MAX((zb_all(i,j)-zb_all(i,j+1))
      & *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed_depo(i,j+1,kbed(i,j+1))),1.e-18)					
-					sl5=SQRT((Rp(i)*phip(j+1)-Rp(i)*phip(j))**2+(Rp(i)-Rp(i-1))**2)/MAX((zb_all(i,j)-zb_all(i-1,j+1))
-     & *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed_depo(i-1,j+1,kbed(i-1,j+1))),1.e-18)					
-					sl6=SQRT((Rp(i)*phip(j+1)-Rp(i)*phip(j))**2+(Rp(i)-Rp(i+1))**2)/MAX((zb_all(i,j)-zb_all(i+1,j+1))
-     & *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed_depo(i+1,j+1,kbed(i+1,j+1))),1.e-18)					
-					sl7=SQRT((Rp(i)*phip(j-1)-Rp(i)*phip(j))**2+(Rp(i)-Rp(i+1))**2)/MAX((zb_all(i,j)-zb_all(i+1,j-1))
-     & *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed_depo(i+1,j-1,kbed(i+1,j-1))),1.e-18)					
-					sl8=SQRT((Rp(i)*phip(j-1)-Rp(i)*phip(j))**2+(Rp(i)-Rp(i-1))**2)/MAX((zb_all(i,j)-zb_all(i-1,j-1))
-     & *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed_depo(i-1,j-1,kbed(i-1,j-1))),1.e-18)
+!					sl5=SQRT((Rp(i)*phip(j+1)-Rp(i)*phip(j))**2+(Rp(i)-Rp(i-1))**2)/MAX((zb_all(i,j)-zb_all(i-1,j+1))
+!     & *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed_depo(i-1,j+1,kbed(i-1,j+1))),1.e-18)					
+!					sl6=SQRT((Rp(i)*phip(j+1)-Rp(i)*phip(j))**2+(Rp(i)-Rp(i+1))**2)/MAX((zb_all(i,j)-zb_all(i+1,j+1))
+!     & *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed_depo(i+1,j+1,kbed(i+1,j+1))),1.e-18)					
+!					sl7=SQRT((Rp(i)*phip(j-1)-Rp(i)*phip(j))**2+(Rp(i)-Rp(i+1))**2)/MAX((zb_all(i,j)-zb_all(i+1,j-1))
+!     & *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed_depo(i+1,j-1,kbed(i+1,j-1))),1.e-18)					
+!					sl8=SQRT((Rp(i)*phip(j-1)-Rp(i)*phip(j))**2+(Rp(i)-Rp(i-1))**2)/MAX((zb_all(i,j)-zb_all(i-1,j-1))
+!     & *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed_depo(i-1,j-1,kbed(i-1,j-1))),1.e-18)
 	 
-					maxbedslope(i,j)=MIN(sl1,sl2,sl3,sl4,sl5,sl6,sl7,sl8)
+					!maxbedslope(i,j)=MIN(sl1,sl2,sl3,sl4,sl5,sl6,sl7,sl8)
+					maxbedslope(i,j)=MIN(sl1,sl2,sl3,sl4)
 					IF (maxbedslope(i,j).lt.1./tan(phi_sediment).and.kbed(i,j).ge.1) THEN 
 						! steeper than the angle of repose: breach possible				
 						IF (sl1.le.maxbedslope(i,j)) THEN !find steepest slope
@@ -2325,37 +2343,37 @@
 							jtrgt=j-1
 							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
 							dl = Rp(i)*phip(j)-Rp(i)*phip(j-1)							
-							bwal = ABS(Ru(i+1)-Ru(i))
+							bwal = ABS(Ru(i)-Ru(i-1))
 						ELSEIF (sl4.le.maxbedslope(i,j)) THEN
 							itrgt=i
 							jtrgt=j+1
 							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
 							dl = Rp(i)*phip(j+1)-Rp(i)*phip(j)
-							bwal = ABS(Ru(i+1)-Ru(i))
-						ELSEIF (sl5.le.maxbedslope(i,j)) THEN
-							itrgt=i-1
-							jtrgt=j+1
-							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
-							dl = SQRT((Rp(i)*phip(j)-Rp(i)*phip(jtrgt))**2+(Rp(i)-Rp(itrgt))**2)
-							bwal = sqrt(ABS(Ru(i)-Ru(itrgt))*ABS(Rp(i)*(phiv(j)-phiv(jtrgt)))) 							
-						ELSEIF (sl6.le.maxbedslope(i,j)) THEN
-							itrgt=i+1
-							jtrgt=j+1
-							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
-							dl = SQRT((Rp(i)*phip(j)-Rp(i)*phip(jtrgt))**2+(Rp(i)-Rp(itrgt))**2)
-							bwal = sqrt(ABS(Ru(i)-Ru(itrgt))*ABS(Rp(i)*(phiv(j)-phiv(jtrgt)))) 							
-						ELSEIF (sl7.le.maxbedslope(i,j)) THEN
-							itrgt=i+1
-							jtrgt=j-1
-							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
-							dl = SQRT((Rp(i)*phip(j)-Rp(i)*phip(jtrgt))**2+(Rp(i)-Rp(itrgt))**2)
-							bwal = sqrt(ABS(Ru(i)-Ru(itrgt))*ABS(Rp(i)*(phiv(j)-phiv(jtrgt)))) 
-						ELSEIF (sl8.le.maxbedslope(i,j)) THEN
-							itrgt=i-1
-							jtrgt=j-1
-							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
-							dl = SQRT((Rp(i)*phip(j)-Rp(i)*phip(jtrgt))**2+(Rp(i)-Rp(itrgt))**2)	
-							bwal = sqrt(ABS(Ru(i)-Ru(itrgt))*ABS(Rp(i)*(phiv(j)-phiv(jtrgt)))) 							
+							bwal = ABS(Ru(i)-Ru(i-1))
+!						ELSEIF (sl5.le.maxbedslope(i,j)) THEN
+!							itrgt=i-1
+!							jtrgt=j+1
+!							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
+!							dl = SQRT((Rp(i)*phip(j)-Rp(i)*phip(jtrgt))**2+(Rp(i)-Rp(itrgt))**2)
+!							bwal = sqrt(ABS(Ru(i)-Ru(itrgt))*ABS(Rp(i)*(phiv(j)-phiv(jtrgt)))) 							
+!						ELSEIF (sl6.le.maxbedslope(i,j)) THEN
+!							itrgt=i+1
+!							jtrgt=j+1
+!							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
+!							dl = SQRT((Rp(i)*phip(j)-Rp(i)*phip(jtrgt))**2+(Rp(i)-Rp(itrgt))**2)
+!							bwal = sqrt(ABS(Ru(i)-Ru(itrgt))*ABS(Rp(i)*(phiv(j)-phiv(jtrgt)))) 							
+!						ELSEIF (sl7.le.maxbedslope(i,j)) THEN
+!							itrgt=i+1
+!							jtrgt=j-1
+!							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
+!							dl = SQRT((Rp(i)*phip(j)-Rp(i)*phip(jtrgt))**2+(Rp(i)-Rp(itrgt))**2)
+!							bwal = sqrt(ABS(Ru(i)-Ru(itrgt))*ABS(Rp(i)*(phiv(j)-phiv(jtrgt)))) 
+!						ELSEIF (sl8.le.maxbedslope(i,j)) THEN
+!							itrgt=i-1
+!							jtrgt=j-1
+!							dbed = zb_all(i,j)-zb_all(itrgt,jtrgt)
+!							dl = SQRT((Rp(i)*phip(j)-Rp(i)*phip(jtrgt))**2+(Rp(i)-Rp(itrgt))**2)	
+!							bwal = sqrt(ABS(Ru(i)-Ru(itrgt))*ABS(Rp(i)*(phiv(j)-phiv(jtrgt)))) 							
 						ELSE
 							write(*,*),'Steepest breach slope not found,i,j:',i,j
 							CYCLE 
