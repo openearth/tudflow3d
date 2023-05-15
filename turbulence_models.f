@@ -5102,7 +5102,7 @@ c*************************************************************
 !       real Ub1new(0:i1,0:k1),Vb1new(0:i1,0:k1),Wb1new(0:i1,0:k1),Ub2new(0:j1,0:k1),Vb2new(0:j1+1,0:k1),Wb2new(0:j1,0:k1)
 !       real Ub1old(0:i1,0:k1),Vb1old(0:i1,0:k1),Wb1old(0:i1,0:k1),Ub2old(0:j1,0:k1),Vb2old(0:j1+1,0:k1),Wb2old(0:j1,0:k1)
       integer ii,t
-      real fun,uu,vv,ww,fac1,fac2,fac3,x,y,z,yymin,yymax,Vbox1,Vbox2,Vbox3,boxside_x,boxside_y,phi,uuu,vvv,www
+      real fun,uu,vv,ww,fac1,fac2,fac3,x,y,z,yymin,yymax,Vbox1,Vbox2,Vbox3,boxside_x,boxside_y,phig,uuu,vvv,www,ust,ust3,z0
 	  integer*2 tt
  	
       Ub1old=Ub1new
@@ -5119,16 +5119,23 @@ c*************************************************************
 ! 	  yymax=Rp(0)*sin((0.5*px*jmax)*dphi)+boxsize
 !       Vbox=2.*boxsize*(yymax-yymin)*(depth-bc_obst_h)
 
-
+		ust=sqrt(U_bSEM**2+V_bSEM**2)
+		if (slip_bot.eq.1.or.slip_bot.ge.3) then
+		  do i=1,10
+			z0=0.11*nu_mol/ust+kn/30
+			ust=sqrt(U_bSEM**2+V_bSEM**2)*kappa/(log((depth-bc_obst_h)/z0)-1);
+		  enddo
+		endif
+	
       if (nmax2.gt.0) then
 	  	yymin=Rp(0)*sin_vt(0)-0.22*(depth-bc_obst_h) !boxsize
 	  	yymax=Rp(0)*sin_vt(jmax*px)+0.22*(depth-bc_obst_h) !boxsize
       		Vbox2=1.2*(depth-bc_obst_h)*(yymax-yymin)*(depth-bc_obst_h)
       		fac2=1./sqrt(REAL(nmax2))*sqrt(1.5)*1.5
 
-		phi=MAX(phivt(jmax*px),0.01/180.*pi) ! minimal 0.01 degrees
-		boxside_x=0.6*(depth-bc_obst_h)+0.22*(depth-bc_obst_h)/tan(phi) !Lx_max=0.6 (depth-bc_obst_h), Ly_max=0.22 (depth-bc_obst_h)
-		boxside_y=2*0.22*(depth-bc_obst_h)+(Rp(imax)-Rp(0))*sin(phi)
+		phig=MAX(phivt(jmax*px),0.01/180.*pi) ! minimal 0.01 degrees
+		boxside_x=0.6*(depth-bc_obst_h)+0.22*(depth-bc_obst_h)/tan(phig) !Lx_max=0.6 (depth-bc_obst_h), Ly_max=0.22 (depth-bc_obst_h)
+		boxside_y=2*0.22*(depth-bc_obst_h)+(Rp(imax)-Rp(0))*sin(phig)
 		Vbox1=2.*boxside_x*boxside_y*(depth-bc_obst_h)
 		fac1=1./sqrt(REAL(nmax1))*sqrt(1.5)*1.5
 
@@ -5159,18 +5166,18 @@ c*************************************************************
 				vv=vv+epsSEM1(2,tt)*fun*fac1
 				ww=ww+epsSEM1(3,tt)*fun*fac1
 			  enddo
-		      Ub2new(j,k)=uu*AA2(1,1,j,k)+vv*AA2(1,2,j,k)+ww*AA2(1,3,j,k) 
-		      Wb2new(j,k)=uu*AA2(2,1,j,k)+vv*AA2(2,2,j,k)+ww*AA2(2,3,j,k)
-		      Vb2new(j,k)=uu*AA2(3,1,j,k)+vv*AA2(3,2,j,k)+ww*AA2(3,3,j,k)
+		      Ub2new(j,k)=uu*AA2(1,1,j,k)*ust+vv*AA2(1,2,j,k)*ust+ww*AA2(1,3,j,k)*ust 
+		      Wb2new(j,k)=uu*AA2(2,1,j,k)*ust+vv*AA2(2,2,j,k)*ust+ww*AA2(2,3,j,k)*ust
+		      Vb2new(j,k)=uu*AA2(3,1,j,k)*ust+vv*AA2(3,2,j,k)*ust+ww*AA2(3,3,j,k)*ust
 			enddo
 	      enddo
       endif
 
 
       if(nmax1.gt.0) then
-	phi=MAX(phivt(jmax*px),0.01/180.*pi) ! minimal 0.01 degrees
-	boxside_x=0.6*(depth-bc_obst_h)+0.22*(depth-bc_obst_h)/tan(phi) !Lx_max=0.6 (depth-bc_obst_h), Ly_max=0.22 (depth-bc_obst_h)
-	boxside_y=2*0.22*(depth-bc_obst_h)+(Rp(imax)-Rp(0))*sin(phi)
+	phig=MAX(phivt(jmax*px),0.01/180.*pi) ! minimal 0.01 degrees
+	boxside_x=0.6*(depth-bc_obst_h)+0.22*(depth-bc_obst_h)/tan(phig) !Lx_max=0.6 (depth-bc_obst_h), Ly_max=0.22 (depth-bc_obst_h)
+	boxside_y=2*0.22*(depth-bc_obst_h)+(Rp(imax)-Rp(0))*sin(phig)
         Vbox1=2.*boxside_x*boxside_y*(depth-bc_obst_h)
         fac1=1./sqrt(REAL(nmax1))*sqrt(1.5)*1.5
 
@@ -5206,9 +5213,9 @@ c*************************************************************
 	 		vv=vv+epsSEM2(2,tt)*fun*fac2
 	 		ww=ww+epsSEM2(3,tt)*fun*fac2
 	 	    enddo
-	 	    Ub1new(i,k)=uu*AA1(1,1,i,k)+vv*AA1(1,2,i,k)+ww*AA1(1,3,i,k) 
-	 	    Wb1new(i,k)=uu*AA1(2,1,i,k)+vv*AA1(2,2,i,k)+ww*AA1(2,3,i,k)
-	 	    Vb1new(i,k)=uu*AA1(3,1,i,k)+vv*AA1(3,2,i,k)+ww*AA1(3,3,i,k)
+	 	    Ub1new(i,k)=uu*AA1(1,1,i,k)*ust+vv*AA1(1,2,i,k)*ust+ww*AA1(1,3,i,k)*ust 
+	 	    Wb1new(i,k)=uu*AA1(2,1,i,k)*ust+vv*AA1(2,2,i,k)*ust+ww*AA1(2,3,i,k)*ust
+	 	    Vb1new(i,k)=uu*AA1(3,1,i,k)*ust+vv*AA1(3,2,i,k)*ust+ww*AA1(3,3,i,k)*ust
 	 	  enddo
 	 	enddo   
 	       ! boundary at j=px*jmax  
@@ -5238,9 +5245,9 @@ c*************************************************************
 	 		vv=vv+epsSEM2(2,tt)*fun*fac2
 	 		ww=ww+epsSEM2(3,tt)*fun*fac2
 	 	    enddo
-	 	    Ub1new(i,k)=uu*AA1(1,1,i,k)+vv*AA1(1,2,i,k)+ww*AA1(1,3,i,k)
-	 	    Wb1new(i,k)=uu*AA1(2,1,i,k)+vv*AA1(2,2,i,k)+ww*AA1(2,3,i,k)
-	 	    Vb1new(i,k)=uu*AA1(3,1,i,k)+vv*AA1(3,2,i,k)+ww*AA1(3,3,i,k)
+	 	    Ub1new(i,k)=uu*AA1(1,1,i,k)*ust+vv*AA1(1,2,i,k)*ust+ww*AA1(1,3,i,k)*ust
+	 	    Wb1new(i,k)=uu*AA1(2,1,i,k)*ust+vv*AA1(2,2,i,k)*ust+ww*AA1(2,3,i,k)*ust
+	 	    Vb1new(i,k)=uu*AA1(3,1,i,k)*ust+vv*AA1(3,2,i,k)*ust+ww*AA1(3,3,i,k)*ust
 	 	  enddo
 	 	enddo
 	       endif
@@ -5248,6 +5255,7 @@ c*************************************************************
 	
 
       if (nmax3.gt.0) then
+	    ust3 = ABS(W_j)/14.73 !ratio ust Wbulk is 14.73 of Eggels DNS data set
       	Vbox3=pi*radius_j*radius_j*radius_j !(pi*R^2*boxside_z); boxside_z=2*0.5*radius_j
       	fac3=1./sqrt(REAL(nmax3))*sqrt(1.5)*1.5
 
@@ -5285,9 +5293,9 @@ c*************************************************************
 			vvv = uu*cos(azi_angle_p(i,j))+vv*sin(azi_angle_p(i,j))		!= wall-distance direction	r
 			www =-uu*sin(azi_angle_p(i,j))+vv*cos(azi_angle_p(i,j))		!= lateral direction 		theta
 			
-		    uu= uuu*AA3(1,1,i,j)+vvv*AA3(1,2,i,j)+www*AA3(1,3,i,j) 		!= pipe flow direction 		z (aa(1,1) positief? om x,y,z te laten kloppen met z,r,theta) --> aa(1,1) was negatief, 7-12-15 11:45
-		    vv= uuu*AA3(2,1,i,j)+vvv*AA3(2,2,i,j)+www*AA3(2,3,i,j) 		!= wall-distance direction	r (aa(2,1) positief? om tau (wz'ur') te laten kloppen --> aa(2,1) was negatief, 7-12-15 11:45
-		    ww= uuu*AA3(3,1,i,j)+vvv*AA3(3,2,i,j)+www*AA3(3,3,i,j) 		!= lateral direction 		theta
+		    uu= uuu*AA3(1,1,i,j)*ust3+vvv*AA3(1,2,i,j)*ust3+www*AA3(1,3,i,j)*ust3 		!= pipe flow direction 		z (aa(1,1) positief? om x,y,z te laten kloppen met z,r,theta) --> aa(1,1) was negatief, 7-12-15 11:45
+		    vv= uuu*AA3(2,1,i,j)*ust3+vvv*AA3(2,2,i,j)*ust3+www*AA3(2,3,i,j)*ust3 		!= wall-distance direction	r (aa(2,1) positief? om tau (wz'ur') te laten kloppen --> aa(2,1) was negatief, 7-12-15 11:45
+		    ww= uuu*AA3(3,1,i,j)*ust3+vvv*AA3(3,2,i,j)*ust3+www*AA3(3,3,i,j)*ust3 		!= lateral direction 		theta
 			
 			Wb3new(i,j)=-uu													!TUDflow3d ww direction 		z (negatief om w dir te laten kloppen)
 			Ub3new(i,j)=vv*cos(azi_angle_p(i,j))-ww*sin(azi_angle_p(i,j))	!TUDflow3d uu direction 		x
@@ -5311,9 +5319,9 @@ c*************************************************************
       integer m,n,ierr,clock,ii,t
       INTEGER, DIMENSION(:), ALLOCATABLE :: seed
       real yy(nmax2),xx(nmax2),y,z,AAdummy(3,3)
-      real z0,xxmin,xxmax,yymin,yymax,zzmin,zzmax,x0,y0,phi,ust,fac,phi2
+      real z0,xxmin,xxmax,yymin,yymax,zzmin,zzmax,x0,y0,phi,fac,phi2
       character*60 fmatname
-      real boxside_x,ttmin,ttmax,jetcorr,x,rr,rrmin,rrmax,ust3,dxx,dyy
+      real boxside_x,ttmin,ttmax,jetcorr,x,rr,rrmin,rrmax,dxx,dyy,ust!,ust3
 
 	CALL SYSTEM_CLOCK(COUNT=clock)
 	CALL RANDOM_SEED(size = n)
@@ -5331,11 +5339,15 @@ c*************************************************************
 	  enddo
 	endif
 	! rotation ship for ambient side current
-	if ((U_TSHD-U_bSEM).eq.0.or.LOA<0.) then
-	  phi=atan2(V_bSEM,1.e-12)
-	else
-	  phi=atan2(V_bSEM,(U_TSHD-U_bSEM))
-	endif
+	if (LOA<0.) then 
+	  phi=0. !don't rotate grid
+	else 
+		if ((U_TSHD-U_b).eq.0) then
+		  phi=atan2(V_b,1.e-12)
+		else
+		  phi=atan2(V_b,(U_TSHD-U_b))
+		endif
+	endif 
 
 	!! SEM2 is at x-inflow boundary:
 	if (rank.eq.1) then ! 2nd processor can generate SEM2
@@ -5370,7 +5382,8 @@ c*************************************************************
 	  fac=kappa*(depth-bc_obst_h)
 	  do i=1,nmax2
 !	      uSEM2(i)=ust/kappa*log(zSEM2(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)  !correct sign with and without TSHD
-	      uSEM2(i)=ust/kappa*log(zSEM2(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD  !correct sign with and without TSHD
+!	      uSEM2(i)=ust/kappa*log(zSEM2(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD  !correct sign with and without TSHD
+		  uSEM2(i)=ust/kappa*log(zSEM2(i)/z0)*(-signU_bSEM*cos(phi)+signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD*cos(phi)  !corrected 28-2-2023 
 	      lmxSEM2(i)=0.5*(depth-bc_obst_h)/sqrt(U_bSEM**2+V_bSEM**2)*ust/kappa*log(zSEM2(i)/z0)
 	      lmxSEM2(i)=max(lm_min,lmxSEM2(i))
 	      lmySEM2(i)=0.22*(depth-bc_obst_h)
@@ -5428,7 +5441,8 @@ c*************************************************************
 	      xxmax=-ySEM1(i)/tan(phi2)-schuif_x+boxside_x ! xxmax is positive
 	      xSEM1(i)=(xxmax-xxmin)*xSEM1(i)+xxmin  
 !	      uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)  !correct sign with and without TSHD
-	      uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD  !correct sign with and without TSHD
+!	      uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD  !correct sign with and without TSHD
+		  uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)+signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD*cos(phi)  !corrected 28-2-2023 
 	      lmxSEM1(i)=0.5*(depth-bc_obst_h)/sqrt(U_bSEM**2+V_bSEM**2)*ust/kappa*log(zSEM1(i)/z0)
 	      lmxSEM1(i)=max(lm_min,lmxSEM1(i))
 	      lmySEM1(i)=0.22*(depth-bc_obst_h)
@@ -5476,7 +5490,8 @@ c*************************************************************
 	      xxmax=ySEM1(i)/tan(phi2)-schuif_x+boxside_x
 	      xSEM1(i)=(xxmax-xxmin)*xSEM1(i)+xxmin  
 !	      uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)  !correct sign with and without TSHD
-	      uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD  !correct sign with and without TSHD
+!	      uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD  !correct sign with and without TSHD
+		  uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)+signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD*cos(phi)  !corrected 28-2-2023 
 	      lmxSEM1(i)=0.5*(depth-bc_obst_h)/sqrt(U_bSEM**2+V_bSEM**2)*ust/kappa*log(zSEM1(i)/z0)
 	      lmxSEM1(i)=max(lm_min,lmxSEM1(i))
 	      lmySEM1(i)=0.22*(depth-bc_obst_h)
@@ -5570,7 +5585,7 @@ c*************************************************************
 
 		!! create Cholesky decomposition of Re stress tensor
 	AA3=0.
-	ust3 = ABS(W_j)/14.73 !ratio ust Wbulk is 14.73 of Eggels DNS data set
+	!ust3 = ABS(W_j)/14.73 !ratio ust Wbulk is 14.73 of Eggels DNS data set
        do t=1,tmax_inPpunt
 		i=i_inPpunt(t)
 		j=j_inPpunt(t)
@@ -5579,7 +5594,7 @@ c*************************************************************
 		rr=sqrt(x*x+y*y)
         call Chol_tensor_from_DNSpipe_Ret360(rr/(2.*radius_j),AA3(:,:,i,j))
 		!call Chol_tensor_from_DNS_Ret395(1.-rr/radius_j,AA3(:,:,i,j)) !testje
-        AA3(:,:,i,j)=AA3(:,:,i,j)*ust3 ! scale back with ust
+        AA3(:,:,i,j)=AA3(:,:,i,j) ! scale back with ust when using AA in determining velocity fluctuations
 	   enddo
 			
 
@@ -5600,7 +5615,7 @@ c*************************************************************
 					z=(k-kbed0(i,j))*dz-0.5*dz
 				ENDIF
 				call Chol_tensor_from_DNS_Ret395(z/(depth-kbed0(i,j)*dz),AAdummy(:,:))
-				AA1(:,:,i,k)=AAdummy(:,:)*ust ! scale back with ust
+				AA1(:,:,i,k)=AAdummy(:,:) ! scale back with ust when using AA in determining velocity fluctuations
 			else 
 				AA1(:,:,i,k)=0.
 			endif
@@ -5616,7 +5631,7 @@ c*************************************************************
 					z=(k-kbed0(i,j))*dz-0.5*dz
 				ENDIF
 				call Chol_tensor_from_DNS_Ret395(z/(depth-(kbed0(i,j))*dz),AAdummy(:,:))
-				AA1(:,:,i,k)=AAdummy(:,:)*ust ! scale back with ust
+				AA1(:,:,i,k)=AAdummy(:,:) ! scale back with ust when using AA in determining velocity fluctuations
 			else 
 				AA1(:,:,i,k)=0. 
 			endif
@@ -5635,7 +5650,7 @@ c*************************************************************
 					z=(k-kbed0(i,j))*dz-0.5*dz
 				ENDIF
 				call Chol_tensor_from_DNS_Ret395(z/(depth-kbed0(i,j)*dz),AAdummy(:,:))
-				AA2(:,:,j,k)=AAdummy(:,:)*ust ! scale back with ust
+				AA2(:,:,j,k)=AAdummy(:,:) ! scale back with ust when using AA in determining velocity fluctuations
 			else 
 				AA2(:,:,j,k)=0.
 			endif
@@ -5651,7 +5666,7 @@ c*************************************************************
 					z=(k-kbed0(i,j))*dz-0.5*dz
 				ENDIF
 				call Chol_tensor_from_DNS_Ret395(z/(depth-kbed0(i,j)*dz),AAdummy(:,:))
-				AA2(:,:,j,k)=AAdummy(:,:)*ust ! scale back with ust
+				AA2(:,:,j,k)=AAdummy(:,:) ! scale back with ust when using AA in determining velocity fluctuations
 			else 
 				AA2(:,:,j,k)=0. 
 			endif
@@ -5703,12 +5718,31 @@ c*************************************************************
 	  enddo
 	endif
 	! rotation ship for ambient side current
-	if ((U_TSHD-U_bSEM).eq.0.or.LOA<0.) then
-	  phi=atan2(V_bSEM,1.e-12)
-	else
-	  phi=atan2(V_bSEM,(U_TSHD-U_bSEM))
-	endif
-
+	if (LOA<0.) then 
+	  phi=0. !don't rotate grid
+	else 
+		if ((U_TSHD-U_b).eq.0) then
+		  phi=atan2(V_b,1.e-12)
+		else
+		  phi=atan2(V_b,(U_TSHD-U_b))
+		endif
+	endif 
+	
+	if (U_b_tseriesfile.ne.''.or.V_b_tseriesfile.ne.''.or.W_b_tseriesfile.ne.'') then  !update all SEM1 and SEM2 points with new velocity:
+	  if (rank.eq.0.or.rank.eq.px-1) then
+	    do i=1,nmax1
+		  uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)+signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD*cos(phi)  !corrected 28-2-2023 
+		  lmxSEM1(i)=0.5*(depth-bc_obst_h)/sqrt(U_bSEM**2+V_bSEM**2)*ust/kappa*log(zSEM1(i)/z0)
+		  lmxSEM1(i)=max(lm_min,lmxSEM1(i))
+	    enddo 
+	  endif 
+	  do i=1,nmax2
+		  uSEM2(i)=ust/kappa*log(zSEM2(i)/z0)*(-signU_bSEM*cos(phi)+signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD*cos(phi)  !corrected 28-2-2023 
+	      lmxSEM2(i)=0.5*(depth-bc_obst_h)/sqrt(U_bSEM**2+V_bSEM**2)*ust/kappa*log(zSEM2(i)/z0)
+	      lmxSEM2(i)=max(lm_min,lmxSEM2(i))	  
+	  enddo 
+	endif 
+	  
       phi2=MAX(phivt(jmax*px),0.01/180.*pi) ! minimal 0.01 degrees (phi2 is positive...)
       boxside_x=0.6*(depth-bc_obst_h)+0.22*(depth-bc_obst_h)/tan(phi2) !Lx_max=0.6 (depth-bc_obst_h), Ly_max=0.22 (depth-bc_obst_h)	
       zzmin=z0+1.e-6
@@ -5756,7 +5790,8 @@ c*************************************************************
 	 	    epsSEM1(ii,i)=eps(ii)*2.-1. ! +1 or -1	
 	 	  enddo
 !	      	  uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)  !correct sign with and without TSHD
-	      	  uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD  !correct sign with and without TSHD
+!	      	  uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD  !correct sign with and without TSHD
+			  uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)+signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD*cos(phi)  !corrected 28-2-2023 
 		  lmxSEM1(i)=0.5*(depth-bc_obst_h)/sqrt(U_bSEM**2+V_bSEM**2)*ust/kappa*log(zSEM1(i)/z0)
 		  lmxSEM1(i)=max(lm_min,lmxSEM1(i))
 		  lmySEM1(i)=0.22*(depth-bc_obst_h)
@@ -5822,7 +5857,8 @@ c*************************************************************
 	 	    epsSEM1(ii,i)=eps(ii)*2.-1. ! +1 or -1	
 	 	  enddo
 !	      	  uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)  !correct sign with and without TSHD
-	      	  uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD  !correct sign with and without TSHD
+!	      	  uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD  !correct sign with and without TSHD
+			  uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)+signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD*cos(phi)  !corrected 28-2-2023 
 		  lmxSEM1(i)=0.5*(depth-bc_obst_h)/sqrt(U_bSEM**2+V_bSEM**2)*ust/kappa*log(zSEM1(i)/z0)
 		  lmxSEM1(i)=max(lm_min,lmxSEM1(i))
 		  lmySEM1(i)=0.22*(depth-bc_obst_h)
@@ -5884,7 +5920,8 @@ c*************************************************************
 	      epsSEM2(j,i)=eps(j)*2.-1. ! +1 or -1	
 	    enddo	
 !	      uSEM2(i)=ust/kappa*log(zSEM2(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)  !correct sign with and without TSHD)
-	      uSEM2(i)=ust/kappa*log(zSEM2(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD !correct sign with and without TSHD)
+!	      uSEM2(i)=ust/kappa*log(zSEM2(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD !correct sign with and without TSHD)
+		  uSEM2(i)=ust/kappa*log(zSEM2(i)/z0)*(-signU_bSEM*cos(phi)+signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD*cos(phi)  !corrected 28-2-2023 
 	      lmxSEM2(i)=0.5*(depth-bc_obst_h)/sqrt(U_bSEM**2+V_bSEM**2)*ust/kappa*log(zSEM2(i)/z0)
 	      lmxSEM2(i)=max(lm_min,lmxSEM2(i))
 	      lmySEM2(i)=0.22*(depth-bc_obst_h)

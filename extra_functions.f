@@ -649,11 +649,15 @@
 	DO n2=1,nbedplume !correct div2 for adding or subtracting volume:
 		IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
 		! rotation ship for ambient side current
-		if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-		  phi=atan2(V_b,1.e-12)
-		else
-		  phi=atan2(V_b,(U_TSHD-U_b))
-		endif
+		if (LOA<0.) then 
+		  phi=0. !don't rotate grid
+		else 
+			if ((U_TSHD-U_b).eq.0) then
+			  phi=atan2(V_b,1.e-12)
+			else
+			  phi=atan2(V_b,(U_TSHD-U_b))
+			endif
+		endif 
 		  xx=Rp(i)*cos_u(j)-schuif_x
 		  yy=Rp(i)*sin_u(j)
 		  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle:
@@ -740,7 +744,7 @@
 	!REAL uu,vv,ww,uudt,vvdt,wwdt
 	REAL uu(1:imax,1:jmax,1:kmax),vv(1:imax,1:jmax,1:kmax),ww(1:imax,1:jmax,1:kmax)
 	REAL uudt(1:imax,1:jmax,1:kmax),vvdt(1:imax,1:jmax,1:kmax),wwdt(1:imax,1:jmax,1:kmax)
-	REAL tau_flow_temp(1:imax,1:jmax)
+	REAL tau_flow_temp(1:imax,1:jmax),tau_frac_temp(1:nfrac,1:imax,1:jmax)
 	INTEGER n
 
 	stat_count=stat_count+1
@@ -798,6 +802,20 @@
 			  sigVC(n,:,:,:) = sigVC(n,:,:,:) + Cnew(n,1:imax,1:jmax,1:kmax)*vvdt
 			  sigWC(n,:,:,:) = sigWC(n,:,:,:) + Cnew(n,1:imax,1:jmax,1:kmax)*wwdt
 		  enddo
+		  if (nfrac>0) then
+			tau_flow_temp=ust_sl_new(1:imax,1:jmax)*ust_sl_new(1:imax,1:jmax)*rho_b
+			sig_tau_sl2 = sig_tau_sl2+tau_flow_temp*tau_flow_temp*dt
+			tau_sl_avg = tau_sl_avg+tau_flow_temp*dt
+			tau_flow_temp=ust_bl_new(1:imax,1:jmax)*ust_bl_new(1:imax,1:jmax)*rho_b
+			sig_tau_bl2 = sig_tau_bl2+tau_flow_temp*tau_flow_temp*dt
+			tau_bl_avg = tau_bl_avg+tau_flow_temp*dt
+			tau_flow_temp=ust_mud_new(1:imax,1:jmax)*ust_mud_new(1:imax,1:jmax)*rho_b
+			sig_tau_mud2 = sig_tau_mud2+tau_flow_temp*tau_flow_temp*dt
+			tau_mud_avg = tau_mud_avg+tau_flow_temp*dt
+			tau_frac_temp=ust_frac_new(1:nfrac,1:imax,1:jmax)*ust_frac_new(1:nfrac,1:imax,1:jmax)*rho_b
+			sig_tau_frac2 = sig_tau_frac2+tau_frac_temp*tau_frac_temp*dt
+			tau_frac_avg = tau_frac_avg+tau_frac_temp*dt
+		  endif 
 		
 !!! Favre average results in differences of <1 promille for Umean and <1% for U' between Favre and Reynolds avg
 !!! for CO2 plume simulation (Wang et al. 2008), this is not important for dredge plumes, thus only Reynolds avg is calculated from now on

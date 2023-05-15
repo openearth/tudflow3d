@@ -49,6 +49,7 @@ c
 	real Ujetbc,Vjetbc,Wjetbc,Ujetbc2,Vjetbc2
 	real rr,interpseries
       real Ujet2,zzz,z2,val2,jetcorr
+	  integer i_inflowU,i_inflowVW,i_outflowU,i_outflowVW
 
 ! 	pi   = 4.0 * atan(1.0)
 c
@@ -66,11 +67,15 @@ c	Ubc,Vbc,Wbc are boundary velocities in carthesian
 c	x,y,z coordinate system, not in r,theta,z like this code
 
 	! rotation ship for ambient side current
-	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-	  phi=atan2(V_b,1.e-12)
-	else
-	  phi=atan2(V_b,(U_TSHD-U_b))
-	endif
+	if (LOA<0.) then 
+	  phi=0. !don't rotate grid
+	else 
+		if ((U_TSHD-U_b).eq.0) then
+		  phi=atan2(V_b,1.e-12)
+		else
+		  phi=atan2(V_b,(U_TSHD-U_b))
+		endif
+	endif 	
 
 c 	influence of waves on lateral boundaries:
 	! 10-3-2020 noted that perhaps exact location wave inflow bc is not consistent with staggered layout near boundary, have to research later [Ub1in,Vb1in,Wb1in are defined at Uloc; Ub2in,Vb2in,Wb2in are defined at Vloc; but Ub1,Vb1,Wb1,Ub2,Vb2,Wb2 defined at u,v,w loc respectively and they are added without correcting
@@ -105,7 +110,13 @@ c 	influence of waves on lateral boundaries:
 	    IF (periodicx.eq.3.or.periodicx.eq.4) THEN
 			i=i1
 		ELSE 
-			i=0
+			if (monopile>0) then !inflow Ubc2,Vbc2 defined at imax instead at i=0
+			  i=imax 
+			elseif((U_b>0.and.LOA<0).or.((U_TSHD-U_b)>0.and.LOA>0.)) THEN 
+			  i=0
+			else !inflow Ubc2,Vbc2 defined at imax instead at i=0
+			  i=imax 
+			endif 
 		ENDIF 
 	    z=(k-0.5)*dz-zbed(i,j)
 	    z=MIN(z,depth-zbed(i,j))
@@ -267,6 +278,17 @@ c 	influence of waves on lateral boundaries:
 	Wbc1=W_b
 
 	if (periodicx.eq.0.and.monopile.eq.-1) then
+		if((U_b>0.and.LOA<0).or.((U_TSHD-U_b)>0.and.LOA>0.)) THEN 
+	      i_inflowU=0
+		  i_inflowVW=0
+		  i_outflowU=imax
+		  i_outflowVW=i1
+		else !inflow Ubc2,Vbc2 defined at imax instead at i=0
+		  i_inflowU=imax 
+		  i_inflowVW=i1
+		  i_outflowU=0
+		  i_outflowVW=0
+		endif 	
 		if (Uoutflow.eq.2) then ! convective outflow boundary
           do k=1,kmax ! boundaries in i-direction
            do j=0,j1
@@ -279,9 +301,9 @@ c 	influence of waves on lateral boundaries:
 		    Ubc=Ub2(j,k)+Ubc2(j,k)
 		    Vbc=0.5*(Vb2(j,k)+Vb2(j+1,k))+Vbc2(j,k)
 		    Wbc=0.5*(Wb2(j,k)+Wb2(j,k+1))+Wbc2	
-		   Ubound(0,j,k)    =    Ubc*cos_u(j)+Vbc*sin_u(j)
-		   Vbound(0,j,k)    =    (-Ubc*sin_v(j)+Vbc*cos_v(j)) !2.*(-Ubc*sin_v(j)+Vbc*cos_v(j))-Vbound(1,j,k)
-		   Wbound(0,j,k)    =    Wbc !2.*Wbc - Wbound(1,j,k) !Wbound(0,j,k)    =  Wbc !- Wbound(1,j,k)
+		   Ubound(i_inflowU,j,k)    =    Ubc*cos_u(j)+Vbc*sin_u(j)
+		   Vbound(i_inflowVW,j,k)    =    (-Ubc*sin_v(j)+Vbc*cos_v(j)) !2.*(-Ubc*sin_v(j)+Vbc*cos_v(j))-Vbound(1,j,k)
+		   Wbound(i_inflowVW,j,k)    =    Wbc !2.*Wbc - Wbound(1,j,k) !Wbound(0,j,k)    =  Wbc !- Wbound(1,j,k)
 		   Ubc = MAX(Ubc2(j,k)*cos_u(j)+Vbc2(j,k)*sin_u(j),0.)  !Unormal outflow boundary at U-loc; should be >0 otherwise no outflow and divide by zero 
 !		   Ubound(imax,j,k) =    MAX(Ubound(imax-1,j,k)-dr(imax)/(Ubc*dt)*(Unew(imax-1,j,k)-Uold(imax-1,j,k)),0.)
 !		   Ubound(i1,j,k)   =    MAX(Ubound(imax,j,k),0.)	
@@ -293,7 +315,11 @@ c 	influence of waves on lateral boundaries:
 		   Ubound(i1,j,k)   =    MAX(Ubound(imax,j,k),0.)	
 		   Vbound(i1,j,k) = (Vnew(i1,j,k)+Ubc*dt/(Rp(i1)-Rp(imax))*Vbound(imax,j,k))/(1.+Ubc*dt/(Rp(i1)-Rp(imax))) 
 		   Wbound(i1,j,k) = (Wnew(i1,j,k)+Ubc*dt/(Rp(i1)-Rp(imax))*Wbound(imax,j,k))/(1.+Ubc*dt/(Rp(i1)-Rp(imax))) 
-
+!		   Ubound(i_outflowU,j,k) = (Unew(imax,j,k)+Ubc*dt/dr(imax)*Ubound(imax-1,j,k))/(1.+Ubc*dt/dr(imax)) 
+!		   Ubound(i_outflowVW,j,k)   =    MAX(Ubound(imax,j,k),0.)	
+!		   Vbound(i_outflowVW,j,k) = (Vnew(i1,j,k)+Ubc*dt/(Rp(i1)-Rp(imax))*Vbound(imax,j,k))/(1.+Ubc*dt/(Rp(i1)-Rp(imax))) 
+!		   Wbound(i_outflowVW,j,k) = (Wnew(i1,j,k)+Ubc*dt/(Rp(i1)-Rp(imax))*Wbound(imax,j,k))/(1.+Ubc*dt/(Rp(i1)-Rp(imax))) 
+		   
            enddo   
           enddo		
 		else !Neumann outflow boundary 
@@ -532,6 +558,7 @@ c 	influence of waves on lateral boundaries:
        		f=Strouhal*ABS(W_j)/MAX(radius_j*2.,1.e-12) !Strouholt number is 0.3
 	else
        		Wjet=interpseries(plumetseries,plumeUseries,plumeseriesloc,tt)
+			W_j=Wjet
        		f=Strouhal*ABS(W_j)/MAX(radius_j*2.,1.e-12) !Strouholt number is 0.3
 	endif
 	jetcorr=pi/(2.*pi*(1/(1./W_j_powerlaw+1)-1./(1./W_j_powerlaw+2.))) !=1.22449 for W_j_powerlaw=7
@@ -596,6 +623,7 @@ c 	influence of waves on lateral boundaries:
        		f=Strouhal*ABS(U_j2)/(radius_j2*2.) !Strouholt number is 0.3
 	else
        		Ujet2=interpseries(plumetseries2,plumeUseries2,plumeseriesloc2,tt)
+			U_j2=Ujet2
        		f=Strouhal2*ABS(U_j2)/(radius_j2*2.) !Strouholt number is 0.3
 	endif
        do t=1,tmax_inPpunt2
@@ -719,11 +747,15 @@ c	Ubc,Vbc,Wbc are boundary velocities in carthesian
 c	x,y,z coordinate system, not in r,theta,z like this code
 
 	! rotation ship for ambient side current
-	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-	  phi=atan2(V_b,1.e-12)
-	else
-	  phi=atan2(V_b,(U_TSHD-U_b))
-	endif
+	if (LOA<0.) then 
+	  phi=0. !don't rotate grid
+	else 
+		if ((U_TSHD-U_b).eq.0) then
+		  phi=atan2(V_b,1.e-12)
+		else
+		  phi=atan2(V_b,(U_TSHD-U_b))
+		endif
+	endif 
 	
 c 	influence of waves on lateral boundaries:
 	IF(Hs>0.) THEN
@@ -756,8 +788,14 @@ c 	influence of waves on lateral boundaries:
 	  DO j=0,j1
 	    IF (periodicx.eq.3.or.periodicx.eq.4) THEN
 			i=i1
-		ELSE 
-			i=0
+		ELSE
+			if (monopile>0) then !inflow Ubc2,Vbc2 defined at imax instead at i=0
+			  i=imax 
+			elseif((U_b>0.and.LOA<0).or.((U_TSHD-U_b)>0.and.LOA>0.)) THEN 
+			  i=0
+			else !inflow Ubc2,Vbc2 defined at imax instead at i=0
+			  i=imax 
+			endif 		
 		ENDIF
 	    z=(k-0.5)*dz-zbed(i,j)
 	    z=MIN(z,depth-zbed(i,j))
@@ -1248,6 +1286,7 @@ c 	influence of waves on lateral boundaries:
        		f=Strouhal*ABS(W_j)/MAX(radius_j*2.,1.e-12) !Strouholt number is 0.3
 	else
        		Wjet=interpseries(plumetseries,plumeUseries,plumeseriesloc,tt)
+			W_j=Wjet
        		f=Strouhal*ABS(W_j)/MAX(radius_j*2.,1.e-12) !Strouholt number is 0.3
 	endif
 	jetcorr=pi/(2.*pi*(1/(1./W_j_powerlaw+1)-1./(1./W_j_powerlaw+2.))) !=1.22449 for W_j_powerlaw=7
@@ -1335,6 +1374,7 @@ c 	influence of waves on lateral boundaries:
        		f=Strouhal*ABS(U_j2)/(radius_j2*2.) !Strouholt number is 0.3
 	else
        		Ujet2=interpseries(plumetseries2,plumeUseries2,plumeseriesloc2,tt)
+			U_j2=Ujet2
        		f=Strouhal2*ABS(U_j2)/(radius_j2*2.) !Strouholt number is 0.3
 	endif
        do t=1,tmax_inPpunt2
@@ -1588,7 +1628,7 @@ c
 	real rr,interpseries
 	real uu1,uu2,vv1,vv2,test
       real zzz,Ujet2,z2,val2,jetcorr
-	  real duu,du,Uav,Tadapt,fbx2,fby2,fbz2,fbx,fby,ppp(0:i1,0:j1,0:k1),scal
+	  real duu,du,Uav,Tadapt,fbx2,fby2,fbz2,fbx,fby,ppp(0:i1,0:j1,0:k1)
 
 !      real  Ubound2(0:i1,0:j1,0:k1),Vbound2(0:i1,0:j1,0:k1),Wbound2(0:i1,0:j1,0:k1)
       real  Ubound2(-1:i1+1,-1:j1+1,0:k1),Vbound2(-1:i1+1,-1:j1+1,0:k1),Wbound2(-1:i1+1,-1:j1+1,0:k1),rho2(-1:i1+1,-1:j1+1,0:k1),rr1,rr2
@@ -1597,7 +1637,8 @@ c
 	real Propz_dummy(0:i1,0:px*jmax+1,1:kmax)	  
 	  integer kp,kpp,kb,jbeg,jend
 	  real zb_W,zb_U,zb_V,vel_ibm2,distance_to_bed_kp,distance_to_bed_kpp,yplus,absU,z0,ust,rr2,ww1,ww2
-	  real dpdz1,dpdy2,tauw1,tauv1,tauw2,tauv2,ust1,ust2,tauu1,tauu2,dpdx11,dpdy22,tau
+	  real dpdz1,dpdy2,tauw1,tauv1,tauw2,tauv2,ust1,ust2,tauu1,tauu2,dpdx11,dpdy22,tau,u0,v0,rr1a,rr2a,rr0
+	  real uu1a,uu2a,vv1a,vv2a,dist_vel,uu0,vv0 
 
 c
 c
@@ -1614,11 +1655,15 @@ c	Ubc,Vbc,Wbc are boundary velocities in carthesian
 c	x,y,z coordinate system, not in r,theta,z like this code
 
 	! rotation ship for ambient side current
-	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-	  phi=atan2(V_b,1.e-12)
-	else
-	  phi=atan2(V_b,(U_TSHD-U_b))
-	endif
+	if (LOA<0.) then 
+	  phi=0. !don't rotate grid
+	else 
+		if ((U_TSHD-U_b).eq.0) then
+		  phi=atan2(V_b,1.e-12)
+		else
+		  phi=atan2(V_b,(U_TSHD-U_b))
+		endif
+	endif 
 
 	
 	 if (split_rho_cont.eq.'VL2'.or.split_rho_cont.eq.'SB2') then
@@ -1811,7 +1856,13 @@ c 	influence of waves on lateral boundaries:
 	    IF (periodicx.eq.3.or.periodicx.eq.4) THEN
 			i=i1
 		ELSE 
-			i=0
+			if (monopile>0) then !inflow Ubc2,Vbc2 defined at imax instead at i=0
+			  i=imax 
+			elseif((U_b>0.and.LOA<0).or.((U_TSHD-U_b)>0.and.LOA>0.)) THEN 
+			  i=0
+			else !inflow Ubc2,Vbc2 defined at imax instead at i=0
+			  i=imax 
+			endif 
 		ENDIF
 	    z=(k-0.5)*dz-zbed(i,j)
 	    z=MIN(z,depth-zbed(i,j))
@@ -2137,8 +2188,8 @@ c 	influence of waves on lateral boundaries:
 				uu1=0.25*(Ubound(i,j,k)+Ubound(i-1,j,k)+Ubound(i,j,k+1)+Ubound(i-1,j,k+1))	!at W-gridpoint
 				ww2=0.25*(Wbound(i,j,k)+Wbound(i,j,k-1)+Wbound(i+1,j,k)+Wbound(i+1,j,k-1)) !at U-gridpoint
 				uu2=Ubound(i,j,k)
-				call wall_fun_rho(ww1,uu1,rr1,Rp(i)*dphi2(j),1.,dt,kn_sidewalls,kappa,nu_mol,tau)
-				call wall_fun_rho(uu2,ww2,rr2,Rp(i)*dphi2(j),1.,dt,kn_sidewalls,kappa,nu_mol,tau)
+				call wall_fun_rho(ww1,uu1,ww1,uu1,rr1,Rp(i)*dphi2(j),0.5*Rp(i)*dphi2(j),dt,kn_sidewalls,kappa,nu_mol,tau)
+				call wall_fun_rho(uu2,ww2,uu2,ww2,rr2,Rp(i)*dphi2(j),0.5*Rp(i)*dphi2(j),dt,kn_sidewalls,kappa,nu_mol,tau)
 				Wbound(i,j,k)=ww1
 				Ubound(i,j,k)=uu2
 				j=0
@@ -2164,8 +2215,8 @@ c 	influence of waves on lateral boundaries:
 				uu1=0.25*(Ubound(i,j,k)+Ubound(i-1,j,k)+Ubound(i,j,k+1)+Ubound(i-1,j,k+1))	!at W-gridpoint
 				ww2=0.25*(Wbound(i,j,k)+Wbound(i,j,k-1)+Wbound(i+1,j,k)+Wbound(i+1,j,k-1)) !at U-gridpoint
 				uu2=Ubound(i,j,k)
-				call wall_fun_rho(ww1,uu1,rr1,Rp(i)*dphi2(j),1.,dt,kn_sidewalls,kappa,nu_mol,tau)
-				call wall_fun_rho(uu2,ww2,rr2,Rp(i)*dphi2(j),1.,dt,kn_sidewalls,kappa,nu_mol,tau)
+				call wall_fun_rho(ww1,uu1,ww1,uu1,rr1,Rp(i)*dphi2(j),0.5*Rp(i)*dphi2(j),dt,kn_sidewalls,kappa,nu_mol,tau)
+				call wall_fun_rho(uu2,ww2,uu2,ww2,rr2,Rp(i)*dphi2(j),0.5*Rp(i)*dphi2(j),dt,kn_sidewalls,kappa,nu_mol,tau)
 				Wbound(i,j,k)=ww1
 				Ubound(i,j,k)=uu2
 			endif 		   
@@ -2295,8 +2346,8 @@ c 	influence of waves on lateral boundaries:
 			vv1=0.25*(Vbound(1,j,k)+Vbound(1,j-1,k)+Vbound(1,j,k+1)+Vbound(1,j-1,k+1))	!at W-gridpoint
 			ww2=0.25*(Wbound(1,j,k)+Wbound(1,j,k-1)+Wbound(1,j+1,k)+Wbound(1,j+1,k-1)) !at V-gridpoint
 			vv2=Vbound(1,j,k)
-			call wall_fun_rho(ww1,vv1,rr1,dr(1),1.,dt,kn_mp,kappa,nu_mol,tau)
-			call wall_fun_rho(vv2,ww2,rr2,dr(1),1.,dt,kn_mp,kappa,nu_mol,tau)
+			call wall_fun_rho(ww1,vv1,ww1,vv1,rr1,dr(1),0.5*dr(1),dt,kn_mp,kappa,nu_mol,tau)
+			call wall_fun_rho(vv2,ww2,vv2,ww2,rr2,dr(1),0.5*dr(1),dt,kn_mp,kappa,nu_mol,tau)
 			Wbound(1,j,k)=ww1
 			Vbound(1,j,k)=vv2
 		  enddo
@@ -2319,8 +2370,8 @@ c 	influence of waves on lateral boundaries:
 			vv1=0.25*(Vbound(1,j,k)+Vbound(1,j-1,k)+Vbound(1,j,k+1)+Vbound(1,j-1,k+1))	!at W-gridpoint
 			ww2=0.25*(Wbound(1,j,k)+Wbound(1,j,k-1)+Wbound(1,j+1,k)+Wbound(1,j+1,k-1)) !at V-gridpoint
 			vv2=Vbound(1,j,k)
-			call wall_fun_rho_TBL(ww1,vv1,dpdz1,rr1,dr(1),Ru(0)/Rp(1),dt,kn_mp,kappa,nu_mol,ust1,tau2Wnew(j,k))
-			call wall_fun_rho_TBL(vv2,ww2,dpdy2,rr2,dr(1),Ru(0)/Rp(1),dt,kn_mp,kappa,nu_mol,ust2,tau2Vnew(j,k))
+			call wall_fun_rho_TBL(ww1,vv1,ww1,vv1,dpdz1,rr1,dr(1),0.5*dr(1),dt,kn_mp,kappa,nu_mol,ust1,tau2Wnew(j,k))
+			call wall_fun_rho_TBL(vv2,ww2,vv2,ww2,dpdy2,rr2,dr(1),0.5*dr(1),dt,kn_mp,kappa,nu_mol,ust2,tau2Vnew(j,k))
 			Wbound(1,j,k)=ww1
 			Vbound(1,j,k)=vv2
 		  enddo
@@ -2575,139 +2626,110 @@ c 	influence of waves on lateral boundaries:
      &    *sin(kx_w*(xx-U_TSHD*cos(phi)*tt)+ky_w*(yy-U_TSHD*sin(phi)*tt)-om_w*tt)
         enddo
        enddo
-	  elseif (botstress.eq.3.and.IBMorder.ne.2) then 
+	  elseif (botstress.ge.1.and.IBMorder.ne.2) then 
 		do j=1,jmax ! boundaries in k-direction
 		  do i=1,imax 
-			rr1=rhU(i,j,kbedt(i,j)+1) 					 												!at U-gridpoint
-			rr2=rhV(i,j,kbedt(i,j)+1) 																	!at V-gridpoint
-			dpdx11=(ppp(i+1,j,kbedt(i,j)+1)-ppp(i,j,kbedt(i,j)+1))/(Rp(i+1)-Rp(i))/rr1					!at U-gridpoint
-			dpdy22=(ppp(i,j+1,kbedt(i,j)+1)-ppp(i,j,kbedt(i,j)+1))/(Rp(i)*(phip(j+1)-phip(j)))/rr2		!at V-gridpoint	
+			rr1=rhU(i,j,kbedt(i,j)+k_ust_tau_flow) 					 												!at U-gridpoint
+			rr2=rhV(i,j,kbedt(i,j)+k_ust_tau_flow) 																	!at V-gridpoint
+			dpdx11=(ppp(i+1,j,kbedt(i,j)+k_ust_tau_flow)-ppp(i,j,kbedt(i,j)+k_ust_tau_flow))/(Rp(i+1)-Rp(i))/rr1					!at U-gridpoint
+			dpdy22=(ppp(i,j+1,kbedt(i,j)+k_ust_tau_flow)-ppp(i,j,kbedt(i,j)+k_ust_tau_flow))/(Rp(i)*(phip(j+1)-phip(j)))/rr2		!at V-gridpoint	
 			tauu1=tau_fl_Uold(i,j)																		!at U-gridpoint
 			tauv1=0.25*(tau_fl_Vold(i,j)+tau_fl_Vold(i+1,j)+tau_fl_Vold(i,j-1)+tau_fl_Vold(i+1,j-1))	!at U-gridpoint
 			tauu2=0.25*(tau_fl_Uold(i,j)+tau_fl_Uold(i,j+1)+tau_fl_Uold(i-1,j)+tau_fl_Uold(i-1,j+1)) 	!at V-gridpoint
 			tauv2=tau_fl_Vold(i,j) 																		!at V-gridpoint
 			
-			uu1=Ubound(i,j,kbedt(i,j)+1)-Ubot_TSHD(j)*rr1
-			vv1=0.25*(Vbound2(i,j,kbedt(i,j)+1)+Vbound2(i+1,j,kbedt(i,j)+1)+Vbound2(i,j-1,kbedt(i,j)+1)
-     &                      +Vbound2(i+1,j-1,kbedt(i,j)+1))-Vbot_TSHD(j)*rr1
-			uu2=0.25*(Ubound2(i,j,kbedt(i,j)+1)+Ubound2(i,j+1,kbedt(i,j)+1)+Ubound2(i-1,j,kbedt(i,j)+1)
-     &                      +Ubound2(i-1,j+1,kbedt(i,j)+1))-Ubot_TSHD(j)*rr2
-			vv2=Vbound(i,j,kbedt(i,j)+1)-Vbot_TSHD(j)*rr2
+			uu1=Ubound(i,j,kbedt(i,j)+k_ust_tau_flow)-Ubot_TSHD(j)*rr1
+			vv1=0.25*(Vbound2(i,j,kbedt(i,j)+k_ust_tau_flow)+Vbound2(i+1,j,kbedt(i,j)+k_ust_tau_flow)
+     &          +Vbound2(i,j-1,kbedt(i,j)+k_ust_tau_flow)+Vbound2(i+1,j-1,kbedt(i,j)+k_ust_tau_flow))-Vbot_TSHD(j)*rr1
+			uu2=0.25*(Ubound2(i,j,kbedt(i,j)+k_ust_tau_flow)+Ubound2(i,j+1,kbedt(i,j)+k_ust_tau_flow)
+     &          +Ubound2(i-1,j,kbedt(i,j)+k_ust_tau_flow)+Ubound2(i-1,j+1,kbedt(i,j)+k_ust_tau_flow))-Ubot_TSHD(j)*rr2
+			vv2=Vbound(i,j,kbedt(i,j)+k_ust_tau_flow)-Vbot_TSHD(j)*rr2
 			ust1 = ((tauu1/rr1)**2+(tauv1/rr1)**2)**0.25								!at U-gridpoint
 			ust2 = ((tauu2/rr2)**2+(tauv2/rr2)**2)**0.25 								!at V-gridpoint	
-			IF (slip_bot.eq.3) THEN 
-			 call wall_fun_rho_TBL(uu1,vv1,dpdx11,rr1,dz,1.,dt,kn_flow(i,j),kappa,nu_mol,ust1,tau_fl_Unew(i,j))
-			 call wall_fun_rho_TBL(vv2,uu2,dpdy22,rr2,dz,1.,dt,kn_flow(i,j),kappa,nu_mol,ust2,tau_fl_Vnew(i,j))
+			
+			rr1a=rhU(i,j,kbedt(i,j)+1) 					 												!at U-gridpoint
+			rr2a=rhV(i,j,kbedt(i,j)+1) 			
+			uu1a=Ubound(i,j,kbedt(i,j)+1)-Ubot_TSHD(j)*rr1a
+			vv1a=0.25*(Vbound2(i,j,kbedt(i,j)+1)+Vbound2(i+1,j,kbedt(i,j)+1)+Vbound2(i,j-1,kbedt(i,j)+1)
+     &                      +Vbound2(i+1,j-1,kbedt(i,j)+1))-Vbot_TSHD(j)*rr1a
+			uu2a=0.25*(Ubound2(i,j,kbedt(i,j)+1)+Ubound2(i,j+1,kbedt(i,j)+1)+Ubound2(i-1,j,kbedt(i,j)+1)
+     &                      +Ubound2(i-1,j+1,kbedt(i,j)+1))-Ubot_TSHD(j)*rr2a
+			vv2a=Vbound(i,j,kbedt(i,j)+1)-Vbot_TSHD(j)*rr2a			
+			dist_vel=(k_ust_tau_flow-0.5)*dz
+			IF (slip_bot.eq.1.or.slip_bot.eq.2) THEN 
+			  call wall_fun_rho(uu1a,vv1a,uu1,vv1,rr1,dz,dist_vel,dt,kn_flow(i,j),kappa,nu_mol,tau_fl_Unew(i,j))
+			  call wall_fun_rho(vv2a,uu2a,vv2,uu2,rr2,dz,dist_vel,dt,kn_flow(i,j),kappa,nu_mol,tau_fl_Vnew(i,j))
+			ELSEIF (slip_bot.eq.3) THEN 
+			 call wall_fun_rho_TBL(uu1a,vv1a,uu1,vv1,dpdx11,rr1,dz,dist_vel,dt,kn_flow(i,j),kappa,nu_mol,ust1,tau_fl_Unew(i,j))
+			 call wall_fun_rho_TBL(vv2a,uu2a,vv2,uu2,dpdy22,rr2,dz,dist_vel,dt,kn_flow(i,j),kappa,nu_mol,ust2,tau_fl_Vnew(i,j))
 			ELSEIF (slip_bot.eq.4) THEN 
-			 call wall_fun_rho_TBL(uu1,vv1,0.,rr1,dz,1.,dt,kn_flow(i,j),kappa,nu_mol,ust1,tau_fl_Unew(i,j))
-			 call wall_fun_rho_TBL(vv2,uu2,0.,rr2,dz,1.,dt,kn_flow(i,j),kappa,nu_mol,ust2,tau_fl_Vnew(i,j))
+			 call wall_fun_rho_TBL(uu1a,vv1a,uu1,vv1,0.,rr1,dz,dist_vel,dt,kn_flow(i,j),kappa,nu_mol,ust1,tau_fl_Unew(i,j))
+			 call wall_fun_rho_TBL(vv2a,uu2a,vv2,uu2,0.,rr2,dz,dist_vel,dt,kn_flow(i,j),kappa,nu_mol,ust2,tau_fl_Vnew(i,j))
 			ELSEIF (slip_bot.eq.5) THEN 
-			 call wall_fun_rho_VD(uu1,vv1,rr1,dz,1.,dt,kn_flow(i,j),kappa,nu_mol,ust1,tau_fl_Unew(i,j))
-			 call wall_fun_rho_VD(vv2,uu2,rr2,dz,1.,dt,kn_flow(i,j),kappa,nu_mol,ust2,tau_fl_Vnew(i,j))
+			 call wall_fun_rho_VD(uu1a,vv1a,uu1,vv1,rr1,dz,dist_vel,dt,kn_flow(i,j),kappa,nu_mol,ust1,tau_fl_Unew(i,j))
+			 call wall_fun_rho_VD(vv2a,uu2a,vv2,uu2,rr2,dz,dist_vel,dt,kn_flow(i,j),kappa,nu_mol,ust2,tau_fl_Vnew(i,j))
 			ENDIF 
-			Ubound(i,j,kbedt(i,j)+1)=uu1+Ubot_TSHD(j)*rr1 !Ubound adjusted 1:imax,1:jmax; but later bc 0,i1,0,0,j1 applied
-			Vbound(i,j,kbedt(i,j)+1)=vv2+Vbot_TSHD(j)*rr2 !Vbound adjusted 1:imax,1:jmax; but later bc 0,i1,0,0,j1 applied
+			Ubound(i,j,kbedt(i,j)+1)=uu1a+Ubot_TSHD(j)*rr1a !Ubound adjusted 1:imax,1:jmax; but later bc 0,i1,0,0,j1 applied
+			Vbound(i,j,kbedt(i,j)+1)=vv2a+Vbot_TSHD(j)*rr2a !Vbound adjusted 1:imax,1:jmax; but later bc 0,i1,0,0,j1 applied
+			if ((botstress.eq.1.or.botstress.eq.2).and.kjet>0.and.LOA<0.) then ! with flat plate shear stress must be applied:
+			  rr1=0.5*(rho2(i,j,kmax-kjet-1)+rho2(i+1,j,kmax-kjet-1)) !at U-gridpoint
+			  rr2=0.5*(rho2(i,j,kmax-kjet-1)+rho2(i,j+1,kmax-kjet-1)) !at V-gridpoint
+			  uu2=0.25*(Ubound2(i,j,kmax-kjet-1)+Ubound2(i,j+1,kmax-kjet-1)+Ubound2(i-1,j,kmax-kjet-1)+Ubound2(i-1,j+1,kmax-kjet-1))
+			  vv2=0.25*(Vbound2(i,j,kmax-kjet-1)+Vbound2(i+1,j,kmax-kjet-1)+Vbound2(i,j-1,kmax-kjet-1)+Vbound2(i+1,j-1,kmax-kjet-1))
+			  dist_vel=0.5*dz
+			  call wall_fun_rho(Vbound(i,j,kmax-kjet-1),uu2,Vbound(i,j,kmax-kjet-1),uu2,rr2,dz,dist_vel,dt,kn_flow(i,j),kappa,nu_mol,tau)
+			  tau_fl_Vnew(i,j)=tau
+			  call wall_fun_rho(Ubound(i,j,kmax-kjet-1),vv2,Ubound(i,j,kmax-kjet-1),vv2,rr1,dz,dist_vel,dt,kn_flow(i,j),kappa,nu_mol,tau)
+			  tau_fl_Unew(i,j)=tau
+			endif
+			if (botstress.ge.1.and.wallup.eq.2) then  !bed shear stress at top domain
+				rr1=0.5*(rho2(i,j,k1-k_ust_tau_flow)+rho2(i+1,j,k1-k_ust_tau_flow)) !at U-gridpoint
+				rr2=0.5*(rho2(i,j,k1-k_ust_tau_flow)+rho2(i,j+1,k1-k_ust_tau_flow)) !at V-gridpoint
+				uu1=Ubound(i,j,k1-k_ust_tau_flow)-Ubot_TSHD(j)*rr1
+				vv1=0.25*(Vbound2(i,j,k1-k_ust_tau_flow)+Vbound2(i+1,j,k1-k_ust_tau_flow)+Vbound2(i,j-1,k1-k_ust_tau_flow)
+     &                      +Vbound2(i+1,j-1,k1-k_ust_tau_flow))-Vbot_TSHD(j)*rr1
+				uu2=0.25*(Ubound2(i,j,k1-k_ust_tau_flow)+Ubound2(i,j+1,k1-k_ust_tau_flow)+Ubound2(i-1,j,k1-k_ust_tau_flow)
+     &                      +Ubound2(i-1,j+1,k1-k_ust_tau_flow))-Ubot_TSHD(j)*rr2
+				vv2=Vbound(i,j,k1-k_ust_tau_flow)-Vbot_TSHD(j)*rr2
+				rr1a=0.5*(rho2(i,j,kmax)+rho2(i+1,j,kmax)) !at U-gridpoint
+				rr2a=0.5*(rho2(i,j,kmax)+rho2(i,j+1,kmax)) !at V-gridpoint				
+				uu1a=Ubound(i,j,kmax)-Ubot_TSHD(j)*rr1a
+				vv1a=0.25*(Vbound2(i,j,kmax)+Vbound2(i+1,j,kmax)+Vbound2(i,j-1,kmax)
+     &                      +Vbound2(i+1,j-1,kmax))-Vbot_TSHD(j)*rr1a
+				uu2a=0.25*(Ubound2(i,j,kmax)+Ubound2(i,j+1,kmax)+Ubound2(i-1,j,kmax)
+     &                      +Ubound2(i-1,j+1,kmax))-Ubot_TSHD(j)*rr2a
+				vv2a=Vbound(i,j,kmax)-Vbot_TSHD(j)*rr2a				
+				dist_vel=(k_ust_tau_flow-0.5)*dz
+				call wall_fun_rho(uu1a,vv1a,uu1,vv1,rr1,dz,dist_vel,dt,kn,kappa,nu_mol,tau)
+				call wall_fun_rho(vv2a,uu2a,vv2,uu2,rr2,dz,dist_vel,dt,kn,kappa,nu_mol,tau)
+				Ubound(i,j,kmax)=uu1a+Ubot_TSHD(j)*rr1a
+				Vbound(i,j,kmax)=vv2a+Vbot_TSHD(j)*rr2a
+			endif 			
 		  enddo
 		 enddo 
 		do j=0,j1 ! boundaries in k-direction
 		  do i=0,i1		
-         Ubound(i,j,k1)   = Ubound(i,j,kmax)
-         Vbound(i,j,k1)   = Vbound(i,j,kmax)
-         !Wbound(i,j,kmax) = 0.
-         Wbound(i,j,k1)   = 0.
-         Ubound(i,j,0)    = Ubound(i,j,1) 
-         Vbound(i,j,0)    = Vbound(i,j,1)
-         Wbound(i,j,0)    = Wbed(i,j)*rhW(i,j,0) !0.
+			 Ubound(i,j,k1)   = Ubound(i,j,kmax)
+			 Vbound(i,j,k1)   = Vbound(i,j,kmax)
+			 !Wbound(i,j,kmax) = 0.
+			 Wbound(i,j,k1)   = 0.
+			 Ubound(i,j,0)    = Ubound(i,j,1) 
+			 Vbound(i,j,0)    = Vbound(i,j,1)
+			 Wbound(i,j,0)    = Wbed(i,j)*rhW(i,j,0) !0.
 
-         xx=Rp(i)*cos_u(j)-schuif_x
-	     yy=Rp(i)*sin_u(j)
-	! apply vertical boundary condition belonging to waves:
-	     Wbound(i,j,kmax)=rho_b*(om_w+kx_w*U_TSHD*cos(phi)+ky_w*U_TSHD*sin(phi))*Hs/2.
-     &    *sin(kx_w*(xx-U_TSHD*cos(phi)*tt)+ky_w*(yy-U_TSHD*sin(phi)*tt)-om_w*tt)
+			 xx=Rp(i)*cos_u(j)-schuif_x
+			 yy=Rp(i)*sin_u(j)
+		! apply vertical boundary condition belonging to waves:
+			 Wbound(i,j,kmax)=rho_b*(om_w+kx_w*U_TSHD*cos(phi)+ky_w*U_TSHD*sin(phi))*Hs/2.
+     &       *sin(kx_w*(xx-U_TSHD*cos(phi)*tt)+ky_w*(yy-U_TSHD*sin(phi)*tt)-om_w*tt)
         enddo
        enddo	  
-	  else
-       do j=0,j1 ! boundaries in k-direction
-        do i=0,i1
-         if ((botstress.eq.1.or.botstress.eq.2).and.(kjet.eq.0.or.LOA>0.).and.IBMorder.ne.2) then  !bed shear stress at bed below
-			!! First Ubot_TSHD and Vbot_TSHD is subtracted to determine tau 
-			!! only over ambient velocities not over U_TSHD
-			!! Then Ubound,Vbound are reduced by tau, 
-			!! now Ubot_TSHD and Vbot_TSHD are added again to get correct total velocity
-			rr1=0.5*(rho2(i,j,kbedt(i,j)+1)+rho2(i+1,j,kbedt(i,j)+1)) !at U-gridpoint
-			rr2=0.5*(rho2(i,j,kbedt(i,j)+1)+rho2(i,j+1,kbedt(i,j)+1)) !at V-gridpoint
-			uu1=Ubound(i,j,kbedt(i,j)+1)-Ubot_TSHD(j)*rr1
-			vv1=0.25*(Vbound2(i,j,kbedt(i,j)+1)+Vbound2(i+1,j,kbedt(i,j)+1)+Vbound2(i,j-1,kbedt(i,j)+1)
-     &                      +Vbound2(i+1,j-1,kbedt(i,j)+1))-Vbot_TSHD(j)*rr1
-			uu2=0.25*(Ubound2(i,j,kbedt(i,j)+1)+Ubound2(i,j+1,kbedt(i,j)+1)+Ubound2(i-1,j,kbedt(i,j)+1)
-     &                      +Ubound2(i-1,j+1,kbedt(i,j)+1))-Ubot_TSHD(j)*rr2
-			vv2=Vbound(i,j,kbedt(i,j)+1)-Vbot_TSHD(j)*rr2
-			call wall_fun_rho(uu1,vv1,rr1,dz,1.,dt,kn_flow(i,j),kappa,nu_mol,tau)
-			tau_fl_Unew(i,j)=tau
-			call wall_fun_rho(vv2,uu2,rr2,dz,1.,dt,kn_flow(i,j),kappa,nu_mol,tau)
-			tau_fl_Vnew(i,j)=tau
-			Ubound(i,j,kbedt(i,j)+1)=uu1+Ubot_TSHD(j)*rr1
-			Vbound(i,j,kbedt(i,j)+1)=vv2+Vbot_TSHD(j)*rr2
-			
-	   elseif ((botstress.eq.1.or.botstress.eq.2).and.kjet>0.and.LOA<0.and.IBMorder.ne.2) then ! with flat plate shear stress must be applied:
-!	    call wall_fun_rho(Vbound(i,j,kmax-kjet-1),Ubound(i,j,kmax-kjet-1),rho(i,j,kmax-kjet-1),dz,dt,kn,kappa,(depth-bc_obst_h),U_b,nu_mol)
-!	    call wall_fun_rho(Ubound(i,j,kmax-kjet-1),Vbound(i,j,kmax-kjet-1),rho(i,j,kmax-kjet-1),dz,dt,kn,kappa,(depth-bc_obst_h),U_b,nu_mol)
-			rr1=0.5*(rho2(i,j,kmax-kjet-1)+rho2(i+1,j,kmax-kjet-1)) !at U-gridpoint
-			rr2=0.5*(rho2(i,j,kmax-kjet-1)+rho2(i,j+1,kmax-kjet-1)) !at V-gridpoint
-		uu2=0.25*(Ubound2(i,j,kmax-kjet-1)+Ubound2(i,j+1,kmax-kjet-1)+Ubound2(i-1,j,kmax-kjet-1)+Ubound2(i-1,j+1,kmax-kjet-1))
-		vv2=0.25*(Vbound2(i,j,kmax-kjet-1)+Vbound2(i+1,j,kmax-kjet-1)+Vbound2(i,j-1,kmax-kjet-1)+Vbound2(i+1,j-1,kmax-kjet-1))
-
-	    call wall_fun_rho(Vbound(i,j,kmax-kjet-1),uu2,rr2,dz,1.,dt,kn_flow(i,j),kappa,nu_mol,tau)
-		tau_fl_Vnew(i,j)=tau
-	    call wall_fun_rho(Ubound(i,j,kmax-kjet-1),vv2,rr1,dz,1.,dt,kn_flow(i,j),kappa,nu_mol,tau)
-		tau_fl_Unew(i,j)=tau
-
-	   endif
-         if (botstress.ge.1.and.wallup.eq.2) then  !bed shear stress at top domain
-			rr1=0.5*(rho2(i,j,kmax)+rho2(i+1,j,kmax)) !at U-gridpoint
-			rr2=0.5*(rho2(i,j,kmax)+rho2(i,j+1,kmax)) !at V-gridpoint
-			uu1=Ubound(i,j,kmax)-Ubot_TSHD(j)*rr1
-			vv1=0.25*(Vbound2(i,j,kmax)+Vbound2(i+1,j,kmax)+Vbound2(i,j-1,kmax)
-     &                      +Vbound2(i+1,j-1,kmax))-Vbot_TSHD(j)*rr1
-			uu2=0.25*(Ubound2(i,j,kmax)+Ubound2(i,j+1,kmax)+Ubound2(i-1,j,kmax)
-     &                      +Ubound2(i-1,j+1,kmax))-Ubot_TSHD(j)*rr2
-			vv2=Vbound(i,j,kmax)-Vbot_TSHD(j)*rr2
-			call wall_fun_rho(uu1,vv1,rr1,dz,1.,dt,kn,kappa,nu_mol,tau)
-			call wall_fun_rho(vv2,uu2,rr2,dz,1.,dt,kn,kappa,nu_mol,tau)
-			Ubound(i,j,kmax)=uu1+Ubot_TSHD(j)*rr1
-			Vbound(i,j,kmax)=vv2+Vbot_TSHD(j)*rr2
-		endif 
-	
-         Ubound(i,j,k1)   = Ubound(i,j,kmax)
-         Vbound(i,j,k1)   = Vbound(i,j,kmax)
-         !Wbound(i,j,kmax) = 0.
-         Wbound(i,j,k1)   = 0.
-         Ubound(i,j,0)    = Ubound(i,j,1) 
-         Vbound(i,j,0)    = Vbound(i,j,1)
-         Wbound(i,j,0)    = Wbed(i,j)*rhW(i,j,0) !0.
-
-         xx=Rp(i)*cos_u(j)-schuif_x
-	     yy=Rp(i)*sin_u(j)
-	! apply vertical boundary condition belonging to waves:
-	     Wbound(i,j,kmax)=rho_b*(om_w+kx_w*U_TSHD*cos(phi)+ky_w*U_TSHD*sin(phi))*Hs/2.
-     &    *sin(kx_w*(xx-U_TSHD*cos(phi)*tt)+ky_w*(yy-U_TSHD*sin(phi)*tt)-om_w*tt)
-        enddo
-       enddo
 	  endif
+	  
 		call bound_cbot(tau_fl_Unew)
 		call bound_cbot(tau_fl_Vnew)
 		tau_fl_Uold = tau_fl_Unew 
 		tau_fl_Vold = tau_fl_Vnew		
-!	DO n=1,nbedplume !make all forces zero before new forces are applied for bedplume
-!		IF (bp(n)%u.ne.-99999.and.bp(n)%velocity_force.ne.0.) THEN ! apply bedplume velocity boundary condition:
-!			IF ((bp(n)%forever.eq.1.and.time_np.gt.bp(n)%t0.and.time_np.lt.bp(n)%t_end)
-!     &     .or.(bp(n)%forever.eq.0.and.time_n.lt.bp(n)%t0.and.time_np.gt.bp(n)%t0)) THEN
-!				Propx_dummy=0.
-!				Propy_dummy=0.
-!				Propz_dummy=0.
-!			ENDIF
-!		ENDIF 
-!	ENDDO
 	 
 	   
 	DO n=1,nbedplume
@@ -2715,11 +2737,15 @@ c 	influence of waves on lateral boundaries:
 	IF ((bp(n)%forever.eq.1.and.time_np.gt.bp(n)%t0.and.time_np.lt.bp(n)%t_end)
      &     .or.(bp(n)%forever.eq.0.and.time_n.lt.bp(n)%t0.and.time_np.gt.bp(n)%t0)) THEN
 	! rotation ship for ambient side current
-	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-	  phi=atan2(V_b,1.e-12)
-	else
-	  phi=atan2(V_b,(U_TSHD-U_b))
-	endif
+	if (LOA<0.) then 
+	  phi=0. !don't rotate grid
+	else 
+		if ((U_TSHD-U_b).eq.0) then
+		  phi=atan2(V_b,1.e-12)
+		else
+		  phi=atan2(V_b,(U_TSHD-U_b))
+		endif
+	endif 
 	 IF (bp(n)%velocity_force.eq.0) THEN
       do k=MAX(1,CEILING(bp(n)%zbottom/dz)),MIN(kmax,FLOOR(bp(n)%height/dz))! do k=k1,0,-1 !from top to bottom
 	   do tel=1,bp(n)%tmax 
@@ -2886,6 +2912,7 @@ c 	influence of waves on lateral boundaries:
        		f=Strouhal*ABS(W_j)/MAX(radius_j*2.,1.e-12) !Strouholt number is 0.3
 	else
        		Wjet=interpseries(plumetseries,plumeUseries,plumeseriesloc,tt)
+			W_j=Wjet
        		f=Strouhal*ABS(W_j)/MAX(radius_j*2.,1.e-12) !Strouholt number is 0.3
 	endif
 	jetcorr=pi/(2.*pi*(1/(1./W_j_powerlaw+1)-1./(1./W_j_powerlaw+2.))) !=1.22449 for W_j_powerlaw=7
@@ -2973,6 +3000,7 @@ c 	influence of waves on lateral boundaries:
        		f=Strouhal*ABS(U_j2)/(radius_j2*2.) !Strouholt number is 0.3
 	else
        		Ujet2=interpseries(plumetseries2,plumeUseries2,plumeseriesloc2,tt)
+			U_j2=Ujet2
        		f=Strouhal2*ABS(U_j2)/(radius_j2*2.) !Strouholt number is 0.3
 	endif
        do t=1,tmax_inPpunt2
@@ -3058,60 +3086,18 @@ c 	influence of waves on lateral boundaries:
 			    zb_U=0.5*(zbed(i,j)+zbed(i+1,j))
 				kb=FLOOR(zb_U/dz+0.5)						!location vel=0 for 2nd order IBM because below 2nd-order zbed
 				kp=MIN(CEILING(zb_U/dz+0.5),kmax)			!location velocity which must be adjusted 2nd order IBM -->(0-1)*dz distance from bed
-				kpp=MIN(CEILING(zb_U/dz+0.5)+1,kmax+1)		!location one cell above to determine 2nd order ibm velocity -->(1-2)*dz distance from bed
+				!kpp=MIN(CEILING(zb_U/dz+0.5)+1,kmax+1)		!location one cell above to determine 2nd order ibm velocity -->(1-2)*dz distance from bed
 				distance_to_bed_kp=(REAL(kp)-0.5)*dz-zb_U
-				distance_to_bed_kpp=(REAL(kpp)-0.5)*dz-zb_U				
 				IF (distance_to_bed_kp>0.1*dz) THEN !apply tau on first cell (0.1-1)*dz distance from bed based on velocity of that cell
-					kpp=kp
+					kpp=MIN(kp+k_ust_tau_flow-1,k1)
 					distance_to_bed_kpp=(REAL(kpp)-0.5)*dz-zb_U
 				ELSE !apply tau on second cell (1-1.1)*dz distance from bed based on velocity of that cell, do nothing for cell below: (0-0.1)dz from bed 
-					kp=kpp
+					kp=MIN(kp+1,k1)
+					distance_to_bed_kp=(REAL(kp)-0.5)*dz-zb_U
+					kpp=MIN(kp+k_ust_tau_flow-1,k1)
+					distance_to_bed_kpp=(REAL(kpp)-0.5)*dz-zb_U
 !				  ELSE !apply tau on first cell (0-0.5)*dz distance from bed based on ustar of second cell (kpp) (1-1.5)*dz distance from bed 
 				ENDIF	
-				!kbed22(i,j)=kb + 1000*kp + 100000*kpp !save all three numbers in one 
-!				IF (botstress.eq.1.or.botstress.eq.2) THEN	! tests showed it is best to apply tau shear stress at first cell above ibm bed and not prescribe U,V velocity straightaway including influence tau (latter gives too large near bed velocities)			
-!				  absU=sqrt((Ubound2(i,j,kpp)-Ubot_TSHD(j)*rhU(i,j,kpp))**2+
-!     &				  (0.25*(Vbound2(i,j,kpp)+Vbound2(i,j-1,kpp)+Vbound2(i+1,j,kpp)+Vbound2(i+1,j-1,kpp))-Vbot_TSHD(j)*rhU(i,j,kpp))**2)
-!				  absU=absU/rhU(i,j,kpp)
-!				  ust=0.1*absU
-!				  if (kn>0.) then !walls with rougness (log-law used which can be hydr smooth or hydr rough):
-!					do tel=1,10 ! 10 iter is more than enough
-!						z0=kn/30.+0.11*nu_mol/MAX(ust,1.e-9)
-!						ust=absU/MAX(1./kappa*log(MAX(distance_to_bed_kpp/z0,1.001)),2.) !ust maximal 0.5*absU
-!					enddo
-!					!vel_ibm2=Ubound(i,j,kpp)/MAX(absU,1e-9)/rhU(i,j,kpp)* (ust/kappa*log(MAX(distance_to_bed_kp/z0,1.001)))
-!				  else
-!					do tel=1,10 ! 10 iter is more than enough
-!						yplus=MAX(distance_to_bed_kpp*ust/nu_mol,1e-12)
-!						ust=absU/MAX((2.5*log(yplus)+5.5),2.) !ust maximal 0.5*absU			
-!					enddo
-!					!vel_ibm2=Ubound(i,j,kpp)/MAX(absU,1e-9)/rhU(i,j,kpp)* ust*(2.5*log(MAX(distance_to_bed_kp*ust/nu_mol,1.001))+5.5)
-!					if (yplus<30.) then
-!					  do tel=1,10 ! 10 iter is more than enough
-!						yplus=MAX(distance_to_bed_kpp*ust/nu_mol,1e-12)
-!						ust=absU/MAX((5.*log(yplus)-3.05),2.) !ust maximal 0.5*absU			
-!					  enddo	
-!					  !vel_ibm2=Ubound(i,j,kpp)/MAX(absU,1e-9)/rhU(i,j,kpp)* ust*(5*log(MAX(distance_to_bed_kp*ust/nu_mol,1.001))-3.05)
-!					endif
-!					if (yplus<5.) then !viscous sublayer uplus=yplus
-!						ust=sqrt(absU*nu_mol/(distance_to_bed_kpp))
-!						!vel_ibm2=Ubound(i,j,kpp)/MAX(absU,1e-9)/rhU(i,j,kpp)* ust*ust*distance_to_bed_kp/nu_mol
-!					endif
-!				  endif
-!				  tau_fl_Unew(i,j) = rhU(i,j,kp)*ust*ust
-!				  DO k=1,kb
-!					Ubound(i,j,k)=Ubot_TSHD(j)*rhU(i,j,k)
-!				  ENDDO
-!				  !Ubound(i,j,kp)=vel_ibm2*rhU(i,j,kp)	
-!				  absU=sqrt(Ubound2(i,j,kp)**2+(0.25*(Vbound2(i,j,kp)+Vbound2(i,j-1,kp)+Vbound2(i+1,j,kp)+Vbound2(i+1,j-1,kp)))**2)
-!				  absU=sqrt((Ubound2(i,j,kp)-Ubot_TSHD(j)*rhU(i,j,kp))**2+
-!     &				  (0.25*(Vbound2(i,j,kp)+Vbound2(i,j-1,kp)+Vbound2(i+1,j,kp)+Vbound2(i+1,j-1,kp))-Vbot_TSHD(j)*rhU(i,j,kp))**2)				  
-!				  absU=absU/rhU(i,j,kp)				
-!				  Ubound(i,j,kp) = (Ubound(i,j,kp)-Ubot_TSHD(j)*rhU(i,j,kp)) / (1. + ust*ust*dt/dz/MAX(absU,1.e-9))  ! implicit = more stable	
-!				  Ubound(i,j,kp) = (Ubound(i,j,kp)+Ubot_TSHD(j)*rhU(i,j,kp))
-!				  IF (dUVdn_IBMbed.eq.0.and.distance_to_bed_kp>0.1*dz) THEN
-!					Ubound(i,j,kb) = Ubound(i,j,kp)
-!				  ENDIF
 				IF(botstress.eq.3.or.botstress.eq.1.or.botstress.eq.2) THEN 
 				  rr1=rhU(i,j,kpp) 																				!at U-gridpoint
 				  dpdx11=(ppp(i+1,j,kpp)-ppp(i,j,kpp))/(Rp(i+1)-Rp(i))/rr1										!at U-gridpoint
@@ -3120,22 +3106,27 @@ c 	influence of waves on lateral boundaries:
 				  uu1=Ubound2(i,j,kpp)-Ubot_TSHD(j)*rr1
 				  vv1=0.25*(Vbound2(i,j,kpp)+Vbound2(i+1,j,kpp)+Vbound2(i,j-1,kpp)+Vbound2(i+1,j-1,kpp))-Vbot_TSHD(j)*rr1
 				  ust1 = ((tauu1/rr1)**2+(tauv1/rr1)**2)**0.25													!at U-gridpoint
-				  scal=2.*distance_to_bed_kpp/dz
+				  rr0=rhU(i,j,kp) 	
+				  uu0=Ubound2(i,j,kp)-Ubot_TSHD(j)*rr0
+				  vv0=0.25*(Vbound2(i,j,kp)+Vbound2(i+1,j,kp)+Vbound2(i,j-1,kp)+Vbound2(i+1,j-1,kp))-Vbot_TSHD(j)*rr0
 				  IF (botstress.eq.1.or.botstress.eq.2) THEN
-				   call wall_fun_rho(uu1,vv1,rr1,2.*distance_to_bed_kpp,scal,dt,kn_flow(i,j),kappa,nu_mol,tau_fl_Unew(i,j))	
+				   call wall_fun_rho(uu0,vv0,uu1,vv1,rr1,dz,distance_to_bed_kpp,dt,kn_flow(i,j),kappa,nu_mol,tau_fl_Unew(i,j))	
 				  ELSEIF (slip_bot.eq.3) THEN
-				   call wall_fun_rho_TBL(uu1,vv1,dpdx11,rr1,2.*distance_to_bed_kpp,scal,dt,kn_flow(i,j),kappa,nu_mol,ust1,tau_fl_Unew(i,j))
+				   call wall_fun_rho_TBL(uu0,vv0,uu1,vv1,dpdx11,rr1,dz,distance_to_bed_kpp,dt,kn_flow(i,j),kappa,nu_mol,ust1,tau_fl_Unew(i,j))
 				  ELSEIF (slip_bot.eq.4) THEN 
-				   call wall_fun_rho_TBL(uu1,vv1,0.,rr1,2.*distance_to_bed_kpp,scal,dt,kn_flow(i,j),kappa,nu_mol,ust1,tau_fl_Unew(i,j))
+				   call wall_fun_rho_TBL(uu0,vv0,uu1,vv1,0.,rr1,dz,distance_to_bed_kpp,dt,kn_flow(i,j),kappa,nu_mol,ust1,tau_fl_Unew(i,j))
 				  ELSEIF (slip_bot.eq.5) THEN 
-				   call wall_fun_rho_VD(uu1,vv1,rr1,2.*distance_to_bed_kpp,scal,dt,kn_flow(i,j),kappa,nu_mol,ust1,tau_fl_Unew(i,j))				   
+				   call wall_fun_rho_VD(uu0,vv0,uu1,vv1,rr1,dz,distance_to_bed_kpp,dt,kn_flow(i,j),kappa,nu_mol,ust1,tau_fl_Unew(i,j))	
+				  ELSEIF (slip_bot.eq.11) THEN !beta not fully developed option to apply sediment shear stress based on U'W' and V'W' also for flow shear stress:
+				    tau_fl_Unew(i,j) = rho_b*ust_sl_new(i,j)*ust_sl_new(i,j)*ABS(uu0)/SQRT(MAX(uu0**2+vv0**2,1.e-8))
+					uu0 = uu0 / (1. + tau_fl_Unew(i,j)*dt/dz/MAX(ABS(uu0),1.e-9))
 				  ENDIF
 				  DO k=1,kb
-					Ubound(i,j,k)=Ubot_TSHD(j)*rr1
+					Ubound(i,j,k)=Ubot_TSHD(j)*rr0
 				  ENDDO				  
-				  Ubound(i,j,kpp) = uu1+Ubot_TSHD(j)*rr1
+				  Ubound(i,j,kp) = uu0+Ubot_TSHD(j)*rr0
 				  IF (dUVdn_IBMbed.eq.0.and.distance_to_bed_kp>0.1*dz) THEN
-					Ubound(i,j,kb) = Ubound(i,j,kpp)
+					Ubound(i,j,kb) = Ubound(i,j,kp)
 				  ENDIF				  
 				ELSEIF(botstress.eq.0.and.slip_bot.eq.0) THEN ! without partial slip bc, simply prescribe 2nd order accurate velocity:
 				  DO k=1,kb
@@ -3149,55 +3140,18 @@ c 	influence of waves on lateral boundaries:
 				
 				kb=FLOOR(zb_V/dz+0.5)						!location vel=0 for 2nd order IBM because below 2nd-order zbed
 				kp=MIN(CEILING(zb_V/dz+0.5),kmax)			!location velocity which must be adjusted 2nd order IBM
-				kpp=MIN(CEILING(zb_V/dz+0.5)+1,kmax+1)		!location one cell above to determine 2nd order ibm velocity
+				!kpp=MIN(CEILING(zb_V/dz+0.5)+1,kmax+1)		!location one cell above to determine 2nd order ibm velocity
 				distance_to_bed_kp=(REAL(kp)-0.5)*dz-zb_V
-				distance_to_bed_kpp=(REAL(kpp)-0.5)*dz-zb_V
 				IF (distance_to_bed_kp>0.1*dz) THEN !apply tau on first cell (0.1-1)*dz distance from bed based on velocity of that cell
-					kpp=kp
+					kpp=MIN(kp+k_ust_tau_flow-1,k1)
 					distance_to_bed_kpp=(REAL(kpp)-0.5)*dz-zb_V
 				ELSE !apply tau on second cell (1-1.1)*dz distance from bed based on velocity of that cell, do nothing for cell below: (0-0.1)dz from bed 
-					kp=kpp 
+					kp=MIN(kp+1,k1)
+					distance_to_bed_kp=(REAL(kp)-0.5)*dz-zb_V
+					kpp=MIN(kp+k_ust_tau_flow-1,k1)
+					distance_to_bed_kpp=(REAL(kpp)-0.5)*dz-zb_V
 !				  ELSE !apply tau on first cell (0-0.1)*dz distance from bed based on ustar of second cell (kpp) (1-1.1)*dz distance from bed 
 				ENDIF				
-!				IF (botstress.eq.1.or.botstress.eq.2) THEN	
-!				  absU=sqrt(Vbound2(i,j,kpp)**2+(0.25*(Ubound2(i,j,kpp)+Ubound2(i,j+1,kpp)+Ubound2(i-1,j,kpp)+Ubound2(i-1,j+1,kpp)))**2)
-!				  absU=absU/rhV(i,j,kpp)
-!				  ust=0.1*absU
-!				  if (kn>0.) then !walls with rougness (log-law used which can be hydr smooth or hydr rough):
-!					do tel=1,10 ! 10 iter is more than enough
-!						z0=kn/30.+0.11*nu_mol/MAX(ust,1.e-9)
-!						ust=absU/MAX(1./kappa*log(MAX(distance_to_bed_kpp/z0,1.001)),2.) !ust maximal 0.5*absU
-!					enddo
-!					!vel_ibm2=Vbound(i,j,kpp)/MAX(absU,1e-9)/rhV(i,j,kpp)* (ust/kappa*log(MAX(distance_to_bed_kp/z0,1.001)))
-!				  else
-!					do tel=1,10 ! 10 iter is more than enough
-!						yplus=MAX(distance_to_bed_kpp*ust/nu_mol,1e-12)
-!						ust=absU/MAX((2.5*log(yplus)+5.5),2.) !ust maximal 0.5*absU			
-!					enddo
-!					!vel_ibm2=Vbound(i,j,kpp)/MAX(absU,1e-9)/rhV(i,j,kpp)* ust*(2.5*log(MAX(distance_to_bed_kp*ust/nu_mol,1.001))+5.5)
-!					if (yplus<30.) then
-!					  do tel=1,10 ! 10 iter is more than enough
-!						yplus=MAX(distance_to_bed_kpp*ust/nu_mol,1e-12)
-!						ust=absU/MAX((5.*log(yplus)-3.05),2.) !ust maximal 0.5*absU			
-!					  enddo	
-!					  !vel_ibm2=Vbound(i,j,kpp)/MAX(absU,1e-9)/rhV(i,j,kpp)* ust*(5*log(MAX(distance_to_bed_kp*ust/nu_mol,1.001))-3.05)
-!					endif
-!					if (yplus<5.) then !viscous sublayer uplus=yplus
-!						ust=sqrt(absU*nu_mol/(distance_to_bed_kpp))
-!						!vel_ibm2=Vbound(i,j,kpp)/MAX(absU,1e-9)/rhV(i,j,kpp)* ust*ust*distance_to_bed_kp/nu_mol
-!					endif
-!				  endif
-!				  tau_fl_Vnew(i,j) = rhV(i,j,kp)*ust*ust  
-!				  DO k=1,kb
-!					Vbound(i,j,k)=0.
-!				  ENDDO
-!				  !Vbound(i,j,kp)=vel_ibm2*rhV(i,j,kp)
-!				  absU=sqrt(Vbound2(i,j,kp)**2+(0.25*(Ubound2(i,j,kp)+Ubound2(i,j+1,kp)+Ubound2(i-1,j,kp)+Ubound2(i-1,j+1,kp)))**2)
-!				  absU=absU/rhV(i,j,kp)				  
-!				  Vbound(i,j,kp) = Vbound(i,j,kp) / (1. + ust*ust*dt/dz/MAX(absU,1.e-9))  ! implicit = more stable	
-!				  IF (dUVdn_IBMbed.eq.0.and.distance_to_bed_kp>0.1*dz) THEN
-!					Vbound(i,j,kb) = Vbound(i,j,kp)
-!				  ENDIF	
 				IF(botstress.eq.3.or.botstress.eq.1.or.botstress.eq.2) THEN 
 				  rr2=rhV(i,j,kpp) 																				!at V-gridpoint
 				  dpdy22=(ppp(i,j+1,kpp)-ppp(i,j,kpp))/(Rp(i)*(phip(j+1)-phip(j)))/rr2							!at V-gridpoint	
@@ -3206,22 +3160,27 @@ c 	influence of waves on lateral boundaries:
 				  uu2=0.25*(Ubound2(i,j,kpp)+Ubound2(i,j+1,kpp)+Ubound2(i-1,j,kpp)+Ubound2(i-1,j+1,kpp))-Ubot_TSHD(j)*rr2
 				  vv2=Vbound2(i,j,kpp)-Vbot_TSHD(j)*rr2
 				  ust2 = ((tauu2/rr2)**2+(tauv2/rr2)**2)**0.25 								!at V-gridpoint	
-				  scal=2.*distance_to_bed_kpp/dz
+				  rr0=rhV(i,j,kp) 
+				  uu0=0.25*(Ubound2(i,j,kp)+Ubound2(i,j+1,kp)+Ubound2(i-1,j,kp)+Ubound2(i-1,j+1,kp))-Ubot_TSHD(j)*rr0
+				  vv0=Vbound2(i,j,kp)-Vbot_TSHD(j)*rr0
 				  IF (botstress.eq.1.or.botstress.eq.2) THEN
-				   call wall_fun_rho(vv2,uu2,rr2,2.*distance_to_bed_kpp,scal,dt,kn_flow(i,j),kappa,nu_mol,tau_fl_Vnew(i,j))				  
+				   call wall_fun_rho(vv0,uu0,vv2,uu2,rr2,dz,distance_to_bed_kpp,dt,kn_flow(i,j),kappa,nu_mol,tau_fl_Vnew(i,j))				  
 				  ELSEIF (slip_bot.eq.3) THEN
-				   call wall_fun_rho_TBL(vv2,uu2,dpdy22,rr2,2.*distance_to_bed_kpp,scal,dt,kn_flow(i,j),kappa,nu_mol,ust2,tau_fl_Vnew(i,j))
+				   call wall_fun_rho_TBL(vv0,uu0,vv2,uu2,dpdy22,rr2,dz,distance_to_bed_kpp,dt,kn_flow(i,j),kappa,nu_mol,ust2,tau_fl_Vnew(i,j))
 				  ELSEIF (slip_bot.eq.4) THEN 
-				   call wall_fun_rho_TBL(vv2,uu2,0.,rr2,2.*distance_to_bed_kpp,scal,dt,kn_flow(i,j),kappa,nu_mol,ust2,tau_fl_Vnew(i,j))
+				   call wall_fun_rho_TBL(vv0,uu0,vv2,uu2,0.,rr2,dz,distance_to_bed_kpp,dt,kn_flow(i,j),kappa,nu_mol,ust2,tau_fl_Vnew(i,j))
 				  ELSEIF (slip_bot.eq.5) THEN 
-				   call wall_fun_rho_VD(vv2,uu2,rr2,2.*distance_to_bed_kpp,scal,dt,kn_flow(i,j),kappa,nu_mol,ust2,tau_fl_Vnew(i,j))
+				   call wall_fun_rho_VD(vv0,uu0,vv2,uu2,rr2,dz,distance_to_bed_kpp,dt,kn_flow(i,j),kappa,nu_mol,ust2,tau_fl_Vnew(i,j))
+				  ELSEIF (slip_bot.eq.11) THEN !beta not fully developed option to apply sediment shear stress based on U'W' and V'W' also for flow shear stress:
+				    tau_fl_Vnew(i,j) = rho_b*ust_sl_new(i,j)*ust_sl_new(i,j)*ABS(vv0)/SQRT(MAX(uu0**2+vv0**2,1.e-8))
+					vv0 = vv0 / (1. + tau_fl_Vnew(i,j)*dt/dz/MAX(ABS(vv0),1.e-9))				   
 				  ENDIF 
 				  DO k=1,kb
-					Vbound(i,j,k)=Vbot_TSHD(j)*rr2
+					Vbound(i,j,k)=Vbot_TSHD(j)*rr0
 				  ENDDO				  
-				  Vbound(i,j,kpp) = vv2+Vbot_TSHD(j)*rr2
+				  Vbound(i,j,kp) = vv0+Vbot_TSHD(j)*rr0
 				  IF (dUVdn_IBMbed.eq.0.and.distance_to_bed_kp>0.1*dz) THEN
-					Vbound(i,j,kb) = Vbound(i,j,kpp)
+					Vbound(i,j,kb) = Vbound(i,j,kp)
 				  ENDIF				
 				ELSEIF(botstress.eq.0.and.slip_bot.eq.0) THEN ! without partial slip bc, simply prescribe 2nd order accurate velocity:
 				  DO k=1,kb
@@ -3499,18 +3458,24 @@ c 	influence of waves on lateral boundaries:
       USE nlist
 
       implicit none
+      include 'mpif.h' 
+
+
+		
 c
 !       include 'param.txt'
 !       include 'common.txt'
 
 c
-      integer jtmp,t,kcheck,n,n2,inout,tel,jbeg,jend
+		integer jtmp,t,kcheck,n,n2,inout,tel,jbeg,jend
 c
-      real Cbound(0:i1,0:j1,0:k1),cjet,Cbound2(0:i1,0:j1,0:k1)
-      real ubb(0:i1,0:k1),val,theta,rbc,xx,yy,r_orifice2,rjet,theta_U,theta_V
-      real cbf(0:i1,0:k1)
-      real cbb(0:i1,0:k1)
-	real xTSHD(4),yTSHD(4),phi,ddtt,interpseries
+		real Cbound(0:i1,0:j1,0:k1),cjet,Cbound2(0:i1,0:j1,0:k1)
+		real ubb(0:i1,0:k1),val,theta,rbc,xx,yy,r_orifice2,rjet,theta_U,theta_V
+		real cbf(0:i1,0:k1)
+		real cbb(0:i1,0:k1)
+		real xTSHD(4),yTSHD(4),phi,ddtt,interpseries
+		real Cbcoarse2_out(kmax)
+        integer ileng,ierr,itag,status(MPI_STATUS_SIZE),i_out	
 c
 c
 c*************************************************************
@@ -3591,12 +3556,30 @@ c*************************************************************
 	! in that case simply zero lateral and inflow bc are applied to C
 
 	if (bcfile.eq.'') then
+	  if (cbc_perx_j(1)>0) then  !use quasi periodic bc for concentration:
+		if (rank.eq.0) then
+			Cbcoarse1(n,1:imax,1:kmax)=0. !Cbound(1:imax,1,1:kmax)
+			
+			i_out=imax 
+			do k=1,kmax
+				Cbcoarse2_out(k)=SUM(Cbound(i_out,cbc_perx_j(1):cbc_perx_j(2),k))/DBLE(cbc_perx_j(2)-cbc_perx_j(1)+1)
+			enddo 
+			
+		elseif (rank.eq.px-1) then	
+			Cbcoarse1(n,1:imax,1:kmax)=0. !Cbound(1:imax,jmax,1:kmax)
+		endif
+		call mpi_bcast(Cbcoarse2_out,kmax,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+		do j=0,j1
+			Cbcoarse2(n,j,1:kmax)=cbc_relax*Cbcoarse2_out+(1.-cbc_relax)*Cbcoarse2(n,j,1:kmax)
+		enddo 
+	  else
 		if (rank.eq.0) then
 			Cbcoarse1(n,1:imax,1:kmax)=0. !Cbound(1:imax,1,1:kmax)
 		elseif (rank.eq.px-1) then	
 			Cbcoarse1(n,1:imax,1:kmax)=0. !Cbound(1:imax,jmax,1:kmax)
 		endif
 		Cbcoarse2(n,0:j1,1:kmax)=0. !Cbound(1,0:j1,1:kmax)
+	  endif 
 	endif
 		
 	if (periodicy.eq.0) then
@@ -4258,16 +4241,16 @@ c*************************************************************
 	uu = uu / (1. + tau*dt/dz/MAX(absU,1.e-12)) 	!! only uu is adjusted !! implicit = more stable
 	end
 
-	subroutine wall_fun_rho(uu,vv,rr,dz,scal,dt,kn,kappa,nu_mol,tau)
+	subroutine wall_fun_rho(uu0,vv0,uu,vv,rr,dz,dist_velpoint,dt,kn,kappa,nu_mol,tau)
 		
 	implicit none
 
 c*************************************************************
 c	Wall function
-c	Determine tau-wall with sqrt(uu**2,vv**2) and adapt uu	
-c	Substract tau_wall*dt*dx*dy/(dx*dy*dz) from uu (kg/m3*m/s)
+c	Determine tau-wall with sqrt(uu**2,vv**2) and adapt uu0	
+c	Substract tau_wall*dt*dx*dy/(dx*dy*dz) from uu0 (kg/m3*m/s)
 c*************************************************************
-	real uu,vv,rr,dz,dt,absU,ust,z0,kn,kappa,yplus,tau,nu_mol,scal
+	real uu,vv,rr,dz,dt,absU,ust,z0,kn,kappa,yplus,tau,nu_mol,dist_velpoint,uu0,vv0,rrabsU0
 	integer tel
 
 	absU=sqrt((uu/rr)**2+(vv/rr)**2)
@@ -4275,93 +4258,74 @@ c*************************************************************
 	if (kn>0.) then !walls with rougness (log-law used which can be hydr smooth or hydr rough):
 		do tel=1,10 ! 10 iter is more than enough
 			z0=kn/30.+0.11*nu_mol/MAX(ust,1.e-9)
-			ust=absU/MAX(1./kappa*log(0.5*dz/z0),2.) !ust maximal 0.5*absU
+			ust=absU/MAX(1./kappa*log(dist_velpoint/z0),2.) !ust maximal 0.5*absU
 		enddo
 !		yplus=0.5*dz*ust/nu_mol
 !	   	if (yplus<30.) then
 !		  do tel=1,10 ! 10 iter is more than enough
-!			yplus=0.5*dz*ust/nu_mol
+!			yplus=dist_velpoint*ust/nu_mol
 !			ust=absU/MAX((5.*log(yplus)-3.05),2.) !ust maximal 0.5*absU			
 !		  enddo	
 !		endif
 !		if (yplus<5.) then !viscous sublayer uplus=yplus
-!			ust=sqrt(absU*nu_mol/(0.5*dz))
+!			ust=sqrt(absU*nu_mol/(dist_velpoint))
 !		endif
 !		if (yplus<11.225) then	!viscous sublayer uplus=yplus
-!			ust=sqrt(absU*nu_mol/(0.5*dz))
+!			ust=sqrt(absU*nu_mol/(dist_velpoint))
 !		endif
 	else
 		do tel=1,10 ! 10 iter is more than enough
-			yplus=MAX(0.5*dz*ust/nu_mol,1e-12)
+			yplus=MAX(dist_velpoint*ust/nu_mol,1e-12)
 			ust=absU/MAX((2.5*log(yplus)+5.5),2.) !ust maximal 0.5*absU			
 		enddo
 	   	if (yplus<30.) then
 		  do tel=1,10 ! 10 iter is more than enough
-			yplus=MAX(0.5*dz*ust/nu_mol,1e-12)
+			yplus=MAX(dist_velpoint*ust/nu_mol,1e-12)
 			ust=absU/MAX((5.*log(yplus)-3.05),2.) !ust maximal 0.5*absU			
 		  enddo	
 		endif
 		if (yplus<5.) then !viscous sublayer uplus=yplus
-			ust=sqrt(absU*nu_mol/(0.5*dz))
+			ust=sqrt(absU*nu_mol/(dist_velpoint))
 		endif
 	endif
 
-	tau=rr*ust*ust
-	!uu = uu - tau*dt/dz*uu/rr/MAX(absU,1.e-6) 	!! only uu is adjusted
-	uu = uu / (1. + tau*scal*dt/dz/rr/MAX(absU,1.e-9)) 	!! only uu is adjusted ! implicit = more stable
+	tau=rr*ust*ust										!! tau here is tau_total = pyth(tau_u0,tau_v0)
+	!uu0 = uu0 - tau*dt/dz*uu0/rr0/MAX(absU0,1.e-6) 	!! only uu is adjusted
+	!uu0^n+1 = uu^n-tau*uu^n+1/(rr0*absU0)*dt/dz   !! implicit
+	!uu0^n+1[1+tau/(rr0*absU0)*dt/dz] = uu^n       !! implicit
+	!uu0^n+1=uu^n/[1+tau/(rr0*absU0)*dt/dz]        !! implicit
+	rrabsU0 = sqrt(uu0**2+vv0**2)
+	uu0 = uu0 / (1. + tau*dt/dz/MAX(rrabsU0,1.e-9)) 	!! only uu is adjusted ! implicit = more stable
+	tau = tau * uu0/MAX(rrabsU0,1.e-9) ! tau now is decomposed as tau_u0 as it is used as output from this subroutine
 	end
 
-	subroutine wall_fun_rho_TBL(uu,vv,Fi,rr,dz,scal,dt,kn,kappa,nu_mol,ust,tau)
+	subroutine wall_fun_rho_TBL(uu0,vv0,uu,vv,Fi,rr,dz,dist_velpoint,dt,kn,kappa,nu_mol,ust,tau)
 		
 	implicit none
 
 c*************************************************************
 c	Wall function based on simplified TBL with influence of dpdx 
 c   Based on (Wang and Moin 2002) Dynamic wall modeling for large-eddy simulation of complex turbulent flows
-c	Determine tau-wall and adapt uu	
-c	Substract tau_wall*dt*dx*dy/(dx*dy*dz) from uu (kg/m3*m/s)
+c	Determine tau-wall based on uu,vv and adapt uu0	
+c	Substract tau_wall*dt*dx*dy/(dx*dy*dz) from uu0 (kg/m3*m/s)
 c*************************************************************
-	real uu,vv,Fi,rr,dz,dt,ust,z0,kn,kappa,yplus,tau,nu_mol,absU
-	real int1,int2,zzz,AA,nu_tot,zplus,ddzz(1:50),zz(1:50),scal,fac,kplus
+	real uu,vv,Fi,rr,dz,dt,ust,z0,kn,kappa,yplus,tau,nu_mol,absU,uu0,vv0
+	real int1,int2,zzz,AA,nu_tot,zplus,ddzz(1:50),zz(1:50),dist_velpoint,fac,kplus
 	integer tel,tel0,nlayer
 	
 	nlayer = 50
 	AA = 19. ! Van Driest damping factor (Wang and Moin 2002) and VanBalen use value 19, others often use 26. In my matlab tests 26 gives better velocity profiles, but 19 gives better (closer to log law) tau based on velocity at certain distance.
-	ddzz(1) = dz/100. !0.5*dz/50. -->input velocity uu,vv defined at 0.5*dz from wall
+	ddzz(1) = dist_velpoint/DBLE(nlayer) !-->input velocity uu,vv defined at dist_velpoint from wall
 	do tel =2,nlayer ! apply 50 grid layers between wall z=0 and first velocity point at 0.5*dz with grow factor 
 		ddzz(tel)=ddzz(tel-1)*1.1 
 	enddo
-	ddzz=0.5*dz/SUM(ddzz)*ddzz 
+	ddzz=dist_velpoint/SUM(ddzz)*ddzz 
 	zz(1) = 0.5*ddzz(1)
 	do tel =2,nlayer 
 		zz(tel)=zz(tel-1)+0.5*ddzz(tel-1)+0.5*ddzz(tel) 
 	enddo	
 	int1=0.
 	int2=0. 
-!	absU=sqrt((uu/rr)**2+(vv/rr)**2)
-!	if (ust<0.0001*absU) then 		
-!		ust=0.1*absU
-!		if (kn>0.) then !walls with rougness (log-law used which can be hydr smooth or hydr rough):
-!			do tel=1,10 ! 10 iter is more than enough
-!				z0=kn/30.+0.11*nu_mol/MAX(ust,1.e-9)
-!				ust=absU/MAX(1./kappa*log(0.5*dz/z0),2.) !ust maximal 0.5*absU
-!			enddo
-!		else
-!			do tel=1,10 ! 10 iter is more than enough
-!				yplus=MAX(0.5*dz*ust/nu_mol,1e-12)
-!				ust=absU/MAX((2.5*log(yplus)+5.5),2.) !ust maximal 0.5*absU			
-!			enddo
-!			if (yplus<30.) then
-!			  do tel=1,10 ! 10 iter is more than enough
-!				yplus=MAX(0.5*dz*ust/nu_mol,1e-12)
-!				ust=absU/MAX((5.*log(yplus)-3.05),2.) !ust maximal 0.5*absU			
-!			  enddo	
-!			endif
-!			if (yplus<5.) then !viscous sublayer uplus=yplus
-!				ust=sqrt(absU*nu_mol/(0.5*dz))
-!			endif
-!		endif	  
-!	endif 
 	if (kn>0.) then
 		z0=kn/30.+0.11*nu_mol/MAX(ust,1.e-9)
 	else
@@ -4384,14 +4348,14 @@ c*************************************************************
 !	endif 
 	tau = MIN((rr*(0.25*ABS(uu)/rr)**2)/(ABS(tau)+1.e-9),1.)*tau !ust limited at maximum 0.25*u 
 
-	IF (tau*uu<0.) THEN ! they have different signs --> tau enhancing the flow instead of slowing it down
-		uu = uu - tau*scal*dt/dz 	!! only uu is adjusted
+	IF (tau*uu0<0.) THEN ! they have different signs --> tau enhancing the flow instead of slowing it down
+		uu0 = uu0 - tau*dt/dz 	!! only uu is adjusted
 	ELSE 
-		uu = uu / (1. + ABS(tau)*scal*dt/dz/MAX(ABS(uu),1.e-9)) 	!! only uu is adjusted ! implicit = more stable
+		uu0 = uu0 / (1. + ABS(tau)*dt/dz/MAX(ABS(uu0),1.e-9)) 	!! only uu is adjusted ! implicit = more stable
 	ENDIF 
 	end
 	
-	subroutine wall_fun_rho_VD(uu,vv,rr,dz,scal,dt,kn,kappa,nu_mol,ust,tau)
+	subroutine wall_fun_rho_VD(uu0,vv0,uu,vv,rr,dz,dist_velpoint,dt,kn,kappa,nu_mol,ust,tau)
 		
 	implicit none
 
@@ -4401,14 +4365,14 @@ c   Based on (Roulund et al. 2005) Numerical and experimental investigation of ï
 c	Determine tau-wall and adapt uu	
 c	Substract tau_wall*dt*dx*dy/(dx*dy*dz) from uu (kg/m3*m/s)
 c*************************************************************
-	real uu,vv,rr,dz,dt,ust,z0,kn,kappa,yplus,tau,nu_mol,absU
-	real int1,zzz,AA,nu_tot,zplus,ddzz(1:50),zz(1:50),scal,fac,kplus,dzplus
+	real uu,vv,rr,dz,dt,ust,z0,kn,kappa,yplus,tau,nu_mol,absU,uu0,vv0
+	real int1,zzz,AA,nu_tot,zplus,ddzz(1:50),zz(1:50),dist_velpoint,fac,kplus,dzplus
 	integer tel,tel0,nlayer
 	
 	nlayer = 50
 	AA = 25.
 	! Van Driest damping factor (Wang and Moin 2002) and VanBalen use value 19, others often use 26, Roulund et al. use 25. In my matlab tests 26 gives better velocity profiles, but 19 gives better (closer to log law) tau based on velocity at certain distance.	
-	ddzz(1) = dz/100. !0.5*dz/50. -->input velocity uu,vv defined at 0.5*dz from wall
+	ddzz(1) = dist_velpoint/DBLE(nlayer) !-->input velocity uu,vv defined at dist_velpoint from wall
 	do tel =2,nlayer ! apply 50 grid layers between wall z=0 and first velocity point at 0.5*dz with grow factor 
 		ddzz(tel)=ddzz(tel-1)*1.1 
 	enddo
@@ -4418,30 +4382,6 @@ c*************************************************************
 		zz(tel)=zz(tel-1)+0.5*ddzz(tel-1)+0.5*ddzz(tel) 
 	enddo	
 	int1=0.
-!	absU=sqrt((uu/rr)**2+(vv/rr)**2)
-!	if (ust<0.0001*absU) then 		
-!		ust=0.1*absU
-!		if (kn>0.) then !walls with rougness (log-law used which can be hydr smooth or hydr rough):
-!			do tel=1,10 ! 10 iter is more than enough
-!				z0=kn/30.+0.11*nu_mol/MAX(ust,1.e-9)
-!				ust=absU/MAX(1./kappa*log(0.5*dz/z0),2.) !ust maximal 0.5*absU
-!			enddo
-!		else
-!			do tel=1,10 ! 10 iter is more than enough
-!				yplus=MAX(0.5*dz*ust/nu_mol,1e-12)
-!				ust=absU/MAX((2.5*log(yplus)+5.5),2.) !ust maximal 0.5*absU			
-!			enddo
-!			if (yplus<30.) then
-!			  do tel=1,10 ! 10 iter is more than enough
-!				yplus=MAX(0.5*dz*ust/nu_mol,1e-12)
-!				ust=absU/MAX((5.*log(yplus)-3.05),2.) !ust maximal 0.5*absU			
-!			  enddo	
-!			endif
-!			if (yplus<5.) then !viscous sublayer uplus=yplus
-!				ust=sqrt(absU*nu_mol/(0.5*dz))
-!			endif
-!		endif	  
-!	endif 
 	if (kn>0.) then
 		z0=kn/30.+0.11*nu_mol/MAX(ust,1.e-9)
 	else
@@ -4455,7 +4395,7 @@ c*************************************************************
 	enddo
 	tau = rr*((ABS(uu)/rr)/(2.*int1+1.e-9))**2 
 	tau = MIN((rr*(0.25*ABS(uu)/rr)**2)/(ABS(tau)+1.e-9),1.)*tau !ust limited at maximum 0.25*u 
-	uu = uu / (1. + tau*scal*dt/dz/MAX(ABS(uu),1.e-9)) 	!! only uu is adjusted ! implicit = more stable
+	uu0 = uu0 / (1. + tau*dt/dz/MAX(ABS(uu0),1.e-9)) 	!! only uu is adjusted ! implicit = more stable
 
 	end
 	
@@ -4626,11 +4566,15 @@ c*************************************************************
 	real Propz_dummy(0:i1,0:px*jmax+1,1:kmax)
 
 	! rotation ship for ambient side current
-	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-	  phi=atan2(V_b,1.e-12)
-	else
-	  phi=atan2(V_b,(U_TSHD-U_b))
-	endif	
+	if (LOA<0.) then 
+	  phi=0. !don't rotate grid
+	else 
+		if ((U_TSHD-U_b).eq.0) then
+		  phi=atan2(V_b,1.e-12)
+		else
+		  phi=atan2(V_b,(U_TSHD-U_b))
+		endif
+	endif 	
 !	DO n2=1,nbedplume !make all forces zero before new forces are applied for bedplume
 !		IF (bp(n2)%u.ne.-99999.) THEN ! apply bedplume velocity boundary condition: !(bp(n2).h_tseriesfile.ne.''.or.bp(n2).zb_tseriesfile.ne.''.or.bp(n2).nmove>0).and.
 !			IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end)) THEN
@@ -4779,11 +4723,15 @@ c*************************************************************
 	real xTSHD(4),yTSHD(4),phi,xx,yy
 
 	! rotation ship for ambient side current
-	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-	  phi=atan2(V_b,1.e-12)
-	else
-	  phi=atan2(V_b,(U_TSHD-U_b))
-	endif	
+	if (LOA<0.) then 
+	  phi=0. !don't rotate grid
+	else 
+		if ((U_TSHD-U_b).eq.0) then
+		  phi=atan2(V_b,1.e-12)
+		else
+		  phi=atan2(V_b,(U_TSHD-U_b))
+		endif
+	endif 	
 	DO n2=1,nbedplume
 		IF (bp(n2)%dt_history>0.AND.tt.ge.bp(n2)%t_bphis_output.AND.bp(n2)%t_bphis_output.le.te_output+1e-12
      &        .and.bp(n2)%istep_bphis_output.le.20000) THEN 
@@ -4916,11 +4864,15 @@ c*************************************************************
 	  IF ((bp(n)%forever.eq.1.and.time_np.gt.bp(n)%t0.and.time_np.lt.bp(n)%t_end).and.
      & bp(n)%move_zbed_criterium(MAX(bp(n)%nmove_present,1))<depth) THEN
 		! rotation ship for ambient side current
-		if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-		  phi=atan2(V_b,1.e-12)
-		else
-		  phi=atan2(V_b,(U_TSHD-U_b))
-		endif
+		if (LOA<0.) then 
+		  phi=0. !don't rotate grid
+		else 
+			if ((U_TSHD-U_b).eq.0) then
+			  phi=atan2(V_b,1.e-12)
+			else
+			  phi=atan2(V_b,(U_TSHD-U_b))
+			endif
+		endif 
 		IF (bp(n)%move_zbed_type(MAX(bp(n)%nmove_present,1)).eq.2) THEN !check for avg bed level:
 			zbed_mean=0.
 			Abed_bedplume=0.
@@ -5047,11 +4999,15 @@ c*************************************************************
      &	 (ABS(bp(n)%move_u)+ABS(bp(n)%move_v)+ABS(bp(n)%move_w).gt.0.))) THEN
 	    bp(n)%tmax=0
 		! rotation ship for ambient side current
-		if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-		  phi=atan2(V_b,1.e-12)
-		else
-		  phi=atan2(V_b,(U_TSHD-U_b))
-		endif
+		if (LOA<0.) then 
+		  phi=0. !don't rotate grid
+		else 
+			if ((U_TSHD-U_b).eq.0) then
+			  phi=atan2(V_b,1.e-12)
+			else
+			  phi=atan2(V_b,(U_TSHD-U_b))
+			endif
+		endif 
 		do i=0,i1  
 		 do j=j1,0,-1       ! bedplume loop is only initial condition: do not bother to have U,V,W initial staggering perfect 
 			xx=Rp(i)*cos_u(j)-schuif_x
@@ -5096,11 +5052,15 @@ c*************************************************************
 	DO n=1,nbedplume
 	    bp(n)%tmax=0
 		! rotation ship for ambient side current
-		if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-		  phi=atan2(V_b,1.e-12)
-		else
-		  phi=atan2(V_b,(U_TSHD-U_b))
-		endif
+		if (LOA<0.) then 
+		  phi=0. !don't rotate grid
+		else 
+			if ((U_TSHD-U_b).eq.0) then
+			  phi=atan2(V_b,1.e-12)
+			else
+			  phi=atan2(V_b,(U_TSHD-U_b))
+			endif
+		endif 
 		do i=0,i1  
 		 do j=j1,0,-1       ! bedplume loop is only initial condition: do not bother to have U,V,W initial staggering perfect 
 			xx=Rp(i)*cos_u(j)-schuif_x

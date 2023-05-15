@@ -72,7 +72,7 @@
       call init_sediment
       call init_propeller
       call determine_indices_ship_in
-      call bedroughness_init
+      call inflow_profiles_front_sides(0.)
 	  call init_location_bedplume
 	  call update_fc_global
 	  call fkdat
@@ -247,6 +247,9 @@
 	!do istep=1,nstep
 		istep=istep   + 1
 !		call calc_div 
+		if (U_b_tseriesfile.ne.''.or.V_b_tseriesfile.ne.''.or.W_b_tseriesfile.ne.'') then 
+			call inflow_profiles_front_sides(time_n)
+		endif 
 		if (Cs>0.or.sgs_model.eq.'MixLe'.or.sgs_model.eq.'ReaKE'.or.sgs_model.eq.'DSmag') then
 		  if (sgs_model.eq.'SSmag') then
 			call LES_smagorinsky(Unew,Vnew,Wnew,rnew)
@@ -451,6 +454,10 @@
 		
 		if (time_np.ge.tstart_morf2) then 
 			b_update(istart_morf2:i1)=1. ! b_update=0. at start sim when tstart_morf2>0 --> before tstart_morf2 there is exchange of sediment between bed and fluid, but no bedupdate (all changes to bed are annihilated) 
+			if (cbc_perx_j(1)>0) then  !use quasi periodic bc for concentration:
+			  b_update(0:1)=0. ! no bed-update at inflow
+			  b_update(imax:i1)=0. ! no bed-update at outflow
+			endif 			
 		endif 
 		if (mod(istep,100).eq.0) then
 			call chkdiv

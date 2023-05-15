@@ -2519,6 +2519,8 @@
 !! mpi transfer sum d_cbotnew over edges:
 			call shiftf_lreverse(d_cbotnew,cbf) 
 			call shiftb_lreverse(d_cbotnew,cbb) 
+			
+			! for breaching via avalanche also have to consider shift_f_lreverse and shiftb_lreverse for ccnew ! to be implemented
 
 			if (periodicy.eq.0.or.periodicy.eq.2) then
 				if (rank.eq.0) then ! boundaries in j-direction

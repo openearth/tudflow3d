@@ -265,12 +265,6 @@ c********************************************************************
         enddo	
       enddo
 
-!      i = imax  !! at imax do nothing -> dpdn=0 at outflow
-!      do k=1,kmax
-!	do j=1,jmax
-!		dUdt(i,j,k) = dUdt(i,j,k) -dt * ( -2* pold(i,j,k) ) /    ( Rp(i+1) - Rp(i) )
-!         enddo
-!      enddo
 	if (periodicx.eq.1) then
 	!!! !periodic bc in x: 
 	      i = imax
@@ -279,6 +273,22 @@ c********************************************************************
 		  dUdt(i,j,k) = dUdt(i,j,k) -dt * ( pold(1,j,k) - pold(i,j,k) ) /( Rp(i+1) - Rp(i) ) 
 		 enddo
 	      enddo
+	else 
+		if (Poutflow.eq.0) then 
+		  i = imax
+		  do k=1,kmax
+		   do j=1,jmax
+			dUdt(i,j,k) = dUdt(i,j,k) -  dt * ( -2* pold(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
+		   enddo
+		  enddo
+		elseif (Poutflow.eq.1) then 
+		 if (rank.eq.0) then
+		  i = imax
+		  j = 1
+		  k = k_pzero
+		  dUdt(i,j,k) = dUdt(i,j,k) -  dt * ( -2* pold(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
+		 endif !!! else do nothing on imax, so p(imax+1)=p(imax) --> dp/dn=0 at outflow
+		endif		
 	endif
       do k=1,kmax
         do j=1,jmax-1
@@ -593,12 +603,6 @@ c********************************************************************
           enddo
         enddo	
       enddo
-!      i = imax  !! at imax do nothing -> dpdn=0 at outflow
-!      do k=1,kmax
-!	do j=1,jmax
-!		dUdt(i,j,k) = dUdt(i,j,k) -dt * ( -2* pold(i,j,k) ) /    ( Rp(i+1) - Rp(i) )
-!         enddo
-!      enddo
 	if (periodicx.eq.1) then
 	!!! !periodic bc in x: 
 	      i = imax
@@ -607,6 +611,22 @@ c********************************************************************
 		  dUdt(i,j,k) = dUdt(i,j,k) -dt * ( pold(1,j,k) - pold(i,j,k) ) /( Rp(i+1) - Rp(i) ) 
 		 enddo
 	      enddo
+	else 
+		if (Poutflow.eq.0) then 
+		  i = imax
+		  do k=1,kmax
+		   do j=1,jmax
+			dUdt(i,j,k) = dUdt(i,j,k) -  dt * ( -2* pold(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
+		   enddo
+		  enddo
+		elseif (Poutflow.eq.1) then 
+		 if (rank.eq.0) then
+		  i = imax
+		  j = 1
+		  k = k_pzero
+		  dUdt(i,j,k) = dUdt(i,j,k) -  dt * ( -2* pold(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
+		 endif !!! else do nothing on imax, so p(imax+1)=p(imax) --> dp/dn=0 at outflow
+		endif		
 	endif
       do k=1,kmax
         do j=1,jmax-1
@@ -1459,20 +1479,30 @@ c********************************************************************
           enddo
         enddo	
       enddo
-!      i = imax  !! at imax do nothing -> dpdn=0 at outflow
-!      do k=1,kmax
-!	do j=1,jmax
-!		dUdt(i,j,k) = dUdt(i,j,k) -dt * ( -2* pold(i,j,k) ) /    ( Rp(i+1) - Rp(i) )
-!         enddo
-!      enddo
 	if (periodicx.eq.1) then
 	!!! !periodic bc in x: 
 	      i = imax
 	      do k=1,kmax
-		do j=1,jmax
-		  dUdt(i,j,k) = dUdt(i,j,k) -dt * ( pold(1,j,k) - pold(i,j,k) ) /( Rp(i+1) - Rp(i) ) 
-		 enddo
+		    do j=1,jmax
+		     dUdt(i,j,k) = dUdt(i,j,k) -dt * ( pold(1,j,k) - pold(i,j,k) ) /( Rp(i+1) - Rp(i) ) 
+		    enddo
 	      enddo
+	else 
+		if (Poutflow.eq.0) then 
+		  i = imax
+		  do k=1,kmax
+		   do j=1,jmax
+			dUdt(i,j,k) = dUdt(i,j,k) -  dt * ( -2* pold(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
+		   enddo
+		  enddo
+		elseif (Poutflow.eq.1) then 
+		 if (rank.eq.0) then
+		  i = imax
+		  j = 1
+		  k = k_pzero
+		  dUdt(i,j,k) = dUdt(i,j,k) -  dt * ( -2* pold(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
+		 endif !!! else do nothing on imax, so p(imax+1)=p(imax) --> dp/dn=0 at outflow
+		endif		
 	endif
       do k=1,kmax
         do j=1,jmax-1
@@ -2303,20 +2333,30 @@ c********************************************************************
           enddo
         enddo	
       enddo
-!      i = imax
-!      do k=1,kmax
-!	do j=1,jmax
-!		dUdt(i,j,k) = dUdt(i,j,k) -c2*dt * ( -2* p(i,j,k) ) /    ( Rp(i+1) - Rp(i) )
-!         enddo
-!      enddo
 	if (periodicx.eq.1) then
 	!!! !periodic bc in x: 
 	      i = imax
 	      do k=1,kmax
-		do j=1,jmax
-		  dUdt(i,j,k) = dUdt(i,j,k) -c2*dt * ( pold(1,j,k) - pold(i,j,k) ) /( Rp(i+1) - Rp(i) ) 
-		 enddo
+		   do j=1,jmax
+		     dUdt(i,j,k) = dUdt(i,j,k) -c2*dt * ( pold(1,j,k) - pold(i,j,k) ) /( Rp(i+1) - Rp(i) ) 
+		   enddo
 	      enddo
+	else 
+		if (Poutflow.eq.0) then 
+		  i = imax
+		  do k=1,kmax
+		   do j=1,jmax
+			dUdt(i,j,k) = dUdt(i,j,k) -  c2*dt * ( -2* pold(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
+		   enddo
+		  enddo
+		elseif (Poutflow.eq.1) then 
+		 if (rank.eq.0) then
+		  i = imax
+		  j = 1
+		  k = k_pzero
+		  dUdt(i,j,k) = dUdt(i,j,k) -  c2*dt * ( -2* pold(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
+		 endif !!! else do nothing on imax, so p(imax+1)=p(imax) --> dp/dn=0 at outflow
+		endif		
 	endif
       do k=1,kmax
         do j=1,jmax-1
@@ -2374,20 +2414,30 @@ c********************************************************************
           enddo
         enddo	
       enddo
-!      i = imax
-!      do k=1,kmax
-!	do j=1,jmax
-!		dUdt(i,j,k) = dUdt(i,j,k) -c2*dt * ( -2* p(i,j,k) ) /    ( Rp(i+1) - Rp(i) )
-!         enddo
-!      enddo
 	if (periodicx.eq.1) then
 	!!! !periodic bc in x: 
 	      i = imax
-	      do k=1,kmax
-		do j=1,jmax
-		  dUdt(i,j,k) = dUdt(i,j,k) -c2*dt * ( p(1,j,k) - p(i,j,k) ) /( Rp(i+1) - Rp(i) ) 
-		 enddo
-	      enddo
+	        do k=1,kmax
+		     do j=1,jmax
+		       dUdt(i,j,k) = dUdt(i,j,k) -c2*dt * ( p(1,j,k) - p(i,j,k) ) /( Rp(i+1) - Rp(i) ) 
+		     enddo
+	        enddo
+	else 
+		if (Poutflow.eq.0) then 
+		  i = imax
+		  do k=1,kmax
+		   do j=1,jmax
+			dUdt(i,j,k) = dUdt(i,j,k) -  c2*dt * ( -2* p(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
+		   enddo
+		  enddo
+		elseif (Poutflow.eq.1) then 
+		 if (rank.eq.0) then
+		  i = imax
+		  j = 1
+		  k = k_pzero
+		  dUdt(i,j,k) = dUdt(i,j,k) -  c2*dt * ( -2* p(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
+		 endif !!! else do nothing on imax, so p(imax+1)=p(imax) --> dp/dn=0 at outflow
+		endif				
 	endif
       do k=1,kmax
         do j=1,jmax-1
@@ -2801,20 +2851,30 @@ c********************************************************************
           enddo
         enddo	
       enddo
-!      i = imax
-!      do k=1,kmax
-!	do j=1,jmax
-!		dUdt(i,j,k) = dUdt(i,j,k) -c3*dt * ( -2* p(i,j,k) ) /    ( Rp(i+1) - Rp(i) )
-!         enddo
-!      enddo
 	if (periodicx.eq.1) then
 	!!! !periodic bc in x: 
 	      i = imax
 	      do k=1,kmax
-		do j=1,jmax
-		  dUdt(i,j,k) = dUdt(i,j,k) -c3*dt * ( pold(1,j,k) - pold(i,j,k) ) /( Rp(i+1) - Rp(i) ) 
-		 enddo
+		   do j=1,jmax
+		     dUdt(i,j,k) = dUdt(i,j,k) -c3*dt * ( pold(1,j,k) - pold(i,j,k) ) /( Rp(i+1) - Rp(i) ) 
+		    enddo
 	      enddo
+	else 
+		if (Poutflow.eq.0) then 
+		  i = imax
+		  do k=1,kmax
+		   do j=1,jmax
+			dUdt(i,j,k) = dUdt(i,j,k) -  c3*dt * ( -2* pold(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
+		   enddo
+		  enddo
+		elseif (Poutflow.eq.1) then 
+		 if (rank.eq.0) then
+		  i = imax
+		  j = 1
+		  k = k_pzero
+		  dUdt(i,j,k) = dUdt(i,j,k) -  c3*dt * ( -2* pold(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
+		 endif !!! else do nothing on imax, so p(imax+1)=p(imax) --> dp/dn=0 at outflow
+		endif		
 	endif
       do k=1,kmax
         do j=1,jmax-1
@@ -2870,20 +2930,30 @@ c********************************************************************
           enddo
         enddo	
       enddo
-!      i = imax
-!      do k=1,kmax
-!	do j=1,jmax
-!		dUdt(i,j,k) = dUdt(i,j,k) -c3*dt * ( -2* p(i,j,k) ) /    ( Rp(i+1) - Rp(i) )
-!         enddo
-!      enddo
 	if (periodicx.eq.1) then
 	!!! !periodic bc in x: 
 	      i = imax
 	      do k=1,kmax
-		do j=1,jmax
-		  dUdt(i,j,k) = dUdt(i,j,k) -c3*dt * ( p(1,j,k) - p(i,j,k) ) /( Rp(i+1) - Rp(i) ) 
-		 enddo
+		    do j=1,jmax
+		      dUdt(i,j,k) = dUdt(i,j,k) -c3*dt * ( p(1,j,k) - p(i,j,k) ) /( Rp(i+1) - Rp(i) ) 
+		    enddo
 	      enddo
+	else 
+		if (Poutflow.eq.0) then 
+		  i = imax
+		  do k=1,kmax
+		   do j=1,jmax
+			dUdt(i,j,k) = dUdt(i,j,k) -  c3*dt * ( -2* p(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
+		   enddo
+		  enddo
+		elseif (Poutflow.eq.1) then 
+		 if (rank.eq.0) then
+		  i = imax
+		  j = 1
+		  k = k_pzero
+		  dUdt(i,j,k) = dUdt(i,j,k) -  c3*dt * ( -2* p(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
+		 endif !!! else do nothing on imax, so p(imax+1)=p(imax) --> dp/dn=0 at outflow
+		endif		
 	endif
       do k=1,kmax
         do j=1,jmax-1
@@ -3307,12 +3377,6 @@ c********************************************************************
           enddo
         enddo
       enddo
-!      i = imax
-!      do k=1,kmax
-!       do j=1,jmax
-!               dUdt1(i,j,k) = dUdt1(i,j,k) -c2*dt * ( -2* p(i,j,k) ) /    ( Rp(i+1) - Rp(i) )
-!         enddo
-!      enddo
 	if (periodicx.eq.1) then
 	!!! !periodic bc in x: 
 	      i = imax
@@ -3321,6 +3385,22 @@ c********************************************************************
 		  dUdt(i,j,k) = dUdt(i,j,k) -dt * ( pold(1,j,k) - pold(i,j,k) ) /( Rp(i+1) - Rp(i) ) 
 		 enddo
 	      enddo
+	else 
+		if (Poutflow.eq.0) then 
+		  i = imax
+		  do k=1,kmax
+		   do j=1,jmax
+			dUdt(i,j,k) = dUdt(i,j,k) -  dt * ( -2* pold(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
+		   enddo
+		  enddo
+		elseif (Poutflow.eq.1) then 
+		 if (rank.eq.0) then
+		  i = imax
+		  j = 1
+		  k = k_pzero
+		  dUdt(i,j,k) = dUdt(i,j,k) -  dt * ( -2* pold(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
+		 endif !!! else do nothing on imax, so p(imax+1)=p(imax) --> dp/dn=0 at outflow
+		endif		
 	endif
       do k=1,kmax
         do j=1,jmax-1
@@ -3830,20 +3910,30 @@ c********************************************************************
           enddo
         enddo	
       enddo
-!      i = imax  !! at imax do nothing -> dpdn=0 at outflow
-!      do k=1,kmax
-!	do j=1,jmax
-!		dUdt(i,j,k) = dUdt(i,j,k) -dt * ( -2* pold(i,j,k) ) /    ( Rp(i+1) - Rp(i) )
-!         enddo
-!      enddo
 	if (periodicx.eq.1) then
 	!!! !periodic bc in x: 
-	      i = imax
+	    i = imax
 	      do k=1,kmax
-		do j=1,jmax
-		  dUdt(i,j,k) = dUdt(i,j,k) -dt * ( pold(1,j,k) - pold(i,j,k) ) /( Rp(i+1) - Rp(i) ) 
-		 enddo
+		    do j=1,jmax
+		      dUdt(i,j,k) = dUdt(i,j,k) -dt * ( pold(1,j,k) - pold(i,j,k) ) /( Rp(i+1) - Rp(i) ) 
+		    enddo
 	      enddo
+	else 
+		if (Poutflow.eq.0) then 
+		  i = imax
+		  do k=1,kmax
+		   do j=1,jmax
+			dUdt(i,j,k) = dUdt(i,j,k) -  dt * ( -2* pold(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
+		   enddo
+		  enddo
+		elseif (Poutflow.eq.1) then 
+		 if (rank.eq.0) then
+		  i = imax
+		  j = 1
+		  k = k_pzero
+		  dUdt(i,j,k) = dUdt(i,j,k) -  dt * ( -2* pold(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
+		 endif !!! else do nothing on imax, so p(imax+1)=p(imax) --> dp/dn=0 at outflow
+		endif		
 	endif
       do k=1,kmax
         do j=1,jmax-1
@@ -4113,11 +4203,15 @@ c
 	DO n2=1,nbedplume
 	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
 	! rotation ship for ambient side current
-	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-	  phi=atan2(V_b,1.e-12)
-	else
-	  phi=atan2(V_b,(U_TSHD-U_b))
-	endif
+	if (LOA<0.) then 
+	  phi=0. !don't rotate grid
+	else 
+		if ((U_TSHD-U_b).eq.0) then
+		  phi=atan2(V_b,1.e-12)
+		else
+		  phi=atan2(V_b,(U_TSHD-U_b))
+		endif
+	endif 
       do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
        do i=1,imax  
          do j=jmax,1,-1 
@@ -4183,11 +4277,15 @@ c
 	DO n2=1,nbedplume
 	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
 	! rotation ship for ambient side current
-	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-	  phi=atan2(V_b,1.e-12)
-	else
-	  phi=atan2(V_b,(U_TSHD-U_b))
-	endif
+	if (LOA<0.) then 
+	  phi=0. !don't rotate grid
+	else 
+		if ((U_TSHD-U_b).eq.0) then
+		  phi=atan2(V_b,1.e-12)
+		else
+		  phi=atan2(V_b,(U_TSHD-U_b))
+		endif
+	endif 
       do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
        do i=1,imax  
          do j=jmax,1,-1 
@@ -4362,11 +4460,15 @@ c
 	DO n2=1,nbedplume
 	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
 	! rotation ship for ambient side current
-	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-	  phi=atan2(V_b,1.e-12)
-	else
-	  phi=atan2(V_b,(U_TSHD-U_b))
-	endif
+	if (LOA<0.) then 
+	  phi=0. !don't rotate grid
+	else 
+		if ((U_TSHD-U_b).eq.0) then
+		  phi=atan2(V_b,1.e-12)
+		else
+		  phi=atan2(V_b,(U_TSHD-U_b))
+		endif
+	endif 
       do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
        do i=1,imax  
          do j=jmax,1,-1 
@@ -4433,11 +4535,15 @@ c
 	DO n2=1,nbedplume
 	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
 	! rotation ship for ambient side current
-	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-	  phi=atan2(V_b,1.e-12)
-	else
-	  phi=atan2(V_b,(U_TSHD-U_b))
-	endif
+	if (LOA<0.) then 
+	  phi=0. !don't rotate grid
+	else 
+		if ((U_TSHD-U_b).eq.0) then
+		  phi=atan2(V_b,1.e-12)
+		else
+		  phi=atan2(V_b,(U_TSHD-U_b))
+		endif
+	endif 
       do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
        do i=1,imax  
          do j=jmax,1,-1 
@@ -4577,11 +4683,15 @@ c
 	DO n2=1,nbedplume
 	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
 	! rotation ship for ambient side current
-	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-	  phi=atan2(V_b,1.e-12)
-	else
-	  phi=atan2(V_b,(U_TSHD-U_b))
-	endif
+	if (LOA<0.) then 
+	  phi=0. !don't rotate grid
+	else 
+		if ((U_TSHD-U_b).eq.0) then
+		  phi=atan2(V_b,1.e-12)
+		else
+		  phi=atan2(V_b,(U_TSHD-U_b))
+		endif
+	endif 
       do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
        do i=1,imax  
          do j=jmax,1,-1 
@@ -4678,11 +4788,15 @@ c
 	DO n2=1,nbedplume
 	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
 	! rotation ship for ambient side current
-	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-	  phi=atan2(V_b,1.e-12)
-	else
-	  phi=atan2(V_b,(U_TSHD-U_b))
-	endif
+	if (LOA<0.) then 
+	  phi=0. !don't rotate grid
+	else 
+		if ((U_TSHD-U_b).eq.0) then
+		  phi=atan2(V_b,1.e-12)
+		else
+		  phi=atan2(V_b,(U_TSHD-U_b))
+		endif
+	endif 
       do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
        do i=1,imax  
          do j=jmax,1,-1 
@@ -4896,11 +5010,15 @@ c
 	DO n2=1,nbedplume
 	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
 	! rotation ship for ambient side current
-	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-	  phi=atan2(V_b,1.e-12)
-	else
-	  phi=atan2(V_b,(U_TSHD-U_b))
-	endif
+	if (LOA<0.) then 
+	  phi=0. !don't rotate grid
+	else 
+		if ((U_TSHD-U_b).eq.0) then
+		  phi=atan2(V_b,1.e-12)
+		else
+		  phi=atan2(V_b,(U_TSHD-U_b))
+		endif
+	endif 
       do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
        do i=1,imax  
          do j=jmax,1,-1 
@@ -4966,11 +5084,15 @@ c
 	DO n2=1,nbedplume
 	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
 	! rotation ship for ambient side current
-	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-	  phi=atan2(V_b,1.e-12)
-	else
-	  phi=atan2(V_b,(U_TSHD-U_b))
-	endif
+	if (LOA<0.) then 
+	  phi=0. !don't rotate grid
+	else 
+		if ((U_TSHD-U_b).eq.0) then
+		  phi=atan2(V_b,1.e-12)
+		else
+		  phi=atan2(V_b,(U_TSHD-U_b))
+		endif
+	endif 
       do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
        do i=1,imax  
          do j=jmax,1,-1 
@@ -5072,11 +5194,15 @@ c
 	DO n2=1,nbedplume
 	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
 	! rotation ship for ambient side current
-	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-	  phi=atan2(V_b,1.e-12)
-	else
-	  phi=atan2(V_b,(U_TSHD-U_b))
-	endif
+	if (LOA<0.) then 
+	  phi=0. !don't rotate grid
+	else 
+		if ((U_TSHD-U_b).eq.0) then
+		  phi=atan2(V_b,1.e-12)
+		else
+		  phi=atan2(V_b,(U_TSHD-U_b))
+		endif
+	endif 
       do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
        do i=1,imax  
          do j=jmax,1,-1 
@@ -5143,11 +5269,15 @@ c
 	DO n2=1,nbedplume
 	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
 	! rotation ship for ambient side current
-	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-	  phi=atan2(V_b,1.e-12)
-	else
-	  phi=atan2(V_b,(U_TSHD-U_b))
-	endif
+	if (LOA<0.) then 
+	  phi=0. !don't rotate grid
+	else 
+		if ((U_TSHD-U_b).eq.0) then
+		  phi=atan2(V_b,1.e-12)
+		else
+		  phi=atan2(V_b,(U_TSHD-U_b))
+		endif
+	endif 
       do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
        do i=1,imax  
          do j=jmax,1,-1 
@@ -5205,11 +5335,15 @@ c
 	DO n2=1,nbedplume
 	IF ((bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end.and.bp(n2)%Q.ne.0.)) THEN
 	! rotation ship for ambient side current
-	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-	  phi=atan2(V_b,1.e-12)
-	else
-	  phi=atan2(V_b,(U_TSHD-U_b))
-	endif
+	if (LOA<0.) then 
+	  phi=0. !don't rotate grid
+	else 
+		if ((U_TSHD-U_b).eq.0) then
+		  phi=atan2(V_b,1.e-12)
+		else
+		  phi=atan2(V_b,(U_TSHD-U_b))
+		endif
+	endif 
       do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
        do i=1,imax  
          do j=jmax,1,-1 
@@ -5291,23 +5425,31 @@ c
           enddo
         enddo	
       enddo
-!!! Do nothing on imax, so p(imax+1)=p(imax) --> dp/dn=0 at outflow
-!      i = imax
-!      do k=1,kmax
-!	do j=1,jmax
-!		dUdt(i,j,k) = dUdt(i,j,k) -  dt * ( -2* p(i,j,k) ) /    ( Rp(i+1) - Rp(i) )
-!         enddo
-!      enddo
+
 	if (periodicx.eq.1) then
 	!!! !periodic bc in x: 
-	      i = imax
-	      do k=1,kmax
-		do j=1,jmax
-		  dUdt(i,j,k) = dUdt(i,j,k) -
-     +             dt * ( p(1,j,k) - p(i,j,k) ) /
-     +                ( Rp(i+1) - Rp(i) ) 
-		 enddo
-	      enddo
+	    i = imax
+	    do k=1,kmax
+		  do j=1,jmax
+		    dUdt(i,j,k) = dUdt(i,j,k)-dt * ( p(1,j,k) - p(i,j,k) ) / ( Rp(i+1) - Rp(i) ) 
+		  enddo
+	    enddo
+	else 
+		if (Poutflow.eq.0) then 
+		  i = imax
+		  do k=1,kmax
+		   do j=1,jmax
+			dUdt(i,j,k) = dUdt(i,j,k) -  dt * ( -2* p(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
+		   enddo
+		  enddo
+		elseif (Poutflow.eq.1) then 
+		 if (rank.eq.0) then
+		  i = imax
+		  j = 1
+		  k = k_pzero
+		  dUdt(i,j,k) = dUdt(i,j,k) -  dt * ( -2* p(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
+		 endif !!! else do nothing on imax, so p(imax+1)=p(imax) --> dp/dn=0 at outflow
+		endif	
 	endif
 
       do k=1,kmax
@@ -5610,13 +5752,6 @@ c
           enddo
         enddo	
       enddo
-!!! Do nothing on imax, so p(imax+1)=p(imax) --> dp/dn=0 at outflow
-!      i = imax
-!      do k=1,kmax
-!	do j=1,jmax
-!		uu(i,j,k) = uu(i,j,k) -  ddtt * ( -2* p(i,j,k) ) /    ( Rp(i+1) - Rp(i) )
-!         enddo
-!      enddo
 	if (periodicx.eq.1) then
 	!!! !periodic bc in x: 
 	      i = imax
@@ -5627,6 +5762,22 @@ c
      +                ( Rp(i+1) - Rp(i) ) 
 		 enddo
 	      enddo
+	else 
+	 if (Poutflow.eq.0) then 
+      i = imax
+      do k=1,kmax
+	   do j=1,jmax
+		uu(i,j,k) = uu(i,j,k) -  ddtt * ( -2* p(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
+       enddo
+      enddo
+	 elseif (Poutflow.eq.1) then 
+	  if (rank.eq.0) then
+       i = imax
+	   j = 1
+	   k = k_pzero
+	   uu(i,j,k) = uu(i,j,k) -  ddtt * ( -2* p(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
+	  endif !!! else do nothing on imax, so p(imax+1)=p(imax) --> dp/dn=0 at outflow
+	 endif 	
 	endif
 
 
@@ -6476,15 +6627,15 @@ C.. Fill all arrays containing matrix data.
          enddo
       enddo
 
-	!!    Make pressure zero at one point in outflow:
-	!!    Only b(imax)-c(imax) in matrix is not sufficient to make pressure exactly zero in (imax,1,1)
-	!!    Some small drift is occuring without following lines:
-		if (rank.eq.0) then
-		  rhs_ref=rhs(imax,1,k_pzero)
-		endif
-		call mpi_bcast(rhs_ref,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-		rhs=rhs-rhs_ref
-
+!!!	!!    Make pressure zero at one point in outflow:
+!!!	!!    Only b(imax)-c(imax) in matrix is not sufficient to make pressure exactly zero in (imax,1,1)
+!!!	!!    Some small drift is occuring without following lines:
+!!!		if (rank.eq.0) then
+!!!		  rhs_ref=rhs(imax,1,k_pzero)
+!!!		endif
+!!!		call mpi_bcast(rhs_ref,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+!!!		rhs=rhs-rhs_ref
+!!! switched off 22-2-2023; should not be needed and this correction makes dpdx at imax contribution incorrect
       return
       end
 	  
@@ -6785,11 +6936,12 @@ C.. Fill all arrays containing matrix data.
 		  ENDDO
 		ENDDO
 		
-	!!    Make pressure zero at one point in outflow:
-	!!    Only b(imax)-c(imax) in matrix is not sufficient to make pressure exactly zero in (imax,1,1)
-	!!    Some small drift is occuring without following lines:
-        rhs_ref=rhs(imax,1,kmax)
-		rhs=rhs-rhs_ref
+!!!	!!    Make pressure zero at one point in outflow:
+!!!	!!    Only b(imax)-c(imax) in matrix is not sufficient to make pressure exactly zero in (imax,1,1)
+!!!	!!    Some small drift is occuring without following lines:
+!!!        rhs_ref=rhs(imax,1,kmax)
+!!!		rhs=rhs-rhs_ref
+!!! switched off 22-2-2023; should not be needed and this correction makes dpdx at imax contribution incorrect
 
       return
       end
@@ -7057,14 +7209,15 @@ c  J --> direction      (yrt)
       call t2fp(rtmp,rhs)
 	
 
-	!!    Make pressure zero at one point in outflow:
-	!!    Only b(imax)-c(imax) in matrix is not sufficient to make pressure exactly zero in (imax,1,1)
-	!!    Some small drift is occuring without following lines:
-		if (rank.eq.0) then
-		  rhs_ref=rhs(imax,1,k_pzero)
-		endif
-		call mpi_bcast(rhs_ref,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-		rhs=rhs-rhs_ref
+!!!	!!    Make pressure zero at one point in outflow:
+!!!	!!    Only b(imax)-c(imax) in matrix is not sufficient to make pressure exactly zero in (imax,1,1)
+!!!	!!    Some small drift is occuring without following lines:
+!!!		if (rank.eq.0) then
+!!!		  rhs_ref=rhs(imax,1,k_pzero)
+!!!		endif
+!!!		call mpi_bcast(rhs_ref,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+!!!		rhs=rhs-rhs_ref
+!!! switched off 22-2-2023; should not be needed and this correction makes dpdx at imax contribution incorrect
 
       return
       end
@@ -7100,11 +7253,15 @@ c  J --> direction      (yrt)
 	DO n2=1,nbedplume
 	IF (bp(n2)%forever.eq.0.and.time_n.lt.bp(n2)%t0.and.time_np.gt.bp(n2)%t0) THEN
 	! rotation ship for ambient side current
-	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-	  phi=atan2(V_b,1.e-12)
-	else
-	  phi=atan2(V_b,(U_TSHD-U_b))
-	endif
+	if (LOA<0.) then 
+	  phi=0. !don't rotate grid
+	else 
+		if ((U_TSHD-U_b).eq.0) then
+		  phi=atan2(V_b,1.e-12)
+		else
+		  phi=atan2(V_b,(U_TSHD-U_b))
+		endif
+	endif 
       !! Search for P,V:
       do k=CEILING(bp(n2)%zbottom/dz),FLOOR(bp(n2)%height/dz) !do k=0,k1
 	   do tel=1,bp(n2)%tmax 
@@ -7186,11 +7343,15 @@ c  J --> direction      (yrt)
 	DO n2=1,nbedplume
 	IF (bp(n2)%forever.eq.0.and.time_n.lt.bp(n2)%t0.and.time_np.gt.bp(n2)%t0) THEN
 	! rotation ship for ambient side current
-	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-	  phi=atan2(V_b,1.e-12)
-	else
-	  phi=atan2(V_b,(U_TSHD-U_b))
-	endif
+	if (LOA<0.) then 
+	  phi=0. !don't rotate grid
+	else 
+		if ((U_TSHD-U_b).eq.0) then
+		  phi=atan2(V_b,1.e-12)
+		else
+		  phi=atan2(V_b,(U_TSHD-U_b))
+		endif
+	endif 
       !! Search for P,V:
       do k=CEILING(bp(n2)%zbottom/dz),FLOOR(bp(n2)%height/dz) !do k=0,k1
 	   do tel=1,bp(n2)%tmax 

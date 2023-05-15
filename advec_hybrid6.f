@@ -63,7 +63,7 @@ c********************************************************************
 	real rhU(0:i1,0:j1,0:k1),rhV(0:i1,0:j1,0:k1),rhW(0:i1,0:j1,0:k1)
 	real wwdd(1:3),wf(0:i1,0:j1,0:k1),numdif2,u4mag 
 	real Vvel2(-2:i1+2,-2:j1+2,-2:k1+2),Wvel2(-2:i1+2,-2:j1+2,-2:k1+2)
-	real fcg(0:i1,0:px*(j1-1)+1,0:k1)
+	real fcg(0:i1,0:px*(j1-1)+1,0:k1),fcg_local
 	
 	Uvel2(0:i1,0:j1,0:k1)=Uvel
 	jmax=j1-1 
@@ -371,7 +371,27 @@ c********************************************************************
 		  enddo
 	    enddo
 	  enddo
-	endif ! wf=1. is already default when wiggle_detector==0
+	elseif (wd.eq.2) then 
+		do i=ib,ie 
+		  do j=jb,je 
+			do k=kb,ke 
+			fcg_local=MIN(fcg(i,j+rank*jmax,k),fcg(i+1,j+rank*jmax,k),fcg(i-1,j+rank*jmax,k),
+     &			fcg(i,j+rank*jmax+1,k),fcg(i,j+rank*jmax-1,k),fcg(i,j+rank*jmax,k+1),fcg(i,j+rank*jmax,k-1))
+			  wf(i,j,k)=MAX((1.-fcg_local),nd2) !high diffusion cells direct neighbours of ibm and low diffusion otherwise
+			enddo 
+		  enddo 
+		enddo
+		do i=0,i1 
+		  do j=0,j1 
+			do k=0,k1 
+			  wf(i,j,k)=MAX((1.-fcg(i,j+rank*jmax,k)),nd2) !high diffusion all cells inside ibm and low diffusion outside ibm 
+			enddo 
+		    do k=0,kbed(i,j)
+			  wf(i,j,k)=1. !high diffusion inside bed and first cell above 
+			enddo 			
+		  enddo 
+		enddo
+	endif ! wf=1. is already default when wiggle_detector==0	
 	
 	  do  i=ib,ie
 		ip=i+1

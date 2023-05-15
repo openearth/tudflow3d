@@ -118,7 +118,10 @@
 		write(*,*) '# CFL is not defined                             #'	
 	CASE(036)
 		write(*,*) '# namelist &times                                #'			
-		write(*,*) '# te_rms must be >tstart_rms                     #'			
+		write(*,*) '# te_rms must be >tstart_rms                     #'	
+	CASE(039)
+		write(*,*) '# namelist &ambient                                        #'			
+		write(*,*) '# timeseries file mentioned above should be long enough    #'			
 	CASE(040)
 		write(*,*) '# namelist &ambient                              #'			
 		write(*,*) '# U_b is not defined                             #'	
@@ -592,10 +595,11 @@
 		write(*,*) '# npresIBM must be >0                            #'
 	CASE(408)
 		write(*,*) '# namelist &num_scheme                           #'		
-		write(*,*) '# wiggle_detector should be 0 or 1               #'			
+		write(*,*) '# wiggle_detector should be 0 or 1 or 2          #'			
 	CASE(409)
 		write(*,*) '# namelist &num_scheme                           #'		
 		write(*,*) '# k_ust_tau should be between 1 and kmax         #'	
+		write(*,*) '# and k_ust_tau_flow should be between 1 and kmax#'	
 	CASE(410)
 		write(*,*) '# namelist &num_scheme                           #'		
 		write(*,*) '# k_pzero should be between 1 and kmax           #'	
@@ -663,7 +667,15 @@
 		write(*,*) '# nmax3 is not defined                           #'			
 	CASE(621)
 		write(*,*) '# namelist &ambient                              #'			
-		write(*,*) '# lm_min3 is not defined                         #'		
+		write(*,*) '# lm_min3 is not defined                         #'	
+	CASE(622)
+		write(*,*) '# namelist &ambient                              #'			
+		write(*,*) '# cbc_perx_j(1) should be <= cbc_perx_j(2)       #'			
+		write(*,*) '# cbc_perx_j(1) should be >0                     #'			
+		write(*,*) '# cbc_perx_j(2) should be <=jmax/px              #'			
+	CASE(623)
+		write(*,*) '# namelist &ambient                              #'			
+		write(*,*) '# cbc_relax should be between 0-1                #'		
 	CASE(701)
 		write(*,*) '# namelist &simulation                           #'			
 		write(*,*) '# restart_dir does not give correct files        #'	

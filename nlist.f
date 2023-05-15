@@ -25,6 +25,7 @@
       
       INTEGER i,j,k,imax,jmax,kmax,i1,j1,k1,px,rank,kjet,nmax1,nmax2,nmax3,istep,CNdiffz,npresIBM,counter,npresPRHO,oPRHO,k_pzero
       INTEGER Lmix_type,slip_bot,SEM,azi_n,outflow_overflow_down,azi_n2,wiggle_detector,wd,applyVOF,Poutflow,k_ust_tau,Uoutflow
+	  INTEGER k_ust_tau_flow
       REAL ekm_mol,nu_mol,pi,kappa,gx,gy,gz,Cs,Sc,calibfac_sand_pickup,calibfac_Shields_cr,morfac,morfac2,calibfac_sand_bedload
       REAL dt,time_nm,time_n,time_np,t_end,t0_output,dt_output,te_output,dt_max,tstart_rms,CFL,dt_ini,tstart_morf,trestart,dt_old
       REAL dt_output_movie,t0_output_movie,te_output_movie,te_rms,time_nm2,tstart_morf2,fcor
@@ -41,6 +42,7 @@
       INTEGER nfrac,slipvel,interaction_bed,nobst,nbedplume,continuity_solver,hindered_settling,settling_along_gvector
       INTEGER nfr_silt,nfr_sand,nfr_air,istart_morf2,i_periodicx,hindered_settling_c
       CHARACTER*256 hisfile,restart_dir,inpfile,plumetseriesfile,bcfile,plumetseriesfile2,bedlevelfile,initconditionsfile
+	  CHARACTER*256 U_b_tseriesfile,V_b_tseriesfile,W_b_tseriesfile
       CHARACTER*3 time_int,advec_conc,cutter,split_rho_cont
       CHARACTER*5 sgs_model
       CHARACTER*4 damping_drho_dz,extra_mix_visc
@@ -52,7 +54,10 @@
       REAL plumeUseries(1:10000)
       REAL plumetseries2(1:10000) 
       REAL plumeUseries2(1:10000),c_bed(100)
+	  REAL U_b_series(1:10000),V_b_series(1:10000),W_b_series(1:10000)
+	  REAL U_b_tseries(1:10000),V_b_tseries(1:10000),W_b_tseries(1:10000)
       INTEGER plumeseriesloc,plumeseriesloc2,plumeQseriesloc,plumecseriesloc
+	  INTEGER U_b_seriesloc,V_b_seriesloc,W_b_seriesloc
       INTEGER nr_HPfilter,depo_implicit,depo_cbed_option,monopile
       REAL timeAB_real(1:4),dpdx,dpdy,kn_d50_multiplier,avalanche_slope(100),av_slope_z(100)
 	  REAL dpdx1,dpdy1,Uavold,Vavold,U3avold,V3avold,dpdx3,dpdy3
@@ -75,6 +80,8 @@
 	  INTEGER nobst_files,nobst_file,momentum_exchange_obstacles,erosion_cbed_start,movebed_absorb_cfluid
 	  CHARACTER(len=256) :: obst_file_series(5000)
 	  REAL :: obst_starttimes(5000)
+	  INTEGER cbc_perx_j(2)
+	  REAL cbc_relax
 	  
 	  
 	  !new variables rheology
@@ -191,6 +198,9 @@
 	  REAL, DIMENSION(:,:,:), ALLOCATABLE :: sigU2,sigV2,sigW2,sigR2,sigUV,sigUW,sigVW
 	  REAL, DIMENSION(:,:,:,:), ALLOCATABLE :: sigC2,Cavg,sigUC,sigVC,sigWC,Cmax,Cmin
 	  REAL, DIMENSION(:,:), ALLOCATABLE :: sig_tau_flow2,tau_flow_avg
+	  REAL, DIMENSION(:,:), ALLOCATABLE :: tau_sl_avg,tau_bl_avg,tau_mud_avg,sig_tau_sl2,sig_tau_bl2,sig_tau_mud2
+	  REAL, DIMENSION(:,:,:), ALLOCATABLE :: tau_frac_avg,sig_tau_frac2
+	  
 	  INTEGER stat_count
 	REAL stat_time_count	
 
@@ -269,10 +279,12 @@
      & continuity_solver,transporteq_fracs,split_rho_cont,driftfluxforce_calfac,depo_implicit,IBMorder,npresPRHO,
      & pres_in_predictor_step,Poutflow,oPRHO,applyVOF,k_ust_tau,Uoutflow,dUVdn_IBMbed,k_pzero,numdiff2,CNdiff_factor,CNdiff_ho,
      & CNdiff_dtfactor,CNdiff_pc,CNdiff_maxi,CNdiff_tol,CNdiff_ini,initPhydrostatic,npresIBM_viscupdate,momentum_exchange_obstacles
+     & ,k_ust_tau_flow	 
 	NAMELIST /ambient/U_b,V_b,W_b,bcfile,rho_b,SEM,nmax2,nmax1,nmax3,lm_min,lm_min3,slip_bot,kn,interaction_bed,
      & periodicx,periodicy,dpdx,dpdy,W_ox,Hs,Tp,nx_w,ny_w,obst,bc_obst_h,U_b3,V_b3,surf_layer,wallup,bedlevelfile,
      & U_bSEM,V_bSEM,U_w,V_w,c_bed,cfixedbed,U_init,V_init,initconditionsfile,rho_b2,monopile,kn_mp,kn_sidewalls,obstfile
-     & ,istart_morf2,i_periodicx,kn_flow_file,kn_flow_d50_multiplier
+     & ,istart_morf2,i_periodicx,kn_flow_file,kn_flow_d50_multiplier,U_b_tseriesfile,V_b_tseriesfile,W_b_tseriesfile
+     & ,cbc_perx_j,cbc_relax
 	NAMELIST /plume/W_j,plumetseriesfile,Awjet,Aujet,Avjet,Strouhal,azi_n,kjet,radius_j,Sc,slipvel,outflow_overflow_down,
      & U_j2,plumetseriesfile2,Awjet2,Aujet2,Avjet2,Strouhal2,azi_n2,radius_j2,zjet2,bedplume,radius_inner_j,xj,yj,W_j_powerlaw,
      & plume_z_outflow_belowsurf,hindered_settling,hindered_settling_c,Q_j,plumeQtseriesfile,plumectseriesfile
@@ -369,6 +381,7 @@
 	Uoutflow=0 !0 (default) Neumann outflow dUdn=0 (for U,V,W); 2 means Convective outflow condition dUdt+U_normal*dUdn=0 (for U,V,W)
 	applyVOF=0
 	k_ust_tau=1
+	k_ust_tau_flow=1
 	dUVdn_IBMbed=-1 !default no correction, but with 0 then dUdn and dVdn is made zero over immersed bed and with -2  to apply UV(1:kbed)=0 also for IBM2
 	initPhydrostatic = 0 !default 0 no initial hydrostatic pressure; 1 = initialize hydrostatic pressure before first timestep 
 	momentum_exchange_obstacles = 1 !default there is momentum exchange between flow and obstacles, optional 0 makes momenum terms zero in case the advective velocity is inside or at edge obstacle 
@@ -379,6 +392,15 @@
 	U_init = -999.
 	V_init = -999.
 	bcfile = ''
+	U_b_tseriesfile=''
+	V_b_tseriesfile=''
+	W_b_tseriesfile=''
+	U_b_tseries=-99999.
+	U_b_series=-99999.	
+	V_b_tseries=-99999.
+	V_b_series=-99999.	
+	W_b_tseries=-99999.
+	W_b_series=-99999.		
 	rho_b = -999.  
 	rho_b2 = -999.  
 	SEM = -999
@@ -405,6 +427,8 @@
 	dpdy1=0.
 	dpdx3=0.
 	dpdy3=0.	
+	cbc_perx_j(1:2)=0 
+	cbc_relax = 1. 
 	Uavold=0.
 	Vavold=0.
 	U3avold=0. 
@@ -754,7 +778,7 @@
      &  .AND.convection.ne.'HYB6'.AND.convection.ne.'HYB4'.AND.convection.ne.'C4A6'.AND.convection.ne.'uTVD'
      &  .AND.convection.ne.'C2Bl'.AND.convection.ne.'C4Bl') CALL writeerror(401)
 	IF (numdiff<0.or.numdiff>1.) CALL writeerror(402)
-	IF (wiggle_detector.ne.0.and.wiggle_detector.ne.1) CALL writeerror(408) 
+	IF (wiggle_detector.ne.0.and.wiggle_detector.ne.1.and.wiggle_detector.ne.2) CALL writeerror(408) 
 	wd = wiggle_detector 
 	IF (diffusion.ne.'CDS2'.AND.diffusion.ne.'COM4') CALL writeerror(403) 
 	IF (comp_filter_a<0.or.comp_filter_a>0.5) CALL writeerror(404)
@@ -776,6 +800,7 @@
 		pres_in_predictor_step = 1 
 	ENDIF 
 	IF (k_ust_tau<1.or.k_ust_tau>kmax) CALL writeerror(409)
+	IF (k_ust_tau_flow<1.or.k_ust_tau_flow>kmax) CALL writeerror(409)
 	IF (k_pzero<1.or.k_pzero>kmax) CALL writeerror(410)
 	IF (CNdiff_dtfactor.lt.0.9999) CALL writeerror(411) 
 
@@ -807,6 +832,10 @@
 	IF (interaction_bed<0) CALL writeerror(50)
 	IF (periodicx.ne.0.and.periodicx.ne.1.and.periodicx.ne.2) CALL writeerror(52)
 	IF (periodicy.ne.0.and.periodicy.ne.1.and.periodicy.ne.2) CALL writeerror(53)
+	IF (cbc_perx_j(1).ne.0.and.cbc_perx_j(2).ne.0) THEN 
+	  IF(cbc_perx_j(2).lt.cbc_perx_j(1).or.cbc_perx_j(1).lt.1.or.cbc_perx_j(2).gt.jmax) CALL writeerror(622)
+	ENDIF 
+	IF (cbc_relax.gt.1.or.cbc_relax.lt.0) CALL writeerror(623)
 	!IF (periodicx.eq.1.and.dpdx.eq.0.) CALL writeerror(54)
 	IF (Hs>0.and.Hs>depth) CALL writeerror(55)
 	IF (Hs>0.and.Tp.le.0) CALL writeerror(56)
@@ -1615,7 +1644,50 @@
 				CALL writeerror(279)
 		ENDIF	   
 	ENDIF
-
+	
+	IF (U_b_tseriesfile.eq.'') THEN
+	ELSE
+	   call readtseries(U_b_tseriesfile,U_b_tseries,U_b_series)
+	   U_b_seriesloc=1
+	   n3=0
+	   DO WHILE (U_b_tseries(n3+1).NE.-99999.)
+		n3=n3+1
+	   END DO	  
+	   IF (U_b_tseries(n3).lt.t_end) THEN
+				write(*,*),' time series shorter than t_end'
+				write(*,*),' series file:',U_b_tseriesfile
+				CALL writeerror(039)
+		ENDIF	   
+	ENDIF	
+	IF (V_b_tseriesfile.eq.'') THEN
+	ELSE
+	   call readtseries(V_b_tseriesfile,V_b_tseries,V_b_series)
+	   V_b_seriesloc=1
+	   n3=0
+	   DO WHILE (V_b_tseries(n3+1).NE.-99999.)
+		n3=n3+1
+	   END DO	  
+	   IF (V_b_tseries(n3).lt.t_end) THEN
+				write(*,*),' time series shorter than t_end'
+				write(*,*),' series file:',V_b_tseriesfile
+				CALL writeerror(039)
+		ENDIF	   
+	ENDIF
+	IF (W_b_tseriesfile.eq.'') THEN
+	ELSE
+	   call readtseries(W_b_tseriesfile,W_b_tseries,W_b_series)
+	   W_b_seriesloc=1
+	   n3=0
+	   DO WHILE (W_b_tseries(n3+1).NE.-99999.)
+		n3=n3+1
+	   END DO	  
+	   IF (W_b_tseries(n3).lt.t_end) THEN
+				write(*,*),' time series shorter than t_end'
+				write(*,*),' series file:',W_b_tseriesfile
+				CALL writeerror(039)
+		ENDIF	   
+	ENDIF
+	
 	END SUBROUTINE read_namelist
 
 	SUBROUTINE allocate_global_vars
@@ -1813,6 +1885,10 @@
 	ELSE 
 		b_update(istart_morf2:i1)=1.
 	ENDIF 	
+	if (cbc_perx_j(1)>0) then  !use quasi periodic bc for concentration:
+	  b_update(0:1)=0. ! no bed-update at inflow
+	  b_update(imax:i1)=0. ! no bed-update at outflow
+	endif 
 	
 	ALLOCATE(Ppropx(0:i1,0:j1,0:k1))
 	ALLOCATE(Ppropy(0:i1,0:j1,0:k1))
@@ -2083,7 +2159,10 @@
      1                Cmin(nfrac,1:imax,1:jmax,1:kmax),
      1            Umax(1:imax,1:jmax,1:kmax),Vmax(1:imax,1:jmax,1:kmax),Wmax(1:imax,1:jmax,1:kmax),
      1            Uhormax(1:imax,1:jmax,1:kmax),U3dmax(1:imax,1:jmax,1:kmax),
-     1            sig_tau_flow2(1:imax,1:jmax),tau_flow_avg(1:imax,1:jmax))
+     1            sig_tau_flow2(1:imax,1:jmax),tau_flow_avg(1:imax,1:jmax),
+     1            tau_sl_avg(1:imax,1:jmax),tau_bl_avg(1:imax,1:jmax),tau_mud_avg(1:imax,1:jmax),
+     1            sig_tau_sl2(1:imax,1:jmax),sig_tau_bl2(1:imax,1:jmax),sig_tau_mud2(1:imax,1:jmax),	 
+     1	          tau_frac_avg(1:nfrac,1:imax,1:jmax),sig_tau_frac2(1:nfrac,1:imax,1:jmax))
 !     1            Umin(1:imax,1:jmax,1:kmax),Vmin(1:imax,1:jmax,1:kmax),Wmin(1:imax,1:jmax,1:kmax))
  !    1 			,fUavg(1:imax,1:jmax,1:kmax),sigfU2(1:imax,1:jmax,1:kmax))
 
@@ -2117,6 +2196,17 @@
 		Uhormax=0.
 		U3dmax=0.
 		tau_flow_avg=0.
+		
+		tau_sl_avg=0.
+		tau_bl_avg=0.
+		tau_mud_avg=0.
+		sig_tau_sl2=0.
+		sig_tau_bl2=0.
+		sig_tau_mud2=0.
+		tau_frac_avg=0.
+		sig_tau_frac2=0.		
+		
+		
 !		sigfU2=0.
 !		fUavg=0.
 	endif  

@@ -135,7 +135,8 @@ solve.o: solve.f makefile
 rheology.o: rheology.f makefile	
 	$(F77) $(FLAGS) -c rheology.f
 
+version: $(VR1) $(VR2) $(VR3) 
+
 clean:
 	$(RM) a.out core *.mod $(PROGRAM) $(OBJS)
 
-version: $(VR1) $(VR2) $(VR3) 

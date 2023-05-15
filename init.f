@@ -269,11 +269,15 @@ c******************************************************************
 	kabs_w=2.*pi/Lw
 	om_w=2.*pi/Tp
 	! rotation ship for ambient side current
-	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-	  phi=atan2(V_b,1.e-12)
-	else
-	  phi=atan2(V_b,(U_TSHD-U_b))
-	endif
+	if (LOA<0.) then 
+	  phi=0. !don't rotate grid
+	else 
+		if ((U_TSHD-U_b).eq.0) then
+		  phi=atan2(V_b,1.e-12)
+		else
+		  phi=atan2(V_b,(U_TSHD-U_b))
+		endif
+	endif 
 	kx_w=kabs_w*nx_w*cos(phi)+kabs_w*ny_w*sin(phi)   !nx_w pos in TSHD dir, ny_w pos waves from starboard (is negative y-dir!)
 	ky_w=-kabs_w*ny_w*cos(phi)+kabs_w*nx_w*sin(phi) 
 	do i=1,imax
@@ -370,11 +374,15 @@ c******************************************************************
 
 
 	! rotation ship for ambient side current
-	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-	  phi=atan2(V_b,1.e-12)
-	else
-	  phi=atan2(V_b,(U_TSHD-U_b))
-	endif
+	if (LOA<0.) then 
+	  phi=0. !don't rotate grid
+	else 
+		if ((U_TSHD-U_b).eq.0) then
+		  phi=atan2(V_b,1.e-12)
+		else
+		  phi=atan2(V_b,(U_TSHD-U_b))
+		endif
+	endif 
 
 	if (periodicx.eq.0.or.periodicx.eq.2) then
 		cnew =0.
@@ -1287,11 +1295,15 @@ C ...  Locals
 	
 	
 	! rotation ship for ambient side current
-	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-	  phi=atan2(V_b,1.e-12)
-	else
-	  phi=atan2(V_b,(U_TSHD-U_b))
-	endif
+	if (LOA<0.) then 
+	  phi=0. !don't rotate grid
+	else 
+		if ((U_TSHD-U_b).eq.0) then
+		  phi=atan2(V_b,1.e-12)
+		else
+		  phi=atan2(V_b,(U_TSHD-U_b))
+		endif
+	endif 
 	if (nprop.eq.1) then
 	  yprop=0.
 	endif
@@ -1564,11 +1576,15 @@ C ...  Locals
 	INTEGER*2 k_inVpunt_rudder_dummy(i1*px*k1)
 
 	! rotation ship for ambient side current
-	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-	  phi=atan2(V_b,1.e-12)
-	else
-	  phi=atan2(V_b,(U_TSHD-U_b))
-	endif
+	if (LOA<0.) then 
+	  phi=0. !don't rotate grid
+	else 
+		if ((U_TSHD-U_b).eq.0) then
+		  phi=atan2(V_b,1.e-12)
+		else
+		  phi=atan2(V_b,(U_TSHD-U_b))
+		endif
+	endif 
 	if (nprop.eq.1) then
 	  yprop=0.
 	endif
@@ -1800,11 +1816,15 @@ C ...  Locals
 	xTSHD=xTSHD+xfront
 	yTSHD=yTSHD+yfront
 	! rotation ship for ambient side current
-	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-	  phi=atan2(V_b,1.e-12)
-	else
-	  phi=atan2(V_b,(U_TSHD-U_b))
-	endif
+	if (LOA<0.) then 
+	  phi=0. !don't rotate grid
+	else 
+		if ((U_TSHD-U_b).eq.0) then
+		  phi=atan2(V_b,1.e-12)
+		else
+		  phi=atan2(V_b,(U_TSHD-U_b))
+		endif
+	endif 
 	xTSHD2=xTSHD
 	yTSHD2=yTSHD
 	xTSHD=xTSHD2*cos(phi)-yTSHD2*sin(phi)
@@ -2091,11 +2111,15 @@ C ...  Locals
 	! search for starboard draghead:
 
 	! rotation ship for ambient side current
-	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-	  phi=atan2(V_b,1.e-12)
-	else
-	  phi=atan2(V_b,(U_TSHD-U_b))
-	endif
+	if (LOA<0.) then 
+	  phi=0. !don't rotate grid
+	else 
+		if ((U_TSHD-U_b).eq.0) then
+		  phi=atan2(V_b,1.e-12)
+		else
+		  phi=atan2(V_b,(U_TSHD-U_b))
+		endif
+	endif 
 
 	ydh=0.5*Breadth+1.5*Dsp
 
@@ -2285,11 +2309,15 @@ C ...  Locals
 	! search for portside draghead:
 
 	! rotation ship for ambient side current
-	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-	  phi=atan2(V_b,1.e-12)
-	else
-	  phi=atan2(V_b,(U_TSHD-U_b))
-	endif
+	if (LOA<0.) then 
+	  phi=0. !don't rotate grid
+	else 
+		if ((U_TSHD-U_b).eq.0) then
+		  phi=atan2(V_b,1.e-12)
+		else
+		  phi=atan2(V_b,(U_TSHD-U_b))
+		endif
+	endif 
 
 	ydh=-0.5*Breadth-1.5*Dsp
 
@@ -2487,11 +2515,15 @@ C ...  Locals
 
 	!! Search for obstacles near bed:  
 	! rotation ship for ambient side current
-	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-	  phi=atan2(V_b,1.e-12)
-	else
-	  phi=atan2(V_b,(U_TSHD-U_b))
-	endif
+	if (LOA<0.) then 
+	  phi=0. !don't rotate grid
+	else 
+		if ((U_TSHD-U_b).eq.0) then
+		  phi=atan2(V_b,1.e-12)
+		else
+		  phi=atan2(V_b,(U_TSHD-U_b))
+		endif
+	endif 
 	kbed=0
 	zbed=0.
 
@@ -2998,21 +3030,51 @@ C ...  Locals
 		end subroutine read_obstacle 
 	
 	
-	subroutine bedroughness_init
+	subroutine inflow_profiles_front_sides(tt)
 
         USE nlist
 	implicit none
 
-	real phi,z,ust_U_b,ust_V_b,z0_U,z0_V,correction
+	real phi,z,ust_U_b,ust_V_b,z0_U,z0_V,correction,tt,interpseries,ust,z0,absU
 	integer ii
 
+    !! Set time-varying boundary conditions:
+	if (U_b_tseriesfile.ne.'') then
+   		U_b=interpseries(U_b_tseries,U_b_series,U_b_seriesloc,tt)
+		U_bSEM=U_b !make U_bSEM also time dependent
+		IF(U_b<0.) THEN
+		  signU_b=-1.
+		  signU_bSEM=-1.
+		ELSE 
+		  signU_b=1.	
+		  signU_bSEM=1.
+		ENDIF				
+	endif	
+	if (V_b_tseriesfile.ne.'') then
+   		V_b=interpseries(V_b_tseries,V_b_series,V_b_seriesloc,tt)
+		V_bSEM=V_b 	!make V_bSEM also time dependent 
+		IF(V_b<0.) THEN
+		  signV_b=-1.
+		  signV_bSEM=-1.
+		ELSE 
+		  signV_b=1.	
+		  signV_bSEM=1.
+		ENDIF		
+	endif
+	if (W_b_tseriesfile.ne.'') then
+   		W_b=interpseries(W_b_tseries,W_b_series,W_b_seriesloc,tt)
+	endif	
 
 	! rotation ship for ambient side current
-	if ((U_TSHD-U_b).eq.0.or.LOA<0.) then
-	  phi=atan2(V_b,1.e-12)
-	else
-	  phi=atan2(V_b,(U_TSHD-U_b))
-	endif
+	if (LOA<0.) then 
+	  phi=0. !don't rotate grid
+	else 
+		if ((U_TSHD-U_b).eq.0) then
+		  phi=atan2(V_b,1.e-12)
+		else
+		  phi=atan2(V_b,(U_TSHD-U_b))
+		endif
+	endif 
 
 	!! velocity U_b is determined for (depth-bc_obst_h): 
 	!! when local depth differs the Ubc is adjusted such that total flux remains equal !13-4-15 correction switched off !
@@ -3030,28 +3092,37 @@ C ...  Locals
 	          else !if obstacle persists through full watercolumn then U_b should be zero at this location
 		    correction=0.
 		  endif
-		  if (LOA>0.) then !ship:
-		   ust_U_b=MAX(ABS(U_b),1.e-6)
-		   ust_V_b=MAX(ABS(V_b),1.e-6)
+		  if (LOA>0.) then !ship and rotate so that :
+		   ust=sqrt(U_b**2+V_b**2)
+		   absU=sqrt(U_b**2+V_b**2)+1.e-12
 		   if (slip_bot.eq.1.or.slip_bot.ge.3) then
 			    do ii=1,10
-			      z0_U=0.11*nu_mol/MAX(ust_U_b,1.e-9)+kn/30
-			      ust_U_b=correction*ABS(U_b)*kappa/(log(MAX(depth-zbed(i,j),1.e-12)/z0_U)-1);
-			      z0_V=0.11*nu_mol/MAX(ust_V_b,1.e-9)+kn/30
-			      ust_V_b=correction*ABS(V_b)*kappa/(log(MAX(depth-zbed(i,j),1.e-12)/z0_V)-1);
+			      z0=0.11*nu_mol/MAX(ust,1.e-9)+kn/30
+			      ust=correction*sqrt(U_b**2+V_b**2)*kappa/(log(MAX(depth-zbed(i,j),1.e-12)/z0)-1);
 			    enddo
 		   endif
+!		   ust_U_b=MAX(ABS(U_b),1.e-6)
+!		   ust_V_b=MAX(ABS(V_b),1.e-6)
+!		   if (slip_bot.eq.1.or.slip_bot.ge.3) then
+!			    do ii=1,10
+!			      z0_U=0.11*nu_mol/MAX(ust_U_b,1.e-9)+kn/30
+!			      ust_U_b=correction*ABS(U_b)*kappa/(log(MAX(depth-zbed(i,j),1.e-12)/z0_U)-1);
+!			      z0_V=0.11*nu_mol/MAX(ust_V_b,1.e-9)+kn/30
+!			      ust_V_b=correction*ABS(V_b)*kappa/(log(MAX(depth-zbed(i,j),1.e-12)/z0_V)-1);
+!			    enddo
+!		   endif
 		    if (k.gt.kbed(i,j)) then
 		      if (slip_bot.eq.1.or.slip_bot.ge.3) then
 				if (wallup.eq.1) then
 					  z=depth-((k-kbed(i,j))*dz-0.5*dz)
 				else
-				  z=(k-kbed(i,j))*dz-0.5*dz
+				  !z=(k-kbed(i,j))*dz-0.5*dz
+				  z=k*dz-0.5*dz-zbed(i,j)
 				endif
-		    	Ubc1(i,k)=-ust_U_b/kappa*log(z/z0_U)*signU_b*cos(phi)+ust_V_b/kappa*log(z/z0_V)*signV_b*sin(phi)
-     &                   +U_TSHD*cos(phi)*correction
-		    	Vbc1(i,k)=-ust_V_b/kappa*log(z/z0_V)*signV_b*cos(phi)-ust_U_b/kappa*log(z/z0_U)*signU_b*sin(phi)
-     &                   +U_TSHD*sin(phi)*correction
+		    	Ubc1(i,k)=-ust/kappa*log(MAX(1.,z/z0))*signU_b*cos(phi)*abs(U_b)/absU
+     &                   +ust/kappa*log(MAX(1.,z/z0))*signV_b*sin(phi)*abs(V_b)/absU+U_TSHD*cos(phi)*correction				
+		    	Vbc1(i,k)=-ust/kappa*log(MAX(1.,z/z0))*signV_b*cos(phi)*abs(V_b)/absU
+     &                   -ust/kappa*log(MAX(1.,z/z0))*signU_b*sin(phi)*abs(U_b)/absU+U_TSHD*sin(phi)*correction
 	 	      else
 				if (k.gt.ksurf_bc) then
 				  Ubc1(i,k)=(-U_b3*cos(phi)+V_b3*sin(phi)+U_TSHD*cos(phi))*correction
@@ -3065,7 +3136,7 @@ C ...  Locals
 			  Ubc1(i,k)=Ubot_TSHD(j) !0.
 			  Vbc1(i,k)=Vbot_TSHD(j) !0.
 		    endif
-		  else ! no ship, then plate:
+		  else ! no ship, then plate, don't rotate::
 		    ust_U_b=MAX(ABS(U_b),1.e-6)
 		    ust_V_b=MAX(ABS(V_b),1.e-6)
 		    if (slip_bot.eq.1.or.slip_bot.ge.3) then
@@ -3081,10 +3152,11 @@ C ...  Locals
 				  if (wallup.eq.1) then
 					z=depth-((k-kbed(i,j))*dz-0.5*dz)
 				  else
-					z=(k-kbed(i,j))*dz-0.5*dz
+					!z=(k-kbed(i,j))*dz-0.5*dz
+					z=k*dz-0.5*dz-zbed(i,j)
 				  endif
-			      Ubc1(i,k)=ust_U_b/kappa*log(z/z0_U) 
-			      Vbc1(i,k)=ust_V_b/kappa*log(z/z0_V)
+			      Ubc1(i,k)=ust_U_b/kappa*log(MAX(1.,z/z0_U)) 
+			      Vbc1(i,k)=ust_V_b/kappa*log(MAX(1.,z/z0_V))
 		 	    else
 				  Ubc1(i,k)=U_b*correction 
 				  Vbc1(i,k)=0.
@@ -3100,8 +3172,10 @@ C ...  Locals
 	!! fill Ubc2,Vbc2 (front boundary at i=0):
 		if (monopile>0) then !inflow Ubc2,Vbc2 defined at imax instead at i=0
 		  i=imax 
-		else 
+		elseif((U_b>0.and.LOA<0).or.((U_TSHD-U_b)>0.and.LOA>0.)) THEN 
 	      i=0
+		else !inflow Ubc2,Vbc2 defined at imax instead at i=0
+		  i=imax 
 		endif 
 	    do k=1,kmax
 		 do j=0,j1
@@ -3110,28 +3184,37 @@ C ...  Locals
 	          else !if obstacle persists through full watercolumn then U_b should be zero at this location
 		    correction=0.
 		  endif
-		  if (LOA>0.) then !ship:
-		   ust_U_b=MAX(ABS(U_b),1.e-6)
-		   ust_V_b=MAX(ABS(V_b),1.e-6)
+		  if (LOA>0.) then !ship and grid is rotated to get U_u inflow and V_b zero:
+		   ust=sqrt(U_b**2+V_b**2)
+		   absU=sqrt(U_b**2+V_b**2)+1.e-12
 		   if (slip_bot.eq.1.or.slip_bot.ge.3) then
-		    do ii=1,10
-		      z0_U=0.11*nu_mol/MAX(ust_U_b,1.e-9)+kn/30
-		      ust_U_b=correction*ABS(U_b)*kappa/(log(MAX(depth-zbed(i,j),1.e-12)/z0_U)-1);
-		      z0_V=0.11*nu_mol/MAX(ust_V_b,1.e-9)+kn/30
-		      ust_V_b=correction*ABS(V_b)*kappa/(log(MAX(depth-zbed(i,j),1.e-12)/z0_V)-1);
-		    enddo
-		   endif
+			    do ii=1,10
+			      z0=0.11*nu_mol/MAX(ust,1.e-9)+kn/30
+			      ust=correction*sqrt(U_b**2+V_b**2)*kappa/(log(MAX(depth-zbed(i,j),1.e-12)/z0)-1);
+			    enddo
+		   endif		  
+!		   ust_U_b=MAX(ABS(U_b),1.e-6)
+!		   ust_V_b=MAX(ABS(V_b),1.e-6)
+!		   if (slip_bot.eq.1.or.slip_bot.ge.3) then
+!		    do ii=1,10
+!		      z0_U=0.11*nu_mol/MAX(ust_U_b,1.e-9)+kn/30
+!		      ust_U_b=correction*ABS(U_b)*kappa/(log(MAX(depth-zbed(i,j),1.e-12)/z0_U)-1);
+!		      z0_V=0.11*nu_mol/MAX(ust_V_b,1.e-9)+kn/30
+!		      ust_V_b=correction*ABS(V_b)*kappa/(log(MAX(depth-zbed(i,j),1.e-12)/z0_V)-1);
+!		    enddo
+!		   endif
 		    if (k.gt.kbed(i,j)) then
 		     if (slip_bot.eq.1.or.slip_bot.ge.3) then
 				if (wallup.eq.1) then
 				  z=depth-((k-kbed(i,j))*dz-0.5*dz)
 				else
-				  z=(k-kbed(i,j))*dz-0.5*dz
+				  !z=(k-kbed(i,j))*dz-0.5*dz
+				  z=k*dz-0.5*dz-zbed(i,j)
 				endif
-		    	Ubc2(j,k)=-ust_U_b/kappa*log(z/z0_U)*signU_b*cos(phi)+ust_V_b/kappa*log(z/z0_V)*signV_b*sin(phi)
-     &                   +U_TSHD*cos(phi)*correction
-		    	Vbc2(j,k)=-ust_V_b/kappa*log(z/z0_V)*signV_b*cos(phi)-ust_U_b/kappa*log(z/z0_U)*signU_b*sin(phi)
-     &                   +U_TSHD*sin(phi)*correction
+		    	Ubc2(j,k)=-ust/kappa*log(MAX(1.,z/z0))*signU_b*cos(phi)*abs(U_b)/absU
+     &                   +ust/kappa*log(MAX(1.,z/z0))*signV_b*sin(phi)*abs(V_b)/absU+U_TSHD*cos(phi)*correction
+		    	Vbc2(j,k)=-ust/kappa*log(MAX(1.,z/z0))*signV_b*cos(phi)*abs(V_b)/absU
+     &                   -ust/kappa*log(MAX(1.,z/z0))*signU_b*sin(phi)*abs(U_b)/absU+U_TSHD*sin(phi)*correction
 	 	     else
 				if (k.gt.ksurf_bc) then
 				  Ubc2(j,k)=(-U_b3*cos(phi)+V_b3*sin(phi)+U_TSHD*cos(phi))*correction
@@ -3145,7 +3228,7 @@ C ...  Locals
 			  Ubc2(j,k)=Ubot_TSHD(j) !0.
 			  Vbc2(j,k)=Vbot_TSHD(j) !0.
 		    endif
-		  else ! no ship, then plate:
+		  else ! no ship, then plate, don't rotate:
 		   ust_U_b=MAX(ABS(U_b),1.e-6)
 		   ust_V_b=MAX(ABS(V_b),1.e-6)
 		   if (slip_bot.eq.1.or.slip_bot.ge.3) then
@@ -3163,8 +3246,8 @@ C ...  Locals
                         	else
                           	  z=(k-kbed(i,j))*dz-0.5*dz
                                 endif
-			    	Ubc2(j,k)=ust_U_b/kappa*log(z/z0_U) 
-			    	Vbc2(j,k)=ust_V_b/kappa*log(z/z0_V)
+			    	Ubc2(j,k)=ust_U_b/kappa*log(MAX(1.,z/z0_U)) 
+			    	Vbc2(j,k)=ust_V_b/kappa*log(MAX(1.,z/z0_V))
 		 	    else
 				Ubc2(j,k)=U_b*correction 
 				Vbc2(j,k)=0.
@@ -3177,9 +3260,6 @@ C ...  Locals
 		 enddo
 	    enddo
 
-	
-	
-	
 	! called as last therefore now kbedt (used to apply tau wall) can be defined:
 	IF (wallup.eq.1) THEN
 	  kbedt=kmax-1 ! apply tau wall at upper boundary kmax
@@ -3188,9 +3268,9 @@ C ...  Locals
 	ENDIF
 	
 
-	end 
+	end subroutine inflow_profiles_front_sides
 
-
+	
 
 C .................................................................. 
 C 
