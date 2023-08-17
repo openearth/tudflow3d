@@ -41,6 +41,9 @@ c******************************************************************
 	IF (z_tau_sed<0.) THEN 
 	  z_tau_sed = 0.5*dz
 	ENDIF 
+	IF (dz_sidewall<0.) THEN 
+	  dz_sidewall = dz 
+	ENDIF 
 
 	ksurf_bc=kmax-FLOOR(surf_layer/dz) ! if surf_layer is zero than ksurf_bc=kmax	
 
@@ -590,6 +593,7 @@ c******************************************************************
 				call check( nf90_get_var(ncid,rhVarid,dummy_var(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1:kmax),
      &                       start=(/1,1,1/),count=(/imax,jpx,kmax/)) )
 				load_var=1
+				write(*,*),'initconditionsfile =',restart_file(n2),' variable "U" found and used as initial condition'
 			else
 				write(*,*),'initconditionsfile =',restart_file(n2),' variable "U" not found and not used as initial condition'
 				load_var=0
@@ -614,6 +618,7 @@ c******************************************************************
 				call check( nf90_get_var(ncid,rhVarid,dummy_var2(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1:kmax),
      &                       start=(/1,1,1/),count=(/imax,jpx,kmax/)) )
 				load_var2=1
+				write(*,*),'initconditionsfile =',restart_file(n2),' variable "V" found and used as initial condition'
 			else
 				write(*,*),'initconditionsfile =',restart_file(n2),' variable "V" not found and not used as initial condition'
 				load_var2=0
@@ -648,6 +653,7 @@ c******************************************************************
 				call check( nf90_get_var(ncid,rhVarid,dummy_var(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1:kmax),
      &                       start=(/1,1,1/),count=(/imax,jpx,kmax/)) )
 				load_var=1
+				write(*,*),'initconditionsfile =',restart_file(n2),' variable "W" found and used as initial condition'
 			else
 				write(*,*),'initconditionsfile =',restart_file(n2),' variable "W" not found and not used as initial condition'
 				load_var=0
@@ -683,6 +689,7 @@ c******************************************************************
 					call check( nf90_get_var(ncid,rhVarid,dummy_var(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1:kmax),
      &                       start=(/n,1,1,1/),count=(/1,imax,jpx,kmax/)) )
 					load_var=1
+					write(*,*),'initconditionsfile =',restart_file(n2),' variable "C" found and used as initial condition'
 				else
 					write(*,*),'initconditionsfile =',restart_file(n2),' variable "C" not found and not used as initial condition'
 					load_var=0
@@ -722,6 +729,7 @@ c******************************************************************
 					call check( nf90_get_var(ncid,rhVarid,dummy_var(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1:kmax),
      &                       start=(/n,1,1,1/),count=(/1,imax,jpx,kmax/)) )
 					load_var=1
+					write(*,*),'initconditionsfile =',restart_file(n2),' variable "Cbed" found and used as initial condition'
 				else
 					write(*,*),'initconditionsfile =',restart_file(n2),' variable "Cbed" not found and not used as initial condition'
 					load_var=0
@@ -740,6 +748,13 @@ c******************************************************************
 			ENDIF
 		 ENDDO
 		ENDIF
+		IF (load_var.eq.1) THEN 
+		  do n=1,nfrac
+			 IF (interaction_bed.ge.4) THEN
+			   call bound_c(Clivebed(n,:,:,:),0.,n,0.)
+			 ENDIF
+		  enddo			
+		ENDIF 		
 		load_var=0
 		DO n=1,nfrac
 			DO n2=1,nfound
@@ -758,6 +773,7 @@ c******************************************************************
 					call check( nf90_get_var(ncid,rhVarid,dummy_var(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1),
      &                       start=(/n,1,1/),count=(/1,imax,jpx/)) )
 					load_var=1
+					write(*,*),'initconditionsfile =',restart_file(n2),' variable "mass_bed" found and used as initial condition'
 				else
 					write(*,*),'initconditionsfile =',restart_file(n2),' variable "mass_bed" not found and not used as initial condition'
 					load_var=0
@@ -769,17 +785,63 @@ c******************************************************************
 			 do i=1,imax
 			  do j=1,jmax
 				  Cnewbot(n,i,j)=dummy_var(i,j+rank*jmax,1)/dz/frac(n)%rho 
+				  Coldbot(n,i,j)=dummy_var(i,j+rank*jmax,1)/dz/frac(n)%rho 
+				  dCdtbot(n,i,j)=dummy_var(i,j+rank*jmax,1)/dz/frac(n)%rho 
 			  enddo
 			 enddo
 			ENDIF
-		ENDDO		
+		ENDDO
+		IF (load_var.eq.1) THEN 
+		  do n=1,nfrac
+			 call bound_cbot(Cnewbot(n,:,:))
+			 call bound_cbot(Coldbot(n,:,:))
+			 call bound_cbot(dCdtbot(n,:,:))
+		  enddo			
+		ENDIF 
+		load_var=0 
+		DO n2=1,nfound
+			status2 = nf90_open(restart_file(n2), nf90_NoWrite, ncid) 
+			IF (status2/= nf90_noerr) THEN
+				write(*,*),'initconditionsfile =',restart_file(n2)
+				CALL writeerror(701)
+			ENDIF
+			status = nf90_inq_varid(ncid, "kbed",rhVarid)
+			if (status.eq.nf90_NoErr) then
+				call check( nf90_inquire_variable(ncid, rhVarid, dimids = dimIDs))
+				call check( nf90_inquire_dimension(ncid, dimIDs(1), len = size1))
+				call check( nf90_inquire_dimension(ncid, dimIDs(2), len = size2))
+				call check( nf90_inquire_dimension(ncid, dimIDs(3), len = size3))
+				IF(size1.ne.nfrac.or.size2.ne.imax.or.size3*nfound.ne.jmax*px) CALL writeerror(702)
+				call check( nf90_get_var(ncid,rhVarid,dummy_var(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1),
+     &                       start=(/n,1,1/),count=(/1,imax,jpx/)) )
+				load_var=1
+				write(*,*),'initconditionsfile =',restart_file(n2),' variable "kbed" found and used as initial condition'
+			else
+				write(*,*),'initconditionsfile =',restart_file(n2),' variable "kbed" not found and not used as initial condition'
+				load_var=0
+				!dummy_var(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1)=0.
+			endif
+			call check( nf90_close(ncid) )
+		ENDDO
+		IF (load_var.eq.1) THEN
+		 do i=1,imax
+		  do j=1,jmax
+			  kbed(i,j)=NINT(dummy_var(i,j+rank*jmax,1))
+			  kbedt(i,j)=NINT(dummy_var(i,j+rank*jmax,1))
+		  enddo
+		 enddo
+		  call bound_cbot_integer(kbed) 
+		  call bound_cbot_integer(kbedt)		 
+		ENDIF		
 		
 		Uold=Unew
 		Vold=Vnew 
 		Wold=Wnew 
 		Cold=Cnew
+		dCdt=Cnew 
+		!boundary conditions on velocity and concentration are given in main.f 
 		
-		IF (interaction_bed.ge.4.and.load_Cbed.eq.1) THEN
+		IF (interaction_bed.ge.4.and.load_Cbed.eq.1.and.load_var.eq.0) THEN !kbed not read from inputfile 
 			!kbed=0
 			!kbedt=0
 			do i=1,imax
@@ -797,13 +859,6 @@ c******************************************************************
 
 	!		call state(cnew,rnew)
 	!		CALL erosion_deposition(Cnew,cnewbot,Unew,Vnew,Wnew,Rnew,Cnew,Cnewbot,dt,dz)
-
-		  do n=1,nfrac
-			 IF (interaction_bed.ge.4) THEN
-			   call bound_c(Clivebed(n,:,:,:),0.,n,0.)
-			 ENDIF
-			 call bound_cbot(Cnewbot(n,:,:))
-		  enddo	
 	  ENDIF
 
 	
@@ -871,16 +926,19 @@ C ...  Locals
 			write(*,*),'bcfile =',filenm
 			CALL writeerror(51)
 		ENDIF
+		write(*,*),'rank,uvwbc1a,reading from file:',rank,imax,kmax,TRIM(filenm) 
 		call check( nf90_inq_varid(ncid, "ubc1a",rhVarid) )
 		call check( nf90_get_var(ncid,rhVarid,Ubcoarse1(1:imax,1:kmax),start=(/1,1/),count=(/imax,kmax/)) )
 		call check( nf90_inq_varid(ncid, "vbc1a",rhVarid) )
 		call check( nf90_get_var(ncid,rhVarid,Vbcoarse1(1:imax,1:kmax),start=(/1,1/),count=(/imax,kmax/)) )
 		call check( nf90_inq_varid(ncid, "wbc1a",rhVarid) )
 		call check( nf90_get_var(ncid,rhVarid,Wbcoarse1(1:imax,1:kmax),start=(/1,1/),count=(/imax,kmax/)) )
+		write(*,*),'rank,cbc1a,reading from file:',rank,imax,kmax,TRIM(filenm) 
 		status = nf90_inq_varid(ncid, "cbc1a",rhVarid)
 		IF (status== nf90_noerr) THEN
 		  call check( nf90_inquire_variable(ncid, RhVarId, varname, xtype, ndims, dimids, natts))
 		  status = nf90_inquire_dimension(ncid, dimids(1), len=nfrc)
+		  write(*,*),'rank,cbc1a,nfrc,nfrac,imax,kmax',rank,nfrc,nfrac,imax,kmax
 		  IF (nfrc>nfrac) THEN
 		     write(*,*) 'WARNING, number of fractions in this file is larger than nfrac'
 		     write(*,*) 'extra fractions in bcfilename are ignored!'
@@ -908,16 +966,19 @@ C ...  Locals
 			write(*,*),'bcfile =',filenm
 			CALL writeerror(51)
 		ENDIF
+		write(*,*),'rank,uvwbc1b,reading from file:',rank,imax,kmax,TRIM(filenm) 
 		call check( nf90_inq_varid(ncid, "ubc1b",rhVarid) )
 		call check( nf90_get_var(ncid,rhVarid,Ubcoarse1(1:imax,1:kmax),start=(/1,1/),count=(/imax,kmax/)) )
 		call check( nf90_inq_varid(ncid, "vbc1b",rhVarid) )
 		call check( nf90_get_var(ncid,rhVarid,Vbcoarse1(1:imax,1:kmax),start=(/1,1/),count=(/imax,kmax/)) )
 		call check( nf90_inq_varid(ncid, "wbc1b",rhVarid) )
 		call check( nf90_get_var(ncid,rhVarid,Wbcoarse1(1:imax,1:kmax),start=(/1,1/),count=(/imax,kmax/)) )
+		write(*,*),'rank,cbc1b,reading from file:',rank,imax,kmax,TRIM(filenm) 
 		status = nf90_inq_varid(ncid, "cbc1b",rhVarid)
 		IF (status== nf90_noerr) THEN
 		  call check( nf90_inquire_variable(ncid, RhVarId, varname, xtype, ndims, dimids, natts))
 		  status = nf90_inquire_dimension(ncid, dimids(1), len=nfrc)
+		  write(*,*),'rank,cbc1b,nfrc,nfrac,imax,kmax',rank,nfrc,nfrac,imax,kmax
 		  IF (nfrc>nfrac) THEN
 		     write(*,*) 'WARNING, number of fractions in this file is larger than nfrac'
 		     write(*,*) 'extra fractions in bcfilename are ignored!'
@@ -948,17 +1009,19 @@ C ...  Locals
 		write(*,*),'bcfile =',filenm
 		CALL writeerror(51)
 	ENDIF
-
+	write(*,*),'rank,uvwbc2,reading from file:',rank,jmax,j1,kmax,TRIM(filenm) 
 	call check( nf90_inq_varid(ncid2, "ubc2",rhVarid2) )
 	call check( nf90_get_var(ncid2,rhVarid2,Ubcoarse2(0:j1,1:kmax),start=(/rank*jmax+1,1/),count=(/j1+1,kmax/)) )
 	call check( nf90_inq_varid(ncid2, "vbc2",rhVarid2) )
 	call check( nf90_get_var(ncid2,rhVarid2,Vbcoarse2(0:j1,1:kmax),start=(/rank*jmax+1,1/),count=(/j1+1,kmax/)) )
 	call check( nf90_inq_varid(ncid2, "wbc2",rhVarid2) )
 	call check( nf90_get_var(ncid2,rhVarid2,Wbcoarse2(0:j1,1:kmax),start=(/rank*jmax+1,1/),count=(/j1+1,kmax/)) )
+	write(*,*),'rank,cbc2,reading from file:',rank,jmax,j1,kmax,TRIM(filenm) 
 		status = nf90_inq_varid(ncid2, "cbc2",rhVarid)
 		IF (status== nf90_noerr) THEN
 		  call check( nf90_inquire_variable(ncid2, RhVarId, varname, xtype, ndims, dimids, natts))
 		  status = nf90_inquire_dimension(ncid2, dimids(1), len=nfrc)
+		  write(*,*),'rank,cbc2,nfrc,nfrac,jmax,j1,kmax',rank,nfrc,nfrac,jmax,j1,kmax
 		  IF (nfrc>nfrac) THEN
 		     write(*,*) 'WARNING, number of fractions in this file is larger than nfrac'
 		     write(*,*) 'extra fractions in bcfilename are ignored!'
@@ -2752,6 +2815,24 @@ C ...  Locals
 !	       enddo
 !	      enddo
 !	ENDDO
+	  do t=1,tmax_inWpuntTSHD
+ 	    i=i_inWpuntTSHD(t)
+ 	    j=j_inWpuntTSHD(t)		
+ 	    k=k_inWpuntTSHD(t)		
+		obw(i,j,k)=1. 
+	  enddo
+	  do t=1,tmax_inUpuntTSHD
+ 	    i=i_inUpuntTSHD(t)
+ 	    j=j_inUpuntTSHD(t)		
+ 	    k=k_inUpuntTSHD(t)		
+		obu(i,j,k)=1. 
+	  enddo
+	  do t=1,tmax_inVpuntTSHD
+ 	    i=i_inVpuntTSHD(t)
+ 	    j=j_inVpuntTSHD(t)		
+ 	    k=k_inVpuntTSHD(t)		
+		obv(i,j,k)=1. 
+	  enddo
 	if (obstfile.ne.'') then
 		tmax_inPpuntTSHDini=tmax_inPpuntTSHD
 		tmax_inUpuntTSHDini=tmax_inUpuntTSHD
@@ -2857,6 +2938,7 @@ C ...  Locals
 		integer, dimension(nf90_max_var_dims) :: dimids
 		integer :: size1,size2,size3,tel1start,tel2start,tel3start,tel4start,n,tel1,tel2,tel3,tel4,io
 		real :: obb(0:i1,0:j1,0:k1),obb_ero(0:i1,0:j1,0:k1),obb_depo(0:i1,0:j1,0:k1)	
+		integer ibm1u,ibm1v,ibm1w
 		CHARACTER(len=256) :: command,dummy,dummy2
 	
 	
@@ -2918,6 +3000,9 @@ C ...  Locals
 		
 		
 			obb = 0.
+			ibm1u=0
+			ibm1v=0
+			ibm1w=0
        	status2 = nf90_open(obst_file_series(nobst_file), nf90_NoWrite, ncid) 
 		IF (status2/= nf90_noerr) THEN
 			write(*,*),'obstacle file =',obst_file_series(nobst_file)
@@ -2966,12 +3051,176 @@ C ...  Locals
 		else
 			write(*,*),'obstacle file =',obst_file_series(nobst_file),' variable "obstacle_depo" not found correctly'
 		endif
+		status = nf90_inq_varid(ncid, "obstacle_Uloc",rhVarid)
+		if (status.eq.nf90_NoErr) then
+			call check( nf90_inquire_variable(ncid, rhVarid, dimids = dimIDs))
+			call check( nf90_inquire_dimension(ncid, dimIDs(1), len = size1))
+			call check( nf90_inquire_dimension(ncid, dimIDs(2), len = size2))
+			call check( nf90_inquire_dimension(ncid, dimIDs(3), len = size3))
+			IF(size1.ne.imax+2.or.size2.ne.jmax*px+2.or.size3.ne.kmax+2) CALL writeerror(705)
+			call check( nf90_get_var(ncid,rhVarid,obu(0:i1,0:j1,0:k1),start=(/1,rank*jmax+1,1/),count=(/imax+2,jmax+2,kmax+2/)) )
+			IF (rank.eq.0) THEN
+				write(*,*),'3D Obstacles "obstacle_Uloc" read from obstacle file =',obst_file_series(nobst_file),' at time ',time_np,' s.'
+				write(*,*),'1st order IBM technique (Fadlun et al. 2000) for cell partially inside object' 
+				write(*,*),'with volume fraction of U-gridcell from "obstacle_Uloc" applied on IBM-force'
+			ENDIF 
+			nobst=MAX(1,nobst) !nobst acts as a switch which turns on several switches in rest of the code, in the remainder it is not used as counter in DO loops
+			ibm1u=1
+		else
+			write(*,*),'obstacle file =',obst_file_series(nobst_file),' variable "obstacle_Uloc" not found correctly'
+			write(*,*),'NOT 1st order ibm (Fadlun et al. 2000) applied for cell partially inside object but 0-order (staircase)' 
+		endif		
+		status = nf90_inq_varid(ncid, "obstacle_Vloc",rhVarid)
+		if (status.eq.nf90_NoErr) then
+			call check( nf90_inquire_variable(ncid, rhVarid, dimids = dimIDs))
+			call check( nf90_inquire_dimension(ncid, dimIDs(1), len = size1))
+			call check( nf90_inquire_dimension(ncid, dimIDs(2), len = size2))
+			call check( nf90_inquire_dimension(ncid, dimIDs(3), len = size3))
+			IF(size1.ne.imax+2.or.size2.ne.jmax*px+2.or.size3.ne.kmax+2) CALL writeerror(705)
+			call check( nf90_get_var(ncid,rhVarid,obv(0:i1,0:j1,0:k1),start=(/1,rank*jmax+1,1/),count=(/imax+2,jmax+2,kmax+2/)) )
+			IF (rank.eq.0) THEN
+				write(*,*),'3D Obstacles "obstacle_Vloc" read from obstacle file =',obst_file_series(nobst_file),' at time ',time_np,' s.'
+				write(*,*),'1st order IBM technique (Fadlun et al. 2000) for cell partially inside object' 
+				write(*,*),'with volume fraction of V-gridcell from "obstacle_Vloc" applied on IBM-force'
+			ENDIF 
+			nobst=MAX(1,nobst) !nobst acts as a switch which turns on several switches in rest of the code, in the remainder it is not used as counter in DO loops
+			ibm1v=1
+		else
+			write(*,*),'obstacle file =',obst_file_series(nobst_file),' variable "obstacle_Vloc" not found correctly'
+			write(*,*),'NOT 1st order IBM (Fadlun et al. 2000) applied for cell partially inside object but 0-order (staircase)' 
+		endif
+		status = nf90_inq_varid(ncid, "obstacle_Wloc",rhVarid)
+		if (status.eq.nf90_NoErr) then
+			call check( nf90_inquire_variable(ncid, rhVarid, dimids = dimIDs))
+			call check( nf90_inquire_dimension(ncid, dimIDs(1), len = size1))
+			call check( nf90_inquire_dimension(ncid, dimIDs(2), len = size2))
+			call check( nf90_inquire_dimension(ncid, dimIDs(3), len = size3))
+			IF(size1.ne.imax+2.or.size2.ne.jmax*px+2.or.size3.ne.kmax+2) CALL writeerror(705)
+			call check( nf90_get_var(ncid,rhVarid,obw(0:i1,0:j1,0:k1),start=(/1,rank*jmax+1,1/),count=(/imax+2,jmax+2,kmax+2/)) )
+			IF (rank.eq.0) THEN
+				write(*,*),'3D Obstacles "obstacle_Wloc" read from obstacle file =',obst_file_series(nobst_file),' at time ',time_np,' s.'
+				write(*,*),'1st order IBM technique (Fadlun et al. 2000) for cell partially inside object' 
+				write(*,*),'with volume fraction of W-gridcell from "obstacle_Wloc" applied on IBM-force'
+			ENDIF 
+			nobst=MAX(1,nobst) !nobst acts as a switch which turns on several switches in rest of the code, in the remainder it is not used as counter in DO loops
+			ibm1w=1
+		else
+			write(*,*),'obstacle file =',obst_file_series(nobst_file),' variable "obstacle_Wloc" not found correctly'
+			write(*,*),'NOT 1st order IBM (Fadlun et al. 2000) applied for cell partially inside object but 0-order (staircase)' 
+		endif		
 		call check( nf90_close(ncid) )  
 
 		tel1 = tel1start
 		tel2 = tel2start
 		tel3 = tel3start
 		tel4 = tel4start
+		
+		if (ibm1u.eq.1) then 
+			do i=0,i1
+			  do j=0,j1 
+				do k=0,k1
+					if (obu(i,j,k)>0.) then 
+					  tel2=tel2+1
+					  i_inUpuntTSHD(tel2)=i 
+					  j_inUpuntTSHD(tel2)=j
+					  k_inUpuntTSHD(tel2)=k	
+					endif 
+				enddo
+			  enddo 
+			enddo
+		else
+			do i=0,i1
+			  do j=0,j1 
+				do k=0,k1
+					if (obb(i,j,k).eq.1) then 
+					  tel2=tel2+1
+					  i_inUpuntTSHD(tel2)=i 
+					  j_inUpuntTSHD(tel2)=j
+					  k_inUpuntTSHD(tel2)=k	
+					  obu(i,j,k)=1.
+					  if (i-1.ge.0.and.obb(i-1,j,k).eq.0) then 
+						  tel2=tel2+1
+						  i_inUpuntTSHD(tel2)=i-1 
+						  j_inUpuntTSHD(tel2)=j
+						  k_inUpuntTSHD(tel2)=k			
+						  obu(i-1,j,k)=1.
+					  endif 
+					endif
+				enddo
+			  enddo
+			enddo		
+		endif 
+		if (ibm1v.eq.1) then 
+			do i=0,i1
+			  do j=0,j1 
+				do k=0,k1
+					if (obv(i,j,k)>0.) then 
+					  tel3=tel3+1
+					  i_inVpuntTSHD(tel3)=i 
+					  j_inVpuntTSHD(tel3)=j
+					  k_inVpuntTSHD(tel3)=k	
+					endif 
+				enddo
+			  enddo 
+			enddo		
+		else
+			do i=0,i1
+			  do j=0,j1 
+				do k=0,k1
+					if (obb(i,j,k).eq.1) then 
+					  tel3=tel3+1
+					  i_inVpuntTSHD(tel3)=i 
+					  j_inVpuntTSHD(tel3)=j
+					  k_inVpuntTSHD(tel3)=k	
+					  obv(i,j,k)=1.
+					  if (j-1.ge.0.and.obb(i,j-1,k).eq.0) then 
+						  tel3=tel3+1
+						  i_inVpuntTSHD(tel3)=i 
+						  j_inVpuntTSHD(tel3)=j-1
+						  k_inVpuntTSHD(tel3)=k			
+						  obv(i,j-1,k)=1.
+					  endif	
+					endif
+				enddo
+			  enddo
+			enddo		
+		endif 
+		if (ibm1w.eq.1) then 
+			do i=0,i1
+			  do j=0,j1 
+				do k=0,k1
+					if (obw(i,j,k)>0.) then 
+					  tel4=tel4+1
+					  i_inWpuntTSHD(tel4)=i 
+					  j_inWpuntTSHD(tel4)=j
+					  k_inWpuntTSHD(tel4)=k	
+					endif 
+				enddo
+			  enddo 
+			enddo		
+		else
+			do i=0,i1
+			  do j=0,j1 
+				do k=0,k1
+					if (obb(i,j,k).eq.1) then 
+					  tel4=tel4+1
+					  i_inWpuntTSHD(tel4)=i 
+					  j_inWpuntTSHD(tel4)=j
+					  k_inWpuntTSHD(tel4)=k	
+					  obw(i,j,k)=1.
+					  if (k-1.ge.0.and.obb(i,j,k-1).eq.0) then 
+						  tel4=tel4+1
+						  i_inWpuntTSHD(tel4)=i
+						  j_inWpuntTSHD(tel4)=j
+						  k_inWpuntTSHD(tel4)=k-1	
+						  obw(i,j,k-1)=1.						  
+					  endif 
+					endif
+				enddo
+			  enddo
+			enddo		
+		endif
+		
 		do i=0,i1
 		  do j=0,j1 
 			do k=0,k1
@@ -2983,40 +3232,11 @@ C ...  Locals
 				  if (kbed(i,j).eq.k-1.and.obb(i,j,kmax).eq.0) then  !obstacle is connected to floor and not complete vertical is obstacle so include in kbed + this works only for k=0,k1 upward counting inner loop in i,j loop
 					kbed(i,j)=k
 				  endif 
+				  !_inPpuntTSHD is hard 1/0 switch also when ibm1 for U,V,W is applied; its only use is for determination fc_global which prevents momentum/diffusion exchange between ibm-cells and fluid-cells
 				  tel1=tel1+1
-				  i_inPpuntTSHD(tel1)=i 
+				  i_inPpuntTSHD(tel1)=i  
 				  j_inPpuntTSHD(tel1)=j
 				  k_inPpuntTSHD(tel1)=k
-				  tel2=tel2+1
-				  i_inUpuntTSHD(tel2)=i 
-				  j_inUpuntTSHD(tel2)=j
-				  k_inUpuntTSHD(tel2)=k	
-				  if (i-1.ge.0.and.obb(i-1,j,k).eq.0) then 
-					  tel2=tel2+1
-					  i_inUpuntTSHD(tel2)=i-1 
-					  j_inUpuntTSHD(tel2)=j
-					  k_inUpuntTSHD(tel2)=k			
-				  endif 
-				  tel3=tel3+1
-				  i_inVpuntTSHD(tel3)=i 
-				  j_inVpuntTSHD(tel3)=j
-				  k_inVpuntTSHD(tel3)=k	
-				  if (j-1.ge.0.and.obb(i,j-1,k).eq.0) then 
-					  tel3=tel3+1
-					  i_inVpuntTSHD(tel3)=i 
-					  j_inVpuntTSHD(tel3)=j-1
-					  k_inVpuntTSHD(tel3)=k			
-				  endif	
-				  tel4=tel4+1
-				  i_inWpuntTSHD(tel4)=i 
-				  j_inWpuntTSHD(tel4)=j
-				  k_inWpuntTSHD(tel4)=k	
-				  if (k-1.ge.0.and.obb(i,j,k-1).eq.0) then 
-					  tel4=tel4+1
-					  i_inWpuntTSHD(tel4)=i
-					  j_inWpuntTSHD(tel4)=j
-					  k_inWpuntTSHD(tel4)=k-1		
-				  endif 
 				endif
 			enddo
 		  enddo

@@ -1225,31 +1225,19 @@ c 	influence of waves on lateral boundaries:
  	    i=i_inWpuntTSHD(t)
  	    j=j_inWpuntTSHD(t)		
  	    k=k_inWpuntTSHD(t)		
-		Wbound(i,j,k)=0.
-	    !Wbound(i,j,k)=facIBMw(t)*Wbound(i,j,k) !0.
-		!if (facIBMw(t)<1.) then
-		!  Wbound(i,j,k)=facIBMw(t)/(1.+facIBMw(t))*Wbound(i,j,k+1)
-		!endif		
+		Wbound(i,j,k)=Wbound(i,j,k)-obw(i,j,k)*Wbound(i,j,k) !in case obw either 1/0 then ibm0; in case obw is volume fraction immersed boundary then ibm1
 	  enddo
 	  do t=1,tmax_inUpuntTSHD
  	    i=i_inUpuntTSHD(t)
  	    j=j_inUpuntTSHD(t)		
  	    k=k_inUpuntTSHD(t)		
-		Ubound(i,j,k)=0.
-	    !Ubound(i,j,k)=facIBMu(t)*Ubound(i,j,k) !0.
-		!if (facIBMu(t)<1.) then
-		!  ubound(i,j,k)=facIBMu(t)/(1.+facIBMu(t))*ubound(i,j,k+1)
-		!endif		
+		Ubound(i,j,k)=Ubound(i,j,k)-obu(i,j,k)*Ubound(i,j,k) !in case obu either 1/0 then ibm0; in case obu is volume fraction immersed boundary then ibm1
 	  enddo
 	  do t=1,tmax_inVpuntTSHD
  	    i=i_inVpuntTSHD(t)
  	    j=j_inVpuntTSHD(t)		
  	    k=k_inVpuntTSHD(t)		
-		Vbound(i,j,k)=0.
-	    !Vbound(i,j,k)=facIBMv(t)*Vbound(i,j,k) !0.
-		!if (facIBMv(t)<1.) then
-		!  vbound(i,j,k)=facIBMv(t)/(1.+facIBMv(t))*vbound(i,j,k+1)
-		!endif		
+		Vbound(i,j,k)=Vbound(i,j,k)-obv(i,j,k)*Vbound(i,j,k) !in case obv either 1/0 then ibm0; in case obv is volume fraction immersed boundary then ibm1
 	  enddo
 	  do t=1,tmax_inVpunt_rudder ! apply rudder 
  	    i=i_inVpunt_rudder(t)
@@ -2824,32 +2812,19 @@ c 	influence of waves on lateral boundaries:
  	    i=i_inWpuntTSHD(t)
  	    j=j_inWpuntTSHD(t)		
  	    k=k_inWpuntTSHD(t)		
-		Wbound(i,j,k)=0.
-	    !Wbound(i,j,k)=facIBMw(t)*Wbound(i,j,k) !0.
-		!if (facIBMw(t)<1.) then
-		!  Wbound(i,j,k)=facIBMw(t)/(1.+facIBMw(t))*Wbound(i,j,k+1)
-		!endif
-		
+		Wbound(i,j,k)=Wbound(i,j,k)-obw(i,j,k)*Wbound(i,j,k) !in case obw either 1/0 then ibm0; in case obw is volume fraction immersed boundary then ibm1		
 	  enddo
 	  do t=1,tmax_inUpuntTSHD
  	    i=i_inUpuntTSHD(t)
  	    j=j_inUpuntTSHD(t)		
  	    k=k_inUpuntTSHD(t)		
-		Ubound(i,j,k)=0.
-	    !Ubound(i,j,k)=facIBMu(t)*Ubound(i,j,k) !0.
-		!if (facIBMu(t)<1.) then
-		!  Ubound(i,j,k)=facIBMu(t)/(1.+facIBMu(t))*Ubound(i,j,k+1)
-		!endif		
+		Ubound(i,j,k)=Ubound(i,j,k)-obu(i,j,k)*Ubound(i,j,k) !in case obu either 1/0 then ibm0; in case obu is volume fraction immersed boundary then ibm1	
 	  enddo
 	  do t=1,tmax_inVpuntTSHD
  	    i=i_inVpuntTSHD(t)
  	    j=j_inVpuntTSHD(t)		
  	    k=k_inVpuntTSHD(t)		
-		Vbound(i,j,k)=0.
-	    !Vbound(i,j,k)=facIBMv(t)*Vbound(i,j,k) !0.
-		!if (facIBMv(t)<1.) then
-		!  Vbound(i,j,k)=facIBMv(t)/(1.+facIBMv(t))*Vbound(i,j,k+1)
-		!endif		
+		Vbound(i,j,k)=Vbound(i,j,k)-obv(i,j,k)*Vbound(i,j,k) !in case obv either 1/0 then ibm0; in case obv is volume fraction immersed boundary then ibm1		
 	  enddo
 !	  IF (IBMorder.ne.2) THEN !!already done line 3224
 !	  do i=0,i1 ! prescribe UTSHD in obstacle:
@@ -2871,7 +2846,7 @@ c 	influence of waves on lateral boundaries:
 		rr2=0.5*(rho2(i,j,k)+rho2(i,j+1,k)) !at V-gridpoint		
 		
 !	    call wall_fun_rho(Vbound(i,j,k),Ubound2(i,j,k),rho(i,j,k),dz,dt,kn_TSHD,kappa,(depth-bc_obst_h),U_b,nu_mol)
-	    call wall_fun_rho(Vbound(i,j,k),uu2,rr2,dz,1.,dt,kn_TSHD,kappa,nu_mol,tau)
+	    call wall_fun_rho(Vbound(i,j,k),uu2,Vbound(i,j,k),uu2,rr2,dz,0.5*dz,dt,kn_TSHD,kappa,nu_mol,tau)
 	   enddo
 	  endif
 	  !if (botstress.ge.1) then !if kn_TSHD>0 then tauTSHD independent of botstress
@@ -2883,7 +2858,7 @@ c 	influence of waves on lateral boundaries:
 	    vv2=0.25*(Vbound2(i,j,k)+Vbound2(i+1,j,k)+Vbound2(i,j-1,k)+Vbound2(i+1,j-1,k))
 		rr1=0.5*(rho2(i,j,k)+rho2(i+1,j,k)) !at U-gridpoint
 !	    call wall_fun_rho(Ubound(i,j,k),Vbound2(i,j,k),rho(i,j,k),dz,dt,kn_TSHD,kappa,(depth-bc_obst_h),U_b,nu_mol)
-	    call wall_fun_rho(Ubound(i,j,k),vv2,rr1,dz,1.,dt,kn_TSHD,kappa,nu_mol,tau)
+	    call wall_fun_rho(Ubound(i,j,k),vv2,Ubound(i,j,k),vv2,rr1,dz,0.5*dz,dt,kn_TSHD,kappa,nu_mol,tau)
 	   enddo
 	  endif
 	  do t=1,tmax_inVpunt_rudder ! apply rudder 
@@ -3318,31 +3293,19 @@ c 	influence of waves on lateral boundaries:
  	    i=i_inWpuntTSHD(t)
  	    j=j_inWpuntTSHD(t)		
  	    k=k_inWpuntTSHD(t)		
-	    Wbound(i,j,k)=0.
-		!Wbound(i,j,k)=facIBMw(t)*Wbound(i,j,k) !0.
-		!if (facIBMw(t)<1.) then
-		!  Wbound(i,j,k)=facIBMw(t)/(1.+facIBMw(t))*Wbound(i,j,k+1)
-		!endif			
+	    Wbound(i,j,k)=Wbound(i,j,k)-obw(i,j,k)*Wbound(i,j,k) !in case obw either 1/0 then ibm0; in case obw is volume fraction immersed boundary then ibm1			
 	  enddo
 	  do t=1,tmax_inUpuntTSHD
  	    i=i_inUpuntTSHD(t)
  	    j=j_inUpuntTSHD(t)		
  	    k=k_inUpuntTSHD(t)		
-	    Ubound(i,j,k)=0.
-	    !Ubound(i,j,k)=facIBMu(t)*Ubound(i,j,k) !0.
-		!if (facIBMu(t)<1.) then
-		!  Ubound(i,j,k)=facIBMu(t)/(1.+facIBMu(t))*Ubound(i,j,k+1)
-		!endif			
+	    Ubound(i,j,k)=Ubound(i,j,k)-obu(i,j,k)*Ubound(i,j,k) !in case obu either 1/0 then ibm0; in case obu is volume fraction immersed boundary then ibm1				
 	  enddo
 	  do t=1,tmax_inVpuntTSHD
  	    i=i_inVpuntTSHD(t)
  	    j=j_inVpuntTSHD(t)		
  	    k=k_inVpuntTSHD(t)		
-	    Vbound(i,j,k)=0.
-	    !Vbound(i,j,k)=facIBMv(t)*Vbound(i,j,k) !0.
-		!if (facIBMv(t)<1.) then
-		!  Vbound(i,j,k)=facIBMv(t)/(1.+facIBMv(t))*Vbound(i,j,k+1)
-		!endif			
+	    Vbound(i,j,k)=Vbound(i,j,k)-obv(i,j,k)*Vbound(i,j,k) !in case obv either 1/0 then ibm0; in case obv is volume fraction immersed boundary then ibm1		
 	  enddo
 
         do t=1,tmax_inPpunt ! make vel jet not zero
@@ -3473,8 +3436,8 @@ c
 		real ubb(0:i1,0:k1),val,theta,rbc,xx,yy,r_orifice2,rjet,theta_U,theta_V
 		real cbf(0:i1,0:k1)
 		real cbb(0:i1,0:k1)
-		real xTSHD(4),yTSHD(4),phi,ddtt,interpseries
-		real Cbcoarse2_out(kmax)
+		real xTSHD(4),yTSHD(4),phi,ddtt,interpseries,sedflux_per_width,depoflux_per_width
+		real Cbcoarse2_out(kmax),factor,depoflux_per_width1,depoflux_per_width2
         integer ileng,ierr,itag,status(MPI_STATUS_SIZE),i_out	
 c
 c
@@ -3561,16 +3524,47 @@ c*************************************************************
 			Cbcoarse1(n,1:imax,1:kmax)=0. !Cbound(1:imax,1,1:kmax)
 			
 			i_out=imax 
+			sedflux_per_width=0.
+			!depoflux_per_width=0.
+			!depoflux_per_width1=0.
+			depoflux_per_width2=0.
 			do k=1,kmax
 				Cbcoarse2_out(k)=SUM(Cbound(i_out,cbc_perx_j(1):cbc_perx_j(2),k))/DBLE(cbc_perx_j(2)-cbc_perx_j(1)+1)
+				do j=cbc_perx_j(1),cbc_perx_j(2)
+					sedflux_per_width=sedflux_per_width+Cbound(i_out,j,k)*Unew(i_out,j,k)*dz !*rhos = [m2/s*kg/m3 = kg/s/m]				
+				enddo 
 			enddo 
-			
+			do j=cbc_perx_j(1),cbc_perx_j(2)
+!				do i=1,imax !INT(imax/4) !including dzdt did not help 
+!					depoflux_per_width1=depoflux_per_width1+(zbed(i,j)-zbed_old(i,j))*(Ru(i)-Ru(i-1))
+!				enddo 				
+				do i=1,imax !INT(imax/4)
+					depoflux_per_width2=depoflux_per_width2+(zbed(i,j)-zbed_init(i,j))*(Ru(i)-Ru(i-1))
+				enddo 
+			enddo			
+			sedflux_per_width=sedflux_per_width/DBLE(cbc_perx_j(2)-cbc_perx_j(1)+1) 
+			!depoflux_per_width1=depoflux_per_width1/DBLE(cbc_perx_j(2)-cbc_perx_j(1)+1)
+			depoflux_per_width2=depoflux_per_width2/DBLE(cbc_perx_j(2)-cbc_perx_j(1)+1)
+			!depoflux_per_width1=0.1*depoflux_per_width1*cfixedbed/dt/morfac2 !*rhos = [m/s*m*kg/m3 = kg/s/m]	
+			depoflux_per_width2=depoflux_per_width2*cfixedbed/(1000.*dt )/morfac2 !*rhos = [m/s*m*kg/m3 = kg/s/m]	!use Tadapt=1000*dt, testing 10-100-1000 doesnt give much difference; 1000 slightly better
+			!depoflux_per_width=depoflux_per_width1+depoflux_per_width2
+			factor=MIN(MAX((sedflux_per_width-depoflux_per_width2)/(ABS(sedflux_per_width)+1.e-12),0.25),4.) !factor between 0.25 and 4 otherwise unrealisticly high concentration values could be given to inflow or 0 values	
+			if (mod(istep,100).eq.0) then 
+			    write(*,*),'* cbc_perx_j SSC correction for sedimentation/erosion in domain'
+				write(*,*),'* sedflux/m width,depoflux from (z-z_init)/(1000*dt),factor:'
+				write(*,'(a,e12.4,e12.4,f7.4)'),' * ',sedflux_per_width,depoflux_per_width2,factor
+			endif 
+			Cbcoarse2_out=Cbcoarse2_out*factor !substract depoflux from sedflux, if on average a lot of sedimentation happens in the CFD domain then apparently the influx is too high and this substraction will reduce the influx 
+			!on the other hand if on average a lot of erosion happens then apparently the influx is too low and this correction will increase the influx 
 		elseif (rank.eq.px-1) then	
 			Cbcoarse1(n,1:imax,1:kmax)=0. !Cbound(1:imax,jmax,1:kmax)
 		endif
+		zbed_old=zbed 
 		call mpi_bcast(Cbcoarse2_out,kmax,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
 		do j=0,j1
-			Cbcoarse2(n,j,1:kmax)=cbc_relax*Cbcoarse2_out+(1.-cbc_relax)*Cbcoarse2(n,j,1:kmax)
+		  do k=1,kmax 
+			Cbcoarse2(n,j,k)=cbc_relax*Cbcoarse2_out(k)+(1.-cbc_relax)*Cbcoarse2(n,j,k)
+		  enddo 
 		enddo 
 	  else
 		if (rank.eq.0) then
@@ -4376,7 +4370,7 @@ c*************************************************************
 	do tel =2,nlayer ! apply 50 grid layers between wall z=0 and first velocity point at 0.5*dz with grow factor 
 		ddzz(tel)=ddzz(tel-1)*1.1 
 	enddo
-	ddzz=0.5*dz/SUM(ddzz)*ddzz 
+	ddzz=dist_velpoint/SUM(ddzz)*ddzz 
 	zz(1) = 0.5*ddzz(1)
 	do tel =2,nlayer 
 		zz(tel)=zz(tel-1)+0.5*ddzz(tel-1)+0.5*ddzz(tel) 
@@ -4387,7 +4381,8 @@ c*************************************************************
 	else
 		z0=0.
 	endif
-	kplus = MAX(5.,MIN(2000.,kn*ust/nu_mol)) 
+	!kplus = MAX(5.,MIN(2000.,kn*ust/nu_mol)) 
+	kplus = MIN(2000.,kn*ust/nu_mol) !lower limit on 5 not needed, because for hydr smooth dzplus simply is 0
 	dzplus = 0.9*(sqrt(kplus)-kplus*exp(-kplus/6.))
 	do tel=1,nlayer
 		zplus=zz(tel)*ust/nu_mol+dzplus 
@@ -4539,7 +4534,8 @@ c*************************************************************
 !!			endif
 !!		endif	  
 !	endif 
-	kplus = MAX(5.,MIN(2000.,kn*ust/nu_mol)) 
+	!kplus = MAX(5.,MIN(2000.,kn*ust/nu_mol)) 
+	kplus = MIN(2000.,kn*ust/nu_mol) !lower limit on 5 not needed, because for hydr smooth dzplus simply is 0
 	dzplus = 0.9*(sqrt(kplus)-kplus*exp(-kplus/6.))
 	do tel=1,nlayer
 		zplus=zz(tel)*ust/nu_mol+dzplus 

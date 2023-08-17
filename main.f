@@ -226,7 +226,14 @@
 
 !      call fillps 
 !      CALL SOLVEpois(p) !,Ru,Rp,DPHI,dz,rank,imax,jmax,kmax,px)
-
+		do i=1,imax 
+		  do j=1,jmax 
+			zbed(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+ SUM(Clivebed(1:nfrac,i,j,kbed(i,j)))/cfixedbed*dz
+			zbed_old(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+ SUM(Clivebed(1:nfrac,i,j,kbed(i,j)))/cfixedbed*dz
+			zbed_init(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+ SUM(Clivebed(1:nfrac,i,j,kbed(i,j)))/cfixedbed*dz
+		  enddo 
+		enddo 
+		
 	  if (rank.eq.0) then		
 		call cpu_time(cput1)
 		!call SYSTEM_CLOCK(cput1) !SYSTEM_CLOCK works correctly in case a processor is overloaded with more partitions than physical cores
@@ -334,6 +341,7 @@
 			call bound_rhoU(dUdt,dVdt,dWdt,drdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
 		  endif
 		endif
+		
 		
 		!IF (Hs>0.and.time_int.eq.'RK3') THEN
 		 DO n=1,npresIBM
@@ -454,10 +462,10 @@
 		
 		if (time_np.ge.tstart_morf2) then 
 			b_update(istart_morf2:i1)=1. ! b_update=0. at start sim when tstart_morf2>0 --> before tstart_morf2 there is exchange of sediment between bed and fluid, but no bedupdate (all changes to bed are annihilated) 
-			if (cbc_perx_j(1)>0) then  !use quasi periodic bc for concentration:
-			  b_update(0:1)=0. ! no bed-update at inflow
-			  b_update(imax:i1)=0. ! no bed-update at outflow
-			endif 			
+!			if (cbc_perx_j(1)>0) then  !use quasi periodic bc for concentration:
+!			  b_update(0:1)=0. ! no bed-update at inflow
+!			  b_update(imax:i1)=0. ! no bed-update at outflow
+!			endif 			
 		endif 
 		if (mod(istep,100).eq.0) then
 			call chkdiv

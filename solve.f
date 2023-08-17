@@ -404,20 +404,22 @@ c********************************************************************
      +            ib,ie,jb,je,kb,ke)
 		dcdt(n,:,:,:) =cnew(n,:,:,:) + dt*(1.5*dnewc(n,:,:,:)-0.5*cc(n,:,:,:)) !AB2
 		cc(n,:,:,:)=dnewc(n,:,:,:)
-			  !if (interaction_bed.eq.4.or.interaction_bed.eq.5) then
-			  !  dcdtbot(n,:,:)=cnewbot(n,:,:)
-			  !else
-		    !! advec concentration in bed with velocity TSHD:
-	      	    call adveccbot_TVD(dnewcbot(n,:,:),cnewbot(n,:,:),Ubot_TSHD,Vbot_TSHD,Ru,Rp,dr,phiv,phipt,dz,
-     +            	i1,j1,ib,ie,jb,je,dt,rank,px,periodicx,periodicy)
-				dcdtbot(n,:,:) =cnewbot(n,:,:) + dt*(1.5*dnewcbot(n,:,:)-0.5*ccbot(n,:,:)) !AB2
-				ccbot(n,:,:)=dnewcbot(n,:,:)
-				call bound_cbot(dcdtbot(n,:,:))
-	      	  !endif
 	  enddo
 	  call slipvelocity_bed(cnew,wnew,wsed,rnew,sumWkm,dt,dz) !driftflux_force must be calculated with settling velocity at bed
       	  if (interaction_bed>0) then
 	    CALL erosion_deposition(dcdt,dcdtbot,unew,vnew,wnew,rnew,cnew,cnewbot,dt,dz) !first two vars are adjusted
+		do n=1,nfrac 
+		  call bound_cbot(dcdtbot(n,:,:))
+		enddo			
+		!! advec concentration in bed with velocity TSHD:
+		IF (ABS(U_TSHD)>1e-6) THEN 
+		  do n=1,nfrac 
+			call adveccbot_TVD(dnewcbot(n,:,:),dcdtbot(n,:,:),Ubot_TSHD,Vbot_TSHD,Ru,Rp,dr,phiv,phipt,dz,
+     +            	i1,j1,ib,ie,jb,je,dt,rank,px,periodicx,periodicy)
+			dcdtbot(n,:,:)= dcdtbot(n,:,:) + dt*dnewcbot(n,:,:) ! time update	
+			call bound_cbot(dcdtbot(n,:,:))			
+		  enddo 
+		ENDIF 		
 	    !! for kn1: erosion_deposition must be after advecc_TVD and after dcdt update, because cnew and dcdt are two separate vars
 		if (interaction_bed.eq.4.or.interaction_bed.eq.6) then
 			call advec_update_Clivebed(dcdt,dcdtbot,dt) 
@@ -936,11 +938,6 @@ c********************************************************************
 			cnew(n,:,:,:)=cnew(n,:,:,:)/frac(n)%rho ! from (mass-fraction*rho_mix) back to volume fraction
 		endif
 		
-		    !! advec concentration in bed with velocity TSHD:
-	      	    call adveccbot_TVD(dnewcbot(n,:,:),cnewbot(n,:,:),Ubot_TSHD,Vbot_TSHD,Ru,Rp,dr,phiv,phipt,dz,
-     +            	i1,j1,ib,ie,jb,je,dt,rank,px,periodicx,periodicy)
-				dcdtbot(n,:,:)= cnewbot(n,:,:) + dt*dnewcbot(n,:,:) ! time update	
-				call bound_cbot(dcdtbot(n,:,:))
 			IF (CNdiffz.eq.1.or.CNdiffz.eq.2.or.CNdiffz.eq.11.or.CNdiffz.eq.12) THEN !CN semi implicit treatment diff-z:
 			 IF (CNdiffz.eq.1.or.CNdiffz.eq.11) THEN 
 				CNz=0.5
@@ -1137,6 +1134,18 @@ c********************************************************************
 		  call slipvelocity_bed(cnew,wnew,wsed,rnew,sumWkm,dt,dz) !driftflux_force must be calculated with settling velocity at bed
       	  if (interaction_bed>0) then
 	        CALL erosion_deposition(dcdt,dcdtbot,unew,vnew,wnew,rnew,cnew,cnewbot,dt,dz) !first two vars are adjusted
+	        do n=1,nfrac 
+	          call bound_cbot(dcdtbot(n,:,:))
+	        enddo			
+		    !! advec concentration in bed with velocity TSHD:
+			IF (ABS(U_TSHD)>1e-6) THEN 
+			  do n=1,nfrac 
+				call adveccbot_TVD(dnewcbot(n,:,:),dcdtbot(n,:,:),Ubot_TSHD,Vbot_TSHD,Ru,Rp,dr,phiv,phipt,dz,
+     +            	i1,j1,ib,ie,jb,je,dt,rank,px,periodicx,periodicy)
+				dcdtbot(n,:,:)= dcdtbot(n,:,:) + dt*dnewcbot(n,:,:) ! time update	
+				call bound_cbot(dcdtbot(n,:,:))			
+			  enddo 
+			ENDIF 
 	        !! erosion_deposition must be after advecc_TVD and after dcdt update, because cnew and dcdt are two separate vars
 		    if (interaction_bed.eq.4.or.interaction_bed.eq.6) then
 			  call advec_update_Clivebed(dcdt,dcdtbot,dt) 
@@ -2057,15 +2066,6 @@ c********************************************************************
 	    endif
 !		dcdt(n,:,:,:) =cnew(n,:,:,:) + a21*dt*(k1c(n,:,:,:)) !pred1
 		dcdt(n,:,:,:) =cnew(n,:,:,:) + cn1*dt*(k1c(n,:,:,:)) !pred1
-			  !if(interaction_bed.eq.4.or.interaction_bed.eq.5) then
-			  !  dcdt1bot(n,:,:)=cnewbot(n,:,:)	
-			  !else
-		    !! advec concentration in bed with velocity TSHD:
-	      	    call adveccbot_TVD(k1cbot(n,:,:),cnewbot(n,:,:),Ubot_TSHD,Vbot_TSHD,Ru,Rp,dr,phiv,phipt,dz,
-     +            	i1,j1,ib,ie,jb,je,cn1*dt,rank,px,periodicx,periodicy)
-		    dcdt1bot(n,:,:)= cnewbot(n,:,:) + cn1*dt*k1cbot(n,:,:) ! pred1	
-			call bound_cbot(dcdt1bot(n,:,:))			
-	      	  !endif
            IF (CNdiffz.eq.1) THEN !CN semi implicit treatment diff-z:
 	     call bound_c(dcdt(n,:,:,:),frac(n)%c,n,0.) ! bc start CN-diffz k1 RK3
 	     do k=k1,k1 !-kjet,k1
@@ -2102,6 +2102,18 @@ c********************************************************************
 		  call slipvelocity_bed(cnew,wnew,wsed,rnew,sumWkm,cn1*dt,dz) !driftflux_force must be calculated with settling velocity at bed
       	  if (interaction_bed>0) then
 	    CALL erosion_deposition(dcdt,dcdt1bot,unew,vnew,wnew,rnew,cnew,cnewbot,cn1*dt,dz) !first two vars are adjusted
+		do n=1,nfrac 
+		  call bound_cbot(dcdt1bot(n,:,:))
+		enddo			
+		!! advec concentration in bed with velocity TSHD:
+		IF (ABS(U_TSHD)>1e-6) THEN 
+		  do n=1,nfrac 
+	      	    call adveccbot_TVD(k1cbot(n,:,:),dcdt1bot(n,:,:),Ubot_TSHD,Vbot_TSHD,Ru,Rp,dr,phiv,phipt,dz,
+     +            	i1,j1,ib,ie,jb,je,cn1*dt,rank,px,periodicx,periodicy)
+		    dcdt1bot(n,:,:)= dcdt1bot(n,:,:) + cn1*dt*k1cbot(n,:,:) ! pred1	
+			call bound_cbot(dcdt1bot(n,:,:))			
+		  enddo 
+		ENDIF 		
 	    !! for kn1: erosion_deposition must be after advecc_TVD and after dcdt update, because cnew and dcdt are two separate vars
 		if (interaction_bed.eq.4.or.interaction_bed.eq.6) then
 			call advec_update_Clivebed(dcdt,dcdt1bot,cn1*dt) 	
@@ -2566,16 +2578,6 @@ c********************************************************************
 	      call diffc_CDS2 (k2c(n,:,:,:),dCdt(n,:,:,:),Diffcof,
      +            ib,ie,jb,je,kb,ke)
 	     endif
-
-			  !if(interaction_bed.eq.4.or.interaction_bed.eq.5) then
-			  !  dcdt2bot(n,:,:)=dcdt1bot(n,:,:)	
-			  !else
-		    !! advec concentration in bed with velocity TSHD:
-	            call adveccbot_TVD(k2cbot(n,:,:),dcdt1bot(n,:,:),Ubot_TSHD,Vbot_TSHD,Ru,Rp,dr,phiv,phipt,dz,
-     +              i1,j1,ib,ie,jb,je,cn2*dt,rank,px,periodicx,periodicy)
-		    dcdt2bot(n,:,:)= dcdt1bot(n,:,:) + cn2*dt*k2cbot(n,:,:) ! pred2	
-			call bound_cbot(dcdt2bot(n,:,:))			
-	          !endif
 	  enddo
 	  dcdt2=dcdt
 	  do n=1,nfrac
@@ -2619,6 +2621,18 @@ c********************************************************************
 	  call slipvelocity_bed(dcdt2,dwdt,wsed,drdt,sumWkm,cn2*dt,dz) !get sumWkm and wsed at bed for driftflux_force 
 	  if (interaction_bed>0) then
 	    CALL erosion_deposition(dcdt,dcdt2bot,dudt,dvdt,dwdt,drdt,dcdt2,dcdt1bot,cn2*dt,dz) !first two vars are adjusted 
+		do n=1,nfrac 
+		  call bound_cbot(dcdt2bot(n,:,:))
+		enddo			
+		!! advec concentration in bed with velocity TSHD:
+		IF (ABS(U_TSHD)>1e-6) THEN 
+		  do n=1,nfrac 
+	            call adveccbot_TVD(k2cbot(n,:,:),dcdt2bot(n,:,:),Ubot_TSHD,Vbot_TSHD,Ru,Rp,dr,phiv,phipt,dz,
+     +              i1,j1,ib,ie,jb,je,cn2*dt,rank,px,periodicx,periodicy)
+		    dcdt2bot(n,:,:)= dcdt2bot(n,:,:) + cn2*dt*k2cbot(n,:,:) ! pred2	
+			call bound_cbot(dcdt2bot(n,:,:))		
+		  enddo 
+		ENDIF 		
  	    !! for kn2: variable dcdt2 made
 		if (interaction_bed.eq.4.or.interaction_bed.eq.6) then
 			call advec_update_Clivebed(dcdt,dcdt2bot,cn2*dt) 
@@ -3081,15 +3095,6 @@ c********************************************************************
 	      call diffc_CDS2 (k3c(n,:,:,:),dCdt(n,:,:,:),Diffcof,
      +            ib,ie,jb,je,kb,ke)
 		  endif
-			  !if(interaction_bed.eq.4.or.interaction_bed.eq.5) then
-			  !  dcdtbot(n,:,:)=dcdt2bot(n,:,:)	
-			  !else
-		    !! advec concentration in bed with velocity TSHD:
-	            call adveccbot_TVD(k3cbot(n,:,:),dcdt2bot(n,:,:),Ubot_TSHD,Vbot_TSHD,Ru,Rp,dr,phiv,phipt,dz,
-     +              i1,j1,ib,ie,jb,je,cn3*dt,rank,px,periodicx,periodicy)
-		    dcdtbot(n,:,:)= dcdt2bot(n,:,:) + cn3*dt*k3cbot(n,:,:) ! n+1	
-			call bound_cbot(dcdtbot(n,:,:))
-	          !endif
 	  enddo
 	  dcdt2=dcdt 
 	  do n=1,nfrac
@@ -3136,6 +3141,18 @@ c********************************************************************
 	    call slipvelocity_bed(dcdt2,dwdt,wsed,drdt,sumWkm,cn3*dt,dz) !get sumWkm and wsed at bed for driftflux_force 
 		if (interaction_bed>0) then
 	    CALL erosion_deposition(dcdt,dcdtbot,dudt,dvdt,dwdt,drdt,dcdt2,dcdt2bot,cn3*dt,dz) !first two vars are adjusted
+		do n=1,nfrac 
+		  call bound_cbot(dcdtbot(n,:,:))
+		enddo			
+		!! advec concentration in bed with velocity TSHD:
+		IF (ABS(U_TSHD)>1e-6) THEN 
+		  do n=1,nfrac 
+	            call adveccbot_TVD(k3cbot(n,:,:),dcdtbot(n,:,:),Ubot_TSHD,Vbot_TSHD,Ru,Rp,dr,phiv,phipt,dz,
+     +              i1,j1,ib,ie,jb,je,cn3*dt,rank,px,periodicx,periodicy)
+		    dcdtbot(n,:,:)= dcdtbot(n,:,:) + cn3*dt*k3cbot(n,:,:) ! n+1	
+			call bound_cbot(dcdtbot(n,:,:))			
+		  enddo 
+		ENDIF 		
 		    !! for kn3: extra var dcdt2 is used
 	    ! should correct dwdt(n,:,:,0) with (1.-tau/frac(n)%tau_d), but this correction almost always is zero, for now leave
 		if (interaction_bed.eq.4.or.interaction_bed.eq.6) then
@@ -3577,15 +3594,6 @@ c********************************************************************
 
 		dcdt(n,:,:,:) =cnew(n,:,:,:) + dt*(dnewc(n,:,:,:)) !update in time with EE1 for TVD
 	   endif 
-			  !if(interaction_bed.eq.4.or.interaction_bed.eq.5) then
-			  !  dcdtbot(n,:,:)=cnewbot(n,:,:)	
-			  !else
-		    !! advec concentration in bed with velocity TSHD:
-	      	    call adveccbot_TVD(dnewcbot(n,:,:),cnewbot(n,:,:),Ubot_TSHD,Vbot_TSHD,Ru,Rp,dr,phiv,phipt,dz,
-     +            	i1,j1,ib,ie,jb,je,dt,rank,px,periodicx,periodicy)
-				dcdtbot(n,:,:)= cnewbot(n,:,:) + dt*dnewcbot(n,:,:) ! time update	
-				call bound_cbot(dcdtbot(n,:,:))			
-	      	  !endif
            IF (CNdiffz.eq.1.or.CNdiffz.eq.2) THEN !CN semi implicit treatment diff-z:
 			IF (CNdiffz.eq.1) THEN 
 				CNz=0.5 
@@ -3627,6 +3635,18 @@ c********************************************************************
 		  call slipvelocity_bed(cnew,wnew,wsed,rnew,sumWkm,dt,dz) !driftflux_force must be calculated with settling velocity at bed
       	  if (interaction_bed>0) then
 	    CALL erosion_deposition(dcdt,dcdtbot,unew,vnew,wnew,rnew,cnew,cnewbot,dt,dz) !first two vars are adjusted
+		do n=1,nfrac 
+		  call bound_cbot(dcdtbot(n,:,:))
+		enddo			
+		!! advec concentration in bed with velocity TSHD:
+		IF (ABS(U_TSHD)>1e-6) THEN 
+		  do n=1,nfrac 
+			call adveccbot_TVD(dnewcbot(n,:,:),dcdtbot(n,:,:),Ubot_TSHD,Vbot_TSHD,Ru,Rp,dr,phiv,phipt,dz,
+     +            	i1,j1,ib,ie,jb,je,dt,rank,px,periodicx,periodicy)
+			dcdtbot(n,:,:)= dcdtbot(n,:,:) + dt*dnewcbot(n,:,:) ! time update	
+			call bound_cbot(dcdtbot(n,:,:))			
+		  enddo 
+		ENDIF 		
 	    !! erosion_deposition must be after advecc_TVD and after dcdt update, because cnew and dcdt are two separate vars
 		if (interaction_bed.eq.4.or.interaction_bed.eq.6) then
 			call advec_update_Clivebed(dcdt,dcdtbot,dt) 
@@ -3634,7 +3654,7 @@ c********************************************************************
 	    do n=1,nfrac 
 	        call bound_cbot(dcdtbot(n,:,:))
 	    enddo
-      	  endif
+      	  endif !end (interaction_bed>0) 
 	    do n=1,nfrac 
 		call bound_c(dcdt(n,:,:,:),frac(n)%c,n,dt) ! bc after erosion_deposition ABv
 	    enddo

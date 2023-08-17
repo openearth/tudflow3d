@@ -58,7 +58,7 @@ c********************************************************************
       real rho(0:i1,0:j1,0:k1),numdif,nd2
       real rhoip,rhoim,rhojp,rhojm,rhokp,rhokm
 	real uuR,uuL,vvR,vvL,wwR,wwL
-	integer kpp,kppp,kmm,kmmm,jpp,jppp,jmm,jmmm,ipp,ippp,imm,immm,rank,px,periodicx,periodicy,wd,jmax 
+	integer kpp,kppp,kmm,kmmm,jpp,jppp,jmm,jmmm,ipp,ippp,imm,immm,rank,px,periodicx,periodicy,wd,jmax,klayer 
 	real*8 ubb(0:i1,0:k1),ubf(0:i1,0:k1),Uvel2(-2:i1+2,-2:j1+2,-2:k1+2)
 	real rhU(0:i1,0:j1,0:k1),rhV(0:i1,0:j1,0:k1),rhW(0:i1,0:j1,0:k1)
 	real wwdd(1:3),wf(0:i1,0:j1,0:k1),numdif2,u4mag 
@@ -371,7 +371,12 @@ c********************************************************************
 		  enddo
 	    enddo
 	  enddo
-	elseif (wd.eq.2) then 
+	elseif (wd.ge.2) then 
+		if (wd>20) then
+		  klayer=wd-20 
+		else 
+		  klayer=0 
+   	    endif 
 		do i=ib,ie 
 		  do j=jb,je 
 			do k=kb,ke 
@@ -386,7 +391,7 @@ c********************************************************************
 			do k=0,k1 
 			  wf(i,j,k)=MAX((1.-fcg(i,j+rank*jmax,k)),nd2) !high diffusion all cells inside ibm and low diffusion outside ibm 
 			enddo 
-		    do k=0,kbed(i,j)
+		    do k=0,MIN(k1,kbed(i,j)+klayer)
 			  wf(i,j,k)=1. !high diffusion inside bed and first cell above 
 			enddo 			
 		  enddo 

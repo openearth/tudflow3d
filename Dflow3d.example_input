@@ -42,7 +42,7 @@ tstart_morf2 = 1.					! Start time bedupdate [s] (default 0), before tstart_morf
 &num_scheme
 convection = 'HYB6'					! Numerical scheme for convection term, options: 'CDS2','CDS4','CDS6','HYB6','C4A6','uTVD','C2Bl','C4Bl','COM4'
 numdiff = 0.001953125				! Amount of extra 6th diffusion in case of 'CDS6','CDS4','HYB6','C4A6' ('CDS6' -> 1/60=UPW5, 0=CDS6); or blend slope for TVD-r<0 'C2Bl' and 'C4Bl' 
-wiggle_detector = 0					! Use wiggle detector to adjust amount of numdiff for each individual grid cell (default 0-->numdiff applied for all cells; optional 1 with wiggle detector or 2 for high numdiff in all cells inside or neighbouring ibm obstacle or inside bed including first cell above and numdiff2 elsewhere)
+wiggle_detector = 0					! Use wiggle detector to adjust amount of numdiff for each individual grid cell (default 0-->numdiff applied for all cells; optional 1 with wiggle detector or 2 for high numdiff in all cells inside or neighbouring ibm obstacle or inside bed and numdiff2 elsewhere; >20 same as 2 but with 1 layer numdiff above bed for 21; 2 layers above bed for 22; 3 layers above bed for 23 and so on)
 numdiff2 = 0.001953125				! Amount of minimum 6th diffusion in case of wiggle_detector=1 (default 0.), must be < numdiff
 diffusion = 'CDS2'					! Numerical scheme for diffusion term.
 CNdiffz = 0							! 0 is explicit in z-dir (default 0); 1 is 2nd order CN treatment of diffusion in z-dir; 2 is implicit 1st order Euler backward in z-dir; 11 is 2nd order CN treatment of diffusion in x,y,z-dir; 12 is implicit 1st order Euler backward in x,y,z-dir;
@@ -95,7 +95,7 @@ periodicx = 0						! 1 periodic in x dir; 0 not periodic (default 0); 2 closed b
 periodicy = 0						! 1 periodic in y dir; 0 not periodic; 2 is free slip lateral boundaries (default 0)
 i_periodicx = 0 					! beta option (default 0; not used) when >1 then internal periodic x-dir bc is applied UVWC(0)=UVWC(i_periodicx)
 istart_morf2 = 0 					! (default 0, not used) start i-index where bedupdate is applied, for i<istart_morf2 there is exchange of sediment between bed and fluid, but no bedupdate (all changes to bed are annihilated)
-cbc_perx_j = 1 4					! j-indices used to calculate avg vertical concentration outflow profile used as inflow profile, two values required where second value is >= first value and both j-indices should be within first MPI partition (should be <jmax/px), default 0 0 and not used; with this option bed-update at inflow and outflow is prevented it is the modellers responsibility to have a flat inflow and outflow bathy at the same level  
+cbc_perx_j = 1 4					! j-indices used to calculate avg vertical concentration outflow profile used as inflow profile, two values required where second value is >= first value and both j-indices should be within first MPI partition (should be <jmax/px), default 0 0 and not used; with this option excessive scour at inflow is prevented, it is the modellers responsibility to have a flat inflow and outflow bathy at the same level  
 cbc_relax = 0.01 					! Relaxation factor to determine inflow concentration profile via cbc_perx_j (1. gives no relaxation) value = relax*new+(1-relax)*previous 
 monopile = -1						! -1 (default) no monopile; >0 is monopile : closed bc at i=0 and combined in/outflow at i=imax; 1=partial slip monopile wall log-law; 2=free slip monopile wall; 3=partial slip monopile TBL wall-model including dpdx, 4=no-slip monopile wall
 kn_mp = 0.01 						! must be defined icw monopile=1 and gives Nikkuradse monopile wall roughness is implemented 
@@ -244,6 +244,7 @@ gy = 0.0						! Gravity [m/s2] positive to work in negative y-dir
 gz = 9.81						! Gravity [m/s2] positive to work in negative z-dir
 settling_along_gvector = 0 		! 0 (default) = settling occurs in z-dir, 1 = settling along gravity vector direction
 ekm_mol = 1.e-3					! Moleculair dyn. viscosity [kg/(sm)]
+ekm_sediment_pickup = 1.e-3		! Moleculair dyn. viscosity [kg/(sm)] used to determine sediment pickup flux and tau. Only needed for scaling sediment, default equal to ekm_mol
 calibfac_sand_pickup = 1. 		! Calibration factor for sand pickup, default 1. [-].
 calibfac_Shields_cr = 1. 		! Calibration factor to adjust Shields_cr curve for start motion sand pickup, default 1. [-].
 pickup_formula = 'vanrijn1984' 	!options are 'vanrijn1984' (default),'vanrijn2019' (=VR1984 including simple high speed erosion correction),'VR2019_Cbed' (=VR1984 including simple high speed erosion correction and reduction pickup for C_near_bed),'VR1984_Cbed' (=VR1984 including reduction pickup for C_near_bed),'nielsen1992','okayasu2010'
@@ -257,7 +258,8 @@ reduction_sedimentation_shields = 0. ! Reduction of sedimentation at the bed by 
 morfac = 1. 					! Factor applied to erosion and sedimentation fluxes to speed up morfology simulation (default 1.)
 morfac2 = 1. 					! Factor applied to erosion and sedimentation fluxes in bed (not in fluid) to speed up morfology simulation (default 1.); only dz_bed is accelerated but concentrations in fluid remain unaltered 
 !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
-pickup_correction='noneMastBergenvdBerg' 		! option 'MastBergenvdBerg2003' gives correction to pickup for negative pore pressure, dilantancy effects and very steep slopes (See paper MastBergenvdBerg2003), default no correction is applied
+pickup_correction='noneMastBergenvdBerg' 		! option 'MastBergenvdBerg2003' gives correction to pickup for negative pore pressure, dilantancy effects and very steep slopes (See paper MastBergenvdBerg2003), 'xtra_sidewall_pickup' gives correction for additional pickup from sidewall erosion, default no correction is applied
+dz_sidewall = 0.1 				! dz_sidewall defines minimum step in bed-level to apply pickup_correction 'xtra_sidewall_pickup', when not defined equal to dz
 vwal=0.001						! vwal [m/s] is the wall velocity used in pickup_correction 'MastBergenvdBerg2003'; if defined >999 then vwal is calculated from the actual bed-slope 
 nl=0.44							! nl is the porosity of loose sand after dilantancy used in pickup_correction 'MastBergenvdBerg2003' and must be >(1-cfixedbed) 
 permeability_kl=0.000307		! permeability_kl [m/s] is the permeability of loose sand used in pickup_correction 'MastBergenvdBerg2003', can be calculated by relation Kozeny-Carmen kl = gD15^2/160nu*nl^3/(1-nl)^2

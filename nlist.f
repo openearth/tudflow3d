@@ -3,7 +3,7 @@
 
 !    Copyright (C) 2012  Lynyrd de Wit
 
-!    This program is free software: you can redistribute it and/or modify
+!    This program is free software: you can redistribute it and/or modify 
 !    it under the terms of the GNU General Public License as published by
 !    the Free Software Foundation, either version 3 of the License, or
 !    (at your option) any later version.
@@ -30,7 +30,7 @@
       REAL dt,time_nm,time_n,time_np,t_end,t0_output,dt_output,te_output,dt_max,tstart_rms,CFL,dt_ini,tstart_morf,trestart,dt_old
       REAL dt_output_movie,t0_output_movie,te_output_movie,te_rms,time_nm2,tstart_morf2,fcor
       REAL U_b,V_b,W_b,rho_b,W_j,Awjet,Aujet,Avjet,Strouhal,radius_j,kn,W_ox,U_bSEM,V_bSEM,U_w,V_w,U_init,V_init
-      REAL U_j2,Awjet2,Aujet2,Avjet2,Strouhal2,radius_j2,zjet2,rho_b2
+      REAL U_j2,Awjet2,Aujet2,Avjet2,Strouhal2,radius_j2,zjet2,rho_b2,ekm_sediment_pickup,nu_sediment_pickup
       REAL xj(4),yj(4),radius_inner_j,W_j_powerlaw,plume_z_outflow_belowsurf
       REAL dy,dz,schuif_x,depth,lm_min,lm_min3,Rmin,bc_obst_h
       REAL dr_grid(1:100),dy_grid(1:100),fac_y_grid(1:100),lim_y_grid(1:100),fac_r_grid(1:100),lim_r_grid(1:100)
@@ -68,7 +68,7 @@
       INTEGER iparm(64)
       CHARACTER*256 plumeQtseriesfile,plumectseriesfile,avfile,obstfile,kn_flow_file      
       REAL Q_j,plumeQseries(1:10000),plumeQtseries(1:10000),plumectseries(1:10000),plumecseries(30,1:10000) !c(30) matches with size frac_init
-      REAL Aplume,driftfluxforce_calfac,kn_flow_d50_multiplier
+      REAL Aplume,driftfluxforce_calfac,kn_flow_d50_multiplier,dz_sidewall
 	  REAL vwal,vwal2,delta_nsed,nl,permeability_kl,pickup_fluctuations_ampl,z_tau_sed,kn_d50_multiplier_bl,bl_relax,power_VR2019
 	  INTEGER pickup_fluctuations,cbed_method,k_layer_pickup,nu_minimum_wall,pickup_bedslope_geo,wbed_correction,bedslope_effect
 	  INTEGER wallmodel_tau_sed,ndtbed,nrmsbed,telUVWbed,tel_dt
@@ -144,7 +144,7 @@
       REAL*8, DIMENSION(:),ALLOCATABLE :: xSEM1,ySEM1,zSEM1,uSEM1
       REAL*8, DIMENSION(:),ALLOCATABLE :: lmxSEM1,lmySEM1,lmzSEM1
       REAL*8, DIMENSION(:),ALLOCATABLE :: xSEM2,ySEM2,zSEM2,uSEM2 
-      REAL*8, DIMENSION(:,:),ALLOCATABLE :: epsSEM1,epsSEM2,epsSEM3,Lmix2,Lmix2hat,vol_V,vol_Vp
+      REAL*8, DIMENSION(:,:),ALLOCATABLE :: epsSEM1,epsSEM2,epsSEM3,Lmix2,Lmix2hat,vol_V,vol_Vp,zbed_old,zbed_init
       REAL*8, DIMENSION(:),ALLOCATABLE :: lmxSEM2,lmySEM2,lmzSEM2
 	  REAL*8, DIMENSION(:),ALLOCATABLE :: rSEM3,thetaSEM3,zSEM3,wSEM3,xSEM3,ySEM3
 	  REAL, DIMENSION(:,:,:,:),ALLOCATABLE :: AA1,AA2,AA3
@@ -157,6 +157,7 @@
 	  REAL, DIMENSION(:,:,:),ALLOCATABLE :: rhoU,rhoV,rhoW
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: Srr,Spr,Szr,Spp,Spz,Szz,TKE,EEE,Cmu
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: Ppropx_dummy,Ppropy_dummy,Ppropz_dummy,wf,av_slope 
+	  REAL, DIMENSION(:,:,:),ALLOCATABLE :: obu,obv,obw
       INTEGER, DIMENSION(:),ALLOCATABLE, TARGET :: jco,iro,beg,di,di2
       REAL Hs,Tp,Lw,nx_w,ny_w,kabs_w,kx_w,ky_w,om_w
       REAL, DIMENSION(:),ALLOCATABLE :: LUB,LHS2 
@@ -172,7 +173,7 @@
 	  REAL*8, DIMENSION(:,:,:),ALLOCATABLE :: fc_global
 	  REAL, DIMENSION(:,:),ALLOCATABLE :: uuR_relax,uuL_relax,vvR_relax,vvL_relax,tau2Vold,tau2Vnew,tau2Wold,tau2Wnew,qb_relax
 	  REAL, DIMENSION(:,:),ALLOCATABLE :: tau_fl_Uold,tau_fl_Vold,tau_fl_Unew,tau_fl_Vnew,ust_sl_new,ust_sl_old,ust_bl_new,ust_bl_old
-	  REAL, DIMENSION(:,:),ALLOCATABLE :: ust_mud_new,ust_mud_old,kn_flow
+	  REAL, DIMENSION(:,:),ALLOCATABLE :: ust_mud_new,ust_mud_old,kn_flow,d50field
 	  REAL, DIMENSION(:,:,:),ALLOCATABLE :: qbU,qbV,ust_frac_old,ust_frac_new,sigUWbed,sigVWbed,sigUbed,sigVbed,sigWbed
 
  !     REAL, DIMENSION(:,:,:),ALLOCATABLE :: Uf,Vf,Wf
@@ -295,7 +296,7 @@
      & settling_along_gvector,vwal,nl,permeability_kl,pickup_fluctuations_ampl,pickup_fluctuations,pickup_correction,cbed_method,
      & z_tau_sed,k_layer_pickup,pickup_bedslope_geo,bedload_formula,kn_d50_multiplier_bl,calibfac_sand_bedload,bl_relax,fcor,
      & wbed_correction,bedslope_effect,bedslope_mu_s,alfabs_bl,alfabn_bl,phi_sediment,wallmodel_tau_sed,nrmsbed,ndtbed,
-     & erosion_cbed_start,movebed_absorb_cfluid,power_VR2019	 
+     & erosion_cbed_start,movebed_absorb_cfluid,power_VR2019,ekm_sediment_pickup,dz_sidewall	 
 	NAMELIST /fractions_in_plume/fract
 	NAMELIST /ship/U_TSHD,LOA,Lfront,Breadth,Draught,Lback,Hback,xfront,yfront,kn_TSHD,nprop,Dprop,xprop,yprop,zprop,
      &   Pprop,rudder,rot_prop,draghead,Dsp,xdh,perc_dh_suction,softnose,Hfront,cutter
@@ -612,6 +613,7 @@
 	gz = -999.
 	settling_along_gvector = 0
 	ekm_mol = -999.
+	ekm_sediment_pickup=-999.
 	time_nm = 0.
 	time_n=0.
 	time_np=0.
@@ -644,6 +646,7 @@
 	ndtbed = 10
 	nrmsbed = 100 
 	z_tau_sed = -999.
+	dz_sidewall = -999. 
 	pickup_bedslope_geo=0
 	bl_relax=0.01 
 	bedslope_effect=0
@@ -778,7 +781,7 @@
      &  .AND.convection.ne.'HYB6'.AND.convection.ne.'HYB4'.AND.convection.ne.'C4A6'.AND.convection.ne.'uTVD'
      &  .AND.convection.ne.'C2Bl'.AND.convection.ne.'C4Bl') CALL writeerror(401)
 	IF (numdiff<0.or.numdiff>1.) CALL writeerror(402)
-	IF (wiggle_detector.ne.0.and.wiggle_detector.ne.1.and.wiggle_detector.ne.2) CALL writeerror(408) 
+	IF ((wiggle_detector.ne.0.and.wiggle_detector.ne.1.and.wiggle_detector.ne.2).and.wiggle_detector<20) CALL writeerror(408) 
 	wd = wiggle_detector 
 	IF (diffusion.ne.'CDS2'.AND.diffusion.ne.'COM4') CALL writeerror(403) 
 	IF (comp_filter_a<0.or.comp_filter_a>0.5) CALL writeerror(404)
@@ -1508,6 +1511,7 @@
 	IF (gy<-800.) CALL writeerror(92)
 	IF (gz<-80000000.) CALL writeerror(93)
 	IF (ekm_mol<0.) CALL writeerror(94)
+	IF (ekm_sediment_pickup<0.) ekm_sediment_pickup=ekm_mol
 	IF (pickup_formula.ne.'vanrijn1984'.and.pickup_formula.ne.'nielsen1992'.and.pickup_formula.ne.'okayasu2010'
      & .and.pickup_formula.ne.'vanrijn2019'.and.pickup_formula.ne.'VR2019_Cbed'
      & .and.pickup_formula.ne.'VR1984_Cbed')   CALL writeerror(95)
@@ -1765,6 +1769,8 @@
 	ALLOCATE(kbedt(0:i1,0:j1))
 !!!	ALLOCATE(kbed22(0:i1,0:j1))
 	ALLOCATE(zbed(0:i1,0:j1))
+	ALLOCATE(zbed_old(0:i1,0:j1))
+	ALLOCATE(zbed_init(0:i1,0:j1))
 	ALLOCATE(rhocorr_air_z(1:nfrac,0:k1))
 	ALLOCATE(av_slope(1:imax,1:jmax,0:k1))
 	ALLOCATE(wscorr_z(1:nfrac,0:k1))
@@ -1838,7 +1844,12 @@
 	ALLOCATE(cV(nfrac,0:i1,0:j1,0:k1))
 	ALLOCATE(cW(nfrac,0:i1,0:j1,0:k1))
 	ALLOCATE(fc_global(0:i1,0:jmax*px+1,0:k1))
-	
+	ALLOCATE(obu(0:i1,0:j1,0:k1))  
+	ALLOCATE(obv(0:i1,0:j1,0:k1))  
+	ALLOCATE(obw(0:i1,0:j1,0:k1)) 
+	obu=0.
+	obv=0.
+	obw=0. 	
 	if (transporteq_fracs.eq.'massfrac') then
 		ALLOCATE(rhoU(0:i1,0:j1,0:k1))  
 		ALLOCATE(rhoV(0:i1,0:j1,0:k1))  
@@ -1872,10 +1883,10 @@
 	  ALLOCATE(d_cbotdelay(nfrac,0:i1,0:j1))
 	  d_cbotdelay = 0.
 	ENDIF
-	IF (interaction_bed.ge.4) THEN
+!	IF (interaction_bed.ge.4) THEN
 	  ALLOCATE(Clivebed(nfrac,0:i1,0:j1,0:k1))
 	  Clivebed=0.
-	ENDIF
+!	ENDIF
 			Coldbot=0.
 			Cnewbot=0.
 			dCdtbot=0.
@@ -1885,10 +1896,10 @@
 	ELSE 
 		b_update(istart_morf2:i1)=1.
 	ENDIF 	
-	if (cbc_perx_j(1)>0) then  !use quasi periodic bc for concentration:
-	  b_update(0:1)=0. ! no bed-update at inflow
-	  b_update(imax:i1)=0. ! no bed-update at outflow
-	endif 
+!	if (cbc_perx_j(1)>0) then  !use quasi periodic bc for concentration:
+!	  b_update(0:1)=0. ! no bed-update at inflow
+!	  b_update(imax:i1)=0. ! no bed-update at outflow
+!	endif 
 	
 	ALLOCATE(Ppropx(0:i1,0:j1,0:k1))
 	ALLOCATE(Ppropy(0:i1,0:j1,0:k1))
@@ -2056,6 +2067,7 @@
 	ust_frac_new=0.
 	ust_frac_old=0.
 	ALLOCATE(kn_flow(0:i1,0:j1))	
+	ALLOCATE(d50field(0:i1,0:j1))
 	kn_flow(0:i1,0:j1) = kn !default use kn defined in input file; in main.f subroutine determine_kn_flow is called once when kn_flow_file is defined or every timestep when kn_flow_d50_multiplies is defined
 	
 	!new variables rheology
@@ -2142,6 +2154,7 @@
 	tmax_inPpuntTSHD=0
 
 	nu_mol=ekm_mol/rho_b
+	nu_sediment_pickup=ekm_sediment_pickup/rho_b
   
   
 	IF (tstart_rms<t_end) then

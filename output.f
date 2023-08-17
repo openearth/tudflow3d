@@ -150,12 +150,13 @@
        ! Write the pretend data to the file. Although netCDF supports
        ! reading and writing subsets of data, in this case we write all the
        ! data in one operation.
-       call check( nf90_put_var(ncid, varid1, x) )
-       call check( nf90_put_var(ncid, varid2, y) )
-       call check( nf90_put_var(ncid, varid3, z) )
+       call check( nf90_put_var(ncid, varid1, REAL(x)) )
+       call check( nf90_put_var(ncid, varid2, REAL(y)) )
+       call check( nf90_put_var(ncid, varid3, REAL(z)) )
+       call check( nf90_put_var(ncid, varid21, REAL(obstacle)) )	   
        call check( nf90_put_var(ncid, varid22, ddxx) )
        call check( nf90_put_var(ncid, varid23, ddyy) )
-       call check( nf90_put_var(ncid, varid21, obstacle) )
+
 
 	
 
@@ -542,7 +543,7 @@
 	   
        call check( nf90_def_var(ncid, "wiggle_factor", NF90_REAL, dimids, varid10) )
        call check( nf90_put_att(ncid, varid10, 'units', '-') )
-       call check( nf90_put_att(ncid, varid10, 'long_name', 'wiggle factor blend: 0=no wiggles, 1=wiggles') )
+       call check( nf90_put_att(ncid, varid10, 'long_name', 'wiggle factor blend 0=no wiggles 1=wiggles') )
 	   
        call check( nf90_def_var(ncid, "time", NF90_REAL, dimids3, varid8) )
        call check( nf90_put_att(ncid, varid8, 'units', 's') )
@@ -602,29 +603,42 @@
        !call check( nf90_put_var(ncid, varid7, p(1:imax,1:jmax,1:kmax)+pold(1:imax,1:jmax,1:kmax)) )
 	   !!!call check( nf90_put_var(ncid, varid7, p(1:imax,1:jmax,1:kmax)) ) !! changed for exact solver output,
 	   if (sgs_model.eq.'DSmag') then
-	     call check( nf90_put_var(ncid, varid9, Csgrid(1:imax,1:jmax,1:kmax)) )
+	     uu=Csgrid(1:imax,1:jmax,1:kmax)
+	     call check( nf90_put_var(ncid, varid9, uu(1:imax,1:jmax,1:kmax)) )
 	   endif
 	   if (sgs_model.eq.'ReaKE') then
-	     call check( nf90_put_var(ncid, varid14, TKE(1:imax,1:jmax,1:kmax)) )
-		 call check( nf90_put_var(ncid, varid15, EEE(1:imax,1:jmax,1:kmax)) )
-		 call check( nf90_put_var(ncid, varid16, Cmu(1:imax,1:jmax,1:kmax)) )
+		 uu=TKE(1:imax,1:jmax,1:kmax)
+	     call check( nf90_put_var(ncid, varid14, uu(1:imax,1:jmax,1:kmax)) )
+		 uu=EEE(1:imax,1:jmax,1:kmax)
+		 call check( nf90_put_var(ncid, varid15, uu(1:imax,1:jmax,1:kmax)) )
+		 uu=Cmu(1:imax,1:jmax,1:kmax)
+		 call check( nf90_put_var(ncid, varid16, uu(1:imax,1:jmax,1:kmax)) )
 	   endif	   
 	   !! new output variable
 	   if (Non_Newtonian.eq.1.or.Non_Newtonian.eq.2) then
-         call check( nf90_put_var(ncid, varid30, strain(1:imax,1:jmax,1:kmax)) )
-		 call check( nf90_put_var(ncid, varid31, stress(1:imax,1:jmax,1:kmax)) )
-		 call check( nf90_put_var(ncid, varid32, tauY(1:imax,1:jmax,1:kmax)) )
-		 call check( nf90_put_var(ncid, varid33, muB(1:imax,1:jmax,1:kmax)) )
-		 call check( nf90_put_var(ncid, varid36, muA(1:imax,1:jmax,1:kmax)) )
+		 uu=strain(1:imax,1:jmax,1:kmax)
+         call check( nf90_put_var(ncid, varid30, uu(1:imax,1:jmax,1:kmax)) )
+		 uu=stress(1:imax,1:jmax,1:kmax)
+		 call check( nf90_put_var(ncid, varid31, uu(1:imax,1:jmax,1:kmax)) )
+		 uu=tauY(1:imax,1:jmax,1:kmax)
+		 call check( nf90_put_var(ncid, varid32, uu(1:imax,1:jmax,1:kmax)) )
+		 uu=muB(1:imax,1:jmax,1:kmax)
+		 call check( nf90_put_var(ncid, varid33, uu(1:imax,1:jmax,1:kmax)) )
+		 uu=muA(1:imax,1:jmax,1:kmax)
+		 call check( nf90_put_var(ncid, varid36, uu(1:imax,1:jmax,1:kmax)) )
        endif
 
 	   if (Non_Newtonian.eq.2) then
-		 call check( nf90_put_var(ncid, varid34, lambda_new(1:imax,1:jmax,1:kmax)) )
-		 call check( nf90_put_var(ncid, varid35, lambda_old(1:imax,1:jmax,1:kmax)) )
+		 uu=lambda_new(1:imax,1:jmax,1:kmax)	
+		 call check( nf90_put_var(ncid, varid34, uu(1:imax,1:jmax,1:kmax)) )
+		 uu=lambda_old(1:imax,1:jmax,1:kmax)
+		 call check( nf90_put_var(ncid, varid35, uu(1:imax,1:jmax,1:kmax)) )
 	   endif
-	   call check( nf90_put_var(ncid, varid10, wf(1:imax,1:jmax,1:kmax)) )
+	   uu=wf(1:imax,1:jmax,1:kmax)
+	   call check( nf90_put_var(ncid, varid10, uu(1:imax,1:jmax,1:kmax)) )
        call check( nf90_put_var(ncid, varid8, tt) )
-	   call check( nf90_put_var(ncid, varid23, obstacle) )
+	   uu=obstacle(1:imax,1:jmax,1:kmax)
+	   call check( nf90_put_var(ncid, varid23, uu(1:imax,1:jmax,1:kmax)) )
     
        ! Close the file. This frees up any internal netCDF resources
        ! associated with the file, and flushes any buffers.

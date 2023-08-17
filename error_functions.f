@@ -595,7 +595,7 @@
 		write(*,*) '# npresIBM must be >0                            #'
 	CASE(408)
 		write(*,*) '# namelist &num_scheme                           #'		
-		write(*,*) '# wiggle_detector should be 0 or 1 or 2          #'			
+		write(*,*) '# wiggle_detector should be 0 or 1 or 2 or >20   #'			
 	CASE(409)
 		write(*,*) '# namelist &num_scheme                           #'		
 		write(*,*) '# k_ust_tau should be between 1 and kmax         #'	
@@ -658,7 +658,7 @@
 		write(*,*) '# please note that unlike V_b, V_w is defined in earth fixed x,y coordinate system !    #'	
 	CASE(613)
 		write(*,*) '# namelist &ambient                              #'			
-		write(*,*) '# istart_morf2, i_periodicx must be >0 and <imax  #'		
+		write(*,*) '# istart_morf2, and/or i_periodicx must be >0 and <imax  #'		
 	CASE(614)
 		write(*,*) '# namelist &ambient                              #'			
 		write(*,*) '# kn_flow_file contains NaN or negative value    #'			
