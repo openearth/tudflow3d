@@ -18,7 +18,7 @@
 
       MODULE sediment
       USE nlist	
-
+ 
       IMPLICIT NONE
       
 
@@ -1063,8 +1063,8 @@
 					bedslope_alpha = atan(dzbed_dn/(MAX(ABS(dzbed_ds),1.e-12)*SIGN(1.,dzbed_ds)))
 					fcor_slope=(cos(bedslope_angle)*sqrt(1.-(sin(bedslope_alpha))**2*(tan(bedslope_angle))**2/
      &					bedslope_mu_s**2)-cos(bedslope_alpha)*sin(bedslope_angle)/bedslope_mu_s)
-					fcor_slope=MIN(fcor_slope,10.)
-					fcor_slope=MAX(fcor_slope,0.1)
+					fcor_slope=MIN(fcor_slope,1000.)
+					fcor_slope=MAX(fcor_slope,0.001)
 					! if used in combination with avalanche slope of 1.6 or less steep then no imaginary numbers occur in fcor_slope (tested in Matlab)
 					Shields_cr = Shields_cr*fcor_slope
 					Shields_cr_bl=Shields_cr 
@@ -1081,8 +1081,8 @@
 					bedslope_alpha = atan(dzbed_dn/(MAX(ABS(dzbed_ds),1.e-12)*SIGN(1.,dzbed_ds)))
 					fcor_slope=(cos(bedslope_angle)*sqrt(1.-(sin(bedslope_alpha))**2*(tan(bedslope_angle))**2/
      &					bedslope_mu_s**2)-cos(bedslope_alpha)*sin(bedslope_angle)/bedslope_mu_s)
-					fcor_slope=MIN(fcor_slope,10.)
-					fcor_slope=MAX(fcor_slope,0.1)	
+					fcor_slope=MIN(fcor_slope,1000.)
+					fcor_slope=MAX(fcor_slope,0.001)	
 					! if used in combination with avalanche slope of 1.6 or less steep then no imaginary numbers occur in fcor_slope (tested in Matlab)
 					Shields_cr_bl = Shields_cr*fcor_slope
 				ENDIF 

@@ -21,7 +21,7 @@
      &   tmax_inPpunt,i_inPpunt,j_inPpunt,tmax_inUpunt,i_inUpunt,j_inUpunt,tmax_inVpunt,i_inVpunt,j_inVpunt,kjet)
 	implicit none
 
-	include 'mpif.h'
+	include 'mpif.h' 
 
 	real Uvel(0:i1,0:j1,0:k1),Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1)
       integer  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px
@@ -5122,7 +5122,7 @@ c*************************************************************
 		ust=sqrt(U_bSEM**2+V_bSEM**2)
 		if (slip_bot.eq.1.or.slip_bot.ge.3) then
 		  do i=1,10
-			z0=0.11*nu_mol/ust+kn/30
+			z0=0.11*nu_mol/MAX(ust,1.e-9)+kn/30
 			ust=sqrt(U_bSEM**2+V_bSEM**2)*kappa/(log((depth-bc_obst_h)/z0)-1);
 		  enddo
 		endif
@@ -5334,7 +5334,7 @@ c*************************************************************
 	ust=sqrt(U_bSEM**2+V_bSEM**2)
 	if (slip_bot.eq.1.or.slip_bot.ge.3) then
 	  do i=1,10
-	    z0=0.11*nu_mol/ust+kn/30
+	    z0=0.11*nu_mol/MAX(ust,1.e-9)+kn/30
 	    ust=sqrt(U_bSEM**2+V_bSEM**2)*kappa/(log((depth-bc_obst_h)/z0)-1);
 	  enddo
 	endif
@@ -5713,7 +5713,7 @@ c*************************************************************
 	ust=sqrt(U_bSEM**2+V_bSEM**2)
 	if (slip_bot.eq.1.or.slip_bot.ge.3) then
 	  do i=1,10
-	    z0=0.11*nu_mol/ust+kn/30
+	    z0=0.11*nu_mol/MAX(ust,1.e-9)+kn/30
 	    ust=sqrt(U_bSEM**2+V_bSEM**2)*kappa/(log((depth-bc_obst_h)/z0)-1);
 	  enddo
 	endif

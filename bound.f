@@ -27,7 +27,7 @@ c
 !       include 'common.txt'
 
 c
-      integer jtmp,t
+      integer jtmp,t 
 c
       real  Ubound(0:i1,0:j1,0:k1),Vbound(0:i1,0:j1,0:k1),rho(0:i1,0:j1,0:k1),
      +      Wbound(0:i1,0:j1,0:k1)
@@ -49,7 +49,8 @@ c
 	real Ujetbc,Vjetbc,Wjetbc,Ujetbc2,Vjetbc2
 	real rr,interpseries
       real Ujet2,zzz,z2,val2,jetcorr
-	  integer i_inflowU,i_inflowVW,i_outflowU,i_outflowVW
+	  integer i_inflowU,i_inflowVW,i_outflowU,i_outflowVW,i_shift
+	  real outflow_factor
 
 ! 	pi   = 4.0 * atan(1.0)
 c
@@ -112,7 +113,7 @@ c 	influence of waves on lateral boundaries:
 		ELSE 
 			if (monopile>0) then !inflow Ubc2,Vbc2 defined at imax instead at i=0
 			  i=imax 
-			elseif((U_b>0.and.LOA<0).or.((U_TSHD-U_b)>0.and.LOA>0.)) THEN 
+			elseif((U_b.ge.0.and.LOA<0).or.((U_TSHD-U_b).ge.0.and.LOA>0.)) THEN 
 			  i=0
 			else !inflow Ubc2,Vbc2 defined at imax instead at i=0
 			  i=imax 
@@ -278,16 +279,20 @@ c 	influence of waves on lateral boundaries:
 	Wbc1=W_b
 
 	if (periodicx.eq.0.and.monopile.eq.-1) then
-		if((U_b>0.and.LOA<0).or.((U_TSHD-U_b)>0.and.LOA>0.)) THEN 
+		if((U_b.ge.0.and.LOA<0).or.((U_TSHD-U_b).ge.0.and.LOA>0.)) THEN 
 	      i_inflowU=0
 		  i_inflowVW=0
 		  i_outflowU=imax
 		  i_outflowVW=i1
+		  i_shift=-1
+		  outflow_factor=1.
 		else !inflow Ubc2,Vbc2 defined at imax instead at i=0
 		  i_inflowU=imax 
 		  i_inflowVW=i1
 		  i_outflowU=0
 		  i_outflowVW=0
+		  i_shift=+1
+		  outflow_factor=-1.
 		endif 	
 		if (Uoutflow.eq.2) then ! convective outflow boundary
           do k=1,kmax ! boundaries in i-direction
@@ -304,22 +309,24 @@ c 	influence of waves on lateral boundaries:
 		   Ubound(i_inflowU,j,k)    =    Ubc*cos_u(j)+Vbc*sin_u(j)
 		   Vbound(i_inflowVW,j,k)    =    (-Ubc*sin_v(j)+Vbc*cos_v(j)) !2.*(-Ubc*sin_v(j)+Vbc*cos_v(j))-Vbound(1,j,k)
 		   Wbound(i_inflowVW,j,k)    =    Wbc !2.*Wbc - Wbound(1,j,k) !Wbound(0,j,k)    =  Wbc !- Wbound(1,j,k)
-		   Ubc = MAX(Ubc2(j,k)*cos_u(j)+Vbc2(j,k)*sin_u(j),0.)  !Unormal outflow boundary at U-loc; should be >0 otherwise no outflow and divide by zero 
+		   Ubc = outflow_factor*MAX(outflow_factor*Ubc2(j,k)*cos_u(j)+outflow_factor*Vbc2(j,k)*sin_u(j),0.)  !Unormal outflow boundary at U-loc; should be >0 otherwise no outflow and divide by zero 
 !		   Ubound(imax,j,k) =    MAX(Ubound(imax-1,j,k)-dr(imax)/(Ubc*dt)*(Unew(imax-1,j,k)-Uold(imax-1,j,k)),0.)
 !		   Ubound(i1,j,k)   =    MAX(Ubound(imax,j,k),0.)	
 !		   Vbound(i1,j,k)   =    Vbound(imax,j,k)-(Rp(i1)-Rp(imax))/(Ubc*dt)*(Vnew(imax,j,k)-Vold(imax,j,k))		   
 !		   Wbound(i1,j,k)   =    Wbound(imax,j,k)-(Rp(i1)-Rp(imax))/(Ubc*dt)*(Wnew(imax,j,k)-Wold(imax,j,k))
 		   
 		   ! solving Ui+1^n+1-Ui+1^n)/dt+Unormal(Ui+1^n+1-Ui^n+1)/dx=0. !implicit treatment of dUdn term
-		   Ubound(imax,j,k) = (Unew(imax,j,k)+Ubc*dt/dr(imax)*Ubound(imax-1,j,k))/(1.+Ubc*dt/dr(imax)) 
-		   Ubound(i1,j,k)   =    MAX(Ubound(imax,j,k),0.)	
-		   Vbound(i1,j,k) = (Vnew(i1,j,k)+Ubc*dt/(Rp(i1)-Rp(imax))*Vbound(imax,j,k))/(1.+Ubc*dt/(Rp(i1)-Rp(imax))) 
-		   Wbound(i1,j,k) = (Wnew(i1,j,k)+Ubc*dt/(Rp(i1)-Rp(imax))*Wbound(imax,j,k))/(1.+Ubc*dt/(Rp(i1)-Rp(imax))) 
-!		   Ubound(i_outflowU,j,k) = (Unew(imax,j,k)+Ubc*dt/dr(imax)*Ubound(imax-1,j,k))/(1.+Ubc*dt/dr(imax)) 
-!		   Ubound(i_outflowVW,j,k)   =    MAX(Ubound(imax,j,k),0.)	
-!		   Vbound(i_outflowVW,j,k) = (Vnew(i1,j,k)+Ubc*dt/(Rp(i1)-Rp(imax))*Vbound(imax,j,k))/(1.+Ubc*dt/(Rp(i1)-Rp(imax))) 
-!		   Wbound(i_outflowVW,j,k) = (Wnew(i1,j,k)+Ubc*dt/(Rp(i1)-Rp(imax))*Wbound(imax,j,k))/(1.+Ubc*dt/(Rp(i1)-Rp(imax))) 
-		   
+		   !Ubound(imax,j,k) = (Unew(imax,j,k)+Ubc*dt/dr(imax)*Ubound(imax-1,j,k))/(1.+Ubc*dt/dr(imax))   
+		   !Ubound(i1,j,k)   =    MAX(Ubound(imax,j,k),0.)	
+		   !Vbound(i1,j,k) = (Vnew(i1,j,k)+Ubc*dt/(Rp(i1)-Rp(imax))*Vbound(imax,j,k))/(1.+Ubc*dt/(Rp(i1)-Rp(imax))) 
+		   !Wbound(i1,j,k) = (Wnew(i1,j,k)+Ubc*dt/(Rp(i1)-Rp(imax))*Wbound(imax,j,k))/(1.+Ubc*dt/(Rp(i1)-Rp(imax))) 
+		   Ubound(i_outflowVW,j,k)   =    outflow_factor*MAX(outflow_factor*Ubound(i_outflowVW+i_shift,j,k),0.)	
+		   Ubound(i_outflowU,j,k) = (Unew(i_outflowU,j,k)+Ubc*dt/dr(i_outflowU)*Ubound(i_outflowU+i_shift,j,k))
+     &		   /(1.+Ubc*dt/dr(i_outflowU)) 
+		   Vbound(i_outflowVW,j,k) = (Vnew(i_outflowVW,j,k)+Ubc*dt/dr(i_outflowVW)*Vbound(i_outflowVW+i_shift,j,k))
+     &		   /(1.+Ubc*dt/dr(i_outflowVW))
+		   Wbound(i_outflowVW,j,k) = (Wnew(i_outflowVW,j,k)+Ubc*dt/dr(i_outflowVW)*Wbound(i_outflowVW+i_shift,j,k))
+     &		   /(1.+Ubc*dt/dr(i_outflowVW))
            enddo   
           enddo		
 		else !Neumann outflow boundary 
@@ -334,13 +341,13 @@ c 	influence of waves on lateral boundaries:
 		    Ubc=Ub2(j,k)+Ubc2(j,k)
 		    Vbc=0.5*(Vb2(j,k)+Vb2(j+1,k))+Vbc2(j,k)
 		    Wbc=0.5*(Wb2(j,k)+Wb2(j,k+1))+Wbc2	
-		   Ubound(0,j,k)    =    Ubc*cos_u(j)+Vbc*sin_u(j)
-		   Ubound(imax,j,k) =    MAX(Ubound(imax-1,j,k),0.)
-		   Ubound(i1,j,k)   =    MAX(Ubound(imax,j,k),0.)
-		   Vbound(0,j,k)    =    (-Ubc*sin_v(j)+Vbc*cos_v(j)) !2.*(-Ubc*sin_v(j)+Vbc*cos_v(j))-Vbound(1,j,k)
-		   Vbound(i1,j,k)   =    Vbound(imax,j,k)
-		   Wbound(0,j,k)    =    Wbc !2.*Wbc - Wbound(1,j,k) !Wbound(0,j,k)    =  Wbc !- Wbound(1,j,k)
-		   Wbound(i1,j,k)   =    Wbound(imax,j,k)
+		   Ubound(i_inflowU,j,k)    =    Ubc*cos_u(j)+Vbc*sin_u(j)
+		   Ubound(i_outflowU,j,k) =    outflow_factor*MAX(outflow_factor*Ubound(i_outflowU+i_shift,j,k),0.)
+		   Ubound(i_outflowVW,j,k)   =    outflow_factor*MAX(outflow_factor*Ubound(i_outflowVW+i_shift,j,k),0.)
+		   Vbound(i_inflowVW,j,k)    =    (-Ubc*sin_v(j)+Vbc*cos_v(j)) !2.*(-Ubc*sin_v(j)+Vbc*cos_v(j))-Vbound(1,j,k)
+		   Vbound(i_outflowVW,j,k)   =    Vbound(i_outflowVW+i_shift,j,k)
+		   Wbound(i_inflowVW,j,k)    =    Wbc !2.*Wbc - Wbound(1,j,k) !Wbound(0,j,k)    =  Wbc !- Wbound(1,j,k)
+		   Wbound(i_outflowVW,j,k)   =    Wbound(i_outflowVW+i_shift,j,k)
            enddo   
           enddo
 		endif 
@@ -730,6 +737,8 @@ c
 	  real zb_W,zb_U,zb_V,vel_ibm2,distance_to_bed_kp,distance_to_bed_kpp,yplus,absU,z0,ust
 
       real  Ubound2(0:i1,0:j1,0:k1),Vbound2(0:i1,0:j1,0:k1),Wbound2(0:i1,0:j1,0:k1) 
+	  integer i_inflowU,i_inflowVW,i_outflowU,i_outflowVW,i_shift
+	  real outflow_factor
 
 ! 	pi   = 4.0 * atan(1.0)
 c
@@ -791,7 +800,7 @@ c 	influence of waves on lateral boundaries:
 		ELSE
 			if (monopile>0) then !inflow Ubc2,Vbc2 defined at imax instead at i=0
 			  i=imax 
-			elseif((U_b>0.and.LOA<0).or.((U_TSHD-U_b)>0.and.LOA>0.)) THEN 
+			elseif((U_b.ge.0.and.LOA<0).or.((U_TSHD-U_b).ge.0.and.LOA>0.)) THEN 
 			  i=0
 			else !inflow Ubc2,Vbc2 defined at imax instead at i=0
 			  i=imax 
@@ -955,6 +964,21 @@ c 	influence of waves on lateral boundaries:
 
 	Wbc1=W_b
 	if (periodicx.eq.0.and.monopile.eq.-1) then
+		if((U_b.ge.0.and.LOA<0).or.((U_TSHD-U_b).ge.0.and.LOA>0.)) THEN 
+	      i_inflowU=0
+		  i_inflowVW=0
+		  i_outflowU=imax
+		  i_outflowVW=i1
+		  i_shift=-1
+		  outflow_factor=1.
+		else !inflow Ubc2,Vbc2 defined at imax instead at i=0
+		  i_inflowU=imax 
+		  i_inflowVW=i1
+		  i_outflowU=0
+		  i_outflowVW=0
+		  i_shift=+1
+		  outflow_factor=-1.
+		endif 	
 		if (Uoutflow.eq.2) then ! convective outflow boundary
 	      do k=1,kmax ! boundaries in i-direction
          	do j=0,j1
@@ -967,20 +991,34 @@ c 	influence of waves on lateral boundaries:
 		    Ubc=Ub2(j,k)+Ubc2(j,k)
 		    Vbc=0.5*(Vb2(j,k)+Vb2(j+1,k))+Vbc2(j,k)
 		    Wbc=0.5*(Wb2(j,k)+Wb2(j,k+1))+Wbc2	
-		   Ubound(0,j,k)    =    Ubc*cos_u(j)+Vbc*sin_u(j)
-		   Vbound(0,j,k)    =    (-Ubc*sin_v(j)+Vbc*cos_v(j)) !2.*(-Ubc*sin_v(j)+Vbc*cos_v(j))-Vbound(1,j,k)
-		   Wbound(0,j,k)    =    Wbc !2.*Wbc - Wbound(1,j,k) !Wbound(0,j,k)    =  Wbc !- Wbound(1,j,k)
-		   Ubc = MAX(Ubc2(j,k)*cos_u(j)+Vbc2(j,k)*sin_u(j),0.)  !Unormal outflow boundary at U-loc; should be >0 otherwise no outflow and divide by zero 
-!		   Ubound(imax,j,k) =    MAX(Ubound(imax-1,j,k)-dr(imax)/(Ubc*dt)*(Unew(imax-1,j,k)-Uold(imax-1,j,k)),0.)
+!		   Ubound(0,j,k)    =    Ubc*cos_u(j)+Vbc*sin_u(j)
+!		   Vbound(0,j,k)    =    (-Ubc*sin_v(j)+Vbc*cos_v(j)) !2.*(-Ubc*sin_v(j)+Vbc*cos_v(j))-Vbound(1,j,k)
+!		   Wbound(0,j,k)    =    Wbc !2.*Wbc - Wbound(1,j,k) !Wbound(0,j,k)    =  Wbc !- Wbound(1,j,k)
+!		   Ubc = MAX(Ubc2(j,k)*cos_u(j)+Vbc2(j,k)*sin_u(j),0.)  !Unormal outflow boundary at U-loc; should be >0 otherwise no outflow and divide by zero 
+!!		   Ubound(imax,j,k) =    MAX(Ubound(imax-1,j,k)-dr(imax)/(Ubc*dt)*(Unew(imax-1,j,k)-Uold(imax-1,j,k)),0.)
+!!		   Ubound(i1,j,k)   =    MAX(Ubound(imax,j,k),0.)	
+!!		   Vbound(i1,j,k)   =    Vbound(imax,j,k)-(Rp(i1)-Rp(imax))/(Ubc*dt)*(Vnew(imax,j,k)-Vold(imax,j,k))		   
+!!		   Wbound(i1,j,k)   =    Wbound(imax,j,k)-(Rp(i1)-Rp(imax))/(Ubc*dt)*(Wnew(imax,j,k)-Wold(imax,j,k))
+!		   
+!		   ! solving Ui+1^n+1-Ui+1^n)/dt+Unormal(Ui+1^n+1-Ui^n+1)/dx=0. !implicit treatment of dUdn term
+!		   Ubound(imax,j,k) = (Unew(imax,j,k)+Ubc*dt/dr(imax)*Ubound(imax-1,j,k))/(1.+Ubc*dt/dr(imax)) 
 !		   Ubound(i1,j,k)   =    MAX(Ubound(imax,j,k),0.)	
-!		   Vbound(i1,j,k)   =    Vbound(imax,j,k)-(Rp(i1)-Rp(imax))/(Ubc*dt)*(Vnew(imax,j,k)-Vold(imax,j,k))		   
-!		   Wbound(i1,j,k)   =    Wbound(imax,j,k)-(Rp(i1)-Rp(imax))/(Ubc*dt)*(Wnew(imax,j,k)-Wold(imax,j,k))
+!		   Vbound(i1,j,k) = (Vnew(i1,j,k)+Ubc*dt/(Rp(i1)-Rp(imax))*Vbound(imax,j,k))/(1.+Ubc*dt/(Rp(i1)-Rp(imax))) 
+!		   Wbound(i1,j,k) = (Wnew(i1,j,k)+Ubc*dt/(Rp(i1)-Rp(imax))*Wbound(imax,j,k))/(1.+Ubc*dt/(Rp(i1)-Rp(imax))) 	
+
+		   Ubound(i_inflowU,j,k)    =    Ubc*cos_u(j)+Vbc*sin_u(j)
+		   Vbound(i_inflowVW,j,k)    =    (-Ubc*sin_v(j)+Vbc*cos_v(j)) !2.*(-Ubc*sin_v(j)+Vbc*cos_v(j))-Vbound(1,j,k)
+		   Wbound(i_inflowVW,j,k)    =    Wbc !2.*Wbc - Wbound(1,j,k) !Wbound(0,j,k)    =  Wbc !- Wbound(1,j,k)
+		   Ubc = outflow_factor*MAX(outflow_factor*Ubc2(j,k)*cos_u(j)+outflow_factor*Vbc2(j,k)*sin_u(j),0.)  !Unormal outflow boundary at U-loc; should be >0 otherwise no outflow and divide by zero 
 		   
 		   ! solving Ui+1^n+1-Ui+1^n)/dt+Unormal(Ui+1^n+1-Ui^n+1)/dx=0. !implicit treatment of dUdn term
-		   Ubound(imax,j,k) = (Unew(imax,j,k)+Ubc*dt/dr(imax)*Ubound(imax-1,j,k))/(1.+Ubc*dt/dr(imax)) 
-		   Ubound(i1,j,k)   =    MAX(Ubound(imax,j,k),0.)	
-		   Vbound(i1,j,k) = (Vnew(i1,j,k)+Ubc*dt/(Rp(i1)-Rp(imax))*Vbound(imax,j,k))/(1.+Ubc*dt/(Rp(i1)-Rp(imax))) 
-		   Wbound(i1,j,k) = (Wnew(i1,j,k)+Ubc*dt/(Rp(i1)-Rp(imax))*Wbound(imax,j,k))/(1.+Ubc*dt/(Rp(i1)-Rp(imax))) 		   
+		   Ubound(i_outflowVW,j,k)   =    outflow_factor*MAX(outflow_factor*Ubound(i_outflowVW+i_shift,j,k),0.)	
+		   Ubound(i_outflowU,j,k) = (Unew(i_outflowU,j,k)+Ubc*dt/dr(i_outflowU)*Ubound(i_outflowU+i_shift,j,k))
+     &		   /(1.+Ubc*dt/dr(i_outflowU)) 
+		   Vbound(i_outflowVW,j,k) = (Vnew(i_outflowVW,j,k)+Ubc*dt/dr(i_outflowVW)*Vbound(i_outflowVW+i_shift,j,k))
+     &		   /(1.+Ubc*dt/dr(i_outflowVW))
+		   Wbound(i_outflowVW,j,k) = (Wnew(i_outflowVW,j,k)+Ubc*dt/dr(i_outflowVW)*Wbound(i_outflowVW+i_shift,j,k))
+     &		   /(1.+Ubc*dt/dr(i_outflowVW))		   
          	enddo   
       	    enddo
 		else !Neumann outflow boundary 
@@ -995,13 +1033,20 @@ c 	influence of waves on lateral boundaries:
 		    Ubc=Ub2(j,k)+Ubc2(j,k)
 		    Vbc=0.5*(Vb2(j,k)+Vb2(j+1,k))+Vbc2(j,k)
 		    Wbc=0.5*(Wb2(j,k)+Wb2(j,k+1))+Wbc2	
-		   Ubound(0,j,k)    =    Ubc*cos_u(j)+Vbc*sin_u(j)
-		   Ubound(imax,j,k) =    MAX(Ubound(imax-1,j,k),0.)
-		   Ubound(i1,j,k)   =    MAX(Ubound(imax,j,k),0.)
-		   Vbound(0,j,k)    =    (-Ubc*sin_v(j)+Vbc*cos_v(j)) !2.*(-Ubc*sin_v(j)+Vbc*cos_v(j))-Vbound(1,j,k)
-		   Vbound(i1,j,k)   =    Vbound(imax,j,k)
-		   Wbound(0,j,k)    =    Wbc !2.*Wbc - Wbound(1,j,k) !Wbound(0,j,k)    =  Wbc !- Wbound(1,j,k)
-		   Wbound(i1,j,k)   =    Wbound(imax,j,k)
+!		   Ubound(0,j,k)    =    Ubc*cos_u(j)+Vbc*sin_u(j)
+!		   Ubound(imax,j,k) =    MAX(Ubound(imax-1,j,k),0.)
+!		   Ubound(i1,j,k)   =    MAX(Ubound(imax,j,k),0.)
+!		   Vbound(0,j,k)    =    (-Ubc*sin_v(j)+Vbc*cos_v(j)) !2.*(-Ubc*sin_v(j)+Vbc*cos_v(j))-Vbound(1,j,k)
+!		   Vbound(i1,j,k)   =    Vbound(imax,j,k)
+!		   Wbound(0,j,k)    =    Wbc !2.*Wbc - Wbound(1,j,k) !Wbound(0,j,k)    =  Wbc !- Wbound(1,j,k)
+!		   Wbound(i1,j,k)   =    Wbound(imax,j,k)
+		   Ubound(i_inflowU,j,k)    =    Ubc*cos_u(j)+Vbc*sin_u(j)
+		   Ubound(i_outflowU,j,k) =    outflow_factor*MAX(outflow_factor*Ubound(i_outflowU+i_shift,j,k),0.)
+		   Ubound(i_outflowVW,j,k)   =    outflow_factor*MAX(outflow_factor*Ubound(i_outflowVW+i_shift,j,k),0.)
+		   Vbound(i_inflowVW,j,k)    =    (-Ubc*sin_v(j)+Vbc*cos_v(j)) !2.*(-Ubc*sin_v(j)+Vbc*cos_v(j))-Vbound(1,j,k)
+		   Vbound(i_outflowVW,j,k)   =    Vbound(i_outflowVW+i_shift,j,k)
+		   Wbound(i_inflowVW,j,k)    =    Wbc !2.*Wbc - Wbound(1,j,k) !Wbound(0,j,k)    =  Wbc !- Wbound(1,j,k)
+		   Wbound(i_outflowVW,j,k)   =    Wbound(i_outflowVW+i_shift,j,k)
          	enddo   
       	    enddo		
 		endif 
@@ -1627,6 +1672,8 @@ c
 	  real zb_W,zb_U,zb_V,vel_ibm2,distance_to_bed_kp,distance_to_bed_kpp,yplus,absU,z0,ust,rr2,ww1,ww2
 	  real dpdz1,dpdy2,tauw1,tauv1,tauw2,tauv2,ust1,ust2,tauu1,tauu2,dpdx11,dpdy22,tau,u0,v0,rr1a,rr2a,rr0
 	  real uu1a,uu2a,vv1a,vv2a,dist_vel,uu0,vv0 
+	  integer i_inflowU,i_inflowVW,i_outflowU,i_outflowVW,i_shift
+	  real outflow_factor
 
 c
 c
@@ -1846,7 +1893,7 @@ c 	influence of waves on lateral boundaries:
 		ELSE 
 			if (monopile>0) then !inflow Ubc2,Vbc2 defined at imax instead at i=0
 			  i=imax 
-			elseif((U_b>0.and.LOA<0).or.((U_TSHD-U_b)>0.and.LOA>0.)) THEN 
+			elseif((U_b.ge.0.and.LOA<0).or.((U_TSHD-U_b).ge.0.and.LOA>0.)) THEN 
 			  i=0
 			else !inflow Ubc2,Vbc2 defined at imax instead at i=0
 			  i=imax 
@@ -2373,6 +2420,21 @@ c 	influence of waves on lateral boundaries:
 
 	Wbc1=W_b
 	if (periodicx.eq.0.and.monopile.eq.-1) then	
+		if((U_b.ge.0.and.LOA<0).or.((U_TSHD-U_b).ge.0.and.LOA>0.)) THEN 
+	      i_inflowU=0
+		  i_inflowVW=0
+		  i_outflowU=imax
+		  i_outflowVW=i1
+		  i_shift=-1
+		  outflow_factor=1.
+		else !inflow Ubc2,Vbc2 defined at imax instead at i=0
+		  i_inflowU=imax 
+		  i_inflowVW=i1
+		  i_outflowU=0
+		  i_outflowVW=0
+		  i_shift=+1
+		  outflow_factor=-1.
+		endif 	
 		if (Uoutflow.eq.2) then ! convective outflow boundary
       	   do k=1,kmax ! boundaries in i-direction
 	   	do j=0,j1
@@ -2382,25 +2444,39 @@ c 	influence of waves on lateral boundaries:
 			Vbc2(j,k)=Vbcoarse2(j,k)
 			Wbc2=Wbcoarse2(j,k)
 		    endif
-		    Ubc=rhU(0,j,k)*(Ub2(j,k)+Ubc2(j,k))                                     !0.5*(rho(0,j,k)+rho(1,j,k))*
-		    Vbc=rhU(0,j,k)*(0.5*(Vb2(j,k)+Vb2(j+1,k))+Vbc2(j,k))                    !0.5*(rho(0,j,k)+rho(1,j,k))*
-		    Wbc=rhU(0,j,k)*(0.5*(Wb2(j,k)+Wb2(j,k+1))+Wbc2)	                     !0.5*(rho(0,j,k)+rho(1,j,k))*
-		   Ubound(imax,j,k) =    MAX(Ubound(imax-1,j,k),0.)
-		   Ubound(i1,j,k)   =    MAX(Ubound(imax,j,k),0.)
-		   Vbound(i1,j,k)   =    Vbound(imax,j,k)
-		   Wbound(i1,j,k)   =    Wbound(imax,j,k)
-		   Ubc = MAX(Ubc2(j,k)*cos_u(j)+Vbc2(j,k)*sin_u(j),0.)  !Unormal outflow boundary at U-loc; should be >0 otherwise no outflow and divide by zero 
-!		   Ubound(imax,j,k) =    MAX(Ubound(imax-1,j,k)-rhU(imax,j,k)*dr(imax)/(Ubc*dt)*(Unew(imax-1,j,k)-Uold(imax-1,j,k)),0.)
+		    Ubc=rhU(i_inflowU,j,k)*(Ub2(j,k)+Ubc2(j,k))                                     !0.5*(rho(0,j,k)+rho(1,j,k))*
+		    Vbc=rhU(i_inflowU,j,k)*(0.5*(Vb2(j,k)+Vb2(j+1,k))+Vbc2(j,k))                    !0.5*(rho(0,j,k)+rho(1,j,k))*
+		    Wbc=rhU(i_inflowU,j,k)*(0.5*(Wb2(j,k)+Wb2(j,k+1))+Wbc2)	                     !0.5*(rho(0,j,k)+rho(1,j,k))*
+!		   Ubound(imax,j,k) =    MAX(Ubound(imax-1,j,k),0.)
+!		   Ubound(i1,j,k)   =    MAX(Ubound(imax,j,k),0.)
+!		   Vbound(i1,j,k)   =    Vbound(imax,j,k)
+!		   Wbound(i1,j,k)   =    Wbound(imax,j,k)
+!		   Ubc = MAX(Ubc2(j,k)*cos_u(j)+Vbc2(j,k)*sin_u(j),0.)  !Unormal outflow boundary at U-loc; should be >0 otherwise no outflow and divide by zero 
+!!		   Ubound(imax,j,k) =    MAX(Ubound(imax-1,j,k)-rhU(imax,j,k)*dr(imax)/(Ubc*dt)*(Unew(imax-1,j,k)-Uold(imax-1,j,k)),0.)
+!!		   Ubound(i1,j,k)   =    MAX(Ubound(imax,j,k),0.)	
+!!		   Vbound(i1,j,k)   =    Vbound(imax,j,k)-rhV(imax,j,k)*(Rp(i1)-Rp(imax))/(Ubc*dt)*(Vnew(imax,j,k)-Vold(imax,j,k))		   
+!!		   Wbound(i1,j,k)   =    Wbound(imax,j,k)-rhW(imax,j,k)*(Rp(i1)-Rp(imax))/(Ubc*dt)*(Wnew(imax,j,k)-Wold(imax,j,k))		
+!
+!		   ! solving Ui+1^n+1-Ui+1^n)/dt+Unormal(Ui+1^n+1-Ui^n+1)/dx=0. !implicit treatment of dUdn term
+!		   Ubound(imax,j,k) = (rhU(imax,j,k)*Unew(imax,j,k)+Ubc*dt/dr(imax)*Ubound(imax-1,j,k))/(1.+Ubc*dt/dr(imax)) 
 !		   Ubound(i1,j,k)   =    MAX(Ubound(imax,j,k),0.)	
-!		   Vbound(i1,j,k)   =    Vbound(imax,j,k)-rhV(imax,j,k)*(Rp(i1)-Rp(imax))/(Ubc*dt)*(Vnew(imax,j,k)-Vold(imax,j,k))		   
-!		   Wbound(i1,j,k)   =    Wbound(imax,j,k)-rhW(imax,j,k)*(Rp(i1)-Rp(imax))/(Ubc*dt)*(Wnew(imax,j,k)-Wold(imax,j,k))		
+!		   Vbound(i1,j,k) = (rhV(i1,j,k)*Vnew(i1,j,k)+Ubc*dt/(Rp(i1)-Rp(imax))*Vbound(imax,j,k))/(1.+Ubc*dt/(Rp(i1)-Rp(imax))) 
+!		   Wbound(i1,j,k) = (rhW(i1,j,k)*Wnew(i1,j,k)+Ubc*dt/(Rp(i1)-Rp(imax))*Wbound(imax,j,k))/(1.+Ubc*dt/(Rp(i1)-Rp(imax))) 
 
+
+		   Ubound(i_inflowU,j,k)    =    Ubc*cos_u(j)+Vbc*sin_u(j)
+		   Vbound(i_inflowVW,j,k)    =    (-Ubc*sin_v(j)+Vbc*cos_v(j)) !2.*(-Ubc*sin_v(j)+Vbc*cos_v(j))-Vbound(1,j,k)
+		   Wbound(i_inflowVW,j,k)    =    Wbc !2.*Wbc - Wbound(1,j,k) !Wbound(0,j,k)    =  Wbc !- Wbound(1,j,k)
+		   Ubc = outflow_factor*MAX(outflow_factor*Ubc2(j,k)*cos_u(j)+outflow_factor*Vbc2(j,k)*sin_u(j),0.)  !Unormal outflow boundary at U-loc; should be >0 otherwise no outflow and divide by zero 
+		   
 		   ! solving Ui+1^n+1-Ui+1^n)/dt+Unormal(Ui+1^n+1-Ui^n+1)/dx=0. !implicit treatment of dUdn term
-		   Ubound(imax,j,k) = (rhU(imax,j,k)*Unew(imax,j,k)+Ubc*dt/dr(imax)*Ubound(imax-1,j,k))/(1.+Ubc*dt/dr(imax)) 
-		   Ubound(i1,j,k)   =    MAX(Ubound(imax,j,k),0.)	
-		   Vbound(i1,j,k) = (rhV(i1,j,k)*Vnew(i1,j,k)+Ubc*dt/(Rp(i1)-Rp(imax))*Vbound(imax,j,k))/(1.+Ubc*dt/(Rp(i1)-Rp(imax))) 
-		   Wbound(i1,j,k) = (rhW(i1,j,k)*Wnew(i1,j,k)+Ubc*dt/(Rp(i1)-Rp(imax))*Wbound(imax,j,k))/(1.+Ubc*dt/(Rp(i1)-Rp(imax))) 
-	   
+		   Ubound(i_outflowVW,j,k)   =    outflow_factor*MAX(outflow_factor*Ubound(i_outflowVW+i_shift,j,k),0.)	 !if outflow_factor=1. OK for outflow right; if outflow_factor=-1. OK for outflow left
+		   Ubound(i_outflowU,j,k) = (rhU(i_outflowU,j,k)*Unew(i_outflowU,j,k)+Ubc*dt/dr(i_outflowU)*Ubound(i_outflowU+i_shift,j,k))
+     &		   /(1.+Ubc*dt/dr(i_outflowU)) 
+		   Vbound(i_outflowVW,j,k) = (rhV(i_outflowVW,j,k)*Vnew(i_outflowVW,j,k)+Ubc*dt/dr(i_outflowVW)*Vbound(i_outflowVW+i_shift,j,k))
+     &		   /(1.+Ubc*dt/dr(i_outflowVW))
+		   Wbound(i_outflowVW,j,k) = (rhW(i_outflowVW,j,k)*Wnew(i_outflowVW,j,k)+Ubc*dt/dr(i_outflowVW)*Wbound(i_outflowVW+i_shift,j,k))
+     &		   /(1.+Ubc*dt/dr(i_outflowVW))		   
          	enddo   
       	    enddo
 		else !Neumann outflow boundary 
@@ -2412,16 +2488,26 @@ c 	influence of waves on lateral boundaries:
 			Vbc2(j,k)=Vbcoarse2(j,k)
 			Wbc2=Wbcoarse2(j,k)
 		    endif
-		    Ubc=rhU(0,j,k)*(Ub2(j,k)+Ubc2(j,k))                                     !0.5*(rho(0,j,k)+rho(1,j,k))*
-		    Vbc=rhU(0,j,k)*(0.5*(Vb2(j,k)+Vb2(j+1,k))+Vbc2(j,k))                    !0.5*(rho(0,j,k)+rho(1,j,k))*
-		    Wbc=rhU(0,j,k)*(0.5*(Wb2(j,k)+Wb2(j,k+1))+Wbc2)	                     !0.5*(rho(0,j,k)+rho(1,j,k))*
-		   Ubound(0,j,k)    =    (Ubc*cos_u(j)+Vbc*sin_u(j))
-		   Ubound(imax,j,k) =    MAX(Ubound(imax-1,j,k),0.)
-		   Ubound(i1,j,k)   =    MAX(Ubound(imax,j,k),0.)
-		   Vbound(0,j,k)    =    (-Ubc*sin_v(j)+Vbc*cos_v(j)) !2.*(-Ubc*sin_v(j)+Vbc*cos_v(j)) !-Vbound(1,j,k)
-		   Vbound(i1,j,k)   =    Vbound(imax,j,k)
-		   Wbound(0,j,k)    =    Wbc !2.*Wbc - Wbound(1,j,k) !Wbound(0,j,k)    =  Wbc !- Wbound(1,j,k)
-		   Wbound(i1,j,k)   =    Wbound(imax,j,k)
+!		    Ubc=rhU(0,j,k)*(Ub2(j,k)+Ubc2(j,k))                                     !0.5*(rho(0,j,k)+rho(1,j,k))*
+!		    Vbc=rhU(0,j,k)*(0.5*(Vb2(j,k)+Vb2(j+1,k))+Vbc2(j,k))                    !0.5*(rho(0,j,k)+rho(1,j,k))*
+!		    Wbc=rhU(0,j,k)*(0.5*(Wb2(j,k)+Wb2(j,k+1))+Wbc2)	                     !0.5*(rho(0,j,k)+rho(1,j,k))*
+!		   Ubound(0,j,k)    =    (Ubc*cos_u(j)+Vbc*sin_u(j))
+!		   Ubound(imax,j,k) =    MAX(Ubound(imax-1,j,k),0.)
+!		   Ubound(i1,j,k)   =    MAX(Ubound(imax,j,k),0.)
+!		   Vbound(0,j,k)    =    (-Ubc*sin_v(j)+Vbc*cos_v(j)) !2.*(-Ubc*sin_v(j)+Vbc*cos_v(j)) !-Vbound(1,j,k)
+!		   Vbound(i1,j,k)   =    Vbound(imax,j,k)
+!		   Wbound(0,j,k)    =    Wbc !2.*Wbc - Wbound(1,j,k) !Wbound(0,j,k)    =  Wbc !- Wbound(1,j,k)
+!		   Wbound(i1,j,k)   =    Wbound(imax,j,k)
+		    Ubc=rhU(i_inflowU,j,k)*(Ub2(j,k)+Ubc2(j,k))                                     !0.5*(rho(0,j,k)+rho(1,j,k))*
+		    Vbc=rhU(i_inflowU,j,k)*(0.5*(Vb2(j,k)+Vb2(j+1,k))+Vbc2(j,k))                    !0.5*(rho(0,j,k)+rho(1,j,k))*
+		    Wbc=rhU(i_inflowU,j,k)*(0.5*(Wb2(j,k)+Wb2(j,k+1))+Wbc2)	                     !0.5*(rho(0,j,k)+rho(1,j,k))*		   
+		   Ubound(i_inflowU,j,k)    =    Ubc*cos_u(j)+Vbc*sin_u(j)
+		   Ubound(i_outflowU,j,k) =    outflow_factor*MAX(outflow_factor*Ubound(i_outflowU+i_shift,j,k),0.) !if outflow_factor=1. OK for outflow right; if outflow_factor=-1. OK for outflow left
+		   Ubound(i_outflowVW,j,k)   =    outflow_factor*MAX(outflow_factor*Ubound(i_outflowVW+i_shift,j,k),0.) !if outflow_factor=1. OK for outflow right; if outflow_factor=-1. OK for outflow left		   
+		   Vbound(i_inflowVW,j,k)    =    (-Ubc*sin_v(j)+Vbc*cos_v(j)) !2.*(-Ubc*sin_v(j)+Vbc*cos_v(j))-Vbound(1,j,k)
+		   Vbound(i_outflowVW,j,k)   =    Vbound(i_outflowVW+i_shift,j,k)
+		   Wbound(i_inflowVW,j,k)    =    Wbc !2.*Wbc - Wbound(1,j,k) !Wbound(0,j,k)    =  Wbc !- Wbound(1,j,k)
+		   Wbound(i_outflowVW,j,k)   =    Wbound(i_outflowVW+i_shift,j,k)		   
          	enddo   
       	    enddo		
 		endif 
@@ -3439,6 +3525,7 @@ c
 		real xTSHD(4),yTSHD(4),phi,ddtt,interpseries,sedflux_per_width,depoflux_per_width
 		real Cbcoarse2_out(kmax),factor,depoflux_per_width1,depoflux_per_width2
         integer ileng,ierr,itag,status(MPI_STATUS_SIZE),i_out	
+		integer i_shift,i_inflowC,i_outflowC
 c
 c
 c*************************************************************
@@ -3632,10 +3719,19 @@ c*************************************************************
 	endif
 
 	if (periodicx.eq.0.and.monopile.eq.-1) then
+		if((U_b.ge.0.and.LOA<0).or.((U_TSHD-U_b).ge.0.and.LOA>0.)) THEN 
+	      i_inflowC=0
+		  i_outflowC=i1
+		  i_shift=-1
+		else !inflow Ubc2,Vbc2 defined at imax instead at i=0
+		  i_inflowC=i1 
+		  i_outflowC=0
+		  i_shift=+1
+		endif 	
 	      do k=1,kmax ! boundaries in i-direction
 		 do j=0,j1
-			   Cbound(0,j,k)    =    Cbcoarse2(n,j,k) !Cbound(1,j,k)
-			   Cbound(i1,j,k)   =    Cbound(imax,j,k)
+			   Cbound(i_inflowC,j,k)    =    Cbcoarse2(n,j,k) !Cbound(1,j,k)
+			   Cbound(i_outflowC,j,k)   =    Cbound(i_outflowC+i_shift,j,k)
 		 enddo   
 	      enddo
        elseif (periodicx.eq.0.and.monopile>0) then ! closed boundary at i=0 (flow past circular cylinder); mixed inflow/outflow bc at imax; 3 = partial slip with tau-wall/4=free slip

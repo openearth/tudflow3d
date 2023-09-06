@@ -19,7 +19,7 @@
 
       subroutine mkgrid
 
-      USE nlist
+      USE nlist 
       implicit none
 !       include 'param.txt'
 !       include 'common.txt'
@@ -810,10 +810,9 @@ c******************************************************************
 				call check( nf90_inquire_variable(ncid, rhVarid, dimids = dimIDs))
 				call check( nf90_inquire_dimension(ncid, dimIDs(1), len = size1))
 				call check( nf90_inquire_dimension(ncid, dimIDs(2), len = size2))
-				call check( nf90_inquire_dimension(ncid, dimIDs(3), len = size3))
-				IF(size1.ne.nfrac.or.size2.ne.imax.or.size3*nfound.ne.jmax*px) CALL writeerror(702)
+				IF(size1.ne.imax.or.size2*nfound.ne.jmax*px) CALL writeerror(702)
 				call check( nf90_get_var(ncid,rhVarid,dummy_var(1:imax,(n2-1)*jpx+1:(n2-1)*jpx+jpx,1),
-     &                       start=(/n,1,1/),count=(/1,imax,jpx/)) )
+     &                       start=(/1,1/),count=(/imax,jpx/)) )
 				load_var=1
 				write(*,*),'initconditionsfile =',restart_file(n2),' variable "kbed" found and used as initial condition'
 			else
@@ -3392,7 +3391,7 @@ C ...  Locals
 	!! fill Ubc2,Vbc2 (front boundary at i=0):
 		if (monopile>0) then !inflow Ubc2,Vbc2 defined at imax instead at i=0
 		  i=imax 
-		elseif((U_b>0.and.LOA<0).or.((U_TSHD-U_b)>0.and.LOA>0.)) THEN 
+		elseif((U_b.ge.0.and.LOA<0).or.((U_TSHD-U_b).ge.0.and.LOA>0.)) THEN 
 	      i=0
 		else !inflow Ubc2,Vbc2 defined at imax instead at i=0
 		  i=imax 
