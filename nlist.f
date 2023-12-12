@@ -40,13 +40,13 @@
       INTEGER tmax_inUpunt_tauTSHD,tmax_inVpunt_tauTSHD,tmax_inVpunt_rudder
       INTEGER tmax_inWpunt2,tmax_inVpunt2,tmax_inPpunt2,tmax_inWpunt_suction
       INTEGER nfrac,slipvel,interaction_bed,nobst,nbedplume,continuity_solver,hindered_settling,settling_along_gvector
-      INTEGER nfr_silt,nfr_sand,nfr_air,istart_morf2,i_periodicx,hindered_settling_c
+      INTEGER nfr_silt,nfr_sand,nfr_air,istart_morf1,istart_morf2,i_periodicx,hindered_settling_c
       CHARACTER*256 hisfile,restart_dir,inpfile,plumetseriesfile,bcfile,plumetseriesfile2,bedlevelfile,initconditionsfile
 	  CHARACTER*256 U_b_tseriesfile,V_b_tseriesfile,W_b_tseriesfile
       CHARACTER*3 time_int,advec_conc,cutter,split_rho_cont
       CHARACTER*5 sgs_model
       CHARACTER*4 damping_drho_dz,extra_mix_visc
-	  CHARACTER*11 pickup_formula,bedload_formula
+	  CHARACTER*11 pickup_formula,bedload_formula,pickup_formula_swe
 	  CHARACTER*8 transporteq_fracs
 	  CHARACTER*20 pickup_correction
       REAL damping_a1,damping_b1,damping_a2,damping_b2,cfixedbed
@@ -80,8 +80,8 @@
 	  INTEGER nobst_files,nobst_file,momentum_exchange_obstacles,erosion_cbed_start,movebed_absorb_cfluid
 	  CHARACTER(len=256) :: obst_file_series(5000)
 	  REAL :: obst_starttimes(5000)
-	  INTEGER cbc_perx_j(2)
-	  REAL cbc_relax
+	  INTEGER cbc_perx_j(2),taulayerTBLE,obstfile_erodepo,nWM,vel_start_after_ero
+	  REAL cbc_relax,TBLE_grad_relax,TBLEsed_grad_relax
 	  
 	  
 	  !new variables rheology
@@ -173,9 +173,10 @@
 	  REAL*8, DIMENSION(:,:,:),ALLOCATABLE :: fc_global
 	  REAL, DIMENSION(:,:),ALLOCATABLE :: uuR_relax,uuL_relax,vvR_relax,vvL_relax,tau2Vold,tau2Vnew,tau2Wold,tau2Wnew,qb_relax
 	  REAL, DIMENSION(:,:),ALLOCATABLE :: tau_fl_Uold,tau_fl_Vold,tau_fl_Unew,tau_fl_Vnew,ust_sl_new,ust_sl_old,ust_bl_new,ust_bl_old
-	  REAL, DIMENSION(:,:),ALLOCATABLE :: ust_mud_new,ust_mud_old,kn_flow,d50field
+	  REAL, DIMENSION(:,:),ALLOCATABLE :: ust_mud_new,ust_mud_old,kn_flow,d50field,tau_fl_Utop,tau_fl_Vtop
 	  REAL, DIMENSION(:,:,:),ALLOCATABLE :: qbU,qbV,ust_frac_old,ust_frac_new,sigUWbed,sigVWbed,sigUbed,sigVbed,sigWbed
-
+	  REAL, DIMENSION(:,:),ALLOCATABLE :: TBLEdudx,TBLEdudy,TBLEdvdx,TBLEdvdy,TBLEdpdx,TBLEdpdy
+	  REAL, DIMENSION(:,:),ALLOCATABLE :: TBLEsed_dpdx,TBLEsed_dpdy
  !     REAL, DIMENSION(:,:,:),ALLOCATABLE :: Uf,Vf,Wf
 
 !      REAL, DIMENSION(:,:,:),ALLOCATABLE :: div
@@ -281,11 +282,11 @@
      & pres_in_predictor_step,Poutflow,oPRHO,applyVOF,k_ust_tau,Uoutflow,dUVdn_IBMbed,k_pzero,numdiff2,CNdiff_factor,CNdiff_ho,
      & CNdiff_dtfactor,CNdiff_pc,CNdiff_maxi,CNdiff_tol,CNdiff_ini,initPhydrostatic,npresIBM_viscupdate,momentum_exchange_obstacles
      & ,k_ust_tau_flow	 
-	NAMELIST /ambient/U_b,V_b,W_b,bcfile,rho_b,SEM,nmax2,nmax1,nmax3,lm_min,lm_min3,slip_bot,kn,interaction_bed,
+	NAMELIST /ambient/U_b,V_b,W_b,bcfile,rho_b,SEM,nmax2,nmax1,nmax3,lm_min,lm_min3,slip_bot,taulayerTBLE,kn,interaction_bed,
      & periodicx,periodicy,dpdx,dpdy,W_ox,Hs,Tp,nx_w,ny_w,obst,bc_obst_h,U_b3,V_b3,surf_layer,wallup,bedlevelfile,
-     & U_bSEM,V_bSEM,U_w,V_w,c_bed,cfixedbed,U_init,V_init,initconditionsfile,rho_b2,monopile,kn_mp,kn_sidewalls,obstfile
-     & ,istart_morf2,i_periodicx,kn_flow_file,kn_flow_d50_multiplier,U_b_tseriesfile,V_b_tseriesfile,W_b_tseriesfile
-     & ,cbc_perx_j,cbc_relax
+     & U_bSEM,V_bSEM,U_w,V_w,c_bed,cfixedbed,U_init,V_init,initconditionsfile,rho_b2,monopile,kn_mp,kn_sidewalls,obstfile,
+     & istart_morf1,istart_morf2,i_periodicx,kn_flow_file,kn_flow_d50_multiplier,U_b_tseriesfile,V_b_tseriesfile,W_b_tseriesfile
+     & ,cbc_perx_j,cbc_relax,obstfile_erodepo,TBLE_grad_relax
 	NAMELIST /plume/W_j,plumetseriesfile,Awjet,Aujet,Avjet,Strouhal,azi_n,kjet,radius_j,Sc,slipvel,outflow_overflow_down,
      & U_j2,plumetseriesfile2,Awjet2,Aujet2,Avjet2,Strouhal2,azi_n2,radius_j2,zjet2,bedplume,radius_inner_j,xj,yj,W_j_powerlaw,
      & plume_z_outflow_belowsurf,hindered_settling,hindered_settling_c,Q_j,plumeQtseriesfile,plumectseriesfile
@@ -296,7 +297,8 @@
      & settling_along_gvector,vwal,nl,permeability_kl,pickup_fluctuations_ampl,pickup_fluctuations,pickup_correction,cbed_method,
      & z_tau_sed,k_layer_pickup,pickup_bedslope_geo,bedload_formula,kn_d50_multiplier_bl,calibfac_sand_bedload,bl_relax,fcor,
      & wbed_correction,bedslope_effect,bedslope_mu_s,alfabs_bl,alfabn_bl,phi_sediment,wallmodel_tau_sed,nrmsbed,ndtbed,
-     & erosion_cbed_start,movebed_absorb_cfluid,power_VR2019,ekm_sediment_pickup,dz_sidewall	 
+     & erosion_cbed_start,movebed_absorb_cfluid,power_VR2019,ekm_sediment_pickup,dz_sidewall,TBLEsed_grad_relax,pickup_formula_swe
+     & ,vel_start_after_ero
 	NAMELIST /fractions_in_plume/fract
 	NAMELIST /ship/U_TSHD,LOA,Lfront,Breadth,Draught,Lback,Hback,xfront,yfront,kn_TSHD,nprop,Dprop,xprop,yprop,zprop,
      &   Pprop,rudder,rot_prop,draghead,Dsp,xdh,perc_dh_suction,softnose,Hfront,cutter
@@ -306,6 +308,7 @@
      & THOMAS_Cy,THOMAS_Cmu,THOMAS_ky,THOMAS_kmu,THOMAS_Py,THOMAS_Pmu,THOMAS_phi_sand_max,
      & Lambda_init,Kin_eq_a,Kin_eq_b,Kin_eq_lambda_0,HOUSKA_n,HOUSKA_eta_0,HOUSKA_eta_inf,HOUSKA_tauy_0,HOUSKA_tauy_inf,
      & BAGNOLD_beta,BAGNOLD_phi_max,rheo_shear_method,Apvisc_shear_relax,Apvisc_force_eq
+
 
 	!! initialise:
 	!! simulation:
@@ -413,6 +416,7 @@
 	lm_min = -999.
 	lm_min3 = -999.
 	slip_bot = -999
+	taulayerTBLE = 1
 	kn = -999.
 	kn_flow_file=''
 	kn_flow_d50_multiplier = -2.
@@ -430,6 +434,7 @@
 	dpdy3=0.	
 	cbc_perx_j(1:2)=0 
 	cbc_relax = 1. 
+	TBLE_grad_relax = 1.
 	Uavold=0.
 	Vavold=0.
 	U3avold=0. 
@@ -459,9 +464,15 @@
 	surf_layer=0.
 	wallup=0
 	obstfile = ''
+	obstfile_erodepo = 1
 	nobst_files = 0
 	i_periodicx=0
+	istart_morf1=0
 	istart_morf2=0
+	nWM = 50 !number of layers in TBL and VD tau-wall-models for flow and sediment pickup. Growth factor is 1.1. 
+	! 50 layers with growthfac 1.1 gives first staggered WM cell at 1/1000 dzU_CFD (distance velocity point CFD grid)  
+	! 50 layers Matlab tests found 1-10% difference in hydr rough tau for 0.5-2 m/s @ dzU_CFD=0.5m; 0.5-5% @ dzU_CFD=0.25m; 1-2% @ dzU_CFD=0.05m and no difference for 0.1-2 m/s @ dzU_CFD=0.025m or smaller 
+	! 100 layers with growthfac 1.1 gives first staggered WM cell at 1/100000 dzU_CFD --> no difference in hydr rough tau for Matlab tests 0.1-2 m/s @ dzU_CFD = 0.5m or smaller
 	
 	!! plume
 	W_j = -999.
@@ -643,6 +654,7 @@
 	cbed_method = 1
 	k_layer_pickup = 1
 	wallmodel_tau_sed = 1
+	TBLEsed_grad_relax = 1.
 	ndtbed = 10
 	nrmsbed = 100 
 	z_tau_sed = -999.
@@ -657,6 +669,10 @@
 	erosion_cbed_start = 1 !
 	movebed_absorb_cfluid = 1 !default 1 absorb cfluid in bed when bed moves and new bed is higher than previous timestep (like in avalanche and regular bed-update), 0 = add cfluid buried in new bed to first fluid cell above new bed
 	power_VR2019 = 1.
+	pickup_formula_swe = 'vanrijn1984' !default
+	vel_start_after_ero = 0 
+	
+	
 	!! ship
 	U_TSHD=-999.
 	LOA=-999.
@@ -799,7 +815,7 @@
 	IF (CNdiffz.ne.0.and.CNdiffz.ne.1.and.CNdiffz.ne.2.and.CNdiffz.ne.11.and.CNdiffz.ne.12.and.CNdiffz.ne.31) CALL writeerror(406)
 	IF (npresIBM<0) CALL writeerror(407)
 	pres_in_predictor_step_internal = pres_in_predictor_step
-	IF (pres_in_predictor_step_internal.eq.3.or.pres_in_predictor_step_internal.eq.4) THEN !make Pold in bed zero every timestep; use pres_in_predictor_step=1 in the rest of the code
+	IF (pres_in_predictor_step_internal.eq.3.or.pres_in_predictor_step_internal.eq.4.or.pres_in_predictor_step_internal.eq.5) THEN !make Pold in bed zero every timestep; use pres_in_predictor_step=1 in the rest of the code
 		pres_in_predictor_step = 1 
 	ENDIF 
 	IF (k_ust_tau<1.or.k_ust_tau>kmax) CALL writeerror(409)
@@ -831,6 +847,7 @@
 	IF (lm_min<0.) CALL writeerror(47)
 	IF (lm_min3<0) CALL writeerror(621)
 	IF (slip_bot<-2) CALL writeerror(48)
+	IF (taulayerTBLE.ne.50.and.taulayerTBLE.ne.1) CALL writeerror(624)
 	IF (kn<0.) CALL writeerror(49)
 	IF (interaction_bed<0) CALL writeerror(50)
 	IF (periodicx.ne.0.and.periodicx.ne.1.and.periodicx.ne.2) CALL writeerror(52)
@@ -839,6 +856,7 @@
 	  IF(cbc_perx_j(2).lt.cbc_perx_j(1).or.cbc_perx_j(1).lt.1.or.cbc_perx_j(2).gt.jmax) CALL writeerror(622)
 	ENDIF 
 	IF (cbc_relax.gt.1.or.cbc_relax.lt.0) CALL writeerror(623)
+	IF (TBLE_grad_relax.gt.1.or.TBLE_grad_relax.lt.0) CALL writeerror(623)
 	!IF (periodicx.eq.1.and.dpdx.eq.0.) CALL writeerror(54)
 	IF (Hs>0.and.Hs>depth) CALL writeerror(55)
 	IF (Hs>0.and.Tp.le.0) CALL writeerror(56)
@@ -852,16 +870,6 @@
 	IF (surf_layer<0.or.surf_layer>depth) CALL writeerror(604)
 	IF (U_bSEM<-998.) U_bSEM=U_b ! only if defined then different U_bSEM is used else equal to U_b
 	IF (V_bSEM<-998.) V_bSEM=V_b
-	IF(U_bSEM<0.) THEN
-	  signU_bSEM=-1.
-	ELSE 
-	  signU_bSEM=1.	
-	ENDIF
-	IF(V_bSEM<0.) THEN
-	  signV_bSEM=-1.
-	ELSE 
-	  signV_bSEM=1.	
-	ENDIF
 	IF (U_init<-998.) U_init=U_b ! only if defined then different U_init is used else equal to U_b
 	IF (V_init<-998.) V_init=V_b
 	IF (kn_mp<0.and.monopile.eq.1) CALL writeerror(610)
@@ -897,6 +905,8 @@
 	IF (wallup.ne.0.and.wallup.ne.1.and.wallup.ne.2) CALL writeerror(605)
 	IF (cfixedbed<0.or.cfixedbed>1.) CALL writeerror(607)
 	IF (i_periodicx<0.or.istart_morf2<0.or.i_periodicx>imax.or.istart_morf2>imax) CALL writeerror(613)
+	IF (istart_morf1<0.or.istart_morf1>imax.or.istart_morf2<istart_morf1) CALL writeerror(613)
+	IF (obstfile_erodepo.ne.1.and.obstfile_erodepo.ne.2) CALL writeerror(625)
 	DEALLOCATE(obst)
 
 	READ (UNIT=1,NML=plume,IOSTAT=ios)
@@ -1515,6 +1525,9 @@
 	IF (pickup_formula.ne.'vanrijn1984'.and.pickup_formula.ne.'nielsen1992'.and.pickup_formula.ne.'okayasu2010'
      & .and.pickup_formula.ne.'vanrijn2019'.and.pickup_formula.ne.'VR2019_Cbed'
      & .and.pickup_formula.ne.'VR1984_Cbed')   CALL writeerror(95)
+	IF (pickup_formula_swe.ne.'vanrijn1984'.and.pickup_formula_swe.ne.'nielsen1992'.and.pickup_formula_swe.ne.'okayasu2010'
+     & .and.pickup_formula_swe.ne.'vanrijn2019'.and.pickup_formula_swe.ne.'VR2019_Cbed'
+     & .and.pickup_formula_swe.ne.'VR1984_Cbed')   CALL writeerror(95)	 
 	IF (kn_d50_multiplier<0.or.kn_d50_multiplier_bl<0.) CALL writeerror(96)
 	IF (MINVAL(avalanche_slope)<0.and.MINVAL(avalanche_slope).ne.-99.) CALL writeerror(97)
 	IF (calibfac_sand_pickup<0.or.calibfac_sand_bedload<0.) CALL writeerror(98)
@@ -1541,6 +1554,7 @@
 	IF (wallmodel_tau_sed.ne.1.and.wallmodel_tau_sed.ne.3.and.wallmodel_tau_sed.ne.4.and.wallmodel_tau_sed.ne.5.
      &	and.wallmodel_tau_sed.ne.11) THEN 
 		CALL writeerror(145)
+	IF (TBLEsed_grad_relax.gt.1.or.TBLEsed_grad_relax.lt.0) CALL writeerror(623)
 	IF (power_VR2019<0.) CALL writeerror(146)
 	ENDIF 
 	 
@@ -1571,7 +1585,23 @@
 	IF (softnose.ne.0.and.softnose.ne.1) CALL writeerror(321)
 	IF (softnose.eq.1.and.Lfront.le.0.) CALL writeerror(322)
 	IF (LOA<0.) U_TSHD=0.
-
+	!%%% this part can only be done after ship is read:
+	IF(U_bSEM<0.) THEN 
+	  IF (LOA<0.) THEN !no ship 
+	    !signU_bSEM=-1.
+	    signU_bSEM=1.  !keep SEM points moving in positive direction, but simply apply SEM-turbulent eddies at imax
+	  ELSE !ship  
+	    signU_bSEM=-1.
+	  ENDIF 
+	ELSE 
+	  signU_bSEM=1.	
+	ENDIF
+	IF(V_bSEM<0.) THEN
+	  signV_bSEM=-1.
+	ELSE 
+	  signV_bSEM=1.	
+	ENDIF	
+	!%%% end this part can only be done after ship is read
 	READ (UNIT=1,NML=rheology,IOSTAT=ios)
 	!! check input rheology
 	IF (Non_Newtonian.ne.0.and.Non_Newtonian.ne.1.and.Non_Newtonian.ne.2) CALL writeerror(801)
@@ -1893,9 +1923,15 @@
 	ALLOCATE(b_update(0:i1))
 	IF (tstart_morf2.gt.1e-6) THEN 
 		b_update=0. 
-	ELSE 
+	ELSE
+		b_update=0. 	
 		b_update(istart_morf2:i1)=1.
+		do i=istart_morf1,istart_morf2
+		  b_update(i)=DBLE(i-istart_morf1)/DBLE(istart_morf2-istart_morf1)
+		enddo		
 	ENDIF 	
+	  b_update(0:1)=0. ! no bed-update at inflow
+	  b_update(imax:i1)=0. ! no bed-update at outflow	
 !	if (cbc_perx_j(1)>0) then  !use quasi periodic bc for concentration:
 !	  b_update(0:1)=0. ! no bed-update at inflow
 !	  b_update(imax:i1)=0. ! no bed-update at outflow
@@ -1963,6 +1999,7 @@
 	pold3=0.
 	phdt=0.
 	phnew=0.
+	dp=0. 
 	IF (time_int.eq.'AB2'.or.time_int.eq.'AB3'.or.time_int.eq.'ABv') THEN
 		ALLOCATE(wx(0:i1,0:j1,0:k1))  
 		ALLOCATE(wy(0:i1,0:j1,0:k1))
@@ -2032,6 +2069,23 @@
 	qbU = 0.
 	qbV = 0.
 	
+	ALLOCATE(TBLEdudx(0:i1,0:j1))
+	ALLOCATE(TBLEdvdx(0:i1,0:j1))
+	ALLOCATE(TBLEdudy(0:i1,0:j1))
+	ALLOCATE(TBLEdvdy(0:i1,0:j1))	
+	ALLOCATE(TBLEdpdx(0:i1,0:j1))
+	ALLOCATE(TBLEdpdy(0:i1,0:j1))	
+	TBLEdudx = 0. 
+	TBLEdvdx = 0. 
+	TBLEdudy = 0. 
+	TBLEdvdy = 0.	
+	TBLEdpdx = 0. 
+	TBLEdpdy = 0.	
+	ALLOCATE(TBLEsed_dpdx(0:i1,0:j1))
+	ALLOCATE(TBLEsed_dpdy(0:i1,0:j1))		
+	TBLEsed_dpdx = 0. 
+	TBLEsed_dpdy = 0.
+	
 	if (monopile.eq.3) then 
 		ALLOCATE(tau2Vold(0:j1,0:k1))
 		ALLOCATE(tau2Wold(0:j1,0:k1))
@@ -2046,10 +2100,14 @@
 	ALLOCATE(tau_fl_Uold(0:i1,0:j1))
 	ALLOCATE(tau_fl_Vnew(0:i1,0:j1))
 	ALLOCATE(tau_fl_Unew(0:i1,0:j1))
+	ALLOCATE(tau_fl_Vtop(0:i1,0:j1))
+	ALLOCATE(tau_fl_Utop(0:i1,0:j1))	
 	tau_fl_Vold = 0.
 	tau_fl_Uold = 0.
 	tau_fl_Vnew = 0.
 	tau_fl_Unew = 0.
+	tau_fl_Vtop = 0.
+	tau_fl_Utop = 0.	
 	ALLOCATE(ust_sl_new(0:i1,0:j1))
 	ALLOCATE(ust_sl_old(0:i1,0:j1))
 	ALLOCATE(ust_bl_new(0:i1,0:j1))

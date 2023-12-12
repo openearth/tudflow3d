@@ -295,6 +295,7 @@
 	CASE(095)
 		write(*,*) '# namelist &constants                            #'			
 		write(*,*) '# pickup_formula is not defined                  #'
+		write(*,*) '# or pickup_formula_swe is not defined           #'
 		write(*,*) '# choose ''vanrijn1984'',or ''nielsen1992'',or ''okayasu2010'' #'	
 		write(*,*) '# or ''vanrijn2019'', or ''VR2019_Cbed'' #'	
 		write(*,*) '# or ''VR1984_Cbed'' #'
@@ -658,7 +659,8 @@
 		write(*,*) '# please note that unlike V_b, V_w is defined in earth fixed x,y coordinate system !    #'	
 	CASE(613)
 		write(*,*) '# namelist &ambient                              #'			
-		write(*,*) '# istart_morf2, and/or i_periodicx must be >0 and <imax  #'		
+		write(*,*) '# istart_morf1, istart_morf2, and/or i_periodicx must be >0 and <imax  #'		
+		write(*,*) '# and it should be: istart_morf2 > istart_morf1  #'		
 	CASE(614)
 		write(*,*) '# namelist &ambient                              #'			
 		write(*,*) '# kn_flow_file contains NaN or negative value    #'			
@@ -675,8 +677,16 @@
 		write(*,*) '# cbc_perx_j(2) should be <=jmax/px              #'			
 	CASE(623)
 		write(*,*) '# namelist &ambient                              #'			
-		write(*,*) '# cbc_relax should be between 0-1                #'		
-	CASE(701)
+		write(*,*) '# cbc_relax and TBLE_grad_relax and TBLEsed_grad_relax should be between 0-1     #'	
+	CASE(624)
+		write(*,*) '# namelist &ambient                              #'			
+		write(*,*) '# taulayerTBLE should be 1 (default) or 50       #'			
+		write(*,*) '# 1 means using tau_bottom from TBLE as bc CFD   #'			
+		write(*,*) '# 50 means using tau_top from TBLE as bc CFD     #'		
+	CASE(625)
+		write(*,*) '# namelist &ambient                              #'			
+		write(*,*) '# obstfile_erodepo should be 1 or 2              #'			
+   	CASE(701)
 		write(*,*) '# namelist &simulation                           #'			
 		write(*,*) '# restart_dir does not give correct files        #'	
 	CASE(702)

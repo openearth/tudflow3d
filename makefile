@@ -52,13 +52,13 @@ FC = $(F77) $(FLAGS)
 RM = rm -f
 
 # commandos to obtain github info in fortran program and trace version of code for each simulation:
-#VR1 = $(shell echo "      gitversion = '`git rev-parse --short HEAD`'" > version.inc)
-#VR2 = $(shell echo "      url = 'https://github.com/openearth/tudflow3d'" >> version.inc )
-#VR3 = $(shell echo "      date_make = '`date`'" >> version.inc)
+VR1 = $(shell echo "      gitversion = '`git rev-parse --short HEAD`'" > version.inc)
+VR2 = $(shell echo "      url = 'https://github.com/openearth/tudflow3d'" >> version.inc )
+VR3 = $(shell echo "      date_make = '`date`'" >> version.inc)
 
-VR1 = 
-VR2 = 
-VR3 = 
+#VR1 = 
+#VR2 = 
+#VR3 = 
 
 
 PROGRAM = TUDflow3d_vg_h7AL8.exe
@@ -141,7 +141,7 @@ solve.o: solve.f makefile
 rheology.o: rheology.f makefile	
 	$(F77) $(FLAGS) -c rheology.f
 
-#version: $(VR1) $(VR2) $(VR3) 
+version: $(VR1) $(VR2) $(VR3) 
 
 clean:
 	$(RM) a.out core *.mod $(PROGRAM) $(OBJS)

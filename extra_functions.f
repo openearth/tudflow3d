@@ -1430,7 +1430,7 @@
 		!A~x~=b~ with A~ = P^-1AP^-T x=P^-Tx~ and b~ = P^-1b 
 		!P = sqrt(D)
 		!at end x=P^-Tx~
-		call bound_p(DD3D) !--> DD3D (ip im jp jm kp km) are needed  
+		call bound_3D(DD3D) !--> DD3D (ip im jp jm kp km) are needed  
 		x = x0*sqrt(DD3D) !starting condition for x~
 		Ax3D = Ax3D/sqrt(DD3D)
 		Cx3D = Cx3D/sqrt(DD3D)
@@ -1919,7 +1919,7 @@
 
 		
 		! make local (on this partition) incomplete Cholesky decomposition:
-		call bound_p(DD3D) 
+		call bound_3D(DD3D) 
 		Ax3D_c=0. 
 		Ay3D_c=0.
 		Az3D_c=0.
@@ -1962,7 +1962,7 @@
      &			-Az3D(irks(tel),jrks(tel),krks(tel))**2/DD3D_c(irks(tel-imax2*jmax2),jrks(tel-imax2*jmax2),krks(tel-imax2*jmax2))
 		enddo 
 		
-		call bound_p(DD3D_c) 
+		call bound_3D(DD3D_c) 
 		do k=kb,ke 
 			do j=jb,je
 				do i=ib,ie	
@@ -2000,10 +2000,10 @@
 				enddo 
 			enddo 
 		enddo		
-		call bound_p(Ax3D_c)
-		call bound_p(Ay3D_c)
-		call bound_p(Az3D_c)
-		call bound_p(DD3D_c)
+		call bound_3D(Ax3D_c)
+		call bound_3D(Ay3D_c)
+		call bound_3D(Az3D_c)
+		call bound_3D(DD3D_c)
 		! Local incomplete Cholesky matrix created, symmetric therefore both upper and lower triangle are filled 
 
 
@@ -2572,7 +2572,7 @@
 		!A~x~=b~ with A~ = P^-1AP^-T x=P^-Tx~ and b~ = P^-1b 
 		!P = sqrt(D)
 		!at end x=P^-Tx~
-		call bound_p(DD3D) !--> DD3D (ip im jp jm kp km) are needed  
+		call bound_3D(DD3D) !--> DD3D (ip im jp jm kp km) are needed  
 		x = x0*sqrt(DD3D) !starting condition for x~
 		Ax3D = Ax3D/sqrt(DD3D)
 		Cx3D = Cx3D/sqrt(DD3D)

@@ -360,6 +360,7 @@
 	   integer :: dimids4(NDIMS),varid20,varid21,varid22,varid12,varid13,varid14,varid15,varid16,varid23
 	   integer :: varid24,varid25,varid26,varid27,varid28,varid29
        integer :: varid30,varid31,varid32,varid33,varid34,varid35,varid36,varid37,varid38
+	   integer :: varid39
 
 	character(1024) :: gitversion
 	character(1024) :: url
@@ -441,7 +442,12 @@
 	   	call check( nf90_def_var(ncid, "tau_flow", NF90_REAL, dimids5, varid25) )
 		call check( nf90_put_att(ncid, varid25, 'units', 'N/m2') )
 		call check( nf90_put_att(ncid, varid25, 'long_name', 'Flow bed shear stress') )
-
+	   if (slip_bot.eq.6.or.slip_bot.eq.7) then
+	   	call check( nf90_def_var(ncid, "tau_flow_top_TBLE", NF90_REAL, dimids5, varid39) )
+		call check( nf90_put_att(ncid, varid39, 'units', 'N/m2') )
+		call check( nf90_put_att(ncid, varid39, 'long_name', 'Flow bed shear stress at top 2nd grid of TBLE between CFD grid and bed') )
+	   endif 
+	   
 		call check( nf90_def_var(ncid, "zbed", NF90_REAL, dimids5, varid21) )
 		call check( nf90_put_att(ncid, varid21, 'units', 'm') )
 		call check( nf90_put_att(ncid, varid21, 'long_name', 'Bed level excl. buffer in mass_bed (actual zbed IMB0)') )
@@ -602,6 +608,14 @@
        !call check( nf90_put_var(ncid, varid6, ekm(1:imax,1:jmax,1:kmax)) )
        !call check( nf90_put_var(ncid, varid7, p(1:imax,1:jmax,1:kmax)+pold(1:imax,1:jmax,1:kmax)) )
 	   !!!call check( nf90_put_var(ncid, varid7, p(1:imax,1:jmax,1:kmax)) ) !! changed for exact solver output,
+	   
+	   if (slip_bot.eq.6.or.slip_bot.eq.7) then
+		call bound_cbot(tau_fl_Utop)
+		call bound_cbot(tau_fl_Vtop)
+		zzbed=sqrt((0.5*(tau_fl_Utop(1:imax,1:jmax)+tau_fl_Utop(0:imax-1,1:jmax)))**2
+     &   +(0.5*(tau_fl_Vtop(1:imax,1:jmax)+tau_fl_Vtop(1:imax,0:jmax-1)))**2)
+		call check( nf90_put_var(ncid, varid39,zzbed  ))
+	   endif 
 	   if (sgs_model.eq.'DSmag') then
 	     uu=Csgrid(1:imax,1:jmax,1:kmax)
 	     call check( nf90_put_var(ncid, varid9, uu(1:imax,1:jmax,1:kmax)) )

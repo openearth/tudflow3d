@@ -421,13 +421,15 @@ c*************************************************************
 	ekm2=ekm
  	  do i=1,imax
  	    do j=1,jmax
-  	      uu=0.5*(Uvel(i,j,1)+Uvel(i-1,j,1))
-  	      vv=0.5*(Vvel(i,j,1)+Vvel(i,j-1,1))
+			kp=MIN(kbedt(i,j)+1,k1)
+  	      uu=0.5*(Uvel(i,j,kp)+Uvel(i-1,j,kp))
+  	      vv=0.5*(Vvel(i,j,kp)+Vvel(i,j-1,kp))
   	      absU=sqrt(uu*uu+vv*vv)
 		  IF (slip_bot.ge.3) THEN 
 			  tauu=0.5*(tau_fl_Uold(i,j)+tau_fl_Uold(i-1,j))
 			  tauv=0.5*(tau_fl_Vold(i,j)+tau_fl_Vold(i,j-1))			   
 			  ust = ((tauu/rr(i,j,kp))**2+(tauv/rr(i,j,kp))**2)**0.25
+			  ust = MIN(0.5*absU,ust) !ust maximal 0.5*absU 
 		  ELSE 		  
   	        ust=0.1*absU
   	        do tel=1,10 ! 10 iter is more than enough
@@ -780,6 +782,7 @@ c*************************************************************
 				  tauu=0.5*(tau_fl_Uold(i,j)+tau_fl_Uold(i-1,j))
 				  tauv=0.5*(tau_fl_Vold(i,j)+tau_fl_Vold(i,j-1))			   
 				  ust = ((tauu/rr(i,j,kp))**2+(tauv/rr(i,j,kp))**2)**0.25
+				  ust = MIN(0.5*absU,ust) !ust maximal 0.5*absU 
 				ELSE 				
 				  ust=0.1*absU
 				  if (kn>0.) then !walls with rougness (log-law used which can be hydr smooth or hydr rough):
@@ -1019,6 +1022,7 @@ c*************************************************************
 				ww=0.5*(Wvel(1,j,k)+Wvel(1,j,k-1))
 				vv=0.5*(Vvel(1,j,k)+Vvel(1,j-1,k))				
 				absU=sqrt(ww*ww+vv*vv)								
+				ust = MIN(0.5*absU,ust) !ust maximal 0.5*absU 
 				IF (nu_minimum_wall.eq.1) THEN
 					yplus = distance_to_bed*ust/nu_mol
 					ekm(1,j,k) = MAX(ekm(1,j,k),nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 
@@ -1470,6 +1474,7 @@ c*************************************************************
 				  tauu=0.5*(tau_fl_Uold(i,j)+tau_fl_Uold(i-1,j))
 				  tauv=0.5*(tau_fl_Vold(i,j)+tau_fl_Vold(i,j-1))			   
 				  ust = ((tauu/rr(i,j,kp))**2+(tauv/rr(i,j,kp))**2)**0.25
+				  ust = MIN(0.5*absU,ust) !ust maximal 0.5*absU 
 				ELSE 				
 				  ust=0.1*absU
 				  if (kn>0.) then !walls with rougness (log-law used which can be hydr smooth or hydr rough):
@@ -1708,7 +1713,8 @@ c*************************************************************
 				ust = ((tauw/rr(1,j,k))**2+(tauv/rr(1,j,k))**2)**0.25								!at W-gridpoint
 				ww=0.5*(Wvel(1,j,k)+Wvel(1,j,k-1))
 				vv=0.5*(Vvel(1,j,k)+Vvel(1,j-1,k))				
-				absU=sqrt(ww*ww+vv*vv)								
+				absU=sqrt(ww*ww+vv*vv)
+				ust = MIN(0.5*absU,ust) !ust maximal 0.5*absU 				
 				IF (nu_minimum_wall.eq.1) THEN
 					yplus = distance_to_bed*ust/nu_mol
 					ekm(1,j,k) = MAX(ekm(1,j,k),nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 
@@ -2100,6 +2106,7 @@ c*************************************************************
 				  tauu=0.5*(tau_fl_Uold(i,j)+tau_fl_Uold(i-1,j))
 				  tauv=0.5*(tau_fl_Vold(i,j)+tau_fl_Vold(i,j-1))			   
 				  ust = ((tauu/rr(i,j,kp))**2+(tauv/rr(i,j,kp))**2)**0.25
+				  ust = MIN(0.5*absU,ust) !ust maximal 0.5*absU 
 				ELSE 				
 				  ust=0.1*absU
 				  if (kn>0.) then !walls with rougness (log-law used which can be hydr smooth or hydr rough):
@@ -2338,7 +2345,8 @@ c*************************************************************
 				ust = ((tauw/rr(1,j,k))**2+(tauv/rr(1,j,k))**2)**0.25								!at W-gridpoint
 				ww=0.5*(Wvel(1,j,k)+Wvel(1,j,k-1))
 				vv=0.5*(Vvel(1,j,k)+Vvel(1,j-1,k))				
-				absU=sqrt(ww*ww+vv*vv)								
+				absU=sqrt(ww*ww+vv*vv)	
+				ust = MIN(0.5*absU,ust) !ust maximal 0.5*absU 				
 				IF (nu_minimum_wall.eq.1) THEN
 					yplus = distance_to_bed*ust/nu_mol
 					ekm(1,j,k) = MAX(ekm(1,j,k),nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 
@@ -3049,6 +3057,7 @@ c*************************************************************
 				  tauu=0.5*(tau_fl_Uold(i,j)+tau_fl_Uold(i-1,j))
 				  tauv=0.5*(tau_fl_Vold(i,j)+tau_fl_Vold(i,j-1))			   
 				  ust = ((tauu/rr(i,j,kp))**2+(tauv/rr(i,j,kp))**2)**0.25
+				  ust = MIN(0.5*absU,ust) !ust maximal 0.5*absU 
 				ELSE 				
 				  ust=0.1*absU
 				  if (kn>0.) then !walls with rougness (log-law used which can be hydr smooth or hydr rough):
@@ -3287,7 +3296,8 @@ c*************************************************************
 				ust = ((tauw/rr(1,j,k))**2+(tauv/rr(1,j,k))**2)**0.25								!at W-gridpoint
 				ww=0.5*(Wvel(1,j,k)+Wvel(1,j,k-1))
 				vv=0.5*(Vvel(1,j,k)+Vvel(1,j-1,k))				
-				absU=sqrt(ww*ww+vv*vv)								
+				absU=sqrt(ww*ww+vv*vv)	
+				ust = MIN(0.5*absU,ust) !ust maximal 0.5*absU 				
 				IF (nu_minimum_wall.eq.1) THEN
 					yplus = distance_to_bed*ust/nu_mol
 					ekm(1,j,k) = MAX(ekm(1,j,k),nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 
@@ -3682,6 +3692,7 @@ c*************************************************************
 				  tauu=0.5*(tau_fl_Uold(i,j)+tau_fl_Uold(i-1,j))
 				  tauv=0.5*(tau_fl_Vold(i,j)+tau_fl_Vold(i,j-1))			   
 				  ust = ((tauu/rr(i,j,kp))**2+(tauv/rr(i,j,kp))**2)**0.25
+				  ust = MIN(0.5*absU,ust) !ust maximal 0.5*absU 
 				ELSE 				
 				  ust=0.1*absU
 				  if (kn>0.) then !walls with rougness (log-law used which can be hydr smooth or hydr rough):
@@ -3920,7 +3931,8 @@ c*************************************************************
 				ust = ((tauw/rr(1,j,k))**2+(tauv/rr(1,j,k))**2)**0.25								!at W-gridpoint
 				ww=0.5*(Wvel(1,j,k)+Wvel(1,j,k-1))
 				vv=0.5*(Vvel(1,j,k)+Vvel(1,j-1,k))				
-				absU=sqrt(ww*ww+vv*vv)				
+				absU=sqrt(ww*ww+vv*vv)	
+				ust = MIN(0.5*absU,ust) !ust maximal 0.5*absU 
 				IF (nu_minimum_wall.eq.1) THEN
 					yplus = distance_to_bed*ust/nu_mol
 					ekm(1,j,k) = MAX(ekm(1,j,k),nu_mol*rr(1,j,k)*kappa*yplus*(1-exp(-yplus/19.))**2) 
@@ -4169,7 +4181,7 @@ c*************************************************************
 		 ELSE 
 			CNz=1.
 		 ENDIF 		   
-		 call bound_p(TKEnew) ! bc start CN-diffz 
+		 call bound_3D(TKEnew) ! bc start CN-diffz 
 		 IF (CNdiffz.eq.11.or.CNdiffz.eq.12) THEN 
 			 perx=0
 			 pery=0 		 
@@ -4323,7 +4335,7 @@ c*************************************************************
 			ELSE 
 				CNz=1.
 			ENDIF 		   
-			call bound_p(EEEnew) ! bc start CN-diffz 
+			call bound_3D(EEEnew) ! bc start CN-diffz 
 		    IF (CNdiffz.eq.11.or.CNdiffz.eq.12) THEN 
 			 perx=0
 			 pery=0 			
@@ -4521,7 +4533,7 @@ c*************************************************************
 				IF (slip_bot.ge.3) THEN 
 				  tauu=0.5*(tau_fl_Uold(i,j)+tau_fl_Uold(i-1,j))
 				  tauv=0.5*(tau_fl_Vold(i,j)+tau_fl_Vold(i,j-1))			   
-				  ust = ((tauu/rr(i,j,kpp))**2+(tauv/rr(i,j,kpp))**2)**0.25
+				  ust = ((tauu/rr(i,j,kbedp(i,j)))**2+(tauv/rr(i,j,kbedp(i,j)))**2)**0.25 !perhaps limiting ust 0.5*absU is needed
 				ELSE 
 					IF (IBMorder.eq.2) THEN
 						kppE=MIN(CEILING(0.5*(zbed(i,j)+zbed(i+1,j))/dz+k_ust_tau),k1) !between 0.5-1.5dz from bed 
@@ -4677,8 +4689,8 @@ c*************************************************************
 			  enddo
 			 enddo 
 		ENDIF		
-		call bound_p(TKE)  !periodic boundaries in x or y when needed, otherwise all Neumann boundaries d./dn=0
-		call bound_p(EEE)  !periodic boundaries in x or y when needed, otherwise all Neumann boundaries d./dn=0
+		call bound_3D(TKE)  !periodic boundaries in x or y when needed, otherwise all Neumann boundaries d./dn=0
+		call bound_3D(EEE)  !periodic boundaries in x or y when needed, otherwise all Neumann boundaries d./dn=0
       end
 
 
@@ -5103,6 +5115,7 @@ c*************************************************************
 !       real Ub1old(0:i1,0:k1),Vb1old(0:i1,0:k1),Wb1old(0:i1,0:k1),Ub2old(0:j1,0:k1),Vb2old(0:j1+1,0:k1),Wb2old(0:j1,0:k1)
       integer ii,t
       real fun,uu,vv,ww,fac1,fac2,fac3,x,y,z,yymin,yymax,Vbox1,Vbox2,Vbox3,boxside_x,boxside_y,phig,uuu,vvv,www,ust,ust3,z0
+	  real sign_Ufluc
 	  integer*2 tt
  	
       Ub1old=Ub1new
@@ -5123,9 +5136,14 @@ c*************************************************************
 		if (slip_bot.eq.1.or.slip_bot.ge.3) then
 		  do i=1,10
 			z0=0.11*nu_mol/MAX(ust,1.e-9)+kn/30
-			ust=sqrt(U_bSEM**2+V_bSEM**2)*kappa/(log((depth-bc_obst_h)/z0)-1);
+			ust=MAX(0.,sqrt(U_bSEM**2+V_bSEM**2)*kappa/(log((depth-bc_obst_h)/z0)-1))
 		  enddo
 		endif
+		if((U_b.ge.0.and.LOA<0).or.((U_TSHD-U_b).ge.0.and.LOA>0.)) THEN 
+		  sign_Ufluc=1.
+		else !inflow Ubc2,Vbc2 defined at imax instead at i=0
+		  sign_Ufluc=-1.
+		endif 		
 	
       if (nmax2.gt.0) then
 	  	yymin=Rp(0)*sin_vt(0)-0.22*(depth-bc_obst_h) !boxsize
@@ -5166,9 +5184,9 @@ c*************************************************************
 				vv=vv+epsSEM1(2,tt)*fun*fac1
 				ww=ww+epsSEM1(3,tt)*fun*fac1
 			  enddo
-		      Ub2new(j,k)=uu*AA2(1,1,j,k)*ust+vv*AA2(1,2,j,k)*ust+ww*AA2(1,3,j,k)*ust 
-		      Wb2new(j,k)=uu*AA2(2,1,j,k)*ust+vv*AA2(2,2,j,k)*ust+ww*AA2(2,3,j,k)*ust
-		      Vb2new(j,k)=uu*AA2(3,1,j,k)*ust+vv*AA2(3,2,j,k)*ust+ww*AA2(3,3,j,k)*ust
+		      Ub2new(j,k)=uu*AA2(1,1,j,k)*ust+vv*AA2(1,2,j,k)*ust*sign_Ufluc+ww*AA2(1,3,j,k)*ust*sign_Ufluc 
+		      Wb2new(j,k)=uu*AA2(2,1,j,k)*ust*sign_Ufluc+vv*AA2(2,2,j,k)*ust+ww*AA2(2,3,j,k)*ust
+		      Vb2new(j,k)=uu*AA2(3,1,j,k)*ust*sign_Ufluc+vv*AA2(3,2,j,k)*ust+ww*AA2(3,3,j,k)*ust
 			enddo
 	      enddo
       endif
@@ -5213,9 +5231,9 @@ c*************************************************************
 	 		vv=vv+epsSEM2(2,tt)*fun*fac2
 	 		ww=ww+epsSEM2(3,tt)*fun*fac2
 	 	    enddo
-	 	    Ub1new(i,k)=uu*AA1(1,1,i,k)*ust+vv*AA1(1,2,i,k)*ust+ww*AA1(1,3,i,k)*ust 
-	 	    Wb1new(i,k)=uu*AA1(2,1,i,k)*ust+vv*AA1(2,2,i,k)*ust+ww*AA1(2,3,i,k)*ust
-	 	    Vb1new(i,k)=uu*AA1(3,1,i,k)*ust+vv*AA1(3,2,i,k)*ust+ww*AA1(3,3,i,k)*ust
+	 	    Ub1new(i,k)=uu*AA1(1,1,i,k)*ust+vv*AA1(1,2,i,k)*ust*sign_Ufluc+ww*AA1(1,3,i,k)*ust*sign_Ufluc
+	 	    Wb1new(i,k)=uu*AA1(2,1,i,k)*ust*sign_Ufluc+vv*AA1(2,2,i,k)*ust+ww*AA1(2,3,i,k)*ust
+	 	    Vb1new(i,k)=uu*AA1(3,1,i,k)*ust*sign_Ufluc+vv*AA1(3,2,i,k)*ust+ww*AA1(3,3,i,k)*ust
 	 	  enddo
 	 	enddo   
 	       ! boundary at j=px*jmax  
@@ -5245,9 +5263,9 @@ c*************************************************************
 	 		vv=vv+epsSEM2(2,tt)*fun*fac2
 	 		ww=ww+epsSEM2(3,tt)*fun*fac2
 	 	    enddo
-	 	    Ub1new(i,k)=uu*AA1(1,1,i,k)*ust+vv*AA1(1,2,i,k)*ust+ww*AA1(1,3,i,k)*ust
-	 	    Wb1new(i,k)=uu*AA1(2,1,i,k)*ust+vv*AA1(2,2,i,k)*ust+ww*AA1(2,3,i,k)*ust
-	 	    Vb1new(i,k)=uu*AA1(3,1,i,k)*ust+vv*AA1(3,2,i,k)*ust+ww*AA1(3,3,i,k)*ust
+	 	    Ub1new(i,k)=uu*AA1(1,1,i,k)*ust+vv*AA1(1,2,i,k)*ust*sign_Ufluc+ww*AA1(1,3,i,k)*ust*sign_Ufluc
+	 	    Wb1new(i,k)=uu*AA1(2,1,i,k)*ust*sign_Ufluc+vv*AA1(2,2,i,k)*ust+ww*AA1(2,3,i,k)*ust
+	 	    Vb1new(i,k)=uu*AA1(3,1,i,k)*ust*sign_Ufluc+vv*AA1(3,2,i,k)*ust+ww*AA1(3,3,i,k)*ust
 	 	  enddo
 	 	enddo
 	       endif
@@ -5335,7 +5353,8 @@ c*************************************************************
 	if (slip_bot.eq.1.or.slip_bot.ge.3) then
 	  do i=1,10
 	    z0=0.11*nu_mol/MAX(ust,1.e-9)+kn/30
-	    ust=sqrt(U_bSEM**2+V_bSEM**2)*kappa/(log((depth-bc_obst_h)/z0)-1);
+		z0=MIN(0.5*(depth-bc_obst_h),dz,z0)
+		ust=MAX(0.,sqrt(U_bSEM**2+V_bSEM**2)*kappa/(log((depth-bc_obst_h)/z0)-1))
 	  enddo
 	endif
 	! rotation ship for ambient side current
@@ -5381,10 +5400,8 @@ c*************************************************************
 !	  ENDIF 
 	  fac=kappa*(depth-bc_obst_h)
 	  do i=1,nmax2
-!	      uSEM2(i)=ust/kappa*log(zSEM2(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)  !correct sign with and without TSHD
-!	      uSEM2(i)=ust/kappa*log(zSEM2(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD  !correct sign with and without TSHD
-		  uSEM2(i)=ust/kappa*log(zSEM2(i)/z0)*(-signU_bSEM*cos(phi)+signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD*cos(phi)  !corrected 28-2-2023 
-	      lmxSEM2(i)=0.5*(depth-bc_obst_h)/sqrt(U_bSEM**2+V_bSEM**2)*ust/kappa*log(zSEM2(i)/z0)
+	      uSEM2(i)=ust/kappa*log(zSEM2(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD  !correct sign with and without TSHD
+	      lmxSEM2(i)=0.5*(depth-bc_obst_h)/sqrt(U_bSEM**2+V_bSEM**2+1e-12)*ust/kappa*log(zSEM2(i)/z0)
 	      lmxSEM2(i)=max(lm_min,lmxSEM2(i))
 	      lmySEM2(i)=0.22*(depth-bc_obst_h)
 	      lmzSEM2(i)=fac*zSEM2(i)/(depth-bc_obst_h)*sqrt(1.-zSEM2(i)/(depth-bc_obst_h))
@@ -5440,10 +5457,8 @@ c*************************************************************
 	      xxmin=-ySEM1(i)/tan(phi2)-schuif_x-boxside_x ! xxmin is positive
 	      xxmax=-ySEM1(i)/tan(phi2)-schuif_x+boxside_x ! xxmax is positive
 	      xSEM1(i)=(xxmax-xxmin)*xSEM1(i)+xxmin  
-!	      uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)  !correct sign with and without TSHD
-!	      uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD  !correct sign with and without TSHD
-		  uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)+signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD*cos(phi)  !corrected 28-2-2023 
-	      lmxSEM1(i)=0.5*(depth-bc_obst_h)/sqrt(U_bSEM**2+V_bSEM**2)*ust/kappa*log(zSEM1(i)/z0)
+	      uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD  !correct sign with and without TSHD
+	      lmxSEM1(i)=0.5*(depth-bc_obst_h)/sqrt(U_bSEM**2+V_bSEM**2+1e-12)*ust/kappa*log(zSEM1(i)/z0)
 	      lmxSEM1(i)=max(lm_min,lmxSEM1(i))
 	      lmySEM1(i)=0.22*(depth-bc_obst_h)
 	      lmzSEM1(i)=fac*zSEM1(i)/(depth-bc_obst_h)*sqrt(1.-zSEM1(i)/(depth-bc_obst_h))
@@ -5489,10 +5504,8 @@ c*************************************************************
 	      xxmin=ySEM1(i)/tan(phi2)-schuif_x-boxside_x 
 	      xxmax=ySEM1(i)/tan(phi2)-schuif_x+boxside_x
 	      xSEM1(i)=(xxmax-xxmin)*xSEM1(i)+xxmin  
-!	      uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)  !correct sign with and without TSHD
-!	      uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD  !correct sign with and without TSHD
-		  uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)+signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD*cos(phi)  !corrected 28-2-2023 
-	      lmxSEM1(i)=0.5*(depth-bc_obst_h)/sqrt(U_bSEM**2+V_bSEM**2)*ust/kappa*log(zSEM1(i)/z0)
+	      uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD  !correct sign with and without TSHD
+	      lmxSEM1(i)=0.5*(depth-bc_obst_h)/sqrt(U_bSEM**2+V_bSEM**2+1e-12)*ust/kappa*log(zSEM1(i)/z0)
 	      lmxSEM1(i)=max(lm_min,lmxSEM1(i))
 	      lmySEM1(i)=0.22*(depth-bc_obst_h)
 	      lmzSEM1(i)=fac*zSEM1(i)/(depth-bc_obst_h)*sqrt(1.-zSEM1(i)/(depth-bc_obst_h))
@@ -5714,7 +5727,8 @@ c*************************************************************
 	if (slip_bot.eq.1.or.slip_bot.ge.3) then
 	  do i=1,10
 	    z0=0.11*nu_mol/MAX(ust,1.e-9)+kn/30
-	    ust=sqrt(U_bSEM**2+V_bSEM**2)*kappa/(log((depth-bc_obst_h)/z0)-1);
+		z0=MIN(0.5*(depth-bc_obst_h),dz,z0)
+		ust=MAX(0.,sqrt(U_bSEM**2+V_bSEM**2)*kappa/(log((depth-bc_obst_h)/z0)-1))
 	  enddo
 	endif
 	! rotation ship for ambient side current
@@ -5731,14 +5745,14 @@ c*************************************************************
 	if (U_b_tseriesfile.ne.''.or.V_b_tseriesfile.ne.''.or.W_b_tseriesfile.ne.'') then  !update all SEM1 and SEM2 points with new velocity:
 	  if (rank.eq.0.or.rank.eq.px-1) then
 	    do i=1,nmax1
-		  uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)+signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD*cos(phi)  !corrected 28-2-2023 
-		  lmxSEM1(i)=0.5*(depth-bc_obst_h)/sqrt(U_bSEM**2+V_bSEM**2)*ust/kappa*log(zSEM1(i)/z0)
+		  uSEM1(i)=MAX(0.,ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD)  
+		  lmxSEM1(i)=0.5*(depth-bc_obst_h)/sqrt(U_bSEM**2+V_bSEM**2+1e-12)*ust/kappa*log(zSEM1(i)/z0)
 		  lmxSEM1(i)=max(lm_min,lmxSEM1(i))
 	    enddo 
 	  endif 
 	  do i=1,nmax2
-		  uSEM2(i)=ust/kappa*log(zSEM2(i)/z0)*(-signU_bSEM*cos(phi)+signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD*cos(phi)  !corrected 28-2-2023 
-	      lmxSEM2(i)=0.5*(depth-bc_obst_h)/sqrt(U_bSEM**2+V_bSEM**2)*ust/kappa*log(zSEM2(i)/z0)
+		  uSEM2(i)=MAX(0.,ust/kappa*log(zSEM2(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD)  
+	      lmxSEM2(i)=0.5*(depth-bc_obst_h)/sqrt(U_bSEM**2+V_bSEM**2+1e-12)*ust/kappa*log(zSEM2(i)/z0)
 	      lmxSEM2(i)=max(lm_min,lmxSEM2(i))	  
 	  enddo 
 	endif 
@@ -5758,7 +5772,7 @@ c*************************************************************
 	  xxmax=-ySEM1(i)/tan(phi2)-schuif_x+boxside_x ! xxmax is positive
  	  if (xSEM1(i)>xxmax)  then  ! put on start line inflow Vbox:
 		!! first remove from linked list:
-		  kminSEM=INT(FLOOR((zSEM1(i)-lmzSEM1(i))/dz))
+		  kminSEM=INT(FLOOR((zSEM1(i)-lmzSEM1(i))/dz))+MINVAL(kbed0) 
 		  kmaxSEM=INT(CEILING((zSEM1(i)+lmzSEM1(i))/dz))+MAXVAL(kbed0) !add maximum kbed of this processor is sufficient; only interactions for grid-cells on this specific processor are needed
 		  kminSEM=MAX(kminSEM,1)
 		  kminSEM=MIN(kminSEM,kmax)
@@ -5789,16 +5803,14 @@ c*************************************************************
 	 	  do ii=1,3
 	 	    epsSEM1(ii,i)=eps(ii)*2.-1. ! +1 or -1	
 	 	  enddo
-!	      	  uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)  !correct sign with and without TSHD
-!	      	  uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD  !correct sign with and without TSHD
-			  uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)+signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD*cos(phi)  !corrected 28-2-2023 
-		  lmxSEM1(i)=0.5*(depth-bc_obst_h)/sqrt(U_bSEM**2+V_bSEM**2)*ust/kappa*log(zSEM1(i)/z0)
+      	  uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD  !correct sign with and without TSHD
+		  lmxSEM1(i)=0.5*(depth-bc_obst_h)/sqrt(U_bSEM**2+V_bSEM**2+1e-12)*ust/kappa*log(zSEM1(i)/z0)
 		  lmxSEM1(i)=max(lm_min,lmxSEM1(i))
 		  lmySEM1(i)=0.22*(depth-bc_obst_h)
 		  lmzSEM1(i)=fac*zSEM1(i)/(depth-bc_obst_h)*sqrt(1.-zSEM1(i)/(depth-bc_obst_h))
 		  lmzSEM1(i)=max(lm_min,lmzSEM1(i))
 		!! make linked list for new SEM point:
-		  kminSEM=INT(FLOOR((zSEM1(i)-lmzSEM1(i))/dz))
+		  kminSEM=INT(FLOOR((zSEM1(i)-lmzSEM1(i))/dz))+MINVAL(kbed0) 
 		  kmaxSEM=INT(CEILING((zSEM1(i)+lmzSEM1(i))/dz))+MAXVAL(kbed0) !add maximum kbed of this processor is sufficient; only interactions for grid-cells on this specific processor are needed
 		  kminSEM=MAX(kminSEM,1)
 		  kminSEM=MIN(kminSEM,kmax)
@@ -5826,7 +5838,7 @@ c*************************************************************
 	  xxmax=ySEM1(i)/tan(phi2)-schuif_x+boxside_x ! xxmax is positive
  	  if (xSEM1(i)>xxmax)  then  ! put on start line inflow Vbox:
 		!! first remove from linked list:
-		  kminSEM=INT(FLOOR((zSEM1(i)-lmzSEM1(i))/dz))
+		  kminSEM=INT(FLOOR((zSEM1(i)-lmzSEM1(i))/dz))+MINVAL(kbed0) 
 		  kmaxSEM=INT(CEILING((zSEM1(i)+lmzSEM1(i))/dz))+MAXVAL(kbed0) !add maximum kbed of this processor is sufficient; only interactions for grid-cells on this specific processor are needed
 		  kminSEM=MAX(kminSEM,1)
 		  kminSEM=MIN(kminSEM,kmax)
@@ -5856,16 +5868,14 @@ c*************************************************************
 	 	  do ii=1,3
 	 	    epsSEM1(ii,i)=eps(ii)*2.-1. ! +1 or -1	
 	 	  enddo
-!	      	  uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)  !correct sign with and without TSHD
-!	      	  uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD  !correct sign with and without TSHD
-			  uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)+signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD*cos(phi)  !corrected 28-2-2023 
-		  lmxSEM1(i)=0.5*(depth-bc_obst_h)/sqrt(U_bSEM**2+V_bSEM**2)*ust/kappa*log(zSEM1(i)/z0)
+      	  uSEM1(i)=ust/kappa*log(zSEM1(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD  !correct sign with and without TSHD
+		  lmxSEM1(i)=0.5*(depth-bc_obst_h)/sqrt(U_bSEM**2+V_bSEM**2+1e-12)*ust/kappa*log(zSEM1(i)/z0)
 		  lmxSEM1(i)=max(lm_min,lmxSEM1(i))
 		  lmySEM1(i)=0.22*(depth-bc_obst_h)
 		  lmzSEM1(i)=fac*zSEM1(i)/(depth-bc_obst_h)*sqrt(1.-zSEM1(i)/(depth-bc_obst_h))
 		  lmzSEM1(i)=max(lm_min,lmzSEM1(i))
 		!! make linked list for new SEM point:
-		  kminSEM=INT(FLOOR((zSEM1(i)-lmzSEM1(i))/dz))
+		  kminSEM=INT(FLOOR((zSEM1(i)-lmzSEM1(i))/dz))+MINVAL(kbed0) 
 		  kmaxSEM=INT(CEILING((zSEM1(i)+lmzSEM1(i))/dz))+MAXVAL(kbed0) !add maximum kbed of this processor is sufficient; only interactions for grid-cells on this specific processor are needed
 		  kminSEM=MAX(kminSEM,1)
 		  kminSEM=MIN(kminSEM,kmax)
@@ -5919,10 +5929,8 @@ c*************************************************************
 	    do j=1,3
 	      epsSEM2(j,i)=eps(j)*2.-1. ! +1 or -1	
 	    enddo	
-!	      uSEM2(i)=ust/kappa*log(zSEM2(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)  !correct sign with and without TSHD)
-!	      uSEM2(i)=ust/kappa*log(zSEM2(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD !correct sign with and without TSHD)
-		  uSEM2(i)=ust/kappa*log(zSEM2(i)/z0)*(-signU_bSEM*cos(phi)+signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD*cos(phi)  !corrected 28-2-2023 
-	      lmxSEM2(i)=0.5*(depth-bc_obst_h)/sqrt(U_bSEM**2+V_bSEM**2)*ust/kappa*log(zSEM2(i)/z0)
+	      uSEM2(i)=ust/kappa*log(zSEM2(i)/z0)*(-signU_bSEM*cos(phi)-signV_bSEM*sin(phi))*LOA/ABS(LOA)+U_TSHD !correct sign with and without TSHD)
+	      lmxSEM2(i)=0.5*(depth-bc_obst_h)/sqrt(U_bSEM**2+V_bSEM**2+1e-12)*ust/kappa*log(zSEM2(i)/z0)
 	      lmxSEM2(i)=max(lm_min,lmxSEM2(i))
 	      lmySEM2(i)=0.22*(depth-bc_obst_h)
 	      lmzSEM2(i)=fac*zSEM2(i)/(depth-bc_obst_h)*sqrt(1.-zSEM2(i)/(depth-bc_obst_h))
@@ -5938,7 +5946,7 @@ c*************************************************************
 	llmax2_dummy=llmax2
 	do iii=1,iimax
 	  ii=ind(iii)
-	  kminSEM=INT(FLOOR((zSEM2old(ii)-lmzSEM2old(ii))/dz))
+	  kminSEM=INT(FLOOR((zSEM2old(ii)-lmzSEM2old(ii))/dz))+MINVAL(kbed0) 
 	  kmaxSEM=INT(CEILING((zSEM2old(ii)+lmzSEM2old(ii))/dz))+MAXVAL(kbed0) !add maximum kbed of this processor is sufficient; only interactions for grid-cells on this specific processor are needed
 	  kminSEM=MAX(kminSEM,1)
 	  kminSEM=MIN(kminSEM,kmax)

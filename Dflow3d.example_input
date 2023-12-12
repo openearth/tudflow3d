@@ -17,11 +17,11 @@ schuif_x = 0.57016                 	! Shift in x-coordinate to make (x,y) plume 
 dy = 0.00288						! width gridcell at (x,y)=(0,0) [m]
 depth = 0.558						! Depth [m] (dz=depth/kmax)
 hisfile = './inputfiles/his_jicf_Gal_ufvar04.inp'			! Input file for history points
-restart_dir =''						! Path restart netcdf-files influding start of filename e.g. '/data/.../flow3d_000000010_*.nc' containing (variables not provided are simply not used): U,V,W,C,Cbed,zbed,mass_bed 3D matrix (1:imax,1:jmax*px,1:kmax): U,V,W, 4D (1:nfrac,1:imax,1:jmax*px,1:kmax): C,Cbed, 2D matrix (1:imax,1:jmax*px): zbed, 3D(1:nfrac,1:imax,1:jmax*px): mass_bed
+restart_dir =''						! Path restart netcdf-files influding start of filename e.g. '/data/.../flow3d_000000010_*.nc' containing (variables not provided are simply not used): U,V,W,C,Cbed,zbed,kbed,mass_bed. U,V,W: 3D matrix (1:imax,1:jmax*px,1:kmax); C,Cbed: 4D matrix (1:nfrac,1:imax,1:jmax*px,1:kmax):  zbed,kbed: 2D matrix (1:imax,1:jmax*px); mass_bed: 3D(1:nfrac,1:imax,1:jmax*px)
 /
 
 &times
-t_end = 60.							! End time simulation from (re)start [s]
+t_end = 60.							! End time simulation from start [s]
 t0_output = 60.						! Start time output [s] (default 0)
 dt_output = 60.						! Time interval output [s]
 te_output = 360.					! End time output [s] (default t_end)
@@ -51,7 +51,7 @@ npresIBM = 0						! number of extra pres-correction steps to make IBM objects be
 npresPRHO = 0						! number of extra pres-correction steps to get predicted P^n+1 as input in variable-density-Poisson-solver more accurate (default 0)
 oPRHO = 2							! (default 2) 2 = linear extrapolation for predicted P*; 1 = predicted P* equal to P^n; 3 = linear extrapolation for predicted P* using 2dt before to reduce wiggles in time; 4 = high order extrapolation for dPdt to get predicted P*
 pres_in_predictor_step = 1 			! 1 (default) = apply P^n in predictor step and apply corrector step with dP; 0 = predictor step without pressure and apply corrector step with P^n+1; 2 = like 1, but every 100th timestep like 0; 3 = apply spatial filter on P^n in predictor step for more stable results with morphological bed-update; 4 = like 3 but filter only inside bed
-Poutflow=0 							! 0 (default, most robust) Poutflow is zero for complete outflow crosssection at rmax; 1 (optional) Poutflow is zero at just one grid-location at rmax --> sometimes better but less robust
+Poutflow=0 							! 0 (default, most robust) Poutflow is zero for complete outflow crosssection at rmax; 1 (optional) Poutflow is zero at just one grid-location at rmax --> sometimes more accurate but less robust
 k_pzero=1 							! default 1, defines vertical level where p=0 when Poutflow=1 is used
 Uoutflow=0 							! 0 (default) Neumann outflow dUdn=0 (for U,V,W); 2 means convective outflow condition dUdt+U_normal*dUdn=0 (for U,V,W)
 !advec_conc='VLE'					! optional advection scheme concentration, options: 'VLE' (default) 'VL2' 'ARO' 'SBE' SB2' 'NVD' :'VLE' VanLeer(via LW)(default) 'ARO' Arora(via LW) 'SBE' Superbee(via LW) 'VL2' VanLeer(via CDS2) or 'SB2' Superbee(via CDS2) TVD schemes or 'NVD' for NVD scheme 
@@ -64,7 +64,6 @@ applyVOF = 0 						!Beta option, default 0 take variable rho fully in account in
 k_ust_tau = 1 						! defines which k-layer from bed is used to determine ust/tau for sediment pickup and K-Eps bed-bc, default 1 (first cell from bed is used) and sometimes for IBM bed k_ust_tau=2 is recommended because 2nd cell is less influenced by nearby immersed bed grid cells with zero velocity 
 k_ust_tau_flow = 1 						! defines which k-layer from bed is used to determine ust/tau for the flow bed shear stress, default 1 (first cell from bed is used) and sometimes for IBM bed k_ust_tau_flow>1 could be used
 dUVdn_IBMbed=-1 					! -1 = default no correction, 0 gives dUdn and dVdn is zero over immersed bed, -2 to apply UV(1:kbed)=0 also for IBM2
-
 /
 
 &ambient
@@ -87,6 +86,7 @@ lm_min = 0.02 						! Minimal Lm SEM eddies [m] (1/10*depth)
 nmax3= 0 							!Number of SEM eddies jet inflow
 lm_min3 = 0.03						! Minimal Lm SEM eddies jet pipe [m] (1/10*radius_j)
 slip_bot = 1						! 1 = partial slip (law of the wall) bottom with log-U inflow profile , 0 = free slip bottom, 2 partial slip with constant U profile over vertical, 3 is partial slip TBL wall-model including dpdx, 4 is partial slip TBL wall-model excluding dpdx, 5 is partial slip wall-model based on VanDriest U-profile, -1 is no slip bottom, -2 is no slip bottom and top
+TBLE_grad_relax = 0.01 					! Relaxation factor to determine gradients input (dpdx,dpdy,dudx,dudy,dvdx,dvdy depending on which slip_bot is used) for slip_bot =3,6,7 (1. gives no relaxation) value = relax*new+(1-relax)*previous 
 kn = 0.1							! Nikkuradse roughness flow [m], used for tau_flow in partial slip condition and for inflow U,V profiles and inflow SEM eddies 
 kn_flow_file = '' 					! Input netcdf file for spatially variable kn (filled with kn_flow(1:imax,0:jmax*px+1) [m]), even when a kn_flow_file is defined kn defined in this inputfile is still being used for inflow U,V profiles and inflow SEM eddies and for tau_flow top of domain (when wallup = 1 or 2)
 kn_flow_d50_multiplier = -2. 				! Multiplier (default <0, not used) to relate kn_flow to the sediment d50 (based on only sand fractions, silt/mud or air fractions are not considered in calculation of d50) in the uppermost cell of the bed -> kn_flow=kn_flow_d50_multiplier*d50 -> can be used to harmonize tau of sediment pickup and bedload and tau_flow (for sediment-pickup values of multiplier=2-2.5 are common), even when kn_flow_d50_multiplier is defined kn defined in this inputfile is still being used for inflow U,V profiles and inflow SEM eddies and for tau_flow top of domain (when wallup = 1 or 2). kn_flow_d50_multiplier overrules kn_flow_file
@@ -94,7 +94,8 @@ interaction_bed = 4					! 0 no erosion/sedimentation, 1 only deposition, 2 depos
 periodicx = 0						! 1 periodic in x dir; 0 not periodic (default 0); 2 closed box (in and outflow in x-dir is zero)
 periodicy = 0						! 1 periodic in y dir; 0 not periodic; 2 is free slip lateral boundaries (default 0)
 i_periodicx = 0 					! beta option (default 0; not used) when >1 then internal periodic x-dir bc is applied UVWC(0)=UVWC(i_periodicx)
-istart_morf2 = 0 					! (default 0, not used) start i-index where bedupdate is applied, for i<istart_morf2 there is exchange of sediment between bed and fluid, but no bedupdate (all changes to bed are annihilated)
+istart_morf1 = 0 					! (default 0, not used) between istart_morf1 and istart_morf2 bedupdate scales linearly from 0 to 1 to allow for smooth startup at inflow boundary of morphological bed-changes. for i<istart_morf1 no bedupdate, for i>istart_morf2 complete bedupdate and inbetween linearly reduced bedupdate. For all i-indices there is exchange of sediment between bed and fluid, but for i<istart_morf2 changes to bed are (partly) annihilated
+istart_morf2 = 0 					! (default 0, not used) between istart_morf1 and istart_morf2 bedupdate scales linearly from 0 to 1 to allow for smooth startup at inflow boundary of morphological bed-changes. for i<istart_morf1 no bedupdate, for i>istart_morf2 complete bedupdate and inbetween linearly reduced bedupdate. For all i-indices there is exchange of sediment between bed and fluid, but for i<istart_morf2 changes to bed are (partly) annihilated
 cbc_perx_j = 1 4					! j-indices used to calculate avg vertical concentration outflow profile used as inflow profile, two values required where second value is >= first value and both j-indices should be within first MPI partition (should be <jmax/px), default 0 0 and not used; with this option excessive scour at inflow is prevented, it is the modellers responsibility to have a flat inflow and outflow bathy at the same level  
 cbc_relax = 0.01 					! Relaxation factor to determine inflow concentration profile via cbc_perx_j (1. gives no relaxation) value = relax*new+(1-relax)*previous 
 monopile = -1						! -1 (default) no monopile; >0 is monopile : closed bc at i=0 and combined in/outflow at i=imax; 1=partial slip monopile wall log-law; 2=free slip monopile wall; 3=partial slip monopile TBL wall-model including dpdx, 4=no-slip monopile wall
@@ -111,6 +112,7 @@ obst(1)%zbottom = 0.2            	! vertical bottom start height obstacle [m] (o
 obst(1)%ero = 0. 					! 0. = no erosion on top of obstacle, 1. = erosion possible  (optional, default 0)
 obst(1)%depo = 0. 					! 0. = no deposition on top of obstacle, 1. = deposition possible  (optional, default 0)
 obstfile = './inputfiles/obstacles_v01.nc'         ! Input netcdf file 3D obstacles; must contain obstacle_Ploc (1=obst, 0=not), obstacle_ero, obstacle_depo (0:i1,0:jmax*px+1,0:k1) [-]); optionally a wildcard can be used to provide several obstfiles which are used one by one at moments in time defined in variable obstacle_starttimes [s] which indicates the starttime for each next obstfile, obstacle_starttimes is a vector in the netcdf file and must be equal in length to the number of obstfiles provided
+obstfile_erodepo = 1				! 1 (default) obstacle_ero and obstacle_depo are only used inside obstacle_Ploc, optionally 2 means obstacle_ero and obstacle_depo are used everywhere in domain
 U_b3 = -0.47						! Ambient bc U velocity [m/s] in surf_layer with respect to TSHD motion: negative means TSHD sailing against current (Utotal=U_TSHD-U_b), without TSHD positive is inward velocity
 V_b3 = -0.29						! Ambient bc V velocity [m/s] in surf_layer with respect to TSHD motion: positive means current from starboard  
 surf_layer = 0.						! Layer depth [m] from free surface with U_b3,V_b3 ambient current (default 0)
@@ -262,13 +264,14 @@ pickup_correction='noneMastBergenvdBerg' 		! option 'MastBergenvdBerg2003' gives
 dz_sidewall = 0.1 				! dz_sidewall defines minimum step in bed-level to apply pickup_correction 'xtra_sidewall_pickup', when not defined equal to dz
 vwal=0.001						! vwal [m/s] is the wall velocity used in pickup_correction 'MastBergenvdBerg2003'; if defined >999 then vwal is calculated from the actual bed-slope 
 nl=0.44							! nl is the porosity of loose sand after dilantancy used in pickup_correction 'MastBergenvdBerg2003' and must be >(1-cfixedbed) 
-permeability_kl=0.000307		! permeability_kl [m/s] is the permeability of loose sand used in pickup_correction 'MastBergenvdBerg2003', can be calculated by relation Kozeny-Carmen kl = gD15^2/160nu*nl^3/(1-nl)^2
+permeability_kl=0.000307		! permeability_kl [m/s] is the permeability of loose sand used in pickup_correction 'MastBergenvdBerg2003', can be calculated by relation Kozeny-Carmen kl = gD15^2/(160nu)*nl^3/(1-nl)^2
 wbed_correction = 0 			! 1 = apply upward W velocity at bed for eroding bed W=V_ero_bed; only applicable i.c.w. pickup_correction 'MastBergenvdBerg2003', default 0 --> W=0. at bed 
 pickup_fluctuations=0			!1 means white noise random fluctuations are added to calculated pickup, default 0 no random fluctuations on calculated pickup  
 pickup_fluctuations_ampl=0.		!determines amplitude of turbulent fluctuations --> pickup = pickup+pickup_fluctuations_ampl*random(range[-1 to 1])*pickup 
 cbed_method = 1					! 1 (default) = cbed is determined in lowest fluid cell above the bed; 2 = avg of all fluid cells above bed up to location of max horizontal velocity
 z_tau_sed = 0.1					! distance [m] from bed where Uflow is taken to calculate tau_sed (relevant when kn_sed differs from kn_flow), default 0.5*dz, but when comparing results with different dz define it as user input otherwise grid-dependent results as the calculation of tau_sed depends on distance from bed 
 wallmodel_tau_sed = 1 			! 1 (default) is log-law wall-model; 3 is TBL wall-model including dpdx, 4 is TBL wall-model excluding dpdx, 5 is wall-model based on VanDriest U-profile, 11 is tau based on U'W' and V'W'; this model choice is used for both suspended load pickup tau and bedload tau 
+TBLEsed_grad_relax = 0.01 					! Relaxation factor to determine gradients input (dpdx,dpdy) for wallmodel_tau_sed =3 (1. gives no relaxation) value = relax*new+(1-relax)*previous 
 nrmsbed = 100 					! # of realizations used to determine U'W' and V'W' in wallmodel_tau_sed=11
 ndtbed = 10 					! every ndtbed time steps a realization is made for U'W' and V'W' in wallmodel_tau_sed=11
 k_layer_pickup = 5				! number of grid cells over which pickup is spread out (default k_layer_pickup=1; everything in lowest cell)
@@ -284,6 +287,7 @@ alfabn_bl=1.5 					! calibration factor transverse slope used in bedslope_effect
 phi_sediment=30. 				! internal angle of friction of bed material (deg); default 30. degrees
 erosion_cbed_start = 1			! 0 after bed-update erosion new fluid cell starts without sediment, 1 (default) it starts with SSC of old near-bed fluid cell and this sediment is taken in weighted avg manner from complete water column above 
 movebed_absorb_cfluid = 1 		! 1 default absorb cfluid in bed when bed moves and new bed is higher than previous timestep (like in avalanche and regular bed-update), 0 = add cfluid buried in new bed to first fluid cell above new bed
+vel_start_after_ero = 1			! default 0: velocity starts with 0 m/s when cell is eroded, 1 = UV initialized with UV of cell above (start UV at freshly eroded hole with near-bed velocity from previous timestep)
 /
 
 &ship

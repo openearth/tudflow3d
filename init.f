@@ -3020,7 +3020,9 @@ C ...  Locals
 			ENDIF 
 			nobst=MAX(1,nobst) !nobst acts as a switch which turns on several switches in rest of the code, in the remainder it is not used as counter in DO loops
 		else
+		  IF (rank.eq.0) THEN
 			write(*,*),'obstacle file =',obst_file_series(nobst_file),' variable "obstacle_Ploc" not found correctly'
+		  ENDIF
 		endif
 		status = nf90_inq_varid(ncid, "obstacle_ero",rhVarid)
 		if (status.eq.nf90_NoErr) then
@@ -3034,7 +3036,9 @@ C ...  Locals
 				write(*,*),'3D Obstacles "obstacle_ero" read from obstacle file =',obst_file_series(nobst_file),' at time ',time_np,' s.'
 			ENDIF 
 		else
-			write(*,*),'obstacle file =',obst_file_series(nobst_file),' variable "obstacle_ero" not found correctly'
+			IF (rank.eq.0) THEN
+				write(*,*),'obstacle file =',obst_file_series(nobst_file),' variable "obstacle_ero" not found correctly'
+			ENDIF 
 		endif
 		status = nf90_inq_varid(ncid, "obstacle_depo",rhVarid)
 		if (status.eq.nf90_NoErr) then
@@ -3048,7 +3052,9 @@ C ...  Locals
 				write(*,*),'3D Obstacles "obstacle_depo" read from obstacle file =',obst_file_series(nobst_file),' at time ',time_np,' s.'
 			ENDIF 
 		else
-			write(*,*),'obstacle file =',obst_file_series(nobst_file),' variable "obstacle_depo" not found correctly'
+			IF (rank.eq.0) THEN
+				write(*,*),'obstacle file =',obst_file_series(nobst_file),' variable "obstacle_depo" not found correctly'
+			ENDIF 
 		endif
 		status = nf90_inq_varid(ncid, "obstacle_Uloc",rhVarid)
 		if (status.eq.nf90_NoErr) then
@@ -3066,8 +3072,10 @@ C ...  Locals
 			nobst=MAX(1,nobst) !nobst acts as a switch which turns on several switches in rest of the code, in the remainder it is not used as counter in DO loops
 			ibm1u=1
 		else
-			write(*,*),'obstacle file =',obst_file_series(nobst_file),' variable "obstacle_Uloc" not found correctly'
-			write(*,*),'NOT 1st order ibm (Fadlun et al. 2000) applied for cell partially inside object but 0-order (staircase)' 
+			IF (rank.eq.0) THEN
+				write(*,*),'obstacle file =',obst_file_series(nobst_file),' variable "obstacle_Uloc" not found correctly'
+				write(*,*),'NOT 1st order ibm (Fadlun et al. 2000) applied for cell partially inside object but 0-order (staircase)' 
+			ENDIF 
 		endif		
 		status = nf90_inq_varid(ncid, "obstacle_Vloc",rhVarid)
 		if (status.eq.nf90_NoErr) then
@@ -3085,8 +3093,10 @@ C ...  Locals
 			nobst=MAX(1,nobst) !nobst acts as a switch which turns on several switches in rest of the code, in the remainder it is not used as counter in DO loops
 			ibm1v=1
 		else
+		  IF (rank.eq.0) THEN
 			write(*,*),'obstacle file =',obst_file_series(nobst_file),' variable "obstacle_Vloc" not found correctly'
 			write(*,*),'NOT 1st order IBM (Fadlun et al. 2000) applied for cell partially inside object but 0-order (staircase)' 
+		  ENDIF
 		endif
 		status = nf90_inq_varid(ncid, "obstacle_Wloc",rhVarid)
 		if (status.eq.nf90_NoErr) then
@@ -3104,8 +3114,10 @@ C ...  Locals
 			nobst=MAX(1,nobst) !nobst acts as a switch which turns on several switches in rest of the code, in the remainder it is not used as counter in DO loops
 			ibm1w=1
 		else
+		  IF (rank.eq.0) THEN
 			write(*,*),'obstacle file =',obst_file_series(nobst_file),' variable "obstacle_Wloc" not found correctly'
 			write(*,*),'NOT 1st order IBM (Fadlun et al. 2000) applied for cell partially inside object but 0-order (staircase)' 
+		  ENDIF 
 		endif		
 		call check( nf90_close(ncid) )  
 
@@ -3223,6 +3235,10 @@ C ...  Locals
 		do i=0,i1
 		  do j=0,j1 
 			do k=0,k1
+			    if (interaction_bed.ge.4.and.obstfile_erodepo.eq.2) then
+				  bednotfixed(i,j,k)=obb_ero(i,j,k) ! obstacle in bed cannot be avalanched or eroded if 0. (default) user can choose to have erosion: 1.
+				  bednotfixed_depo(i,j,k)=obb_depo(i,j,k) ! obstacle in bed cannot have deposition if 0. (default)
+			    endif 			  
 				if (obb(i,j,k).eq.1) then 
 				  if (interaction_bed.ge.4) then
 					  bednotfixed(i,j,k)=obb_ero(i,j,k) ! obstacle in bed cannot be avalanched or eroded if 0. (default) user can choose to have erosion: 1.
@@ -3254,21 +3270,31 @@ C ...  Locals
         USE nlist
 	implicit none
 
-	real phi,z,ust_U_b,ust_V_b,z0_U,z0_V,correction,tt,interpseries,ust,z0,absU
+	real phi,z,ust_U_b,ust_V_b,z0_U,z0_V,correction,tt,interpseries,ust,z0,absU,signU_b_old
 	integer ii
-
+	signU_b_old=signU_b
     !! Set time-varying boundary conditions:
 	if (U_b_tseriesfile.ne.'') then
    		U_b=interpseries(U_b_tseries,U_b_series,U_b_seriesloc,tt)
 		U_bSEM=U_b !make U_bSEM also time dependent
 		IF(U_b<0.) THEN
 		  signU_b=-1.
-		  signU_bSEM=-1.
+		  IF (LOA<0.) THEN !no ship 
+			!signU_bSEM=-1.
+			signU_bSEM=1.  !keep SEM points moving in positive direction, but simply apply SEM-turbulent eddies at imax
+		  ELSE !ship  
+			signU_bSEM=-1.
+		  ENDIF 
 		ELSE 
 		  signU_b=1.	
 		  signU_bSEM=1.
 		ENDIF				
-	endif	
+	endif
+	if (signU_b*signU_b_old<0.) then !U_b switched sign and re-initialization Pardiso matrix coefficients is needed
+      IF (poissolver.eq.3) THEN
+	    CALL SOLVEpois_vg_init_pardiso
+      ENDIF	
+	endif 
 	if (V_b_tseriesfile.ne.'') then
    		V_b=interpseries(V_b_tseries,V_b_series,V_b_seriesloc,tt)
 		V_bSEM=V_b 	!make V_bSEM also time dependent 
@@ -3317,7 +3343,7 @@ C ...  Locals
 		   if (slip_bot.eq.1.or.slip_bot.ge.3) then
 			    do ii=1,10
 			      z0=0.11*nu_mol/MAX(ust,1.e-9)+kn/30
-			      ust=correction*sqrt(U_b**2+V_b**2)*kappa/(log(MAX(depth-zbed(i,j),1.e-12)/z0)-1);
+			      ust=MAX(0.,correction*sqrt(U_b**2+V_b**2)*kappa/(log(MAX(depth-zbed(i,j),1.e-12)/MAX(1.e-9,z0))-1))
 			    enddo
 		   endif
 !		   ust_U_b=MAX(ABS(U_b),1.e-6)
@@ -3338,10 +3364,10 @@ C ...  Locals
 				  !z=(k-kbed(i,j))*dz-0.5*dz
 				  z=k*dz-0.5*dz-zbed(i,j)
 				endif
-		    	Ubc1(i,k)=-ust/kappa*log(MAX(1.,z/z0))*signU_b*cos(phi)*abs(U_b)/absU
-     &                   +ust/kappa*log(MAX(1.,z/z0))*signV_b*sin(phi)*abs(V_b)/absU+U_TSHD*cos(phi)*correction				
-		    	Vbc1(i,k)=-ust/kappa*log(MAX(1.,z/z0))*signV_b*cos(phi)*abs(V_b)/absU
-     &                   -ust/kappa*log(MAX(1.,z/z0))*signU_b*sin(phi)*abs(U_b)/absU+U_TSHD*sin(phi)*correction
+		    	Ubc1(i,k)=-ust/kappa*log(MAX(1.,z/MAX(1.e-9,z0)))*signU_b*cos(phi)*abs(U_b)/absU
+     &                   +ust/kappa*log(MAX(1.,z/MAX(1.e-9,z0)))*signV_b*sin(phi)*abs(V_b)/absU+U_TSHD*cos(phi)*correction				
+		    	Vbc1(i,k)=-ust/kappa*log(MAX(1.,z/MAX(1.e-9,z0)))*signV_b*cos(phi)*abs(V_b)/absU
+     &                   -ust/kappa*log(MAX(1.,z/MAX(1.e-9,z0)))*signU_b*sin(phi)*abs(U_b)/absU+U_TSHD*sin(phi)*correction
 	 	      else
 				if (k.gt.ksurf_bc) then
 				  Ubc1(i,k)=(-U_b3*cos(phi)+V_b3*sin(phi)+U_TSHD*cos(phi))*correction
@@ -3361,9 +3387,9 @@ C ...  Locals
 		    if (slip_bot.eq.1.or.slip_bot.ge.3) then
 			    do ii=1,10
 			      z0_U=0.11*nu_mol/MAX(ABS(ust_U_b),1.e-9)+kn/30
-			      ust_U_b=correction*U_b*kappa/(log(MAX(depth-zbed(i,j),1.e-12)/z0_U)-1);
+			      ust_U_b=correction*U_b*kappa/(log(MAX(0.,MAX(depth-zbed(i,j),1.e-12)/MAX(1.e-9,z0_U)))-1);
 			      z0_V=0.11*nu_mol/MAX(ABS(ust_V_b),1.e-9)+kn/30
-			      ust_V_b=correction*V_b*kappa/(log(MAX(depth-zbed(i,j),1.e-12)/z0_V)-1);
+			      ust_V_b=correction*V_b*kappa/(log(MAX(0.,MAX(depth-zbed(i,j),1.e-12)/MAX(1.e-9,z0_V)))-1);
 			    enddo
 		    endif
 		      if (k.le.(kmax-kjet).and.k.gt.kbed(i,j)) then
@@ -3374,8 +3400,8 @@ C ...  Locals
 					!z=(k-kbed(i,j))*dz-0.5*dz
 					z=k*dz-0.5*dz-zbed(i,j)
 				  endif
-			      Ubc1(i,k)=ust_U_b/kappa*log(MAX(1.,z/z0_U)) 
-			      Vbc1(i,k)=ust_V_b/kappa*log(MAX(1.,z/z0_V))
+			      Ubc1(i,k)=ust_U_b/kappa*log(MAX(1.,z/MAX(1.e-9,z0_U))) 
+			      Vbc1(i,k)=ust_V_b/kappa*log(MAX(1.,z/MAX(1.e-9,z0_V)))
 		 	    else
 				  Ubc1(i,k)=U_b*correction 
 				  Vbc1(i,k)=0.
@@ -3409,7 +3435,7 @@ C ...  Locals
 		   if (slip_bot.eq.1.or.slip_bot.ge.3) then
 			    do ii=1,10
 			      z0=0.11*nu_mol/MAX(ust,1.e-9)+kn/30
-			      ust=correction*sqrt(U_b**2+V_b**2)*kappa/(log(MAX(depth-zbed(i,j),1.e-12)/z0)-1);
+			      ust=MAX(0.,correction*sqrt(U_b**2+V_b**2)*kappa/(log(MAX(depth-zbed(i,j),1.e-12)/MAX(1.e-9,z0))-1))
 			    enddo
 		   endif		  
 !		   ust_U_b=MAX(ABS(U_b),1.e-6)
@@ -3430,10 +3456,10 @@ C ...  Locals
 				  !z=(k-kbed(i,j))*dz-0.5*dz
 				  z=k*dz-0.5*dz-zbed(i,j)
 				endif
-		    	Ubc2(j,k)=-ust/kappa*log(MAX(1.,z/z0))*signU_b*cos(phi)*abs(U_b)/absU
-     &                   +ust/kappa*log(MAX(1.,z/z0))*signV_b*sin(phi)*abs(V_b)/absU+U_TSHD*cos(phi)*correction
-		    	Vbc2(j,k)=-ust/kappa*log(MAX(1.,z/z0))*signV_b*cos(phi)*abs(V_b)/absU
-     &                   -ust/kappa*log(MAX(1.,z/z0))*signU_b*sin(phi)*abs(U_b)/absU+U_TSHD*sin(phi)*correction
+		    	Ubc2(j,k)=-ust/kappa*log(MAX(1.,z/MAX(1.e-9,z0)))*signU_b*cos(phi)*abs(U_b)/absU
+     &                   +ust/kappa*log(MAX(1.,z/MAX(1.e-9,z0)))*signV_b*sin(phi)*abs(V_b)/absU+U_TSHD*cos(phi)*correction
+		    	Vbc2(j,k)=-ust/kappa*log(MAX(1.,z/MAX(1.e-9,z0)))*signV_b*cos(phi)*abs(V_b)/absU
+     &                   -ust/kappa*log(MAX(1.,z/MAX(1.e-9,z0)))*signU_b*sin(phi)*abs(U_b)/absU+U_TSHD*sin(phi)*correction
 	 	     else
 				if (k.gt.ksurf_bc) then
 				  Ubc2(j,k)=(-U_b3*cos(phi)+V_b3*sin(phi)+U_TSHD*cos(phi))*correction
@@ -3453,9 +3479,9 @@ C ...  Locals
 		   if (slip_bot.eq.1.or.slip_bot.ge.3) then
 		    do ii=1,10
 		      z0_U=0.11*nu_mol/MAX(ABS(ust_U_b),1.e-9)+kn/30
-		      ust_U_b=correction*U_b*kappa/(log(MAX(depth-zbed(i,j),1.e-12)/z0_U)-1);
+		      ust_U_b=correction*U_b*kappa/(log(MAX(0.,MAX(depth-zbed(i,j),1.e-12)/MAX(1.e-9,z0_U)))-1);
 		      z0_V=0.11*nu_mol/MAX(ABS(ust_V_b),1.e-9)+kn/30
-		      ust_V_b=correction*V_b*kappa/(log(MAX(depth-zbed(i,j),1.e-12)/z0_V)-1);
+		      ust_V_b=correction*V_b*kappa/(log(MAX(0.,MAX(depth-zbed(i,j),1.e-12)/MAX(1.e-9,z0_V)))-1);
 		    enddo
 		   endif
 		      if (k.le.(kmax-kjet).and.k.gt.kbed(i,j)) then
@@ -3465,8 +3491,8 @@ C ...  Locals
                         	else
                           	  z=(k-kbed(i,j))*dz-0.5*dz
                                 endif
-			    	Ubc2(j,k)=ust_U_b/kappa*log(MAX(1.,z/z0_U)) 
-			    	Vbc2(j,k)=ust_V_b/kappa*log(MAX(1.,z/z0_V))
+			    	Ubc2(j,k)=ust_U_b/kappa*log(MAX(1.,z/MAX(1.e-9,z0_U))) 
+			    	Vbc2(j,k)=ust_V_b/kappa*log(MAX(1.,z/MAX(1.e-9,z0_V)))
 		 	    else
 				Ubc2(j,k)=U_b*correction 
 				Vbc2(j,k)=0.

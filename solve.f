@@ -264,7 +264,7 @@ c********************************************************************
           enddo
         enddo	
       enddo
-
+	!!! do nothing on imax and i=1, so p(imax+1)=p(imax) --> dp/dn=0 at outflow and inflow 
 	if (periodicx.eq.1) then
 	!!! !periodic bc in x: 
 	      i = imax
@@ -273,23 +273,8 @@ c********************************************************************
 		  dUdt(i,j,k) = dUdt(i,j,k) -dt * ( pold(1,j,k) - pold(i,j,k) ) /( Rp(i+1) - Rp(i) ) 
 		 enddo
 	      enddo
-	else 
-		if (Poutflow.eq.0) then 
-		  i = imax
-		  do k=1,kmax
-		   do j=1,jmax
-			dUdt(i,j,k) = dUdt(i,j,k) -  dt * ( -2* pold(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
-		   enddo
-		  enddo
-		elseif (Poutflow.eq.1) then 
-		 if (rank.eq.0) then
-		  i = imax
-		  j = 1
-		  k = k_pzero
-		  dUdt(i,j,k) = dUdt(i,j,k) -  dt * ( -2* pold(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
-		 endif !!! else do nothing on imax, so p(imax+1)=p(imax) --> dp/dn=0 at outflow
-		endif		
 	endif
+	
       do k=1,kmax
         do j=1,jmax-1
           do i=1,imax
@@ -605,6 +590,7 @@ c********************************************************************
           enddo
         enddo	
       enddo
+	  !!! do nothing on imax and i=1, so p(imax+1)=p(imax) --> dp/dn=0 at outflow and inflow 
 	if (periodicx.eq.1) then
 	!!! !periodic bc in x: 
 	      i = imax
@@ -613,22 +599,6 @@ c********************************************************************
 		  dUdt(i,j,k) = dUdt(i,j,k) -dt * ( pold(1,j,k) - pold(i,j,k) ) /( Rp(i+1) - Rp(i) ) 
 		 enddo
 	      enddo
-	else 
-		if (Poutflow.eq.0) then 
-		  i = imax
-		  do k=1,kmax
-		   do j=1,jmax
-			dUdt(i,j,k) = dUdt(i,j,k) -  dt * ( -2* pold(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
-		   enddo
-		  enddo
-		elseif (Poutflow.eq.1) then 
-		 if (rank.eq.0) then
-		  i = imax
-		  j = 1
-		  k = k_pzero
-		  dUdt(i,j,k) = dUdt(i,j,k) -  dt * ( -2* pold(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
-		 endif !!! else do nothing on imax, so p(imax+1)=p(imax) --> dp/dn=0 at outflow
-		endif		
 	endif
       do k=1,kmax
         do j=1,jmax-1
@@ -1488,31 +1458,17 @@ c********************************************************************
           enddo
         enddo	
       enddo
-	if (periodicx.eq.1) then
-	!!! !periodic bc in x: 
-	      i = imax
+	  !!! do nothing on imax and i=1, so p(imax+1)=p(imax) --> dp/dn=0 at outflow and inflow 
+	  if (periodicx.eq.1) then
+	  !!! !periodic bc in x: 
+	    i = imax
 	      do k=1,kmax
 		    do j=1,jmax
-		     dUdt(i,j,k) = dUdt(i,j,k) -dt * ( pold(1,j,k) - pold(i,j,k) ) /( Rp(i+1) - Rp(i) ) 
+		      dUdt(i,j,k) = dUdt(i,j,k) -dt * ( pold(1,j,k) - pold(i,j,k) ) /( Rp(i+1) - Rp(i) ) 
 		    enddo
 	      enddo
-	else 
-		if (Poutflow.eq.0) then 
-		  i = imax
-		  do k=1,kmax
-		   do j=1,jmax
-			dUdt(i,j,k) = dUdt(i,j,k) -  dt * ( -2* pold(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
-		   enddo
-		  enddo
-		elseif (Poutflow.eq.1) then 
-		 if (rank.eq.0) then
-		  i = imax
-		  j = 1
-		  k = k_pzero
-		  dUdt(i,j,k) = dUdt(i,j,k) -  dt * ( -2* pold(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
-		 endif !!! else do nothing on imax, so p(imax+1)=p(imax) --> dp/dn=0 at outflow
-		endif		
-	endif
+	  endif
+	
       do k=1,kmax
         do j=1,jmax-1
           do i=1,imax
@@ -2345,31 +2301,15 @@ c********************************************************************
           enddo
         enddo	
       enddo
-	if (periodicx.eq.1) then
-	!!! !periodic bc in x: 
-	      i = imax
+	  if (periodicx.eq.1) then
+	  !!! !periodic bc in x: 
+	    i = imax
 	      do k=1,kmax
-		   do j=1,jmax
-		     dUdt(i,j,k) = dUdt(i,j,k) -c2*dt * ( pold(1,j,k) - pold(i,j,k) ) /( Rp(i+1) - Rp(i) ) 
-		   enddo
+		    do j=1,jmax
+		      dUdt(i,j,k) = dUdt(i,j,k) -c2*dt * ( pold(1,j,k) - pold(i,j,k) ) /( Rp(i+1) - Rp(i) ) 
+		    enddo
 	      enddo
-	else 
-		if (Poutflow.eq.0) then 
-		  i = imax
-		  do k=1,kmax
-		   do j=1,jmax
-			dUdt(i,j,k) = dUdt(i,j,k) -  c2*dt * ( -2* pold(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
-		   enddo
-		  enddo
-		elseif (Poutflow.eq.1) then 
-		 if (rank.eq.0) then
-		  i = imax
-		  j = 1
-		  k = k_pzero
-		  dUdt(i,j,k) = dUdt(i,j,k) -  c2*dt * ( -2* pold(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
-		 endif !!! else do nothing on imax, so p(imax+1)=p(imax) --> dp/dn=0 at outflow
-		endif		
-	endif
+	  endif  
       do k=1,kmax
         do j=1,jmax-1
           do i=1,imax
@@ -2426,31 +2366,16 @@ c********************************************************************
           enddo
         enddo	
       enddo
-	if (periodicx.eq.1) then
-	!!! !periodic bc in x: 
-	      i = imax
-	        do k=1,kmax
-		     do j=1,jmax
-		       dUdt(i,j,k) = dUdt(i,j,k) -c2*dt * ( p(1,j,k) - p(i,j,k) ) /( Rp(i+1) - Rp(i) ) 
-		     enddo
-	        enddo
-	else 
-		if (Poutflow.eq.0) then 
-		  i = imax
-		  do k=1,kmax
-		   do j=1,jmax
-			dUdt(i,j,k) = dUdt(i,j,k) -  c2*dt * ( -2* p(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
-		   enddo
-		  enddo
-		elseif (Poutflow.eq.1) then 
-		 if (rank.eq.0) then
-		  i = imax
-		  j = 1
-		  k = k_pzero
-		  dUdt(i,j,k) = dUdt(i,j,k) -  c2*dt * ( -2* p(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
-		 endif !!! else do nothing on imax, so p(imax+1)=p(imax) --> dp/dn=0 at outflow
-		endif				
-	endif
+	  !!! do nothing on imax and i=1, so p(imax+1)=p(imax) --> dp/dn=0 at outflow and inflow 
+	  if (periodicx.eq.1) then
+	  !!! !periodic bc in x: 
+	    i = imax
+	      do k=1,kmax
+		    do j=1,jmax
+		      dUdt(i,j,k) = dUdt(i,j,k) -c2*dt * ( p(1,j,k) - p(i,j,k) ) /( Rp(i+1) - Rp(i) ) 
+		    enddo
+	      enddo
+	  endif	
       do k=1,kmax
         do j=1,jmax-1
           do i=1,imax
@@ -2865,31 +2790,15 @@ c********************************************************************
           enddo
         enddo	
       enddo
-	if (periodicx.eq.1) then
-	!!! !periodic bc in x: 
-	      i = imax
+	  if (periodicx.eq.1) then
+	  !!! !periodic bc in x: 
+	    i = imax
 	      do k=1,kmax
-		   do j=1,jmax
-		     dUdt(i,j,k) = dUdt(i,j,k) -c3*dt * ( pold(1,j,k) - pold(i,j,k) ) /( Rp(i+1) - Rp(i) ) 
+		    do j=1,jmax
+		      dUdt(i,j,k) = dUdt(i,j,k) -c3*dt * ( pold(1,j,k) - pold(i,j,k) ) /( Rp(i+1) - Rp(i) ) 
 		    enddo
 	      enddo
-	else 
-		if (Poutflow.eq.0) then 
-		  i = imax
-		  do k=1,kmax
-		   do j=1,jmax
-			dUdt(i,j,k) = dUdt(i,j,k) -  c3*dt * ( -2* pold(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
-		   enddo
-		  enddo
-		elseif (Poutflow.eq.1) then 
-		 if (rank.eq.0) then
-		  i = imax
-		  j = 1
-		  k = k_pzero
-		  dUdt(i,j,k) = dUdt(i,j,k) -  c3*dt * ( -2* pold(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
-		 endif !!! else do nothing on imax, so p(imax+1)=p(imax) --> dp/dn=0 at outflow
-		endif		
-	endif
+	  endif
       do k=1,kmax
         do j=1,jmax-1
           do i=1,imax
@@ -2944,31 +2853,16 @@ c********************************************************************
           enddo
         enddo	
       enddo
-	if (periodicx.eq.1) then
-	!!! !periodic bc in x: 
-	      i = imax
+	  !!! do nothing on imax and i=1, so p(imax+1)=p(imax) --> dp/dn=0 at outflow and inflow 
+	  if (periodicx.eq.1) then
+	  !!! !periodic bc in x: 
+	    i = imax
 	      do k=1,kmax
 		    do j=1,jmax
 		      dUdt(i,j,k) = dUdt(i,j,k) -c3*dt * ( p(1,j,k) - p(i,j,k) ) /( Rp(i+1) - Rp(i) ) 
 		    enddo
 	      enddo
-	else 
-		if (Poutflow.eq.0) then 
-		  i = imax
-		  do k=1,kmax
-		   do j=1,jmax
-			dUdt(i,j,k) = dUdt(i,j,k) -  c3*dt * ( -2* p(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
-		   enddo
-		  enddo
-		elseif (Poutflow.eq.1) then 
-		 if (rank.eq.0) then
-		  i = imax
-		  j = 1
-		  k = k_pzero
-		  dUdt(i,j,k) = dUdt(i,j,k) -  c3*dt * ( -2* p(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
-		 endif !!! else do nothing on imax, so p(imax+1)=p(imax) --> dp/dn=0 at outflow
-		endif		
-	endif
+	  endif 
       do k=1,kmax
         do j=1,jmax-1
           do i=1,imax
@@ -3394,31 +3288,15 @@ c********************************************************************
           enddo
         enddo
       enddo
-	if (periodicx.eq.1) then
-	!!! !periodic bc in x: 
-	      i = imax
+	  if (periodicx.eq.1) then
+	  !!! !periodic bc in x: 
+	    i = imax
 	      do k=1,kmax
-		do j=1,jmax
-		  dUdt(i,j,k) = dUdt(i,j,k) -dt * ( pold(1,j,k) - pold(i,j,k) ) /( Rp(i+1) - Rp(i) ) 
-		 enddo
+		    do j=1,jmax
+		      dUdt(i,j,k) = dUdt(i,j,k) -dt * ( pold(1,j,k) - pold(i,j,k) ) /( Rp(i+1) - Rp(i) ) 
+		    enddo
 	      enddo
-	else 
-		if (Poutflow.eq.0) then 
-		  i = imax
-		  do k=1,kmax
-		   do j=1,jmax
-			dUdt(i,j,k) = dUdt(i,j,k) -  dt * ( -2* pold(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
-		   enddo
-		  enddo
-		elseif (Poutflow.eq.1) then 
-		 if (rank.eq.0) then
-		  i = imax
-		  j = 1
-		  k = k_pzero
-		  dUdt(i,j,k) = dUdt(i,j,k) -  dt * ( -2* pold(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
-		 endif !!! else do nothing on imax, so p(imax+1)=p(imax) --> dp/dn=0 at outflow
-		endif		
-	endif
+	  endif
       do k=1,kmax
         do j=1,jmax-1
           do i=1,imax
@@ -3930,31 +3808,16 @@ c********************************************************************
           enddo
         enddo	
       enddo
-	if (periodicx.eq.1) then
-	!!! !periodic bc in x: 
+	  !!! do nothing on imax and i=1, so p(imax+1)=p(imax) --> dp/dn=0 at outflow and inflow 
+	  if (periodicx.eq.1) then
+	  !!! !periodic bc in x: 
 	    i = imax
 	      do k=1,kmax
 		    do j=1,jmax
 		      dUdt(i,j,k) = dUdt(i,j,k) -dt * ( pold(1,j,k) - pold(i,j,k) ) /( Rp(i+1) - Rp(i) ) 
 		    enddo
 	      enddo
-	else 
-		if (Poutflow.eq.0) then 
-		  i = imax
-		  do k=1,kmax
-		   do j=1,jmax
-			dUdt(i,j,k) = dUdt(i,j,k) -  dt * ( -2* pold(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
-		   enddo
-		  enddo
-		elseif (Poutflow.eq.1) then 
-		 if (rank.eq.0) then
-		  i = imax
-		  j = 1
-		  k = k_pzero
-		  dUdt(i,j,k) = dUdt(i,j,k) -  dt * ( -2* pold(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
-		 endif !!! else do nothing on imax, so p(imax+1)=p(imax) --> dp/dn=0 at outflow
-		endif		
-	endif
+	  endif
       do k=1,kmax
         do j=1,jmax-1
           do i=1,imax
@@ -4193,7 +4056,7 @@ c
 			dp(1:imax,1:jmax,1:kmax)= dt/dt_old*(pold3-pold2) 						!dp contains predicted increment of pressure 
 		ENDIF	
 	  ENDIF	  
-	  call bound_p(dp)
+	  call bound_3D(dp)
 	  !write(*,*),'rank,pold,p,dp',rank,pold(45,1,1),dp(45,1,1),p(45,1,1)
 	  if (applyVOF.eq.1) then 
 		call state_edges(cU,rhU)
@@ -4273,7 +4136,7 @@ c
 	   CALL SOLVEpois(p) !,Ru,Rp,DPHI,dz,rank,imax,jmax,kmax,px)
 	  ENDIF
 	  dp(1:imax,1:jmax,1:kmax)=p*rho_b2 !0.8*p*rho_b+0.2*dp(1:imax,1:jmax,1:kmax) !use first iteration loop to obtain more accurate p-predictor 
-	  call bound_p(dp)	  
+	  call bound_3D(dp)	  
       do  k=1,kmax
         do j=1,jmax
           do i=1,imax
@@ -4456,7 +4319,7 @@ c
 			dp(1:imax,1:jmax,1:kmax)= dt/dt_old*(pold3-pold2) 						!dp contains predicted increment of pressure 
 		ENDIF		   
 	  ENDIF
-	  call bound_p(dp)
+	  call bound_3D(dp)
       do  k=1,kmax
         do j=1,jmax
           do i=1,imax
@@ -4531,7 +4394,7 @@ c
 	   CALL SOLVEpois(p) !,Ru,Rp,DPHI,dz,rank,imax,jmax,kmax,px)
 	  ENDIF
 	  dp(1:imax,1:jmax,1:kmax)=p*rho_b2 !use first iteration loop to obtain more accurate p-predictor 
-	  call bound_p(dp)	   
+	  call bound_3D(dp)	   
       do  k=1,kmax
         do j=1,jmax
           do i=1,imax
@@ -5006,7 +4869,7 @@ c
 	  ELSE 
 		   dp(1:imax,1:jmax,1:kmax)=ddtt/dt_old*(pold3-pold2)		!dp contains predicted increment of pressure 
 	  ENDIF	  
-	  call bound_p(dp)
+	  call bound_3D(dp)
       do  k=1,kmax
         do j=1,jmax
           do i=1,imax
@@ -5080,7 +4943,7 @@ c
 	   CALL SOLVEpois(p) !,Ru,Rp,DPHI,dz,rank,imax,jmax,kmax,px)
 	  ENDIF
 	  dp(1:imax,1:jmax,1:kmax)=p*rho_b2 !0.8*p*rho_b+0.2*dp(1:imax,1:jmax,1:kmax) !use first iteration loop to obtain more accurate p-predictor 
-	  call bound_p(dp)	   
+	  call bound_3D(dp)	   
       do  k=1,kmax
         do j=1,jmax
           do i=1,imax
@@ -5190,7 +5053,7 @@ c
 	  ELSE 
 		   dp(1:imax,1:jmax,1:kmax)=ddtt/dt_old*(pold3-pold2)		!dp contains predicted increment of pressure 
 	  ENDIF
-	  call bound_p(dp)
+	  call bound_3D(dp)
       do  k=1,kmax
         do j=1,jmax
           do i=1,imax
@@ -5265,7 +5128,7 @@ c
 	   CALL SOLVEpois(p) !,Ru,Rp,DPHI,dz,rank,imax,jmax,kmax,px)
 	  ENDIF
 	  dp(1:imax,1:jmax,1:kmax)=p*rho_b2 !use first iteration loop to obtain more accurate p-predictor 
-	  call bound_p(dp)	   
+	  call bound_3D(dp)	   
       do  k=1,kmax
         do j=1,jmax
           do i=1,imax
@@ -5445,32 +5308,16 @@ c
           enddo
         enddo	
       enddo
-
-	if (periodicx.eq.1) then
-	!!! !periodic bc in x: 
+	  !!! do nothing on imax and i=1, so p(imax+1)=p(imax) --> dp/dn=0 at outflow and inflow 
+	  if (periodicx.eq.1) then
+	  !!! !periodic bc in x: 
 	    i = imax
-	    do k=1,kmax
-		  do j=1,jmax
-		    dUdt(i,j,k) = dUdt(i,j,k)-dt * ( p(1,j,k) - p(i,j,k) ) / ( Rp(i+1) - Rp(i) ) 
-		  enddo
-	    enddo
-	else 
-		if (Poutflow.eq.0) then 
-		  i = imax
-		  do k=1,kmax
-		   do j=1,jmax
-			dUdt(i,j,k) = dUdt(i,j,k) -  dt * ( -2* p(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
-		   enddo
-		  enddo
-		elseif (Poutflow.eq.1) then 
-		 if (rank.eq.0) then
-		  i = imax
-		  j = 1
-		  k = k_pzero
-		  dUdt(i,j,k) = dUdt(i,j,k) -  dt * ( -2* p(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
-		 endif !!! else do nothing on imax, so p(imax+1)=p(imax) --> dp/dn=0 at outflow
-		endif	
-	endif
+	      do k=1,kmax
+		    do j=1,jmax
+		      dUdt(i,j,k) = dUdt(i,j,k) -dt * ( p(1,j,k) - p(i,j,k) ) /( Rp(i+1) - Rp(i) ) 
+		    enddo
+	      enddo
+	  endif
 
       do k=1,kmax
         do j=1,jmax-1
@@ -5772,34 +5619,16 @@ c
           enddo
         enddo	
       enddo
-	if (periodicx.eq.1) then
-	!!! !periodic bc in x: 
-	      i = imax
+	  !!! do nothing on imax and i=1, so p(imax+1)=p(imax) --> dp/dn=0 at outflow and inflow 
+	  if (periodicx.eq.1) then
+	  !!! !periodic bc in x: 
+	    i = imax
 	      do k=1,kmax
-		do j=1,jmax
-		  uu(i,j,k) = uu(i,j,k) -
-     +             ddtt * ( p(1,j,k) - p(i,j,k) ) /
-     +                ( Rp(i+1) - Rp(i) ) 
-		 enddo
+		    do j=1,jmax
+		      uu(i,j,k) = uu(i,j,k) -ddtt * ( p(1,j,k) - p(i,j,k) ) /( Rp(i+1) - Rp(i) ) 
+		    enddo
 	      enddo
-	else 
-	 if (Poutflow.eq.0) then 
-      i = imax
-      do k=1,kmax
-	   do j=1,jmax
-		uu(i,j,k) = uu(i,j,k) -  ddtt * ( -2* p(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
-       enddo
-      enddo
-	 elseif (Poutflow.eq.1) then 
-	  if (rank.eq.0) then
-       i = imax
-	   j = 1
-	   k = k_pzero
-	   uu(i,j,k) = uu(i,j,k) -  ddtt * ( -2* p(i,j,k) ) /    ( Rp(i+1) - Rp(i) ) !p(i+1)=-p(i)--> p=0 inbetween exactly at outflow 
-	  endif !!! else do nothing on imax, so p(imax+1)=p(imax) --> dp/dn=0 at outflow
-	 endif 	
-	endif
-
+	  endif
 
       do k=1,kmax
         do j=1,jmax-1
@@ -6265,36 +6094,69 @@ C.. All other variables
 ! DON'T SWITCH ON:		br(imax)=br(imax)+cr(imax) !! p(imax+1)= p(imax); dpdn=0
 		aar(1:imax)=ar(1:imax)
 		ccr(1:imax)=cr(1:imax)
-		if (periodicx.eq.0.or.periodicx.eq.2) then
-		  if (Poutflow.eq.1) then !Poutflow zero at just 1 location
-		    br(imax)=br(imax)+cr(imax) !! p(imax+1)=p(imax); dpdn=0 at full bc; 
-		  else 
-			br(imax)=br(imax)-cr(imax) !! p(imax+1)=-p(imax); p=0 at full bc; 
-		  endif 
-			br(1)=br(1)+ar(1) !dpdn=0
-			cr(imax)=0. !no interaction
-			ar(1)=0. !no interaction	
-		else ! periodicx=1
-			cr(imax)=0. !no interaction
-			ar(1)=0. !no interaction				
-		endif	
-		do i=1,imax
-		  do j=1,jmax*px 
-		    do k=1,kmax/px 
-			  bbrr(i,j,k)=br(i)
+		if((U_b.ge.0.and.LOA<0).or.((U_TSHD-U_b).ge.0.and.LOA>0.)) THEN 
+			if (periodicx.eq.0.or.periodicx.eq.2) then
+			  if (Poutflow.eq.1) then !Poutflow zero at just 1 location
+				br(imax)=br(imax)+cr(imax) !! p(imax+1)=p(imax); dpdn=0 at full bc; 
+			  else 
+				br(imax)=br(imax)-cr(imax) !! p(imax+1)=-p(imax); p=0 at full bc; 
+			  endif 
+				br(1)=br(1)+ar(1) !dpdn=0
+				cr(imax)=0. !no interaction
+				ar(1)=0. !no interaction	
+			else ! periodicx=1
+				cr(imax)=0. !no interaction
+				ar(1)=0. !no interaction				
+			endif	
+			do i=1,imax
+			  do j=1,jmax*px 
+				do k=1,kmax/px 
+				  bbrr(i,j,k)=br(i)
+				enddo 
+			  enddo 
 			enddo 
-		  enddo 
-		enddo 
-		if (Poutflow.eq.1) then !Poutflow zero at just 1 location
-		 rank_target = FLOOR(REAL(k_pzero)/REAL(kmax/px))
-		 if (rank.eq.rank_target.and.(periodicx.eq.0.or.periodicx.eq.2)) then 
-		  bbrr(imax,1,k_pzero-rank_target*kmax/px)=bbrr(imax,1,k_pzero-rank_target*kmax/px)-2*ccr(imax) !get p=0 at only one outflow gridpoint (first b+c; now -2c to arrive at b-c)
-		 endif 
-		endif
-		rank_target = FLOOR(REAL(k_pzero)/REAL(kmax/px))
-		if (rank.eq.rank_target.and.periodicx.eq.1) then !make P zero at one location (for solve_tridiag_periodic2 this is necessary otherwise that crashes, so would be natural to also for pardiso make P zero at one location) !17-10-2021 added
-		  bbrr(imax,1,k_pzero-rank_target*kmax/px)=bbrr(imax,1,k_pzero-rank_target*kmax/px)-ccr(imax) !get p=0 at only one outflow gridpoint (b-c to give P=0)
-		endif 		
+			if (Poutflow.eq.1) then !Poutflow zero at just 1 location
+			 rank_target = FLOOR(REAL(k_pzero)/REAL(kmax/px))
+			 if (rank.eq.rank_target.and.(periodicx.eq.0.or.periodicx.eq.2)) then 
+			  bbrr(imax,1,k_pzero-rank_target*kmax/px)=bbrr(imax,1,k_pzero-rank_target*kmax/px)-2*ccr(imax) !get p=0 at only one outflow gridpoint (first b+c; now -2c to arrive at b-c)
+			 endif 
+			endif
+			rank_target = FLOOR(REAL(k_pzero)/REAL(kmax/px))
+			if (rank.eq.rank_target.and.periodicx.eq.1) then !make P zero at one location (for solve_tridiag_periodic2 this is necessary otherwise that crashes, so would be natural to also for pardiso make P zero at one location) !17-10-2021 added
+			  bbrr(imax,1,k_pzero-rank_target*kmax/px)=bbrr(imax,1,k_pzero-rank_target*kmax/px)-ccr(imax) !get p=0 at only one outflow gridpoint (b-c to give P=0)
+			endif
+		else !negative flow direction with inflow at i=imax and outflow at i=0
+			if (periodicx.eq.0.or.periodicx.eq.2) then
+			  if (Poutflow.eq.1) then !Poutflow zero at just 1 location
+				br(1)=br(1)+ar(1) !! p(0)=p(1); dpdn=0 at full bc; 
+			  else 
+				br(1)=br(1)-ar(1) !! p(0)=-p(1); p=0 at full bc; 
+			  endif 
+				br(imax)=br(imax)+cr(imax) !dpdn=0
+				cr(imax)=0. !no interaction
+				ar(1)=0. !no interaction	
+			else ! periodicx=1
+				cr(imax)=0. !no interaction
+				ar(1)=0. !no interaction				
+			endif	
+			do i=1,imax
+			  do j=1,jmax*px 
+				do k=1,kmax/px 
+				  bbrr(i,j,k)=br(i)
+				enddo 
+			  enddo 
+			enddo 
+			if (Poutflow.eq.1) then !Poutflow zero at just 1 location
+			 rank_target = FLOOR(REAL(k_pzero)/REAL(kmax/px))
+			 if (rank.eq.rank_target.and.(periodicx.eq.0.or.periodicx.eq.2)) then 
+			  bbrr(1,1,k_pzero-rank_target*kmax/px)=bbrr(1,1,k_pzero-rank_target*kmax/px)-2*aar(1) !get p=0 at only one outflow gridpoint (first b+a; now -2a to arrive at b-a)
+			 endif 
+			endif
+			rank_target = FLOOR(REAL(k_pzero)/REAL(kmax/px))
+			if (rank.eq.rank_target.and.periodicx.eq.1) then !make P zero at one location (for solve_tridiag_periodic2 this is necessary otherwise that crashes, so would be natural to also for pardiso make P zero at one location) !17-10-2021 added
+			  bbrr(1,1,k_pzero-rank_target*kmax/px)=bbrr(1,1,k_pzero-rank_target*kmax/px)-aar(1) !get p=0 at only one outflow gridpoint (b-a to give P=0)
+			endif 		
+		endif 
 	  
 !  tridiagonal system in phi-direction
       do j=1,jmax*px
@@ -6331,25 +6193,25 @@ C.. All other variables
         do i=1,imax
          ind=(j-1)*imax+i !diagonal location
          tel3=tel3+1
-         if (periodicy.eq.1.and.(ind-(jmax*px-1)*imax).gt.0.and.ccphi(j).gt.0.) then
+         if (periodicy.eq.1.and.(ind-(jmax*px-1)*imax).gt.0.and.ccphi(j).gt.1.e-12) then
             tel=tel+1
             lhs(tel,k)=ccphi(j)*1./(Rp(i)**2) !(jmax*px-1)*imax left from diagonal
             jco(tel)=ind-(jmax*px-1)*imax
             iro(tel)=tel3
          endif		 
-         if ((ind-imax).gt.0.and.aphi(j).gt.0.) then
+         if ((ind-imax).gt.0.and.aphi(j).gt.1.e-12) then
             tel=tel+1
             lhs(tel,k)=aphi(j)*1./(Rp(i)**2) !imax left from diagonal
             jco(tel)=ind-imax
             iro(tel)=tel3
          endif
-         if (periodicx.eq.1.and.i.eq.imax.and.(ind+1-imax).gt.0.and.ccr(i).gt.0.) then
+         if (periodicx.eq.1.and.i.eq.imax.and.(ind+1-imax).gt.0.and.ccr(i).gt.1.e-12) then
             tel=tel+1
             lhs(tel,k)=ccr(i) !imax minus one left from diagonal
             jco(tel)=ind+1-imax
             iro(tel)=tel3
          endif		 
-         if ((ind-1).gt.0.and.ar(i).gt.0.) then
+         if ((ind-1).gt.0.and.ar(i).gt.1.e-12) then
             tel=tel+1
             lhs(tel,k)=ar(i) !one left from diagonal
             jco(tel)=ind-1
@@ -6361,25 +6223,25 @@ C.. All other variables
 		 tel4=tel4+1
 		 di(tel4)=tel
          iro(tel)=tel3
-         if ((ind+1).le.imax*jmax*px.and.cr(i).gt.0.) then
+         if ((ind+1).le.imax*jmax*px.and.cr(i).gt.1.e-12) then
             tel=tel+1
             lhs(tel,k)=cr(i) !one right from diagonal
             jco(tel)=ind+1
             iro(tel)=tel3
          endif
-         if (periodicx.eq.1.and.i.eq.1.and.(ind-1+imax).le.imax*jmax*px.and.aar(i).gt.0.) then
+         if (periodicx.eq.1.and.i.eq.1.and.(ind-1+imax).le.imax*jmax*px.and.aar(i).gt.1.e-12) then
             tel=tel+1
             lhs(tel,k)=aar(i) !imax minus one right from diagonal
             jco(tel)=ind-1+imax
             iro(tel)=tel3
          endif
-         if ((ind+imax).le.imax*jmax*px.and.cphi(j).gt.0.) then
+         if ((ind+imax).le.imax*jmax*px.and.cphi(j).gt.1.e-12) then
             tel=tel+1
             lhs(tel,k)=cphi(j)*1./(Rp(i)**2) !imax right from diagonal
             jco(tel)=ind+imax
             iro(tel)=tel3
          endif
-         if (periodicy.eq.1.and.(ind+(jmax*px-1)*imax).le.imax*jmax*px.and.aaphi(j).gt.0.) then
+         if (periodicy.eq.1.and.(ind+(jmax*px-1)*imax).le.imax*jmax*px.and.aaphi(j).gt.1.e-12) then
             tel=tel+1
             lhs(tel,k)=aaphi(j)*1./(Rp(i)**2) !(jmax*px-1)*imax right from diagonal
             jco(tel)=ind+(jmax*px-1)*imax
@@ -6453,7 +6315,8 @@ C..
 !		DO i = 1, 64
 !		   pt(i)%DUMMY =  0 
 !		END DO
-        ALLOCATE(pt(64*kmax/px))
+		if (.not. allocated(pt)) allocate(pt(64*kmax/px))
+!        ALLOCATE(pt(64*kmax/px))
         DO i = 1, 64*kmax/px
             pt(i) = 0
         END DO
@@ -6510,7 +6373,7 @@ C.. Termination and release of memory
       real      dzi
       real      vfftk(imax*jmax,kmax),vfftj(imax*kmax/px,jmax*px)
       real wj(4*px*jmax+15),wk(4*kmax+15),bb(imax),rtmp(imax,jmax*px,kmax/px)
-      integer   ipos,ierr,ind
+      integer   ipos,ierr,ind,i_target 
       real	rhs_ref
       REAL, TARGET :: rhs_vec(imax*jmax*px,kmax/px)
       REAL sol(imax*jmax*px)
@@ -6650,12 +6513,17 @@ C.. Fill all arrays containing matrix data.
 !!!	!!    Make pressure zero at one point in outflow:
 !!!	!!    Only b(imax)-c(imax) in matrix is not sufficient to make pressure exactly zero in (imax,1,1)
 !!!	!!    Some small drift is occuring without following lines:
+!!!	    if((U_b.ge.0.and.LOA<0).or.((U_TSHD-U_b).ge.0.and.LOA>0.)) THEN 
+!!!	      i_target = imax 
+!!!	    else 
+!!!	      i_target = 1 
+!!!	    endif 
 !!!		if (rank.eq.0) then
-!!!		  rhs_ref=rhs(imax,1,k_pzero)
+!!!		  rhs_ref=rhs(i_target,1,k_pzero)
 !!!		endif
 !!!		call mpi_bcast(rhs_ref,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
 !!!		rhs=rhs-rhs_ref
-!!! switched off 22-2-2023; should not be needed and this correction makes dpdx at imax contribution incorrect
+!!!		! switched off 22-2-2023; should not be needed and this correction makes dpdx at imax contribution incorrect 
       return
       end
 	  
@@ -6992,7 +6860,7 @@ C  email ::::   b.j.boersma@wbmt.tudelft.nl
       real      zrt(kmax),yrt(px*jmax)
       real      vfftk(imax*jmax,kmax),vfftj(imax*kmax/px,jmax*px)
       real wj(4*px*jmax+15),wk(4*kmax+15),bb(imax),rtmp(imax,jmax*px,kmax/px)
-      integer   ipos,ierr
+      integer   ipos,ierr,i_target 
       real	rhs_ref,dphi3
 	real bbbbb(IMAX,JMAX,kmax)
       
@@ -7017,45 +6885,73 @@ c   generate tridiagonal systems
      $      (Rp(I)*(Ru(I)-Ru(I-1)))
       c(i)= Ru(I) /((Rp(I+1)-Rp(I))*Rp(I)*(Ru(I)-Ru(I-1)))
       end do
-
-	if (periodicx.eq.0.or.periodicx.eq.2) then
-	      b(1)=   -(Ru(1)/(Rp(2)-Rp(1)))/(Rp(1)*(Ru(1)-Ru(0)))
-		  if (Poutflow.eq.1) then !Poutflow zero at just 1 location
-	        b(imax)=b(imax)+c(imax)      !! p(imax+1)= p(imax) --> bc dpdn=0
-		  else !default P=0 complete outflow 
-		    b(imax)=b(imax)-c(imax)     !! p(imax+1)=-p(imax) --> bc p=0
-		  endif 
-      	      i=imax !! p(imax+1)= p(imax) --> bc dpdn=0
- !     	      b(i)=-(Ru(I-1)/(Rp(I)-Rp(I-1)))/   !! this is equivalent to b(imax)+c(imax) --> dpdn=0
-!     $        (Rp(I)*(Ru(I)-Ru(I-1)))
-	!		  b(imax)=b(imax)+c(imax)
-!	else !do nothing
-	endif
-
-	! make bbbb three dimensional to get p=0 only at one loc of outflow (not everywhere at outflow):
-	do i=1,imax
-	  do j=1,jmax
-	    do k=1,kmax
-	      bbbb(i,j,k)=b(i)
-	    enddo
-	  enddo
- 	enddo
-
 	
-	 if (periodicx.eq.0.or.periodicx.eq.2) then
-	  if (Poutflow.eq.1) then !Poutflow zero at just 1 location 
- 	   if (rank==0) then
-	     bbbb(imax,1,k_pzero)=b(imax)-2.*c(imax)     !! p(imax+1)=-p(imax) --> bc p=0 at 1 loc in mesh (first +c(imax) so now -2c(imax) to arrive at b-c)
-	   endif
-	  endif	   
-	   c(imax)=0.
-	   a(1)=0.
-	 else !make P zero at one location for periodicx.eq.1 otherwise P is undetermined and solve_tridiag_periodic2 doesn't give answer
- 	  if (rank==0) then
-	    bbbb(imax,1,k_pzero)=b(imax)-c(imax)     !! p(imax+1)=-p(imax) --> bc p=0 at 1 loc in mesh 
-	  endif
-	 endif
-	
+	if((U_b.ge.0.and.LOA<0).or.((U_TSHD-U_b).ge.0.and.LOA>0.)) THEN 
+		if (periodicx.eq.0.or.periodicx.eq.2) then
+			  b(1)=   -(Ru(1)/(Rp(2)-Rp(1)))/(Rp(1)*(Ru(1)-Ru(0))) !dpdn=0 
+			  if (Poutflow.eq.1) then !Poutflow zero at just 1 location
+				b(imax)=b(imax)+c(imax)      !! p(imax+1)= p(imax) --> bc dpdn=0
+			  else !default P=0 complete outflow 
+				b(imax)=b(imax)-c(imax)     !! p(imax+1)=-p(imax) --> bc p=0
+			  endif 
+	!			  i=imax !! p(imax+1)= p(imax) --> bc dpdn=0
+	 !     	      b(i)=-(Ru(I-1)/(Rp(I)-Rp(I-1)))/   !! this is equivalent to b(imax)+c(imax) --> dpdn=0
+	!     $        (Rp(I)*(Ru(I)-Ru(I-1)))
+		!		  b(imax)=b(imax)+c(imax)
+	!	else !do nothing
+		endif
+		! make bbbb three dimensional to get p=0 only at one loc of outflow (not everywhere at outflow):
+		do i=1,imax
+		  do j=1,jmax
+			do k=1,kmax
+			  bbbb(i,j,k)=b(i)
+			enddo
+		  enddo
+		enddo
+		 if (periodicx.eq.0.or.periodicx.eq.2) then
+		  if (Poutflow.eq.1) then !Poutflow zero at just 1 location 
+		   if (rank==0) then
+			 bbbb(imax,1,k_pzero)=b(imax)-2.*c(imax)     !! p(imax+1)=-p(imax) --> bc p=0 at 1 loc in mesh (first +c(imax) so now -2c(imax) to arrive at b-c)
+		   endif
+		  endif	   
+		   c(imax)=0.
+		   a(1)=0.
+		 else !make P zero at one location for periodicx.eq.1 otherwise P is undetermined and solve_tridiag_periodic2 doesn't give answer
+		  if (rank==0) then
+			bbbb(imax,1,k_pzero)=b(imax)-c(imax)     !! p(imax+1)=-p(imax) --> bc p=0 at 1 loc in mesh 
+		  endif
+		 endif
+	else !negative flow direction with inflow at i=imax and outflow at i=0
+		if (periodicx.eq.0.or.periodicx.eq.2) then
+			  b(imax) = b(imax)+c(imax) !dpdn = 0
+			  if (Poutflow.eq.1) then !Poutflow zero at just 1 location
+				b(1)=b(1)+a(1)      !! p(0)= p(1) --> bc dpdn=0
+			  else !default P=0 complete outflow 
+				b(1)=b(1)-a(1)     !! p(0)=-p(1) --> bc p=0
+			  endif 
+		endif
+		! make bbbb three dimensional to get p=0 only at one loc of outflow (not everywhere at outflow):
+		do i=1,imax
+		  do j=1,jmax
+			do k=1,kmax
+			  bbbb(i,j,k)=b(i)
+			enddo
+		  enddo
+		enddo
+		 if (periodicx.eq.0.or.periodicx.eq.2) then
+		  if (Poutflow.eq.1) then !Poutflow zero at just 1 location 
+		   if (rank==0) then
+			 bbbb(1,1,k_pzero)=b(1)-2.*a(1)     !! p(0)=-p(1) --> bc p=0 at 1 loc in mesh (first +a(1) so now -2a(1) to arrive at b-a)
+		   endif
+		  endif	   
+		   c(imax)=0.
+		   a(1)=0.
+		 else !make P zero at one location for periodicx.eq.1 otherwise P is undetermined and solve_tridiag_periodic2 doesn't give answer
+		  if (rank==0) then
+			bbbb(1,1,k_pzero)=b(1)-a(1)     !! p(0)=-p(1) --> bc p=0 at 1 loc in mesh 
+		  endif
+		 endif
+	endif 
 
       do i=1,imax
          dd(i) = 1/(Rp(i)**2)
@@ -7232,12 +7128,18 @@ c  J --> direction      (yrt)
 !!!	!!    Make pressure zero at one point in outflow:
 !!!	!!    Only b(imax)-c(imax) in matrix is not sufficient to make pressure exactly zero in (imax,1,1)
 !!!	!!    Some small drift is occuring without following lines:
+!!!	    if((U_b.ge.0.and.LOA<0).or.((U_TSHD-U_b).ge.0.and.LOA>0.)) THEN 
+!!!	      i_target = imax 
+!!!	    else 
+!!!	      i_target = 1 
+!!!	    endif 	
 !!!		if (rank.eq.0) then
-!!!		  rhs_ref=rhs(imax,1,k_pzero)
+!!!		  rhs_ref=rhs(i_target,1,k_pzero)
 !!!		endif
 !!!		call mpi_bcast(rhs_ref,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
 !!!		rhs=rhs-rhs_ref
-!!! switched off 22-2-2023; should not be needed and this correction makes dpdx at imax contribution incorrect
+!!!! switched off 22-2-2023; should not be needed and this correction makes dpdx at imax contribution incorrect
+
 
       return
       end

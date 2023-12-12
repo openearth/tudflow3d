@@ -24,7 +24,7 @@
       implicit none
       include 'mpif.h'
 
-      integer  ib,ie,jb,je,kb,ke,ploc,ierr,istep_output,itag,n,t,istep_output_movie,status
+      integer  ib,ie,jb,je,kb,ke,ploc,ierr,istep_output,itag,n,t,istep_output_movie,status,kbp,i_target 
       real     cput1,cput2,t_output,t_output_movie
       real     cput10a,cput10b,cput11a,cput11b
 	  !real     cput1b,cput2b,t_output,t_output_movie,crate
@@ -135,8 +135,13 @@
 		do k=kmax-1,1,-1
 			pold(:,:,k)=pold(:,:,k+1)+(rnew(:,:,k)-rho_b)*ABS(gz)*dz
 		enddo
+	    if((U_b.ge.0.and.LOA<0).or.((U_TSHD-U_b).ge.0.and.LOA>0.)) THEN 
+	      i_target = imax 
+	    else 
+	      i_target = 1 
+	    endif 		
 		if (rank.eq.0) then
-		  pold_ref=pold(imax,1,k_pzero)
+		  pold_ref=pold(i_target ,1,k_pzero)
 		endif
 		call mpi_bcast(pold_ref,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
 		pold=pold-pold_ref	
@@ -226,13 +231,15 @@
 
 !      call fillps 
 !      CALL SOLVEpois(p) !,Ru,Rp,DPHI,dz,rank,imax,jmax,kmax,px)
+	  if (nfrac>0) then 
 		do i=1,imax 
 		  do j=1,jmax 
-			zbed(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+ SUM(Clivebed(1:nfrac,i,j,kbed(i,j)))/cfixedbed*dz
-			zbed_old(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+ SUM(Clivebed(1:nfrac,i,j,kbed(i,j)))/cfixedbed*dz
-			zbed_init(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+ SUM(Clivebed(1:nfrac,i,j,kbed(i,j)))/cfixedbed*dz
+			!zbed(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+ SUM(Clivebed(1:nfrac,i,j,kbed(i,j)))/cfixedbed*dz
+			zbed_old(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(dcdtbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
+			zbed_init(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(dcdtbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
 		  enddo 
 		enddo 
+	  endif 
 		
 	  if (rank.eq.0) then		
 		call cpu_time(cput1)
@@ -304,6 +311,7 @@
 		  call SEM_turb_bc
 		  call move_eddies_SEM
 		endif
+		kbedold=kbed 
 		if (time_int.eq.'AB2') then
 			call adamsb2(ib,ie,jb,je,kb,ke)
 		elseif (time_int.eq.'AB3') then
@@ -315,7 +323,21 @@
 		elseif (time_int.eq.'RK3') then
 			call RK3(ib,ie,jb,je,kb,ke)
 		endif
-
+		IF (vel_start_after_ero.eq.1) THEN 
+		do i=1,imax 
+			do j=1,jmax 
+				do k=kbed(i,j),kbedold(i,j)-1 ! do loop only if kbed(i,j)<kbedold(i,j), so erosion has occured
+				    kbp=MIN(k1,kbed(i,j)+1)
+					! initialise UV in just eroded cell with UV old of cell above. This is done at both sides of eroded cell and in bound_rhoU IBM makes UV zero when it fall below zbed (f.i. when at edge of erosion hole)
+					!in case bed is lowered >1 cell in one timestep (which should not occur) UV gets initialized with zero --> this is not incorrect but will not help either
+					dUdt(i,j,kbed(i,j))=Unew(i,j,kbp)*rhU(i,j,kbp)
+					dUdt(i-1,j,kbed(i,j))=Unew(i-1,j,kbp)*rhU(i-1,j,kbp)
+					dVdt(i,j,kbed(i,j))=Vnew(i,j,kbp)*rhV(i,j,kbp)
+					dVdt(i,j-1,kbed(i,j))=Vnew(i,j-1,kbp)*rhV(i,j-1,kbp)	
+				enddo 
+			enddo 
+		enddo 
+		ENDIF 
 		IF (time_int.eq.'ABv') THEN 
 			call bound_rhoU(dUdt,dVdt,dWdt,drdt,MIN(0,slip_bot),monopile,time_np,
      & 		Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new) !bound_rhoU on rhou^* without wall shear stress, which in ABv is done as first step 
@@ -461,11 +483,13 @@
 		!only drawback is that it is not fully consistent with update C as this is based on c_edge based on direction U^n+1
 		
 		if (time_np.ge.tstart_morf2) then 
-			b_update(istart_morf2:i1)=1. ! b_update=0. at start sim when tstart_morf2>0 --> before tstart_morf2 there is exchange of sediment between bed and fluid, but no bedupdate (all changes to bed are annihilated) 
-!			if (cbc_perx_j(1)>0) then  !use quasi periodic bc for concentration:
-!			  b_update(0:1)=0. ! no bed-update at inflow
-!			  b_update(imax:i1)=0. ! no bed-update at outflow
-!			endif 			
+			b_update=0. 	
+			b_update(istart_morf2:i1)=1.
+			do i=istart_morf1,istart_morf2
+			  b_update(i)=DBLE(i-istart_morf1)/DBLE(istart_morf2-istart_morf1)
+			enddo	
+		    b_update(0:1)=0. ! no bed-update at inflow
+		    b_update(imax:i1)=0. ! no bed-update at outflow			
 		endif 
 		if (mod(istep,100).eq.0) then
 			call chkdiv
@@ -473,13 +497,13 @@
 				pres_in_predictor_step = 0 ! use no Pold in predictor step every 100 time steps to remove spurious strange pressure relicts in immersed boundary zero flow zones
 			endif 
 		else
-		  if (pres_in_predictor_step_internal.ne.3.or.pres_in_predictor_step_internal.ne.4) then 
+		  if (pres_in_predictor_step_internal.ne.3.or.pres_in_predictor_step_internal.ne.4.or.pres_in_predictor_step_internal.ne.5) then 
 			pres_in_predictor_step = pres_in_predictor_step_internal
 		  endif 
 		endif
 		if (pres_in_predictor_step_internal.eq.3) then !spatial filter for Pold to remove spikes especially round obstacles/bed every timestep; use pres_in_predictor_step=1 in the rest of the code
 		  dp(1:imax,1:jmax,1:kmax)=pold+p 
-		  call bound_p(dp)
+		  call bound_3D(dp)
 		  do i=1,imax
 			do j=1,jmax
 			  do k=1,kmax !MIN(kmax,kbed(i,j))
@@ -488,31 +512,50 @@
 			  enddo
 			enddo	
 		  enddo	
-		  !!    Make pressure zero at one point in outflow:
-		  if (rank.eq.0) then
-			pold_ref=pold(imax,1,k_pzero)+p(imax,1,k_pzero)
-		  endif
-		  call mpi_bcast(pold_ref,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-		  pold=pold-pold_ref			  
 		elseif (pres_in_predictor_step_internal.eq.4) then !spatial filter for Pold only in bed to remove spikes especially; use pres_in_predictor_step=1 in the rest of the code
 		  dp(1:imax,1:jmax,1:kmax)=pold+p 
-		  call bound_p(dp)
+		  call bound_3D(dp)
 		  do i=1,imax
 			do j=1,jmax
 			  do k=1,MIN(kmax,kbed(i,j))
 			    pold(i,j,k) = (dp(i-1,j,k)+dp(i+1,j,k)+dp(i,j-1,k)+dp(i,j+1,k)+dp(i,j,k)+dp(i,j,k-1)+dp(i,j,k+1))/7.-p(i,j,k) 
 				! filter pold 
+!				pold(i,j,k) = 	((1.-fc_global(i-1,j+jmax*rank,k))*dp(i-1,j,k)+(1.-fc_global(i+1,j+jmax*rank,k))*dp(i+1,j,k)
+!     &				  +dp(i,j,k)+(1.-fc_global(i,j+jmax*rank-1,k))*dp(i,j-1,k)+(1.-fc_global(i,j+jmax*rank+1,k))*dp(i,j+1,k)
+!     &	 						+(1.-fc_global(i,j+jmax*rank,k-1))*dp(i,j,k-1)+(1.-fc_global(i,j+jmax*rank,k+1))*dp(i,j,k+1))
+!     &	 						/(7.-fc_global(i-1,j+jmax*rank,k)-fc_global(i+1,j+jmax*rank,k)
+!     &	 							-fc_global(i,j+jmax*rank-1,k)-fc_global(i,j+jmax*rank+1,k)
+!     &	 							-fc_global(i,j+jmax*rank,k-1)-fc_global(i,j+jmax*rank,k+1))-p(i,j,k) 
 			  enddo
 			enddo	
 		  enddo
+		elseif (pres_in_predictor_step_internal.eq.5) then !
+		  if (mod(istep,1000).eq.0) then
+		    pold=-p !forcing pold=0 in in predictor step in solve.f
+		  else
+			  dp(1:imax,1:jmax,1:kmax)=pold+p 
+			  call bound_3D(dp)
+			  do i=1,imax
+				do j=1,jmax
+				  do k=1,MIN(kmax,kbed(i,j))
+					pold(i,j,k) = (dp(i-1,j,k)+dp(i+1,j,k)+dp(i,j-1,k)+dp(i,j+1,k)+dp(i,j,k)+dp(i,j,k-1)+dp(i,j,k+1))/7.-p(i,j,k) 
+					! filter pold 
+				  enddo
+				enddo	
+			  enddo
+		  endif 
+		endif 
 		  !!    Make pressure zero at one point in outflow:
+		  if((U_b.ge.0.and.LOA<0).or.((U_TSHD-U_b).ge.0.and.LOA>0.)) THEN 
+			i_target = imax 
+		  else 
+			i_target = 1 
+		  endif 		
 		  if (rank.eq.0) then
-			pold_ref=pold(imax,1,k_pzero)+p(imax,1,k_pzero)
+			pold_ref=pold(i_target ,1,k_pzero)
 		  endif
 		  call mpi_bcast(pold_ref,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-		  pold=pold-pold_ref		  
-		endif 
-		
+		  pold=pold-pold_ref			
 		if (Apvisc_force_eq.eq.1) then 
 			Ppropx=0. !initialize zero every time step, in chkdt driving force periodic sims is determined and put in Ppropx,Ppropy
 			Ppropy=0. 	

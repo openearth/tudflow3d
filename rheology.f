@@ -40,7 +40,7 @@
 			enddo
 		enddo
 	enddo
-	call bound_p(lambda_new) !Neumann B.C.
+	call bound_3D(lambda_new) !Neumann B.C.
 		
 	end subroutine Kinetic_equation
 	
@@ -476,7 +476,7 @@
 	
 		IF (rheo_shear_method.eq.21) THEN ! re-use rheo_shear_method also for other possibility in determination shear
 		  strain2=strain
-		  call bound_p(strain2) 
+		  call bound_3D(strain2) 
 		  do i=1,imax
 			do j=1,jmax
 				do k=1,kmax	
@@ -505,7 +505,7 @@
 	
 !!	IF (Apvisc_interp.eq.3.or.Apvisc_interp.eq.4) THEN ! apply high muA at edges patch for staggered arrangement:
 !!		strain2=strain
-!!		call bound_p(strain2) 
+!!		call bound_3D(strain2) 
 !!		do i=1,imax
 !!			do j=1,jmax
 !!				do k=1,kmax	
@@ -719,8 +719,8 @@
 	if (Apvisc_force_eq.eq.1) then 
 	!! try to split off horizontal dpdx,dpdy part of BYS to arrive at horizontal equilibrium numerically more stable
 	    pppp(1:imax,1:jmax,1:kmax)=Pold+p !now full pold not just dp
-		call bound_p(pppp) 
-		call bound_p(tauY) 
+		call bound_3D(pppp) 
+		call bound_3D(tauY) 
 		do i=1,imax
 			do j=1,jmax
 				do k=1,kmax	
@@ -744,8 +744,8 @@
 			enddo
 		enddo		
 
-		call bound_p(tau_app_u)
-		call bound_p(tau_app_v)
+		call bound_3D(tau_app_u)
+		call bound_3D(tau_app_v)
 		do i=1,imax
 			do j=1,jmax
 				do k=1,kmax	
@@ -764,7 +764,7 @@
 	IF (Apvisc_interp.eq.3.or.Apvisc_interp.eq.4) THEN ! apply high muA at edges patch for staggered arrangement:
 	  DO n=1,1 !10
 		muA2=tauY
-		call bound_p(muA2) 
+		call bound_3D(muA2) 
 		do i=1,imax
 			do j=1,jmax
 				do k=1,kmax	
@@ -798,7 +798,7 @@
 !!	IF (Apvisc_interp.eq.3.or.Apvisc_interp.eq.4) THEN ! apply high muA at edges patch for staggered arrangement:
 !!	  DO n=1,5
 !!		muA2=muA
-!!		call bound_p(muA2) 
+!!		call bound_3D(muA2) 
 !!		do i=1,imax
 !!			do j=1,jmax
 !!				do k=1,kmax	
@@ -822,8 +822,8 @@
 !!	ENDIF 
 	ekm= ekm + muA
 	call stress_magnitude !calculate the stress magnitude
-	call bound_p(ekm)
-	call bound_p(muA) 
+	call bound_3D(ekm)
+	call bound_3D(muA) 
 !!!!!  Boundary conditions Neumann
 !!!	call shiftf(ekm,ebf) 
 !!!	call shiftb(ekm,ebb) 
