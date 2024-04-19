@@ -63,7 +63,9 @@ IBMorder = 2 						! 0 (default) = normal staircase manner bed immersed boundary
 applyVOF = 0 						!Beta option, default 0 take variable rho fully in account in momentum eq.; 1 = only take variable density in account in gravity term, not in rest of momentum eq.
 k_ust_tau = 1 						! defines which k-layer from bed is used to determine ust/tau for sediment pickup and K-Eps bed-bc, default 1 (first cell from bed is used) and sometimes for IBM bed k_ust_tau=2 is recommended because 2nd cell is less influenced by nearby immersed bed grid cells with zero velocity 
 k_ust_tau_flow = 1 						! defines which k-layer from bed is used to determine ust/tau for the flow bed shear stress, default 1 (first cell from bed is used) and sometimes for IBM bed k_ust_tau_flow>1 could be used
+k_ust_tau_sed_range = 1 1 			! optional, it defines start and end klayer from IBM bed to search for largest absU=sqrt(u^2+v^2) to calculate tau_sediment. k_ust_tau is still used for all other purposes like K-Eps bed-bc, dpdx for tau_sediment wall-models, w(k_ust_tau_sed) in case pickup_bedslope_geo=1. Default k_ust_tau_sed_range = k_ust_tau k_ust_tau 
 dUVdn_IBMbed=-1 					! -1 = default no correction, 0 gives dUdn and dVdn is zero over immersed bed, -2 to apply UV(1:kbed)=0 also for IBM2
+nsmooth_bed=100 					!default no smoothing bed, if defined every nsmooth_bed a 2nd order Shapiro low-pass filter is applied to 2D bed-level to redistribute sediment inside the bed in a mass-conserving manner to get rid of bed-wiggles 
 /
 
 &ambient
@@ -85,8 +87,8 @@ nmax1 = 5000						! Number of SEM eddies sides inflow
 lm_min = 0.02 						! Minimal Lm SEM eddies [m] (1/10*depth)
 nmax3= 0 							!Number of SEM eddies jet inflow
 lm_min3 = 0.03						! Minimal Lm SEM eddies jet pipe [m] (1/10*radius_j)
-slip_bot = 1						! 1 = partial slip (law of the wall) bottom with log-U inflow profile , 0 = free slip bottom, 2 partial slip with constant U profile over vertical, 3 is partial slip TBL wall-model including dpdx, 4 is partial slip TBL wall-model excluding dpdx, 5 is partial slip wall-model based on VanDriest U-profile, -1 is no slip bottom, -2 is no slip bottom and top
-TBLE_grad_relax = 0.01 					! Relaxation factor to determine gradients input (dpdx,dpdy,dudx,dudy,dvdx,dvdy depending on which slip_bot is used) for slip_bot =3,6,7 (1. gives no relaxation) value = relax*new+(1-relax)*previous 
+slip_bot = 1						! 1 = partial slip (law of the wall) bottom with log-U inflow profile , 0 = free slip bottom, 2 partial slip with constant U profile over vertical, 3 is partial slip TBL wall-model including dpdx, 4 is partial slip log-U tau with dpdx contribution, 5 is partial slip wall-model based on VanDriest U-profile, 8 is GWF Shih 2003 wall-model including dpdx, 9 is GWF Shih 2003 wall-model including favorable dpdx (unfavorable dpdx is made 0 when calculating tau), -1 is no slip bottom, -2 is no slip bottom and top
+TBLE_grad_relax = 0.01 					! Relaxation factor to determine gradients input (dpdx,dpdy,dudx,dudy,dvdx,dvdy depending on which slip_bot is used) for slip_bot =3,6,7,8,9 (1. gives no relaxation) value = relax*new+(1-relax)*previous 
 kn = 0.1							! Nikkuradse roughness flow [m], used for tau_flow in partial slip condition and for inflow U,V profiles and inflow SEM eddies 
 kn_flow_file = '' 					! Input netcdf file for spatially variable kn (filled with kn_flow(1:imax,0:jmax*px+1) [m]), even when a kn_flow_file is defined kn defined in this inputfile is still being used for inflow U,V profiles and inflow SEM eddies and for tau_flow top of domain (when wallup = 1 or 2)
 kn_flow_d50_multiplier = -2. 				! Multiplier (default <0, not used) to relate kn_flow to the sediment d50 (based on only sand fractions, silt/mud or air fractions are not considered in calculation of d50) in the uppermost cell of the bed -> kn_flow=kn_flow_d50_multiplier*d50 -> can be used to harmonize tau of sediment pickup and bedload and tau_flow (for sediment-pickup values of multiplier=2-2.5 are common), even when kn_flow_d50_multiplier is defined kn defined in this inputfile is still being used for inflow U,V profiles and inflow SEM eddies and for tau_flow top of domain (when wallup = 1 or 2). kn_flow_d50_multiplier overrules kn_flow_file
@@ -122,8 +124,8 @@ c_bed= 0.1 							! Initial volume fractions inside bed [-] (length vector must 
 cfixedbed = 0.6						! Volume concentration threshold for fixed bed (default 0.6)
 Hs=0.7								! Significant waveheigth [m] (using linear wave theory to mimic wave-orbital velocity)
 Tp=5.5								! Wave peak period [s] (using linear wave theory to mimic wave-orbital velocity)
-nx_w=1								! Wave direction normal vector [-] : positive means waves against TSHD (nx_w^2+ny_w^2=1)
-ny_w=0								! Wave direction normal vector [-] : positive means waves from starboard TSHD (nx_w^2+ny_w^2=1)
+nx_w=1								! Wave direction normal vector [-] : positive means waves against TSHD (nx_w^2+ny_w^2=1), or in positive x-dir when no TSHD is defined
+ny_w=0								! Wave direction normal vector [-] : positive means waves from starboard TSHD (nx_w^2+ny_w^2=1), or in positive y-dir when no TSHD is defined
 U_w = 1.37							! U velocity [m/s] used for waves in fixed x,y coordinate system (positive means with x-dir) [for sim with rotated grid for V_b not zero then U_w=pyth(U_b,V_b) and V_w=0]
 V_w = 0.3							! V velocity [m/s] used for waves in fixed x,y coordinate system (positive means with y-dir) [for sim with rotated grid for V_b not zero then U_w=pyth(U_b,V_b) and V_w=0]
 /
@@ -201,6 +203,9 @@ bedplume(1)%move_dz_zbottom_factor =						! (optional) [-] factor to apply move_
 bedplume(1)%move_u = 										! (optional) velocity [m/s] to move bedplume in x direction (default 0)
 bedplume(1)%move_v = 										! (optional) velocity [m/s] to move bedplume in y direction (default 0)
 bedplume(1)%move_w = 										! (optional) velocity [m/s] to move bedplume in z direction: it adjusts both bp()heigth and bp()zbottom (default 0)
+bedplume(1)%fluidize = 0									! (optional) switch (default 0), when 1 CFD cells within this bedplume are fluidized instantaneously every timestep (sediment from Clivebed is brought into suspension and bed is lowered)
+bedplume(1)%kn_flow_wall_normaldir = 0						! (optional) 1,2,3 for wall normal in x,y,z-dir respectively, if defined >0 then wall shear stress is applied for all cells within this bedplume (one could define multiple grid layers to apply this wall shear stress) using bedplume(.)%kn_flow as wall-roughness, wall distance 0.5*dx, 0.5*dy, 0.5*dz for wall_normaldir 1,2,3 respectively, shear-stress-area defined by dy*dz, dx*dz, dx*dy for wall_normaldir 1,2,3 respectively, and local velocity along the wall (pyth(VW),pyth(UW),pyth(UV) for wall_normaldir 1,2,3 respectively). 
+bedplume(1)%kn_flow = 0.									! (optional) Nikuradse [m] wall-roughness used for wall shear stress is applied for all cells within this bedplume (one could define multiple grid layers to apply this wall shear stress) using a log-based wall-model (equal to slip_bot=1 or wallmodel_tau_sed=1)
 /
 
 &fractions_in_plume
@@ -217,6 +222,7 @@ fract(1)%zair_ref_belowsurf = 0.	! Optional reference level used to make air_fra
 fract(1)%CD = 0.					! (default 0.) [-] Optional define CD to make simplified correction in start up of settling velocity as function of distance to zair_ref_belowsurf (sqrt(1-exp(-1.5*CD/dpart*rho_b/rho_s*zzz)))
 fract(1)%type = 1					! 1 = silt/mud (default), 2=sand, 3=air, -1=VOF (VOF is nerd option)
 fract(1)%cmax = 1.0 				! Maximum c for this fraction in CFD domain [-] (default not defined or applied) c(n,i,j,k)=MIN(c(n,i,j,k),fract(n)%cmax), this option is not mass conserving but sometimes needed for stability
+fract(1)%ero = 1.0 					! Fraction specific ero-factor for bedload or suspension load [-] (default 1.) When made 0 no bedload or suspension load of this fraction is possible.
 /
 
 &LESmodel
@@ -248,7 +254,8 @@ settling_along_gvector = 0 		! 0 (default) = settling occurs in z-dir, 1 = settl
 ekm_mol = 1.e-3					! Moleculair dyn. viscosity [kg/(sm)]
 ekm_sediment_pickup = 1.e-3		! Moleculair dyn. viscosity [kg/(sm)] used to determine sediment pickup flux and tau. Only needed for scaling sediment, default equal to ekm_mol
 calibfac_sand_pickup = 1. 		! Calibration factor for sand pickup, default 1. [-].
-calibfac_Shields_cr = 1. 		! Calibration factor to adjust Shields_cr curve for start motion sand pickup, default 1. [-].
+calibfac_Shields_cr = 1. 		! Calibration factor to adjust Shields_cr curve for sand pickup (suspension), default 1. [-].
+calibfac_Shields_cr_bl = 1. 	! Calibration factor to adjust Shields_cr curve for sand bedload, when not defined calibfac_Shields_cr is also used for calibfac_Shields_cr_bl [-].
 pickup_formula = 'vanrijn1984' 	!options are 'vanrijn1984' (default),'vanrijn2019' (=VR1984 including simple high speed erosion correction),'VR2019_Cbed' (=VR1984 including simple high speed erosion correction and reduction pickup for C_near_bed),'VR1984_Cbed' (=VR1984 including reduction pickup for C_near_bed),'nielsen1992','okayasu2010'
 power_VR2019 = 1.				! 1. (default) power to scale the denomitator of the VR2019 correction and reduce the high-speed erosion reduction 
 kn_d50_multiplier = 2. 			! Defines Nikuradse bedroughness for sand pickup function (not for flow shear stress), default 2.; kn=2*d50 defined in paper Van Rijn 1984
@@ -270,8 +277,8 @@ pickup_fluctuations=0			!1 means white noise random fluctuations are added to ca
 pickup_fluctuations_ampl=0.		!determines amplitude of turbulent fluctuations --> pickup = pickup+pickup_fluctuations_ampl*random(range[-1 to 1])*pickup 
 cbed_method = 1					! 1 (default) = cbed is determined in lowest fluid cell above the bed; 2 = avg of all fluid cells above bed up to location of max horizontal velocity
 z_tau_sed = 0.1					! distance [m] from bed where Uflow is taken to calculate tau_sed (relevant when kn_sed differs from kn_flow), default 0.5*dz, but when comparing results with different dz define it as user input otherwise grid-dependent results as the calculation of tau_sed depends on distance from bed 
-wallmodel_tau_sed = 1 			! 1 (default) is log-law wall-model; 3 is TBL wall-model including dpdx, 4 is TBL wall-model excluding dpdx, 5 is wall-model based on VanDriest U-profile, 11 is tau based on U'W' and V'W'; this model choice is used for both suspended load pickup tau and bedload tau 
-TBLEsed_grad_relax = 0.01 					! Relaxation factor to determine gradients input (dpdx,dpdy) for wallmodel_tau_sed =3 (1. gives no relaxation) value = relax*new+(1-relax)*previous 
+wallmodel_tau_sed = 1 			! 1 (default) is log-law wall-model; 3 is TBL wall-model including dpdx, 4 is TBL wall-model excluding dpdx, 5 is wall-model based on VanDriest U-profile,8 is GWF Shih 2003 wall-model including dpdx, 9 is GWF Shih 2003 wall-model including favorable dpdx (unfavorable dpdx is made 0 when calculating tau), 11 is tau based on U'W' and V'W'; this model choice is used for both suspended load pickup tau and bedload tau 
+TBLEsed_grad_relax = 0.01 					! Relaxation factor to determine gradients input (dpdx,dpdy) for wallmodel_tau_sed =3,4,8,9 (1. gives no relaxation) value = relax*new+(1-relax)*previous 
 nrmsbed = 100 					! # of realizations used to determine U'W' and V'W' in wallmodel_tau_sed=11
 ndtbed = 10 					! every ndtbed time steps a realization is made for U'W' and V'W' in wallmodel_tau_sed=11
 k_layer_pickup = 5				! number of grid cells over which pickup is spread out (default k_layer_pickup=1; everything in lowest cell)
@@ -280,14 +287,19 @@ bedload_formula = 'nonenon0000' !options are 'vanrijn2003'; 'vanrijn2007'; 'MeyP
 kn_d50_multiplier_bl = 2. 		! Defines Nikuradse bedroughness for sand bedload function (not for flow shear stress), default 2.; kn=d90~2*d50
 calibfac_sand_bedload = 1. 		! Calibration factor for sand bedload, default 1. [-].
 bl_relax = 0.01 				! Relaxation factor for bedload applied to near bed velocity to calculate bedload (default 0.01), needed for stable bedload results value = relax*new+(1-relax)*previous 
-bedslope_effect=0				! 0 (default) no bedslope effect; 1 = adjust Shields_cr following Roulund,Fredsoe etal. 2004 for suspension and bedload; 2 = like 1 but only for bedload; 3 = bed-slope influence on bedload D3D style (Bagnold (1966) for longitudinal slope and Ikeda (1982, 1988) for transverse slope)
-bedslope_mu_s=0.63 				! static friction coefficient used in bedslope_effect = 1 or 2; bedslope_mu_s=0.63 used in Roulund,Fredsoe etal. 2004
+sl_relax = 1. 				    ! Relaxation factor for susload&mud pickup applied to near bed velocity to calculate tau (default 1.); value = relax*new+(1-relax)*previous 
+bedslope_effect=0				! 0 (default) no bedslope effect; 1 = adjust Shields_cr following Roulund,Fredsoe etal. 2004 for suspension and bedload; 2 = like 1 but only for bedload; 3 = bed-slope influence on bedload D3D style (Bagnold (1966) for longitudinal slope and Ikeda (1982, 1988) for transverse slope),4 = adjust Shields_cr by Roulund et al 2004 in numerator of susload and bedload,5 = adjust Shields_cr by Roulund et al 2004 in numerator of bedload, 6 = adjust Shields_cr by Roulund et al 2004 in numerator of susload and D3D style correction for bedload
+bedslope_mu_s=0.63 				! static friction coefficient used in bedslope_effect = 1 or 2; bedslope_mu_s=0.63=tan(phi_sediment) used in Roulund,Fredsoe etal. 2004
 alfabs_bl=1.0 					! calibration factor longitudinal slope used in bedslope_effect = 3; default 1.0
 alfabn_bl=1.5 					! calibration factor transverse slope used in bedslope_effect = 3; default 1.5
 phi_sediment=30. 				! internal angle of friction of bed material (deg); default 30. degrees
 erosion_cbed_start = 1			! 0 after bed-update erosion new fluid cell starts without sediment, 1 (default) it starts with SSC of old near-bed fluid cell and this sediment is taken in weighted avg manner from complete water column above 
 movebed_absorb_cfluid = 1 		! 1 default absorb cfluid in bed when bed moves and new bed is higher than previous timestep (like in avalanche and regular bed-update), 0 = add cfluid buried in new bed to first fluid cell above new bed
 vel_start_after_ero = 1			! default 0: velocity starts with 0 m/s when cell is eroded, 1 = UV initialized with UV of cell above (start UV at freshly eroded hole with near-bed velocity from previous timestep)
+pickup_correction='xtra_sidewall_pickup' 		! option 'MastBergenvdBerg2003' gives correction to pickup for negative pore pressure, dilantancy effects and very steep slopes (See paper MastBergenvdBerg2003), 'xtra_sidewall_pickup' gives correction for additional pickup from sidewall erosion, default no correction is applied
+pickup_formula_swe = 'vanrijn2019'  !options are 'vanrijn1984' (default),'vanrijn2019' (=VR1984 including simple high speed erosion correction),'VR2019_Cbed' (=VR1984 including simple high speed erosion correction and reduction pickup for C_near_bed),'VR1984_Cbed' (=VR1984 including reduction pickup for C_near_bed),'nielsen1992','okayasu2010'
+dz_sidewall = 0.001 				! dz_sidewall defines minimum step in bed-level to apply pickup_correction 'xtra_sidewall_pickup', when not defined equal to dz
+dpbed_zone = 0.1 				! [m] when defined a reduction in pickup by the excess pressure above the bed (defined by p_cfd(kbed+k_ust_tau)-p_cfd(kmax) is applied assuming that the excess pressure above the bed is dissipated over dpbed_zone [m] in the top of the sediment bed 
 /
 
 &ship
@@ -319,15 +331,15 @@ Hfront = 1.5            ! Height of slope at front for streamlining (25% of Drau
 &rheology
 Non_Newtonian=0				!Default is 0, which is Newtonian treatment, 1 is time-independent behaviour, 2 is including time-dependent behaviour (thixotropy)
 Rheological_model='SIMPLE'	!If Non-Newtonian = 1, choose rheological model to determine the Bingham parameters, i.e. yield stress and bingham viscosity. Options are: 'SIMPLE','JACOBS','WINTER','THOMAS'.
-PAPANASTASIOUS_m=400.		!Exponential stress growth parameter of the Papanastasious model 1987
-shear0limit=0.01			!shear0limit [1/s] is subtracted from the actual shear to determine the apparent viscosity, if shear is below shear0limit then maximum apparent viscosity (defined by the Bingham yield stress and PAPANASTASIOUS_m) is applied --> this makes sure that round the yielding/unyielding point a solid patch stays unyielded also numerically
+PAPANASTASIOUS_m=400.		!Exponential stress growth parameter of the Papanastasious model 1987; when defined <0. then Fluent manner to deal with limit for low shear-rate is used instead of Papanastasious 
+shear0limit=0.001			!shear0limit [1/s] used for Fluent approach of apparent viscosity in low shear-rate limit
 Apvisc_interp = 1 			! 1 (default) is linear interpolation neighbouring cells for apparent viscosity; 2 is maximum of neighbouring cells; 3 is linear app-visc+max-BYS; 4 is max app-visc+max-BYS 
 Apvisc_shear_relax = 0.9   ! Relaxation factor for determination shear used in calculation of apparent viscosity (default 1.0 --> no relaxation)
 SIMPLE_tauy=0.2				!Bingham yield stress [Pa] is constant
 SIMPLE_muB=0.1				!Bingham dynamic viscosity [kg/m/s] is constant
 SIMPLE_climit=0.01 			!Volume fraction, default 0 for all defined fractions, [-] (length vector must be nfrac large) defining limit for application of SIMPLE_tauy and SIMPLE_muB everywhere in domain where c>SIMPLE_climit
 rheo_shear_method = 1		!1 (default) shear determined from uvw; 2 = shear determined by rurvrw/r; 3 = shear determined by uv; 4 = shear determined by rurv/r; 12= shear determined by cucvcw/c; 21 = use min of neighbouring shear; 31 = force shear to zero at cells with sum(C(1:nfrac))=0  
-Apvisc_force_eq = 1		!0 (default) no dpdx,dpdy force from rheology applied directly in momentum eq., 1 = horizontal force balance used to derive dpdx,dpdy terms directly implemented in mom.eq. and app-visc is determined by a reduced BYS to not account double for this 
+Apvisc_force_eq = 2		!0 (default) no dpdx,dpdy force from rheology applied directly in momentum eq., 1 = horizontal force balance used to derive dpdx,dpdy terms directly implemented in mom.eq. and app-visc is determined by a reduced BYS to not account double for this, 2 = an unyielded zone is defined for every cell where the driving forces from pressure in all 3 dir do not exceed BYS multiplied by the shear area along this dir, in this unyielded zone the maximum apparent viscosity is applied   
 JACOBS_Ky=6.72e4			!Empirical yield stress constant
 JACOBS_Kmu=251				!Empirical Viscosity constant
 JACOBS_Aclay=1.0			!Colloidal activity of clay

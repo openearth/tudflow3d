@@ -2889,7 +2889,7 @@ C ...  Locals
 				do i=0,i1 
 					do k=1,kbed(i,j) ! assign initial bed concentrations; k=0 remains empty
 						do n=1,nfrac
-							Clivebed(n,i,j,k)=c_bed(n)*bednotfixed(i,j,k) ! in case obstacle no erosion (bednotfixed=0) then no cbed
+							Clivebed(n,i,j,k)=c_bed(n) !switched off 14-12-2023, because otherwise bedlevel incorrect: *bednotfixed(i,j,k) ! in case obstacle no erosion (bednotfixed=0) then no cbed
 							!Cold(n,i,j,k)=c_bed(n)
 							!Cnew(n,i,j,k)=c_bed(n)
 							!dCdt(n,i,j,k)=c_bed(n)	
@@ -2897,7 +2897,7 @@ C ...  Locals
 					enddo
 					do n=1,nfrac
 					  ! place remainder which does not fit exactly in 1dz into cnewbot; this can be positive or negative as cnewbot varies between +/-0.5*cfixedbed 
-					  Cnewbot(n,i,j)=(zbed(i,j)-DBLE(kbed(i,j))*dz)/dz*c_bed(n)*bednotfixed(i,j,kbed(i,j))
+					  Cnewbot(n,i,j)=(zbed(i,j)-DBLE(kbed(i,j))*dz)/dz*c_bed(n) !switched off 19-12-2023, because otherwise bedlevel incorrect:: *bednotfixed(i,j,kbed(i,j))
 					enddo 
 				enddo
 			enddo
@@ -3246,6 +3246,7 @@ C ...  Locals
 				  endif 
 				  if (kbed(i,j).eq.k-1.and.obb(i,j,kmax).eq.0) then  !obstacle is connected to floor and not complete vertical is obstacle so include in kbed + this works only for k=0,k1 upward counting inner loop in i,j loop
 					kbed(i,j)=k
+					zbed(i,j)=MAX(zbed(i,j),kbed(i,j)*dz)
 				  endif 
 				  !_inPpuntTSHD is hard 1/0 switch also when ibm1 for U,V,W is applied; its only use is for determination fc_global which prevents momentum/diffusion exchange between ibm-cells and fluid-cells
 				  tel1=tel1+1

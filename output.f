@@ -729,8 +729,8 @@
 		if (nfrac>0) then
 			dimids2 =  (/ nfrac_dimid, x_dimid, y_dimid, z_dimid /)
 			dimids4 =  (/ nfrac_dimid, x_dimid, y_dimid /)
-			dimids5 =  (/ x_dimid, y_dimid  /) 	   
 		endif
+		dimids5 =  (/ x_dimid, y_dimid  /) 	
 		dimids3 =  (/ par_dimid  /) 
    
 	

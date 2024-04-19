@@ -708,6 +708,7 @@
 	real muA2(0:i1,0:j1,0:k1)
 	real tau_app(0:i1,0:j1,0:k1),tau_app_u(0:i1,0:j1,0:k1),tau_app_v(0:i1,0:j1,0:k1)
 	real dppdx,dppdy,dy2,dx2,pppp(0:i1,0:j1,0:k1)
+	real driving_shearstressz,driving_shearstressy,driving_shearstressx,driving_shearstress,dpdz_hydr
 	integer im,ip,jm,jp,km,kp,n
 
 	if (Rheological_model.ne.'WINTER') then
@@ -787,14 +788,55 @@
 	  ENDDO 
 	ENDIF 
 	
-	do i=1,imax						!start loop, in r-direction
-		do j=1,jmax						!start loop, in phi-direction
-			do k=1,kmax					!start loop, in z-direction
-				muA(i,j,k)= muB(i,j,k)+MAX(0.,tauY(i,j,k)-tau_app(i,j,k))/(max(1.e-12,strain(i,j,k)-shear0limit))*
+	
+	if (Apvisc_force_eq.eq.2) then 
+	    pppp(1:imax,1:jmax,1:kmax)=Pold+p !now full pold not just dp
+		call bound_3D(pppp) 	
+		do i=1,imax						!start loop, in r-direction
+			do j=1,jmax						!start loop, in phi-direction
+				do k=1,kmax					!start loop, in z-direction
+				  ! unyielded when: delta_Pz*dx*dy < BYS*dz*dy  or delta_Pz*dx*dy < BYS*dz*dx & 
+				  !                 delta_Py*dz*dx < BYS*dy*dx  or delta_Py*dz*dx < BYS*dy*dz  
+				  !	                delta_Px*dz*dy < BYS*dx*dy  or delta_Px*dz*dy < BYS*dx*dz & 		
+				  ! assume very wide cells in laterally uniform situation: dy>>> then check #2 and #6 give yield
+				  ! or assume very wide cells in x-dir for uniform situation in x-dir with dx>>> then check #1 and #4 give yield
+				  ! or assume very high cells dz>>> then check #3 and #5 give yield 
+				  ! each force-dir needs to be taken up by either one of the edges where BYS can counteract the pressure gradient, doesn't need to be able to counteract on both edges for each dir 
+				  dpdz_hydr = (rho_b-rnew(i,j,k))*gz !negative when rnew>rho_b
+				  driving_shearstressz = ABS((pppp(i,j,k+1)-pppp(i,j,k-1))/(2.*dz)-dpdz_hydr)*dr(i)
+				  driving_shearstressz = MIN(driving_shearstressz,ABS((pppp(i,j,k+1)-pppp(i,j,k-1))/(2.*dz)-dpdz_hydr)*Rp(i)*dphi2(j))
+				  
+				  driving_shearstressy = ABS(pppp(i,j+1,k)-pppp(i,j-1,k))*dr(i)/(2.*Rp(i)*dphi2(j))
+				  driving_shearstressy = MIN(driving_shearstressy,ABS(pppp(i,j+1,k)-pppp(i,j-1,k))*dz/(2.*Rp(i)*dphi2(j)))
+				  
+				  driving_shearstressx = ABS(pppp(i+1,j,k)-pppp(i-1,j,k))*dz/(2.*dr(i))
+				  driving_shearstressx = MIN(driving_shearstressx,ABS(pppp(i+1,j,k)-pppp(i-1,j,k))*Rp(i)*dphi2(j)/(2.*dr(i)))
+				  driving_shearstress = MAX(driving_shearstressx,driving_shearstressy,driving_shearstressz) 
+				  if (driving_shearstress<tauY(i,j,k)) then !unyielded zone with maximum appararent viscosity 
+				    muA(i,j,k)= muB(i,j,k)+(tauY(i,j,k)-tau_app(i,j,k))*PAPANASTASIOUS_m
+				  elseif (strain(i,j,k)>1.e-8) then 
+					muA(i,j,k)= muB(i,j,k)+MAX(0.,tauY(i,j,k)-tau_app(i,j,k))/(max(1.e-12,strain(i,j,k)-shear0limit))*
      &				(1.-exp(-PAPANASTASIOUS_m*(max(1.e-12,strain(i,j,k)-shear0limit))))
+				  else 
+					muA(i,j,k)= muB(i,j,k)+(tauY(i,j,k)-tau_app(i,j,k))*PAPANASTASIOUS_m
+				  endif 
+				enddo
 			enddo
 		enddo
-	enddo
+	else 
+		do i=1,imax						!start loop, in r-direction
+			do j=1,jmax						!start loop, in phi-direction
+				do k=1,kmax					!start loop, in z-direction
+				  if (strain(i,j,k)>1.e-8) then 
+					muA(i,j,k)= muB(i,j,k)+MAX(0.,tauY(i,j,k)-tau_app(i,j,k))/(max(1.e-12,strain(i,j,k)-shear0limit))*
+     &				(1.-exp(-PAPANASTASIOUS_m*(max(1.e-12,strain(i,j,k)-shear0limit))))
+				  else 
+					muA(i,j,k)= muB(i,j,k)+(tauY(i,j,k)-tau_app(i,j,k))*PAPANASTASIOUS_m
+				  endif 
+				enddo
+			enddo
+		enddo
+	endif 
 !!	IF (Apvisc_interp.eq.3.or.Apvisc_interp.eq.4) THEN ! apply high muA at edges patch for staggered arrangement:
 !!	  DO n=1,5
 !!		muA2=muA
@@ -824,59 +866,150 @@
 	call stress_magnitude !calculate the stress magnitude
 	call bound_3D(ekm)
 	call bound_3D(muA) 
-!!!!!  Boundary conditions Neumann
-!!!	call shiftf(ekm,ebf) 
-!!!	call shiftb(ekm,ebb) 
-!!!	if (periodicy.eq.0.or.periodicy.eq.2) then
-!!!		if (rank.eq.0) then ! boundaries in j-direction
-!!!			do k=1,kmax
-!!!				do i=1,imax
-!!!				ekm(i,0,k) = ekm(i,1,k) 
-!!!				ekm(i,j1,k)= ebb(i,k) 
-!!!				enddo
-!!!			enddo
-!!!		elseif (rank.eq.px-1) then
-!!!			do k=1,kmax
-!!!				do i=1,imax
-!!!				ekm(i,0,k) = ebf(i,k)
-!!!				ekm(i,j1,k)= ekm(i,jmax,k) 
-!!!				enddo
-!!!			enddo
-!!!		else
-!!!			do k=1,kmax
-!!!				do i=1,imax
-!!!				ekm(i,0,k) = ebf(i,k)
-!!!				ekm(i,j1,k) =ebb(i,k) 
-!!!				enddo
-!!!			enddo
-!!!		endif
-!!!	else
-!!!		do k=1,kmax
-!!!			do i=1,imax
-!!!				ekm(i,0,k) = ebf(i,k)
-!!!				ekm(i,j1,k) =ebb(i,k) 
-!!!			enddo
-!!!		enddo
-!!!	endif
-!!!	if (periodicx.eq.0.or.periodicx.eq.2) then
-!!!		do k=1,kmax ! boundaries in i-direction
-!!!			do j=0,j1
-!!!				ekm(0,j,k) = ekm(1,j,k)
-!!!				ekm(i1,j,k) = ekm(imax,j,k)
-!!!			enddo
-!!!		enddo
-!!!	else
-!!!		do k=1,kmax ! boundaries in i-direction
-!!!			do j=0,j1
-!!!				ekm(0,j,k) = ekm(imax,j,k)
-!!!				ekm(i1,j,k) = ekm(1,j,k)
-!!!			enddo
-!!!		enddo
-!!!	endif
-!!!	do i=0,i1 ! boundaries in k-direction
-!!!		do j=0,j1
-!!!			ekm(i,j,0) = ekm(i,j,1)
-!!!			ekm(i,j,k1) = ekm(i,j,kmax)
-!!!		enddo
-!!!	enddo
+	
 	END subroutine Bingham_Papanastasiou
+	
+	
+	subroutine Bingham_Fluent_manner							!tauY and muB, yield stress and bingham viscosity (rr = density)
+	USE nlist
+	implicit none
+	!include 'mpif.h'
+
+	real ebb(0:i1,0:k1)
+	real ebf(0:i1,0:k1)
+	real muA2(0:i1,0:j1,0:k1)
+	real tau_app(0:i1,0:j1,0:k1),tau_app_u(0:i1,0:j1,0:k1),tau_app_v(0:i1,0:j1,0:k1)
+	real dppdx,dppdy,dy2,dx2,pppp(0:i1,0:j1,0:k1)
+	real driving_shearstressz,driving_shearstressy,driving_shearstressx,driving_shearstress,dpdz_hydr
+	integer im,ip,jm,jp,km,kp,n
+
+	if (Rheological_model.ne.'WINTER') then
+		call strain_magnitude(Unew,Vnew,Wnew)				!determine the magnite of the strain rate
+	endif
+
+
+	tau_app=0.
+	if (Apvisc_force_eq.eq.1) then 
+	!! try to split off horizontal dpdx,dpdy part of BYS to arrive at horizontal equilibrium numerically more stable
+	    pppp(1:imax,1:jmax,1:kmax)=Pold+p !now full pold not just dp
+		call bound_3D(pppp) 
+		call bound_3D(tauY) 
+		do i=1,imax
+			do j=1,jmax
+				do k=1,kmax	
+					im=i-1 
+					ip=i+1 
+					jm=j-1 
+					jp=j+1 
+					!! at U-loc:
+					dppdx = (pppp(ip,j,k)-pppp(i,j,k))/(Rp(ip)-Rp(i))
+					dppdy = (0.5*(pppp(i,jp,k)+pppp(ip,jp,k))-0.5*(pppp(i,jm,k)+pppp(ip,jm,k)))/( Ru(i) * (phip(jp)-phip(jm)) )
+					tau_app_u(i,j,k) = MIN(tauY(i,j,k),tauY(ip,j,k),dz*sqrt(dppdx**2+dppdy**2))
+					Ppropx(i,j,k) = Ppropx(i,j,k)+tau_app_u(i,j,k)/dz*dppdx/sqrt((dppdx)**2+(dppdy)**2+1.e-18) !sign of dppdx automatically gives right addition or subtraction to slow down driving force
+					!Ppropx(i,j,k) = Ppropx(i,j,k)+dppdx !check -> should give near-zero velocity -> yes it does
+					!! at V-loc:
+					dppdy = (pppp(i,jp,k)-pppp(i,j,k))/( Rp(i) * (phip(jp)-phip(j)) ) !
+					dppdx = (0.5*(pppp(ip,j,k)+pppp(ip,jp,k))-0.5*(pppp(im,j,k)+pppp(im,jp,k)))/(Rp(ip)-Rp(im))
+					tau_app_v(i,j,k) = MIN(tauY(i,j,k),tauY(i,jp,k),dz*sqrt(dppdx**2+dppdy**2))
+					Ppropy(i,j,k) = Ppropy(i,j,k)+tau_app_v(i,j,k)/dz*dppdy/sqrt((dppdx)**2+(dppdy)**2+1.e-18) !sign of dppdy automatically gives right addition or subtraction to slow down driving force	
+					!Ppropy(i,j,k) = Ppropy(i,j,k)+dppdy !check -> should give near-zero velocity -> yes it does
+				enddo
+			enddo
+		enddo		
+
+		call bound_3D(tau_app_u)
+		call bound_3D(tau_app_v)
+		do i=1,imax
+			do j=1,jmax
+				do k=1,kmax	
+					im=i-1 
+					jm=j-1 
+					tau_app(i,j,k) = 0.25*(tau_app_u(i,j,k)+tau_app_u(im,j,k)+tau_app_v(i,j,k)+tau_app_v(i,jm,k))
+				enddo
+			enddo
+		enddo
+	endif 
+					
+	
+	IF (Apvisc_interp.eq.3.or.Apvisc_interp.eq.4) THEN ! apply high muA at edges patch for staggered arrangement:
+	  DO n=1,1 !10
+		muA2=tauY
+		call bound_3D(muA2) 
+		do i=1,imax
+			do j=1,jmax
+				do k=1,kmax	
+					im=i-1 
+					ip=i+1 
+					jm=j-1 
+					jp=j+1 
+					km=k-1 
+					kp=k+1 
+					tauY(i,j,k) = MAX(
+     &					muA2(i,j,k),muA2(i,jm,k),muA2(i,jp,k),muA2(i,j,km),muA2(i,j,kp),
+     &					muA2(i,jm,km),muA2(i,jp,km),muA2(i,jm,kp),muA2(i,jp,kp),
+     &					muA2(im,j,k),muA2(im,jm,k),muA2(im,jp,k),muA2(im,j,km),muA2(im,j,kp),
+     &					muA2(im,jm,km),muA2(im,jp,km),muA2(im,jm,kp),muA2(im,jp,kp),
+     &					muA2(ip,j,k),muA2(ip,jm,k),muA2(ip,jp,k),muA2(ip,j,km),muA2(ip,j,kp),
+     &					muA2(ip,jm,km),muA2(ip,jp,km),muA2(ip,jm,kp),muA2(ip,jp,kp))
+				enddo
+			enddo
+		enddo
+	  ENDDO 
+	ENDIF 
+	
+	
+	if (Apvisc_force_eq.eq.2) then 
+	    pppp(1:imax,1:jmax,1:kmax)=Pold+p !now full pold not just dp
+		call bound_3D(pppp) 	
+		do i=1,imax						!start loop, in r-direction
+			do j=1,jmax						!start loop, in phi-direction
+				do k=1,kmax					!start loop, in z-direction
+				  ! unyielded when: delta_Pz*dx*dy < BYS*dz*dy  or delta_Pz*dx*dy < BYS*dz*dx & 
+				  !                 delta_Py*dz*dx < BYS*dy*dx  or delta_Py*dz*dx < BYS*dy*dz  
+				  !	                delta_Px*dz*dy < BYS*dx*dy  or delta_Px*dz*dy < BYS*dx*dz & 		
+				  ! assume very wide cells in laterally uniform situation: dy>>> then check #2 and #6 give yield
+				  ! or assume very wide cells in x-dir for uniform situation in x-dir with dx>>> then check #1 and #4 give yield
+				  ! or assume very high cells dz>>> then check #3 and #5 give yield 
+				  ! each force-dir needs to be taken up by either one of the edges where BYS can counteract the pressure gradient, doesn't need to be able to counteract on both edges for each dir 
+				  dpdz_hydr = (rho_b-rnew(i,j,k))*gz !negative when rnew>rho_b
+				  driving_shearstressz = ABS((pppp(i,j,k+1)-pppp(i,j,k-1))/(2.*dz)-dpdz_hydr)*dr(i)
+				  driving_shearstressz = MIN(driving_shearstressz,ABS((pppp(i,j,k+1)-pppp(i,j,k-1))/(2.*dz)-dpdz_hydr)*Rp(i)*dphi2(j))
+				  
+				  driving_shearstressy = ABS(pppp(i,j+1,k)-pppp(i,j-1,k))*dr(i)/(2.*Rp(i)*dphi2(j))
+				  driving_shearstressy = MIN(driving_shearstressy,ABS(pppp(i,j+1,k)-pppp(i,j-1,k))*dz/(2.*Rp(i)*dphi2(j)))
+				  
+				  driving_shearstressx = ABS(pppp(i+1,j,k)-pppp(i-1,j,k))*dz/(2.*dr(i))
+				  driving_shearstressx = MIN(driving_shearstressx,ABS(pppp(i+1,j,k)-pppp(i-1,j,k))*Rp(i)*dphi2(j)/(2.*dr(i)))
+				  driving_shearstress = MAX(driving_shearstressx,driving_shearstressy,driving_shearstressz) 
+				  if (driving_shearstress<tauY(i,j,k)) then !unyielded zone with maximum appararent viscosity 
+					muA(i,j,k)= muB(i,j,k)+2.*MAX(0.,tauY(i,j,k)-tau_app(i,j,k))/shear0limit					
+				  elseif (strain(i,j,k)>shear0limit) then 
+				    muA(i,j,k)= muB(i,j,k)+MAX(0.,tauY(i,j,k)-tau_app(i,j,k))/strain(i,j,k)
+				  else 
+					muA(i,j,k)= muB(i,j,k)+(2.-strain(i,j,k)/shear0limit)*MAX(0.,tauY(i,j,k)-tau_app(i,j,k))/shear0limit
+				  endif 
+				enddo
+			enddo
+		enddo
+	else 
+		do i=1,imax						!start loop, in r-direction
+			do j=1,jmax						!start loop, in phi-direction
+				do k=1,kmax					!start loop, in z-direction
+				  if (strain(i,j,k)>shear0limit) then 
+				    muA(i,j,k)= muB(i,j,k)+MAX(0.,tauY(i,j,k)-tau_app(i,j,k))/strain(i,j,k)
+				  else 
+					muA(i,j,k)= muB(i,j,k)+(2.-strain(i,j,k)/shear0limit)*MAX(0.,tauY(i,j,k)-tau_app(i,j,k))/shear0limit
+				  endif 
+				enddo
+			enddo
+		enddo
+	endif 
+
+	ekm= ekm + muA
+	call stress_magnitude !calculate the stress magnitude
+	call bound_3D(ekm)
+	call bound_3D(muA) 
+	
+	END subroutine Bingham_Fluent_manner	
+	
+

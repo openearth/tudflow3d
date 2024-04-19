@@ -28,7 +28,7 @@
 	  INTEGER k_ust_tau_flow
       REAL ekm_mol,nu_mol,pi,kappa,gx,gy,gz,Cs,Sc,calibfac_sand_pickup,calibfac_Shields_cr,morfac,morfac2,calibfac_sand_bedload
       REAL dt,time_nm,time_n,time_np,t_end,t0_output,dt_output,te_output,dt_max,tstart_rms,CFL,dt_ini,tstart_morf,trestart,dt_old
-      REAL dt_output_movie,t0_output_movie,te_output_movie,te_rms,time_nm2,tstart_morf2,fcor
+      REAL dt_output_movie,t0_output_movie,te_output_movie,te_rms,time_nm2,tstart_morf2,fcor,calibfac_Shields_cr_bl
       REAL U_b,V_b,W_b,rho_b,W_j,Awjet,Aujet,Avjet,Strouhal,radius_j,kn,W_ox,U_bSEM,V_bSEM,U_w,V_w,U_init,V_init
       REAL U_j2,Awjet2,Aujet2,Avjet2,Strouhal2,radius_j2,zjet2,rho_b2,ekm_sediment_pickup,nu_sediment_pickup
       REAL xj(4),yj(4),radius_inner_j,W_j_powerlaw,plume_z_outflow_belowsurf
@@ -68,7 +68,7 @@
       INTEGER iparm(64)
       CHARACTER*256 plumeQtseriesfile,plumectseriesfile,avfile,obstfile,kn_flow_file      
       REAL Q_j,plumeQseries(1:10000),plumeQtseries(1:10000),plumectseries(1:10000),plumecseries(30,1:10000) !c(30) matches with size frac_init
-      REAL Aplume,driftfluxforce_calfac,kn_flow_d50_multiplier,dz_sidewall
+      REAL Aplume,driftfluxforce_calfac,kn_flow_d50_multiplier,dz_sidewall,sl_relax
 	  REAL vwal,vwal2,delta_nsed,nl,permeability_kl,pickup_fluctuations_ampl,z_tau_sed,kn_d50_multiplier_bl,bl_relax,power_VR2019
 	  INTEGER pickup_fluctuations,cbed_method,k_layer_pickup,nu_minimum_wall,pickup_bedslope_geo,wbed_correction,bedslope_effect
 	  INTEGER wallmodel_tau_sed,ndtbed,nrmsbed,telUVWbed,tel_dt
@@ -80,8 +80,8 @@
 	  INTEGER nobst_files,nobst_file,momentum_exchange_obstacles,erosion_cbed_start,movebed_absorb_cfluid
 	  CHARACTER(len=256) :: obst_file_series(5000)
 	  REAL :: obst_starttimes(5000)
-	  INTEGER cbc_perx_j(2),taulayerTBLE,obstfile_erodepo,nWM,vel_start_after_ero
-	  REAL cbc_relax,TBLE_grad_relax,TBLEsed_grad_relax
+	  INTEGER cbc_perx_j(2),taulayerTBLE,obstfile_erodepo,nWM,vel_start_after_ero,nsmooth_bed,k_ust_tau_sed_range(2)
+	  REAL cbc_relax,TBLE_grad_relax,TBLEsed_grad_relax,dpbed_zone
 	  
 	  
 	  !new variables rheology
@@ -175,8 +175,8 @@
 	  REAL, DIMENSION(:,:),ALLOCATABLE :: tau_fl_Uold,tau_fl_Vold,tau_fl_Unew,tau_fl_Vnew,ust_sl_new,ust_sl_old,ust_bl_new,ust_bl_old
 	  REAL, DIMENSION(:,:),ALLOCATABLE :: ust_mud_new,ust_mud_old,kn_flow,d50field,tau_fl_Utop,tau_fl_Vtop
 	  REAL, DIMENSION(:,:,:),ALLOCATABLE :: qbU,qbV,ust_frac_old,ust_frac_new,sigUWbed,sigVWbed,sigUbed,sigVbed,sigWbed
-	  REAL, DIMENSION(:,:),ALLOCATABLE :: TBLEdudx,TBLEdudy,TBLEdvdx,TBLEdvdy,TBLEdpdx,TBLEdpdy
-	  REAL, DIMENSION(:,:),ALLOCATABLE :: TBLEsed_dpdx,TBLEsed_dpdy
+	  REAL, DIMENSION(:,:),ALLOCATABLE :: TBLEdudx,TBLEdudy,TBLEdvdx,TBLEdvdy,TBLEdpdx,TBLEdpdy,TBLEdpdxo,TBLEdpdyo
+	  REAL, DIMENSION(:,:),ALLOCATABLE :: TBLEsed_dpdx,TBLEsed_dpdy,absU_sed_relax
  !     REAL, DIMENSION(:,:,:),ALLOCATABLE :: Uf,Vf,Wf
 
 !      REAL, DIMENSION(:,:,:),ALLOCATABLE :: div
@@ -207,7 +207,7 @@
 	REAL stat_time_count	
 
 	type fractions
-	    REAL ::	ws,rho,c,dpart,dfloc,n,tau_d,tau_e,M,kn_sed,ws_dep,zair_ref_belowsurf,CD,cmax
+	    REAL ::	ws,rho,c,dpart,dfloc,n,tau_d,tau_e,M,kn_sed,ws_dep,zair_ref_belowsurf,CD,cmax,ero
 	    INTEGER :: type
 	end type fractions
 	type bed_obstacles
@@ -220,10 +220,10 @@
 		REAL :: move_nx_series(100000),move_ny_series(100000),x2(4),y2(4),move_dx2_series(100000),move_dy2_series(100000)
 		REAL :: move_outputfile_series(100000),uinput,dt_history,t_bphis_output,move_dz_height_factor,move_dz_zbottom_factor
 	    INTEGER :: forever,h_seriesloc,zb_seriesloc,Q_seriesloc,S_seriesloc,c_seriesloc,velocity_force
-		INTEGER :: u_seriesloc,v_seriesloc,w_seriesloc,istep_bphis_output
+		INTEGER :: u_seriesloc,v_seriesloc,w_seriesloc,istep_bphis_output,fluidize,kn_flow_wall_normaldir
 		CHARACTER*256 :: h_tseriesfile,zb_tseriesfile,Q_tseriesfile,S_tseriesfile,c_tseriesfile
 		CHARACTER*256 :: u_tseriesfile,v_tseriesfile,w_tseriesfile
-		REAL :: move_u,move_v,move_w,radius,radius2
+		REAL :: move_u,move_v,move_w,radius,radius2,kn_flow
 	end type bed_plumes
 	type bed_plumes2
 	    REAL ::	x(4),y(4),height,u,v,w,c(30),t0,t_end,zbottom,Q,sedflux(30),volncells,changesedsuction !c(30) matches with size frac_init
@@ -236,11 +236,11 @@
 		REAL :: u_tseries(10000),v_tseries(10000),w_tseries(10000)
 		REAL :: u_series(10000),v_series(10000),w_series(10000)
 	    INTEGER :: forever,h_seriesloc,zb_seriesloc,Q_seriesloc,S_seriesloc,c_seriesloc,nmove,nmove_present,velocity_force,tmax
-		INTEGER :: u_seriesloc,v_seriesloc,w_seriesloc,istep_bphis_output
+		INTEGER :: u_seriesloc,v_seriesloc,w_seriesloc,istep_bphis_output,fluidize,kn_flow_wall_normaldir
 		CHARACTER*256 :: h_tseriesfile,zb_tseriesfile,Q_tseriesfile,S_tseriesfile,c_tseriesfile
 		CHARACTER*256 :: u_tseriesfile,v_tseriesfile,w_tseriesfile
 !		INTEGER :: tmax_iP,tmax_iU,iP_inbp(10000),jP_inbp(10000),kP_inbp(10000),iU_inbp(10000),jU_inbp(10000),kU_inbp(10000)
-		REAL :: move_u,move_v,move_w,radius,radius2
+		REAL :: move_u,move_v,move_w,radius,radius2,kn_flow
 		INTEGER*2 :: i(100000),j(100000) 
 	end type bed_plumes2
 	
@@ -264,7 +264,7 @@
 
 	integer ios,n,n1,n2,n3,n4
 	type frac_init
-	  real :: ws,c,rho,dpart,dfloc,tau_d,tau_e,M,kn_sed,ws_dep,zair_ref_belowsurf,CD,cmax
+	  real :: ws,c,rho,dpart,dfloc,tau_d,tau_e,M,kn_sed,ws_dep,zair_ref_belowsurf,CD,cmax,ero
 	  integer :: type
 	end type frac_init
 	TYPE(frac_init), DIMENSION(30) :: fract
@@ -281,7 +281,7 @@
      & continuity_solver,transporteq_fracs,split_rho_cont,driftfluxforce_calfac,depo_implicit,IBMorder,npresPRHO,
      & pres_in_predictor_step,Poutflow,oPRHO,applyVOF,k_ust_tau,Uoutflow,dUVdn_IBMbed,k_pzero,numdiff2,CNdiff_factor,CNdiff_ho,
      & CNdiff_dtfactor,CNdiff_pc,CNdiff_maxi,CNdiff_tol,CNdiff_ini,initPhydrostatic,npresIBM_viscupdate,momentum_exchange_obstacles
-     & ,k_ust_tau_flow	 
+     & ,k_ust_tau_flow,nsmooth_bed,k_ust_tau_sed_range	 
 	NAMELIST /ambient/U_b,V_b,W_b,bcfile,rho_b,SEM,nmax2,nmax1,nmax3,lm_min,lm_min3,slip_bot,taulayerTBLE,kn,interaction_bed,
      & periodicx,periodicy,dpdx,dpdy,W_ox,Hs,Tp,nx_w,ny_w,obst,bc_obst_h,U_b3,V_b3,surf_layer,wallup,bedlevelfile,
      & U_bSEM,V_bSEM,U_w,V_w,c_bed,cfixedbed,U_init,V_init,initconditionsfile,rho_b2,monopile,kn_mp,kn_sidewalls,obstfile,
@@ -293,12 +293,12 @@
 	NAMELIST /LESmodel/sgs_model,Cs,Lmix_type,nr_HPfilter,damping_drho_dz,damping_a1,damping_b1,damping_a2,damping_b2,
      & extra_mix_visc,nu_minimum_wall,Const1eps,Const2,Sc_k,Sc_eps,Cal_buoyancy_k,Cal_buoyancy_eps,Cs_relax
 	NAMELIST /constants/kappa,gx,gy,gz,ekm_mol,calibfac_sand_pickup,pickup_formula,kn_d50_multiplier,avalanche_slope,
-     &	av_slope_z,calibfac_Shields_cr,reduction_sedimentation_shields,morfac,morfac2,avalanche_until_done,avfile,
-     & settling_along_gvector,vwal,nl,permeability_kl,pickup_fluctuations_ampl,pickup_fluctuations,pickup_correction,cbed_method,
-     & z_tau_sed,k_layer_pickup,pickup_bedslope_geo,bedload_formula,kn_d50_multiplier_bl,calibfac_sand_bedload,bl_relax,fcor,
-     & wbed_correction,bedslope_effect,bedslope_mu_s,alfabs_bl,alfabn_bl,phi_sediment,wallmodel_tau_sed,nrmsbed,ndtbed,
+     &	av_slope_z,calibfac_Shields_cr,calibfac_Shields_cr_bl,reduction_sedimentation_shields,morfac,morfac2,avalanche_until_done,
+     & avfile,settling_along_gvector,vwal,nl,permeability_kl,pickup_fluctuations_ampl,pickup_fluctuations,pickup_correction,
+     & cbed_method,z_tau_sed,k_layer_pickup,pickup_bedslope_geo,bedload_formula,kn_d50_multiplier_bl,calibfac_sand_bedload,bl_relax
+     & ,fcor,wbed_correction,bedslope_effect,bedslope_mu_s,alfabs_bl,alfabn_bl,phi_sediment,wallmodel_tau_sed,nrmsbed,ndtbed,
      & erosion_cbed_start,movebed_absorb_cfluid,power_VR2019,ekm_sediment_pickup,dz_sidewall,TBLEsed_grad_relax,pickup_formula_swe
-     & ,vel_start_after_ero
+     & ,vel_start_after_ero,dpbed_zone,sl_relax
 	NAMELIST /fractions_in_plume/fract
 	NAMELIST /ship/U_TSHD,LOA,Lfront,Breadth,Draught,Lback,Hback,xfront,yfront,kn_TSHD,nprop,Dprop,xprop,yprop,zprop,
      &   Pprop,rudder,rot_prop,draghead,Dsp,xdh,perc_dh_suction,softnose,Hfront,cutter
@@ -386,9 +386,11 @@
 	applyVOF=0
 	k_ust_tau=1
 	k_ust_tau_flow=1
+	k_ust_tau_sed_range(1:2) = -1
 	dUVdn_IBMbed=-1 !default no correction, but with 0 then dUdn and dVdn is made zero over immersed bed and with -2  to apply UV(1:kbed)=0 also for IBM2
 	initPhydrostatic = 0 !default 0 no initial hydrostatic pressure; 1 = initialize hydrostatic pressure before first timestep 
 	momentum_exchange_obstacles = 1 !default there is momentum exchange between flow and obstacles, optional 0 makes momenum terms zero in case the advective velocity is inside or at edge obstacle 
+	nsmooth_bed=2000000000 !default no smoothing bed, if defined every nsmooth_bed a 2nd order Shapiro low-pass filter is applied to 2D bed-level to redistribute sediment inside the bed in a mass-conserving manner to get rid of bed-wiggles 
 	!! ambient:
 	U_b = -999.
 	V_b = -999.
@@ -557,6 +559,9 @@
 	bedplume(:)%move_w=0.
 	bedplume(:)%radius=-9.
 	bedplume(:)%radius2=-9.
+	bedplume(:)%fluidize = 0
+	bedplume(:)%kn_flow = -9.
+	bedplume(:)%kn_flow_wall_normaldir = 0
 	
 	
 	DO i=1,30
@@ -591,6 +596,7 @@
 	fract(:)%type=1
 	fract(:)%CD=0.
 	fract(:)%cmax=100.
+	fract(:)%ero=1. !default erosion of specific fraction is possible
 	nfrac=0
 	nfr_silt=0
 	nfr_sand=0
@@ -631,6 +637,7 @@
 	calibfac_sand_pickup = 1.
 	calibfac_sand_bedload = 1.
 	calibfac_Shields_cr = 1.
+	calibfac_Shields_cr_bl = -1. !(when not defined calibfac_Shields_cr is also used as calibfac_Shields_cr_bl)
 	pickup_formula = 'vanrijn1984' !default
 	bedload_formula ='nonenon0000' !default no bedload taken into account 
 	kn_d50_multiplier = 2. !default, kn=2*d50 defined in paper Van Rijn 1984
@@ -661,6 +668,7 @@
 	dz_sidewall = -999. 
 	pickup_bedslope_geo=0
 	bl_relax=0.01 
+	sl_relax=1. 
 	bedslope_effect=0
 	bedslope_mu_s=0.63 
 	alfabs_bl=1.0 
@@ -671,6 +679,7 @@
 	power_VR2019 = 1.
 	pickup_formula_swe = 'vanrijn1984' !default
 	vel_start_after_ero = 0 
+	dpbed_zone = 1.e12 
 	
 	
 	!! ship
@@ -822,6 +831,14 @@
 	IF (k_ust_tau_flow<1.or.k_ust_tau_flow>kmax) CALL writeerror(409)
 	IF (k_pzero<1.or.k_pzero>kmax) CALL writeerror(410)
 	IF (CNdiff_dtfactor.lt.0.9999) CALL writeerror(411) 
+	IF (k_ust_tau_sed_range(1).ne.-1.or.k_ust_tau_sed_range(2).ne.-1) THEN 
+		IF (k_ust_tau_sed_range(1)>kmax.or.k_ust_tau_sed_range(1)>k_ust_tau_sed_range(2).or.k_ust_tau_sed_range(2)>kmax) THEN 
+		  call writeerror(412)
+		ELSEIF (k_ust_tau_sed_range(1)<1.or.k_ust_tau_sed_range(2)<1) THEN 
+		  call writeerror(412)
+		ENDIF
+	ENDIF 
+		
 
 	READ (UNIT=1,NML=ambient,IOSTAT=ios)
 	!! check input ambient
@@ -965,6 +982,7 @@
 	  frac(n)%type = fract(n)%type
 	  frac(n)%CD=fract(n)%CD
 	  frac(n)%cmax=fract(n)%cmax	  
+	  frac(n)%ero=fract(n)%ero
 	!! check input fractions_in_plume
 	  IF (frac(n)%ws.eq.-999.) THEN
 		write(*,*)'Fraction:',n
@@ -1114,6 +1132,9 @@
 	  bp(n)%move_v=bedplume(n)%move_v
 	  bp(n)%move_w=bedplume(n)%move_w
 	  bp(n)%radius=bedplume(n)%radius
+	  bp(n)%fluidize=bedplume(n)%fluidize
+	  bp(n)%kn_flow=bedplume(n)%kn_flow
+	  bp(n)%kn_flow_wall_normaldir=bedplume(n)%kn_flow_wall_normaldir
 	  IF (bp(n)%radius>0.) THEN
 		bp(n)%x(2:4)=0.
 		bp(n)%y(2:4)=0.
@@ -1475,6 +1496,10 @@
 	    write(*,*),' Bedplume:',n
 	    CALL writeerror(278)
 	  ENDIF
+	  IF (bp(n)%kn_flow<-1.e-12.and.bp(n)%kn_flow_wall_normaldir>0) THEN
+	    write(*,*),' Bedplume:',n
+	    CALL writeerror(283)
+	  ENDIF	
 	ENDDO
 
 	DEALLOCATE(bedplume)
@@ -1531,7 +1556,10 @@
 	IF (kn_d50_multiplier<0.or.kn_d50_multiplier_bl<0.) CALL writeerror(96)
 	IF (MINVAL(avalanche_slope)<0.and.MINVAL(avalanche_slope).ne.-99.) CALL writeerror(97)
 	IF (calibfac_sand_pickup<0.or.calibfac_sand_bedload<0.) CALL writeerror(98)
-	IF (calibfac_Shields_cr<0.) CALL writeerror(99)
+	IF (calibfac_Shields_cr_bl<0.) THEN
+	  calibfac_Shields_cr_bl = calibfac_Shields_cr !when calibfac_Shields_cr_bl is not defined then calibfac_Shields_cr is used 
+	ENDIF
+	IF (calibfac_Shields_cr<0.or.calibfac_Shields_cr_bl<0.) CALL writeerror(99)
 	IF (morfac<0.) CALL writeerror(101)
 	IF (morfac2<1.) CALL writeerror(102)
 	IF (pickup_correction.eq.'MastBergenvdBerg2003'.or.pickup_correction.eq.'MBvdBerg2003_vecheck'
@@ -1545,14 +1573,15 @@
 	ENDIF
 	IF (k_layer_pickup<1) CALL writeerror(106)
 	IF (bl_relax>1.or.bl_relax<0.) CALL writeerror(107)
+	IF (sl_relax>1.or.sl_relax<0.) CALL writeerror(107)
 	IF (bedload_formula.ne.'vanrijn2007'.and.bedload_formula.ne.'vanrijn2003'.and.bedload_formula.ne.'MeyPeMu1947'
      & .and.bedload_formula.ne.'nonenon0000')   CALL writeerror(109)
-	IF (bedslope_effect.ne.0.and.bedslope_effect.ne.1.and.bedslope_effect.ne.2.and.bedslope_effect.ne.3)
+	IF (bedslope_effect<0.or.bedslope_effect>6)
      &	CALL writeerror(143) 
 	IF (phi_sediment.lt.(4.0 * atan(1.0))) CALL writeerror(144)
 	phi_sediment = phi_sediment/180.*4.0 * atan(1.0) !change from degrees to rad 
 	IF (wallmodel_tau_sed.ne.1.and.wallmodel_tau_sed.ne.3.and.wallmodel_tau_sed.ne.4.and.wallmodel_tau_sed.ne.5.
-     &	and.wallmodel_tau_sed.ne.11) THEN 
+     &	and.wallmodel_tau_sed.ne.8.and.wallmodel_tau_sed.ne.9.and.wallmodel_tau_sed.ne.11) THEN 
 		CALL writeerror(145)
 	IF (TBLEsed_grad_relax.gt.1.or.TBLEsed_grad_relax.lt.0) CALL writeerror(623)
 	IF (power_VR2019<0.) CALL writeerror(146)
@@ -2061,6 +2090,7 @@
 	ALLOCATE(vvR_relax(0:i1,0:j1))
 	ALLOCATE(vvL_relax(0:i1,0:j1))	
 	ALLOCATE(qb_relax(0:i1,0:j1))
+	ALLOCATE(absU_sed_relax(0:i1,0:j1))
 	uuR_relax = 0. 
 	uuL_relax = 0. 
 	vvR_relax = 0. 
@@ -2068,19 +2098,24 @@
 	qb_relax = 0. 
 	qbU = 0.
 	qbV = 0.
+	absU_sed_relax = 0. 
 	
 	ALLOCATE(TBLEdudx(0:i1,0:j1))
 	ALLOCATE(TBLEdvdx(0:i1,0:j1))
 	ALLOCATE(TBLEdudy(0:i1,0:j1))
 	ALLOCATE(TBLEdvdy(0:i1,0:j1))	
 	ALLOCATE(TBLEdpdx(0:i1,0:j1))
-	ALLOCATE(TBLEdpdy(0:i1,0:j1))	
+	ALLOCATE(TBLEdpdy(0:i1,0:j1))
+	ALLOCATE(TBLEdpdxo(0:i1,0:j1))
+	ALLOCATE(TBLEdpdyo(0:i1,0:j1))	
 	TBLEdudx = 0. 
 	TBLEdvdx = 0. 
 	TBLEdudy = 0. 
 	TBLEdvdy = 0.	
 	TBLEdpdx = 0. 
 	TBLEdpdy = 0.	
+	TBLEdpdxo = 0. 
+	TBLEdpdyo = 0.		
 	ALLOCATE(TBLEsed_dpdx(0:i1,0:j1))
 	ALLOCATE(TBLEsed_dpdy(0:i1,0:j1))		
 	TBLEsed_dpdx = 0. 

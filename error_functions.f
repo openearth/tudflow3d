@@ -310,7 +310,7 @@
 		write(*,*) '# calibfac_sand_pickup and calibfac_sand_bedload must be >=0.              #'	
 	CASE(099)
 		write(*,*) '# namelist &constants                            #'			
-		write(*,*) '# calibfac_Shields_cr must be >=0.               #'			
+		write(*,*) '# calibfac_Shields_cr and calibfac_Shields_cr_bl must be >=0.               #'			
 	CASE(100)
 		write(*,*) '# Namelist error occured                         #'			
 		write(*,*) '# Namelist involved: HISTORIES                   #'
@@ -338,7 +338,7 @@
 		write(*,*) '# k_layer_pickup must be >=1 (default 1)         #'		
 	CASE(107)
 		write(*,*) '# namelist &constants                            #'			
-		write(*,*) '# bl_relax must be between 0 and 1               #'		
+		write(*,*) '# bl_relax & sl_relax must be between 0 and 1    #'		
 	CASE(108)
 		write(*,*) '# namelist &constants                            #'			
 		write(*,*) '# fcor must be >=0.                              #'	
@@ -375,20 +375,23 @@
 		write(*,*) '# av_slope_z                                     #'		
 	CASE(143)
 		write(*,*) '# namelist &constants                            #'			
-		write(*,*) '# bedslope_effect must be 0,1,2,3                #'		
+		write(*,*) '# bedslope_effect must be 0,1,2,3,4,5,6          #'		
 		write(*,*) '# 0 (default) no bedslope effect                 #'		
 		write(*,*) '# 1 = adjust Shields_cr following Roulund,       #'		
 		write(*,*) '# Fredsoe etal. 2004 for suspension and bedload  #'			
 		write(*,*) '# 2 = like 1 but only for bedload                #'		
 		write(*,*) '# 3 = bed-slope influence on bedload D3D style   #'		
 		write(*,*) '# Bagnold (1966) for longitudinal slope and Ikeda (1982, 1988) for transverse slope   #'	
+		write(*,*) '# 4 = like 1 but only for Shields in numerator   #'
+		write(*,*) '# 5 = like 2 but only for Shields in numerator   #'
+		write(*,*) '# 6 = combi 3 for bedload and 1 for susload but only for Shields in numerator   #'
 	CASE(144)
 		write(*,*) '# namelist &constants                            #'			
 		write(*,*) '# phi_sediment must be >0. and in degrees        #'		
 		write(*,*) '# default phi_sediment=30.                       #'		
 	CASE(145)
 		write(*,*) '# namelist &constants                            #'			
-		write(*,*) '# wallmodel_tau_sed must be 1,3,4,5 or 11        #'		
+		write(*,*) '# wallmodel_tau_sed must be 1,3,4,5,8,9 or 11    #'		
 		write(*,*) '# default wallmodel_tau_sed = 1                  #'		
 	CASE(146)
 		write(*,*) '# namelist &constants                            #'			
@@ -489,6 +492,9 @@
 	CASE(282)
 		write(*,*) '# namelist &plume                                #'			
 		write(*,*) '# hindered_settling_c should be 0,1              #'		
+	CASE(283)
+		write(*,*) '# namelist &plume                                #'			
+		write(*,*) '# bedplume%kn_flow should be >0.                 #'				
 	CASE(301)
 		write(*,*) '# namelist &ship                                 #'			
 		write(*,*) '# please prescribe U_TSHD                        #'	
@@ -606,7 +612,11 @@
 		write(*,*) '# k_pzero should be between 1 and kmax           #'	
 	CASE(411)
 		write(*,*) '# namelist &num_scheme                           #'		
-		write(*,*) '# CNdiff_dtfactor should be >=1.                 #'			
+		write(*,*) '# CNdiff_dtfactor should be >=1.                 #'	
+	CASE(412)
+		write(*,*) '# namelist &num_scheme                           #'		
+		write(*,*) '# k_ust_tau_sed_range(1) and k_ust_tau_sed_range(2) should be between 1 and kmax #'	
+		write(*,*) '# and k_ust_tau_sed_range(1)<k_ust_tau_sed_range(2)                              #'			
 	CASE(501)
 		write(*,*) '# namelist &simulation                           #'			
 		write(*,*) '# imax_grid or jmax_grid is not increasing monotonously       #'	

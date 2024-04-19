@@ -2014,8 +2014,6 @@ c********************************************************************
 	      call advecc_ARO(k1c(n,:,:,:),cnew(n,:,:,:),utr,vtr,wtr,rnew,Ru,Rp,dr,phiv,phipt,dz,
      +            i1,j1,k1,ib,ie,jb,je,kb,ke,cn1*dt,rank,px,periodicx,periodicy)	 
           endif
-!	      call advecc_TVD(k1c(n,:,:,:),cnew(n,:,:,:),Unew,Vnew,Wsed(n,:,:,:),rnew,Ru,Rp,dr,phiv,phipt,dz,
-!     +            i1,j1,k1,ib,ie,jb,je,kb,ke,cn1*dt,rank,px,periodicx,periodicy)
 		if (Sc<1.e18) then
 	      call diffc_CDS2 (k1c(n,:,:,:),Cnew(n,:,:,:),Diffcof,
      +            ib,ie,jb,je,kb,ke)
@@ -3478,7 +3476,7 @@ c********************************************************************
 			ELSE 
 				CNz=1.
 			ENDIF 		   
-	     call bound_c(dcdt(n,:,:,:),frac(n)%c,n,0.) ! bc start CN-diffz ABv
+	     call bound_c(dcdt(n,:,:,:),frac(n)%c,n,0.) ! bc start CN-diffz EE1
 	     do k=k1,k1 !-kjet,k1
 	       do t=1,tmax_inPpunt
 	         i=i_inPpunt(t)
@@ -3534,7 +3532,7 @@ c********************************************************************
 	    enddo
       	  endif !end (interaction_bed>0) 
 	    do n=1,nfrac 
-		call bound_c(dcdt(n,:,:,:),frac(n)%c,n,dt) ! bc after erosion_deposition ABv
+		call bound_c(dcdt(n,:,:,:),frac(n)%c,n,dt) ! bc after erosion_deposition EE1
 	    enddo
 	  call state(dcdt,drdt) ! determine drdt with intermediate dcdt
 	   if (applyVOF.eq.1) then ! VOF fraction, do not solve fully variable density NavierStokes but NS with constant density in advection and diffusion; only apply variable density in gravity term

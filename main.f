@@ -186,7 +186,11 @@
 		elseif (Rheological_model.eq.'THOMAS') then
 			call Rheo_Thomas
 		endif
-		call Bingham_Papanastasiou
+		if (PAPANASTASIOUS_m>0.) then 
+		  call Bingham_Papanastasiou
+		else
+		  call Bingham_Fluent_manner
+		endif 
 	elseif (Non_Newtonian.eq.2) then
 		!Erwin ten Brummelhuis corrected for ekm_mol by following line, Lynyrd de Wit 6-10-2021 switched off:
 		!ekm=ekm-ekm_mol				!ekm_mol is replaced by the apparent viscosity,so correcting for ekm_mol from turbulence models
@@ -296,7 +300,11 @@
 			elseif (Rheological_model.eq.'SIMPLE'.and.MAXVAL(SIMPLE_climit)>1.e-12) then
 				call Simple_Bingham				
 			endif
-			call Bingham_Papanastasiou
+			if (PAPANASTASIOUS_m>0.) then 
+			  call Bingham_Papanastasiou
+			else
+			  call Bingham_Fluent_manner
+			endif 
 		elseif (Non_Newtonian.eq.2) then
 		!Erwin ten Brummelhuis corrected for ekm_mol by following line, Lynyrd de Wit 6-10-2021 switched off:
 		!ekm=ekm-ekm_mol				!ekm_mol is replaced by the apparent viscosity,so correcting for ekm_mol from turbulence models
