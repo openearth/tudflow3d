@@ -840,13 +840,12 @@
 		call check( nf90_put_var(ncid, varid20, mass_bed(1:nfrac,1:imax,1:jmax)) )
 		add_offset = MINVAL(Cnew(1:nfrac,1:imax,1:jmax,1:kmax))
 		data_range = MAXVAL(Cnew(1:nfrac,1:imax,1:jmax,1:kmax))-MINVAL(Cnew(1:nfrac,1:imax,1:jmax,1:kmax))
-		if (data_range > 0.) then
-		  scale_factor = data_range/(2.**15-1.)
+		scale_factor = data_range/(2.**15-1.)
+		if (scale_factor > 0.) then
           call check( nf90_put_var(ncid, varid4, nint((Cnew(1:nfrac,1:imax,1:jmax,1:kmax)-add_offset)/scale_factor) ))
           call check( nf90_put_var(ncid, varid9, scale_factor) )
           call check( nf90_put_var(ncid, varid10, add_offset) )
 		else
-		  scale_factor = data_range/(2.**15-1.) ! scale_factor is zero, prevent division by zero:
 		  call check( nf90_put_var(ncid, varid4, nint(0.*Cnew(1:nfrac,1:imax,1:jmax,1:kmax)) ))
 		  call check( nf90_put_var(ncid, varid9, scale_factor) )
 		  call check( nf90_put_var(ncid, varid10, add_offset) )
@@ -854,13 +853,12 @@
 		if (interaction_bed.ge.4) then 
 			add_offset = MINVAL(Clivebed(1:nfrac,1:imax,1:jmax,1:kmax))
 			data_range = MAXVAL(Clivebed(1:nfrac,1:imax,1:jmax,1:kmax))-MINVAL(Clivebed(1:nfrac,1:imax,1:jmax,1:kmax))
-			if (data_range > 0.) then
-			  scale_factor = data_range/(2.**15-1.)
+			scale_factor = data_range/(2.**15-1.)
+			if (scale_factor > 0.) then			
 				  call check( nf90_put_var(ncid, varid22, nint((Clivebed(1:nfrac,1:imax,1:jmax,1:kmax)-add_offset)/scale_factor) ))
 				  call check( nf90_put_var(ncid, varid26, scale_factor) )
 				  call check( nf90_put_var(ncid, varid27, add_offset) )
 			else
-			  scale_factor = data_range/(2.**15-1.) ! scale_factor is zero, prevent division by zero:
 				  call check( nf90_put_var(ncid, varid22, nint(0.*Clivebed(1:nfrac,1:imax,1:jmax,1:kmax)) ))
 				  call check( nf90_put_var(ncid, varid26, scale_factor) )
 				  call check( nf90_put_var(ncid, varid27, add_offset) )
@@ -879,13 +877,12 @@
 
 		add_offset = MINVAL(uu(1:imax,1:jmax,1:kmax))
 		data_range = MAXVAL(uu(1:imax,1:jmax,1:kmax))-MINVAL(uu(1:imax,1:jmax,1:kmax))
-		if (data_range > 0.) then
-			  scale_factor = data_range/(2.**15-1.)
+		scale_factor = data_range/(2.**15-1.)
+		if (scale_factor > 0.) then
 			  call check( nf90_put_var(ncid, varid11, nint((uu(1:imax,1:jmax,1:kmax)-add_offset)/scale_factor) ))
 			  call check( nf90_put_var(ncid, varid12, scale_factor) )
 			  call check( nf90_put_var(ncid, varid13, add_offset) )
-		else
-			  scale_factor = data_range/(2.**15-1.) ! scale_factor is zero, prevent division by zero:
+		else	  ! scale_factor is zero, prevent division by zero:
 			  call check( nf90_put_var(ncid, varid11, nint(0.*uu(1:imax,1:jmax,1:kmax)) ))
 			  call check( nf90_put_var(ncid, varid12, scale_factor) )
 			  call check( nf90_put_var(ncid, varid13, add_offset) )
@@ -893,13 +890,12 @@
 
 		add_offset = MINVAL(vv(1:imax,1:jmax,1:kmax))
 		data_range = MAXVAL(vv(1:imax,1:jmax,1:kmax))-MINVAL(vv(1:imax,1:jmax,1:kmax))
-		if (data_range > 0.) then
-		  scale_factor = data_range/(2.**15-1.)
+		scale_factor = data_range/(2.**15-1.)
+		if (scale_factor > 0.) then
 			  call check( nf90_put_var(ncid, varid14, nint((vv(1:imax,1:jmax,1:kmax)-add_offset)/scale_factor) ))
 			  call check( nf90_put_var(ncid, varid15, scale_factor) )
 			  call check( nf90_put_var(ncid, varid16, add_offset) )
 		else
-		  scale_factor = data_range/(2.**15-1.) ! scale_factor is zero, prevent division by zero:
 			  call check( nf90_put_var(ncid, varid14, nint(0.*vv(1:imax,1:jmax,1:kmax)) ))
 			  call check( nf90_put_var(ncid, varid15, scale_factor) )
 			  call check( nf90_put_var(ncid, varid16, add_offset) )
@@ -907,13 +903,12 @@
 
 		add_offset = MINVAL(wnew(1:imax,1:jmax,1:kmax))
 		data_range = MAXVAL(wnew(1:imax,1:jmax,1:kmax))-MINVAL(wnew(1:imax,1:jmax,1:kmax))
-		if (data_range > 0.) then
-		  scale_factor = data_range/(2.**15-1.)
+		scale_factor = data_range/(2.**15-1.)
+		if (scale_factor > 0.) then
 			  call check( nf90_put_var(ncid, varid17, nint((wnew(1:imax,1:jmax,1:kmax)-add_offset)/scale_factor) ))
 			  call check( nf90_put_var(ncid, varid18, scale_factor) )
 			  call check( nf90_put_var(ncid, varid19, add_offset) )
 		else
-		  scale_factor = data_range/(2.**15-1.) ! scale_factor is zero, prevent division by zero:
 			  call check( nf90_put_var(ncid, varid17, nint(0.*wnew(1:imax,1:jmax,1:kmax)) ))
 			  call check( nf90_put_var(ncid, varid18, scale_factor) )
 			  call check( nf90_put_var(ncid, varid19, add_offset) )

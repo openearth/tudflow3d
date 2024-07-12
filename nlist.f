@@ -40,7 +40,7 @@
       INTEGER tmax_inUpunt_tauTSHD,tmax_inVpunt_tauTSHD,tmax_inVpunt_rudder
       INTEGER tmax_inWpunt2,tmax_inVpunt2,tmax_inPpunt2,tmax_inWpunt_suction
       INTEGER nfrac,slipvel,interaction_bed,nobst,nbedplume,continuity_solver,hindered_settling,settling_along_gvector
-      INTEGER nfr_silt,nfr_sand,nfr_air,istart_morf1,istart_morf2,i_periodicx,hindered_settling_c
+      INTEGER nfr_silt,nfr_sand,nfr_air,istart_morf1(2),istart_morf2(2),i_periodicx,hindered_settling_c
       CHARACTER*256 hisfile,restart_dir,inpfile,plumetseriesfile,bcfile,plumetseriesfile2,bedlevelfile,initconditionsfile
 	  CHARACTER*256 U_b_tseriesfile,V_b_tseriesfile,W_b_tseriesfile
       CHARACTER*3 time_int,advec_conc,cutter,split_rho_cont
@@ -921,8 +921,10 @@
 	IF (bc_obst_h<0.or.bc_obst_h>depth) CALL writeerror(601)
 	IF (wallup.ne.0.and.wallup.ne.1.and.wallup.ne.2) CALL writeerror(605)
 	IF (cfixedbed<0.or.cfixedbed>1.) CALL writeerror(607)
-	IF (i_periodicx<0.or.istart_morf2<0.or.i_periodicx>imax.or.istart_morf2>imax) CALL writeerror(613)
-	IF (istart_morf1<0.or.istart_morf1>imax.or.istart_morf2<istart_morf1) CALL writeerror(613)
+	IF (i_periodicx<0.or.istart_morf2(1)<0.or.i_periodicx>imax.or.istart_morf2(1)>imax) CALL writeerror(613)
+	IF (i_periodicx<0.or.istart_morf2(2)<0.or.i_periodicx>imax.or.istart_morf2(2)>imax) CALL writeerror(613)
+	IF (istart_morf1(1)<0.or.istart_morf1(1)>imax.or.istart_morf2(1)<istart_morf1(1)) CALL writeerror(613)
+	IF (istart_morf1(2)<0.or.istart_morf1(2)>imax.or.istart_morf2(2)>istart_morf1(2)) CALL writeerror(613)
 	IF (obstfile_erodepo.ne.1.and.obstfile_erodepo.ne.2) CALL writeerror(625)
 	DEALLOCATE(obst)
 
@@ -1576,7 +1578,7 @@
 	IF (sl_relax>1.or.sl_relax<0.) CALL writeerror(107)
 	IF (bedload_formula.ne.'vanrijn2007'.and.bedload_formula.ne.'vanrijn2003'.and.bedload_formula.ne.'MeyPeMu1947'
      & .and.bedload_formula.ne.'nonenon0000')   CALL writeerror(109)
-	IF (bedslope_effect<0.or.bedslope_effect>6)
+	IF (bedslope_effect<0.or.bedslope_effect>7)
      &	CALL writeerror(143) 
 	IF (phi_sediment.lt.(4.0 * atan(1.0))) CALL writeerror(144)
 	phi_sediment = phi_sediment/180.*4.0 * atan(1.0) !change from degrees to rad 
@@ -1954,13 +1956,17 @@
 		b_update=0. 
 	ELSE
 		b_update=0. 	
-		b_update(istart_morf2:i1)=1.
-		do i=istart_morf1,istart_morf2
-		  b_update(i)=DBLE(i-istart_morf1)/DBLE(istart_morf2-istart_morf1)
-		enddo		
+		b_update(istart_morf2(1):i1)=1.
+		if (istart_morf1(2)>0) b_update(istart_morf1(2):i1)=0.
+		do i=istart_morf1(1),istart_morf2(1)
+		  b_update(i)=DBLE(i-istart_morf1(1))/DBLE(istart_morf2(1)-istart_morf1(1)) !linear grow 0 -> 1
+		enddo	
+		do i=istart_morf2(2),istart_morf1(2)
+		  b_update(i)=1.-DBLE(i-istart_morf2(2))/DBLE(istart_morf1(2)-istart_morf2(2)) !linear decrease 1 -> 0
+		enddo	
+		b_update(0:1)=0. ! no bed-update at inflow
+		b_update(imax:i1)=0. ! no bed-update at outflow			
 	ENDIF 	
-	  b_update(0:1)=0. ! no bed-update at inflow
-	  b_update(imax:i1)=0. ! no bed-update at outflow	
 !	if (cbc_perx_j(1)>0) then  !use quasi periodic bc for concentration:
 !	  b_update(0:1)=0. ! no bed-update at inflow
 !	  b_update(imax:i1)=0. ! no bed-update at outflow

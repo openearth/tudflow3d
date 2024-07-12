@@ -508,7 +508,7 @@
 	ENDIF 
 	call bound_3D(ppp)	
 	IF(time_n.ge.tstart_morf) THEN 
-	  IF (wallmodel_tau_sed.eq.3.or.wallmodel_tau_sed.eq.4.or.wallmodel_tau_sed.eq.8) THEN 
+	  IF (wallmodel_tau_sed.eq.3.or.wallmodel_tau_sed.eq.4.or.wallmodel_tau_sed.eq.8.or.wallmodel_tau_sed.eq.9) THEN 
 !			DO i=1,imax
 !				DO j=1,jmax
 !					ppp_avg2(i,j)=0.25*ppp(i-1,j,kbedp(i-1,j))+0.5*ppp(i,j,kbedp(i,j))+0.25*ppp(i+1,j,kbedp(i+1,j))
@@ -1205,7 +1205,8 @@
 					!uuRrel and vvLrel are used which are relaxated less jumpy values used for determining bedload (suspension load pickup is based on instantaneous U,V values):
 					dzbed_ds=dzbed_dx*0.5*(uuRrel+uuLrel)+dzbed_dy*0.5*(vvRrel+vvLrel) 
 					dzbed_dn=-dzbed_dx*0.5*(vvRrel+vvLrel)+dzbed_dy*0.5*(uuRrel+uuLrel) 
-					bedslope_alpha = atan(dzbed_dn/(MAX(ABS(dzbed_ds),1.e-12)*SIGN(1.,dzbed_ds)))
+					bedslope_alpha = acos(dzbed_ds/(MAX(1.e-12,dzbed_dl))) !acos((Ux*dzdx+Vy*dzdy)/(sqrt(Ux^2+Vy^2)*sqrt(dzdx^2+dxdy^2))) 
+					!bedslope_alpha = atan(dzbed_dn/(MAX(ABS(dzbed_ds),1.e-12)*SIGN(1.,dzbed_ds)))
 					sl1 = MIN(1.,(sin(bedslope_alpha))**2*(tan(bedslope_angle))**2/bedslope_mu_s**2)
 					fcor_slope=(cos(bedslope_angle)*sqrt(1.-sl1)-cos(bedslope_alpha)*sin(bedslope_angle)/bedslope_mu_s)
 !					fcor_slope=MIN(fcor_slope,1000.)
@@ -1221,7 +1222,7 @@
 						Shields_cr_den = Shields_cr_den
 						Shields_cr_num_bl=Shields_cr_num_bl*(fcor_slope+fcor_pres)
 						Shields_cr_den_bl=Shields_cr_den_bl*(fcor_slope+fcor_pres)
-					ELSEIF(bedslope_effect.eq.4) THEN	!Shields_cr and Shields_cr_bl adjusted for slope effect, only numerator, not Sh_cr in denominator)					
+					ELSEIF(bedslope_effect.eq.4.or.bedslope_effect.eq.7) THEN	!Shields_cr and Shields_cr_bl adjusted for slope effect, only numerator, not Sh_cr in denominator)					
 						Shields_cr_num = Shields_cr_num*(fcor_slope+fcor_pres)
 						Shields_cr_den = Shields_cr_den
 						Shields_cr_num_bl=Shields_cr_num_bl*(fcor_slope+fcor_pres) 
@@ -1485,7 +1486,7 @@
 				  ENDIF 
 				  fnorm=0. !default no bedslope 
 				! Bed slope effect on bedload D3D style using Bagnold (1966) for longitudinal slope and Ikeda (1982, 1988) as presented by Van Rijn (1993) for transverse slope
-				  IF (bedslope_effect.eq.3.or.bedslope_effect.eq.6) THEN !longitudinal and transverse slope corrected
+				  IF (bedslope_effect.eq.3.or.bedslope_effect.eq.6.or.bedslope_effect.eq.7) THEN !longitudinal and transverse slope corrected
 					dzbed_dx=-(zbed(i+1,j)-zbed(i-1,j))/(Rp(i+1)-Rp(i-1)) !defined with z positive down
 					dzbed_dy=-(zbed(i,j+1)-zbed(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1))) !defined with z positive down
 					!assuming bedslope_effect is dominant for bedload uuRrel and vvLrel are used which are relaxated values used for determining bedload (suspension load pickup is based on instantaneous U,V values):
@@ -1495,7 +1496,7 @@
 					dzbed_ds=MAX(dzbed_ds,-0.9*tan(phi_sediment))
 					dzbed_dn=MIN(dzbed_dn,0.9*tan(phi_sediment))
 					dzbed_dn=MAX(dzbed_dn,-0.9*tan(phi_sediment))					
-					qb=qb*(1.+alfabs_bl*(tan(phi_sediment)/(cos(atan(dzbed_ds))*(tan(phi_sediment)-dzbed_ds))-1.))
+					qb=qb*(1.+alfabs_bl*(tan(phi_sediment)/(cos(atan(dzbed_ds))*(tan(phi_sediment)-dzbed_ds))-1.)) !difference in sign -dzbed_ds compared to D3D manual, but the TUDflow3D formulation gives lower bedload for flow up-hill with dzbed_ds<0 and the D3D manual formulation would give higher bedload in that case which is incorrect
 					ustc2 = Shields_cr_bl * gvector*delta*d50
 					fnorm=alfabn_bl*sqrt(ustc2/MAX(1.e-9,ust*ust))*dzbed_dn
      &					*MIN(bednotfixed(i+1,j,kbed(i+1,j)),bednotfixed(i-1,j,kbed(i-1,j)))

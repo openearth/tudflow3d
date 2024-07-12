@@ -18,7 +18,7 @@
 
 
       subroutine advecu_HYB6(putout,Uvel,Vvel,Wvel,RHO,rhu,rhv,rhw,Ru,Rp,dr,phiv,dz,
-     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy,kbed,wf,wd,nd2,fcg)
+     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy,kbed,wf,wd,nd2,fcg,me)
       implicit none
 c
 c********************************************************************
@@ -51,7 +51,7 @@ c          putout            : advection part
 c          other parameters  : all unchanged
 c
 c********************************************************************
-      integer  i,j,k,im,ip,jm,jp,km,kp,i1,j1,k1,ib,ie,jb,je,kb,ke,kbed(0:i1,0:j1)
+      integer  i,j,k,im,ip,jm,jp,km,kp,i1,j1,k1,ib,ie,jb,je,kb,ke,kbed(0:i1,0:j1),me
       real     putout(0:i1,0:j1,0:k1),Uvel(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
      +         dr(0:i1),phiv(0:j1),dz,Ru(0:i1),Rp(0:i1)
@@ -64,6 +64,7 @@ c********************************************************************
 	real wwdd(1:3),wf(0:i1,0:j1,0:k1),numdif2,u4mag 
 	real Vvel2(-2:i1+2,-2:j1+2,-2:k1+2),Wvel2(-2:i1+2,-2:j1+2,-2:k1+2)
 	real fcg(0:i1,0:px*(j1-1)+1,0:k1),fcg_local
+	logical me2 
 	
 	Uvel2(0:i1,0:j1,0:k1)=Uvel
 	jmax=j1-1 
@@ -398,6 +399,12 @@ c********************************************************************
 		enddo
 	endif ! wf=1. is already default when wiggle_detector==0	
 	
+	if (me.eq.100.or.me.eq.101.or.me.eq.111) then 
+		me2=.true. !	me = momentum_exchange_obstacles !100 or 101 or 111 means no advection momentum exchange with bed-cells --> dUVdn = 0 (like ordinary boundary)
+	else 
+		me2=.false.
+	endif 
+	
 	  do  i=ib,ie
 		ip=i+1
 		im=i-1
@@ -418,7 +425,7 @@ c********************************************************************
 			kpp=k+2
 			kppp=k+3
 			kmm=k-2
-			kmmm=k-3		
+			kmmm=k-3	
 
 !            uuR=(Uvel(i,j,k)*rhU(i,j,k)+Uvel(ip,j,k)*rhU(ip,j,k))*Rp(ip)
 !            uuL=(Uvel(i,j,k)*rhU(i,j,k)+Uvel(im,j,k)*rhU(im,j,k))*Rp(i)
@@ -428,22 +435,23 @@ c********************************************************************
 !            wwL=(Wvel(i,j,km)*rhW(i,j,km)+Wvel(ip,j,km)*rhW(ip,j,km))
 			
             uuR=(Uvel(i,j,k)*rhU(i,j,k)+Uvel(ip,j,k)*rhU(ip,j,k))*Rp(ip)
-     &		*MIN(fcg(i,j+rank*jmax,k),fcg(ip,j+rank*jmax,k),fcg(MIN(i1,ipp),j+rank*jmax,k))
+!     &		*MIN(fcg(i,j+rank*jmax,k),fcg(ip,j+rank*jmax,k),fcg(MIN(i1,ipp),j+rank*jmax,k))
             uuL=(Uvel(i,j,k)*rhU(i,j,k)+Uvel(im,j,k)*rhU(im,j,k))*Rp(i)
-     &		*MIN(fcg(im,j+rank*jmax,k),fcg(i,j+rank*jmax,k),fcg(ip,j+rank*jmax,k))			
+!     &		*MIN(fcg(im,j+rank*jmax,k),fcg(i,j+rank*jmax,k),fcg(ip,j+rank*jmax,k))			
             vvR=(Vvel(i,j,k)*rhV(i,j,k)+Vvel(ip,j,k)*rhV(ip,j,k))
-     &		*MIN(fcg(i,j+rank*jmax,k),fcg(i,jp+rank*jmax,k),fcg(ip,j+rank*jmax,k),fcg(ip,jp+rank*jmax,k))			
+!     &		*MIN(fcg(i,j+rank*jmax,k),fcg(i,jp+rank*jmax,k),fcg(ip,j+rank*jmax,k),fcg(ip,jp+rank*jmax,k))			
             vvL=(Vvel(i,jm,k)*rhV(i,jm,k)+Vvel(ip,jm,k)*rhV(ip,jm,k))
-     &		*MIN(fcg(i,j+rank*jmax,k),fcg(i,jm+rank*jmax,k),fcg(ip,j+rank*jmax,k),fcg(ip,jm+rank*jmax,k))			
+!     &		*MIN(fcg(i,j+rank*jmax,k),fcg(i,jm+rank*jmax,k),fcg(ip,j+rank*jmax,k),fcg(ip,jm+rank*jmax,k))			
             wwR=(Wvel(i,j,k)*rhW(i,j,k)+Wvel(ip,j,k)*rhW(ip,j,k))
-     &		*MIN(fcg(i,j+rank*jmax,k),fcg(i,j+rank*jmax,kp),fcg(ip,j+rank*jmax,k),fcg(ip,j+rank*jmax,kp))			
+!     &		*MIN(fcg(i,j+rank*jmax,k),fcg(i,j+rank*jmax,kp),fcg(ip,j+rank*jmax,k),fcg(ip,j+rank*jmax,kp))			
             wwL=(Wvel(i,j,km)*rhW(i,j,km)+Wvel(ip,j,km)*rhW(ip,j,km))			
-     &		*MIN(fcg(i,j+rank*jmax,k),fcg(i,j+rank*jmax,km),fcg(ip,j+rank*jmax,k),fcg(ip,j+rank*jmax,km))			
+!     &		*MIN(fcg(i,j+rank*jmax,k),fcg(i,j+rank*jmax,km),fcg(ip,j+rank*jmax,k),fcg(ip,j+rank*jmax,km))			
 			
 				!*MIN(fc_global(i,j+rank*jmax,k),
 !     & 			fc_global(i,j+rank*jmax,kp),fc_global(i,j+1+rank*jmax,k),fc_global(i,j+1+rank*jmax,kp))	
 
-			
+		if (kbed(i,j).eq.km.and.me2) km=k !	me = momentum_exchange_obstacles !100 or 101 means no advection momentum exchange with bed-cells --> dUVdn = 0 (like ordinary boundary)
+		! wwL above is determined with unchanged km, which is consistent with ordinary boundary 			
 		numdif2=numdif*(wf(i,j,k)+wf(i+1,j,k))*0.5
 
       putout(i,j,k) = - 0.25 * (
@@ -482,7 +490,7 @@ c********************************************************************
 
 
       subroutine advecv_HYB6(putout,Uvel,Vvel,Wvel,RHO,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,
-     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy,kbed,wf,wd,fcg)
+     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy,kbed,wf,wd,fcg,me)
       implicit none
 c
 c********************************************************************
@@ -515,7 +523,7 @@ c          putout            : advection part
 c          other parameters  : all unchanged
 c
 c********************************************************************
-      integer  i,j,k,im,ip,jm,jp,km,kp,i1,j1,k1,ib,ie,jb,je,kb,ke,kbed(0:i1,0:j1)
+      integer  i,j,k,im,ip,jm,jp,km,kp,i1,j1,k1,ib,ie,jb,je,kb,ke,kbed(0:i1,0:j1),me
       real     putout(0:i1,0:j1,0:k1),Uvel(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
      +         dr(0:i1),phiv(0:j1),dz,Ru(0:i1),Rp(0:i1)
@@ -528,6 +536,7 @@ c********************************************************************
 	real*8 ubb(0:i1,0:k1),ubf(0:i1,0:k1),Vvel2(-2:i1+2,-2:j1+2,-2:k1+2)
 	real rhU(0:i1,0:j1,0:k1),rhV(0:i1,0:j1,0:k1),rhW(0:i1,0:j1,0:k1),numdif2,wf(0:i1,0:j1,0:k1)
 	real fcg(0:i1,0:px*(j1-1)+1,0:k1)
+	logical me2 
 	
 	jmax=j1-1 
 	Vvel2(0:i1,0:j1,0:k1)=Vvel
@@ -620,6 +629,12 @@ c********************************************************************
 	Vvel2(-2:i1+2,-2:j1+2,k1+1)=Vvel2(-2:i1+2,-2:j1+2,k1)
 	Vvel2(-2:i1+2,-2:j1+2,k1+2)=Vvel2(-2:i1+2,-2:j1+2,k1)
 
+	if (me.eq.100.or.me.eq.101.or.me.eq.111) then 
+		me2=.true. !	me = momentum_exchange_obstacles !100 or 101 or 111 means no advection momentum exchange with bed-cells --> dUVdn = 0 (like ordinary boundary)
+	else 
+		me2=.false.
+	endif 
+	
 	  do  i=ib,ie
 		ip=i+1
 		im=i-1
@@ -641,21 +656,24 @@ c********************************************************************
 			kppp=k+3
 			kmm=k-2
 			kmmm=k-3		
+			
            uuR=(Uvel(i,j,k)*rhU(i,j,k)+Uvel(i,jp,k)*rhU(i,jp,k))*Ru(i) !*Ru(i)
-     &		*MIN(fcg(i,j+rank*jmax,k),fcg(ip,j+rank*jmax,k),fcg(i,jp+rank*jmax,k),fcg(ip,jp+rank*jmax,k))
+!     &		*MIN(fcg(i,j+rank*jmax,k),fcg(ip,j+rank*jmax,k),fcg(i,jp+rank*jmax,k),fcg(ip,jp+rank*jmax,k))
            uuL=(Uvel(im,j,k)*rhU(im,j,k)+Uvel(im,jp,k)*rhU(im,jp,k))*Ru(im) !*Ru(im)
-     &		*MIN(fcg(i,j+rank*jmax,k),fcg(im,j+rank*jmax,k),fcg(i,jp+rank*jmax,k),fcg(im,jp+rank*jmax,k))		   
+!     &		*MIN(fcg(i,j+rank*jmax,k),fcg(im,j+rank*jmax,k),fcg(i,jp+rank*jmax,k),fcg(im,jp+rank*jmax,k))		   
     	   vvR=(Vvel(i,j,k)*rhV(i,j,k)+Vvel(i,jp,k)*rhV(i,jp,k))
-     &		*MIN(fcg(i,j+rank*jmax,k),fcg(i,jp+rank*jmax,k),fcg(i,MIN(jpp+rank*jmax,px*jmax+1),k))		   		   
+!     &		*MIN(fcg(i,j+rank*jmax,k),fcg(i,jp+rank*jmax,k),fcg(i,MIN(jpp+rank*jmax,px*jmax+1),k))		   		   
            vvL=(Vvel(i,jm,k)*rhV(i,jm,k)+Vvel(i,j,k)*rhV(i,j,k))
-     &		*MIN(fcg(i,jm+rank*jmax,k),fcg(i,j+rank*jmax,k),fcg(i,jp+rank*jmax,k))		   
+!     &		*MIN(fcg(i,jm+rank*jmax,k),fcg(i,j+rank*jmax,k),fcg(i,jp+rank*jmax,k))		   
            wwR=(Wvel(i,j,k)*rhW(i,j,k)+Wvel(i,jp,k)*rhW(i,jp,k))
-     &		*MIN(fcg(i,j+rank*jmax,k),fcg(i,j+rank*jmax,kp),fcg(i,jp+rank*jmax,k),fcg(i,jp+rank*jmax,kp))		   
+!     &		*MIN(fcg(i,j+rank*jmax,k),fcg(i,j+rank*jmax,kp),fcg(i,jp+rank*jmax,k),fcg(i,jp+rank*jmax,kp))		   
            wwL=(Wvel(i,j,km)*rhW(i,j,km)+Wvel(i,jp,km)*rhW(i,jp,km))		   
-     &		*MIN(fcg(i,j+rank*jmax,k),fcg(i,j+rank*jmax,km),fcg(i,jp+rank*jmax,k),fcg(i,jp+rank*jmax,km))		   		   
-			   
-		   
+!     &		*MIN(fcg(i,j+rank*jmax,k),fcg(i,j+rank*jmax,km),fcg(i,jp+rank*jmax,k),fcg(i,jp+rank*jmax,km))		   		   
+		
+			if (kbed(i,j).eq.km.and.me2) km=k !	me = momentum_exchange_obstacles !100 or 101 means no advection momentum exchange with bed-cells --> dUVdn = 0 (like ordinary boundary)
+			! wwL above is determined with unchanged km, which is consistent with ordinary boundary 
 		numdif2=numdif*(wf(i,j,k)+wf(i,j+1,k))*0.5
+		
 
       !putout(i,j,k) = 0.0
       putout(i,j,k) = - 0.25 * (
@@ -707,7 +725,7 @@ c********************************************************************
       end
 
       subroutine advecw_HYB6(putout,Uvel,Vvel,Wvel,RHO,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,
-     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy,kbed,wf,wd,fcg)
+     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy,kbed,wf,wd,fcg,me)
       implicit none
 c
 c********************************************************************
@@ -740,7 +758,7 @@ c          putout            : advection part
 c          other parameters  : all unchanged
 c
 c********************************************************************
-      integer  i,j,k,im,ip,jm,jp,km,kp,i1,j1,k1,ib,ie,jb,je,kb,ke,kbed(0:i1,0:j1)
+      integer  i,j,k,im,ip,jm,jp,km,kp,i1,j1,k1,ib,ie,jb,je,kb,ke,kbed(0:i1,0:j1),me
       real     putout(0:i1,0:j1,0:k1),Uvel(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
      +         dr(0:i1),phiv(0:j1),dz,Ru(0:i1),Rp(0:i1)
@@ -864,17 +882,17 @@ c********************************************************************
 			kmmm=k-3		  
 
       	    uuR=(Uvel(i,j,k)*rhU(i,j,k)+Uvel(i,j,kp)*rhU(i,j,kp))*Ru(i)
-     &		*MIN(fcg(i,j+rank*jmax,k),fcg(ip,j+rank*jmax,k),fcg(i,j+rank*jmax,kp),fcg(ip,j+rank*jmax,kp))			
+!     &		*MIN(fcg(i,j+rank*jmax,k),fcg(ip,j+rank*jmax,k),fcg(i,j+rank*jmax,kp),fcg(ip,j+rank*jmax,kp))			
       	    uuL=(Uvel(im,j,k)*rhU(im,j,k)+Uvel(im,j,kp)*rhU(im,j,kp))*Ru(im)
-     &		*MIN(fcg(i,j+rank*jmax,k),fcg(im,j+rank*jmax,k),fcg(i,j+rank*jmax,kp),fcg(im,j+rank*jmax,kp))			
+!     &		*MIN(fcg(i,j+rank*jmax,k),fcg(im,j+rank*jmax,k),fcg(i,j+rank*jmax,kp),fcg(im,j+rank*jmax,kp))			
 			vvR=(Vvel(i,j,k)*rhV(i,j,k)+Vvel(i,j,kp)*rhV(i,j,kp))
-     &		*MIN(fcg(i,j+rank*jmax,k),fcg(i,jp+rank*jmax,k),fcg(i,j+rank*jmax,kp),fcg(i,jp+rank*jmax,kp))			
+!     &		*MIN(fcg(i,j+rank*jmax,k),fcg(i,jp+rank*jmax,k),fcg(i,j+rank*jmax,kp),fcg(i,jp+rank*jmax,kp))			
     	    vvL=(Vvel(i,jm,k)*rhV(i,jm,k)+Vvel(i,jm,kp)*rhV(i,jm,kp))
-     &		*MIN(fcg(i,j+rank*jmax,k),fcg(i,jm+rank*jmax,k),fcg(i,j+rank*jmax,kp),fcg(i,jm+rank*jmax,kp))						
+!     &		*MIN(fcg(i,j+rank*jmax,k),fcg(i,jm+rank*jmax,k),fcg(i,j+rank*jmax,kp),fcg(i,jm+rank*jmax,kp))						
     	    wwR=(Wvel(i,j,k)*rhW(i,j,k)+Wvel(i,j,kp)*rhW(i,j,kp))
-     &		*MIN(fcg(i,j+rank*jmax,k),fcg(i,j+rank*jmax,kp),fcg(i,j+rank*jmax,MIN(k1,kpp)))						
+!     &		*MIN(fcg(i,j+rank*jmax,k),fcg(i,j+rank*jmax,kp),fcg(i,j+rank*jmax,MIN(k1,kpp)))						
 			wwL=(Wvel(i,j,k)*rhW(i,j,k)+Wvel(i,j,km)*rhW(i,j,km))
-     &		*MIN(fcg(i,j+rank*jmax,km),fcg(i,j+rank*jmax,k),fcg(i,j+rank*jmax,kp))						
+!     &		*MIN(fcg(i,j+rank*jmax,km),fcg(i,j+rank*jmax,k),fcg(i,j+rank*jmax,kp))						
 
 			
 			numdif2=numdif*(wf(i,j,k)+wf(i,j,k+1))*0.5

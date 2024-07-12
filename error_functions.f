@@ -375,7 +375,7 @@
 		write(*,*) '# av_slope_z                                     #'		
 	CASE(143)
 		write(*,*) '# namelist &constants                            #'			
-		write(*,*) '# bedslope_effect must be 0,1,2,3,4,5,6          #'		
+		write(*,*) '# bedslope_effect must be 0,1,2,3,4,5,6,7        #'		
 		write(*,*) '# 0 (default) no bedslope effect                 #'		
 		write(*,*) '# 1 = adjust Shields_cr following Roulund,       #'		
 		write(*,*) '# Fredsoe etal. 2004 for suspension and bedload  #'			
@@ -670,7 +670,9 @@
 	CASE(613)
 		write(*,*) '# namelist &ambient                              #'			
 		write(*,*) '# istart_morf1, istart_morf2, and/or i_periodicx must be >0 and <imax  #'		
-		write(*,*) '# and it should be: istart_morf2 > istart_morf1  #'		
+		write(*,*) '# and it should be: istart_morf2(1) > istart_morf1(1)   #'		
+		write(*,*) '# and if also no-bed-update zone at right end of domain #'
+		write(*,*) '# then it should be: istart_morf2(2) < istart_morf1(2)  #'		
 	CASE(614)
 		write(*,*) '# namelist &ambient                              #'			
 		write(*,*) '# kn_flow_file contains NaN or negative value    #'			

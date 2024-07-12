@@ -492,9 +492,13 @@
 		
 		if (time_np.ge.tstart_morf2) then 
 			b_update=0. 	
-			b_update(istart_morf2:i1)=1.
-			do i=istart_morf1,istart_morf2
-			  b_update(i)=DBLE(i-istart_morf1)/DBLE(istart_morf2-istart_morf1)
+			b_update(istart_morf2(1):i1)=1.
+			if (istart_morf1(2)>0) b_update(istart_morf1(2):i1)=0.
+			do i=istart_morf1(1),istart_morf2(1)
+			  b_update(i)=DBLE(i-istart_morf1(1))/DBLE(istart_morf2(1)-istart_morf1(1)) !linear grow 0 -> 1
+			enddo	
+			do i=istart_morf2(2),istart_morf1(2)
+			  b_update(i)=1.-DBLE(i-istart_morf2(2))/DBLE(istart_morf1(2)-istart_morf2(2)) !linear decrease 1 -> 0
 			enddo	
 		    b_update(0:1)=0. ! no bed-update at inflow
 		    b_update(imax:i1)=0. ! no bed-update at outflow			

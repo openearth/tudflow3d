@@ -80,7 +80,9 @@ c	x,y,z coordinate system, not in r,theta,z like this code
 
 c 	influence of waves on lateral boundaries:
 	! 10-3-2020 noted that perhaps exact location wave inflow bc is not consistent with staggered layout near boundary, have to research later [Ub1in,Vb1in,Wb1in are defined at Uloc; Ub2in,Vb2in,Wb2in are defined at Vloc; but Ub1,Vb1,Wb1,Ub2,Vb2,Wb2 defined at u,v,w loc respectively and they are added without correcting
-	IF(Hs>0.) THEN
+	! 24-6-2024: Test to remove wave flow component on lateral boundaries. Wave flow boundary conditions on lateral xy-boundaries can give trouble with the sediment mass balance because waves can result in negative outflow at x=xmax but this is overruled in the code for stability, but as a result the influx of sediment is not taken into account which results in loss of sediment in the CFD domain over time.
+	IF(.false.) THEN 
+!	IF(Hs>0.) THEN
 	 DO k=0,k1
 	  DO i=0,i1
 	    IF (rank.eq.0) THEN
@@ -767,7 +769,9 @@ c	x,y,z coordinate system, not in r,theta,z like this code
 	endif 
 	
 c 	influence of waves on lateral boundaries:
-	IF(Hs>0.) THEN
+	! 24-6-2024: Test to remove wave flow component on lateral boundaries. Wave flow boundary conditions on lateral xy-boundaries can give trouble with the sediment mass balance because waves can result in negative outflow at x=xmax but this is overruled in the code for stability, but as a result the influx of sediment is not taken into account which results in loss of sediment in the CFD domain over time.
+	IF(.false.) THEN 
+!	IF(Hs>0.) THEN
 	 DO k=0,k1
 	  DO i=0,i1
 	    IF (rank.eq.0) THEN
@@ -1851,7 +1855,9 @@ c	x,y,z coordinate system, not in r,theta,z like this code
 	ENDIF 
 	
 c 	influence of waves on lateral boundaries:
-	IF(Hs>0.) THEN
+	! 24-6-2024: Test to remove wave flow component on lateral boundaries. Wave flow boundary conditions on lateral xy-boundaries can give trouble with the sediment mass balance because waves can result in negative outflow at x=xmax but this is overruled in the code for stability, but as a result the influx of sediment is not taken into account which results in loss of sediment in the CFD domain over time.
+	IF(.false.) THEN 
+!	IF(Hs>0.) THEN
 	 DO k=0,k1
 	  DO i=0,i1
 	    IF (rank.eq.0) THEN

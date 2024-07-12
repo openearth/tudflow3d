@@ -708,7 +708,7 @@ c          putout            : advection and diffusion part
 c          other parameters  : all unchanged
 c
 c*****************************************************************
-      integer  im,ip,jm,jp,km,kp,ib,ie,jb,je,kb,ke
+      integer  im,ip,jm,jp,km,kp,ib,ie,jb,je,kb,ke,km2
       real     putout(0:i1,0:j1,0:k1),Uvel(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
      +         eppo,epmo,epop,epom,drp,dzi,divergentie
@@ -716,12 +716,18 @@ c*****************************************************************
       real divvR,divvL,CNz,CNx,CNy
       integer n,t
 	  real fcg2(0:i1,0:px*jmax+1,0:k1)
+	  logical me2
 
 	  if (momentum_exchange_obstacles.eq.100.or.momentum_exchange_obstacles.eq.110) then 
 		fcg2=fc_global
 	  else 
 		fcg2=1. !all momentum interactions are active
 	  endif	  
+	if (momentum_exchange_obstacles.eq.111) then 
+		me2=.true. !	!111 means dUVdn = 0 for cells directly above bed
+	else 
+		me2=.false.
+	endif 	  
 
 	IF (CNdiffz.eq.1) THEN !CN diff in z-dir is half old, half new timestep (this is half old timestep)
 	  CNz=0.5
@@ -752,7 +758,9 @@ c*****************************************************************
 		do k=kb,ke !k=MAX(kb,kbed(i,k)),ke !kb,ke
 		kp=k+1
 		km=k-1
-	  
+  	    km2=km		  
+		if (kbed(i,j).eq.km2.and.me2) km2=k !	--> dUVdn = 0 (like ordinary boundary)
+		  
       eppo = 0.25 * (
      +   ekm(i,j,k) + ekm(ip,j,k) + ekm(ip,jp,k) + ekm(i,jp,k)  )
      + * MIN(fcg2(i,j+rank*jmax,k),fcg2(ip,j+rank*jmax,k),fcg2(ip,jp+rank*jmax,k),fcg2(i,jp+rank*jmax,k))	 
@@ -798,7 +806,7 @@ c*****************************************************************
      3 ( epop *CNz* ( (Uvel(i,j,kp)  - Uvel(i,j,k) ) * dzi
      3            + (Wvel(ip,j,k)  - Wvel(i,j,k) ) / (Rp(ip) - Rp(i))
      3          )             -
-     3   epom *CNz* (   (Uvel(i,j,k)   - Uvel(i,j,km)) * dzi 
+     3   epom *CNz* (   (Uvel(i,j,k)   - Uvel(i,j,km2)) * dzi 
      3            + (Wvel(ip,j,km) - Wvel(i,j,km)) / (Rp(ip) - Rp(i))
      3          ) ) * dzi
      +              -
@@ -871,7 +879,7 @@ c          incorporated into the radial derivative to avoid
 c          interpolation problems at the centerline.
 c
 c*****************************************************************
-      integer  im,ip,jm,jp,km,kp,ib,ie,jb,je,kb,ke
+      integer  im,ip,jm,jp,km,kp,ib,ie,jb,je,kb,ke,km2
       real     putout(0:i1,0:j1,0:k1),Uvel(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
      +         eppo,empo,eopp,eopm,dzi
@@ -879,13 +887,19 @@ c*****************************************************************
       integer n,t
 	real divvL,divvR,CNz,CNx,CNy
 	  real fcg2(0:i1,0:px*jmax+1,0:k1)
+	  logical me2
 
 	  if (momentum_exchange_obstacles.eq.100.or.momentum_exchange_obstacles.eq.110) then 
 		fcg2=fc_global
 	  else 
 		fcg2=1. !all momentum interactions are active
 	  endif	
-	  
+	if (momentum_exchange_obstacles.eq.111) then 
+		me2=.true. !	!111 means dUVdn = 0 for cells directly above bed
+	else 
+		me2=.false.
+	endif 
+	
 	IF (CNdiffz.eq.1) THEN !CN diff in z-dir is half old, half new timestep (this is half old timestep)
 	  CNz=0.5
 	ELSEIF (CNdiffz.eq.2.or.CNdiffz.eq.12) THEN !CN diff in z-dir is 100% new timestep (Euler backward)
@@ -914,7 +928,9 @@ c*****************************************************************
 		jm=j-1
 	      do k=kb,ke !MAX(kb,kbed(i,k)),ke !do k=kb,ke
 	      kp=k+1
-	      km=k-1		
+	      km=k-1
+		  km2=km		  
+		  if (kbed(i,j).eq.km2.and.me2) km2=k !	--> dUVdn = 0 (like ordinary boundary)
 
       eppo = 0.25 * (
      +   ekm(i,j,k) + ekm(ip,j,k) + ekm(ip,jp,k) + ekm(i,jp,k)  )
@@ -972,7 +988,7 @@ c*****************************************************************
      3 (   eopp * CNz*(  (Vvel(i,j,kp)  - Vvel(i,j,k) ) * dzi
      3              +(Wvel(i,jp,k)  - Wvel(i,j,k) ) / (Rp(i)*(phip(jp)-phip(j)))
      3            ) -
-     3     eopm * CNz*(  (Vvel(i,j,k)   - Vvel(i,j,km)) * dzi
+     3     eopm * CNz*(  (Vvel(i,j,k)   - Vvel(i,j,km2)) * dzi
      3              +(Wvel(i,jp,km) - Wvel(i,j,km)) / (Rp(i)*(phip(jp)-phip(j)))
      3            )  ) * dzi
 
@@ -1041,6 +1057,7 @@ c*****************************************************************
 	  else 
 		fcg2=1. !all momentum interactions are active
 	  endif	
+
 	  
 	IF (CNdiffz.eq.1) THEN !CN diff in z-dir is half old, half new timestep (this is half old timestep)
 	  CNz=0.5

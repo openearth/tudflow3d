@@ -41,7 +41,7 @@ c
       implicit none
 !       include 'param.txt'
 !       include 'common.txt'
-      integer  ib,ie,jb,je,kb,ke,n,t
+      integer  ib,ie,jb,je,kb,ke,n,t,me
       real     doldc(nfrac,0:i1,0:j1,0:k1),dnewc(nfrac,0:i1,0:j1,0:k1)
       real     dold(0:i1,0:j1,0:k1),dnew(0:i1,0:j1,0:k1)
       real     wsed(nfrac,0:i1,0:j1,0:k1),sumWkm(0:i1,0:j1,0:k1)
@@ -56,6 +56,8 @@ c
 !	real     Diffcof(0:i1,0:j1,0:k1)
 
 !	Diffcof=ekm/Sc/Rnew
+
+	me = momentum_exchange_obstacles !100 or 101 or 111 means no advection momentum exchange with bed-cells with HYB6
 
 c********************************************************************
 c     CALCULATE slipvelocity
@@ -121,7 +123,7 @@ c********************************************************************
      & periodicx,periodicy,wf,wd,numdiff2)
 	elseif(convection.eq.'HYB6') then
       call advecu_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2,fc_global)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2,fc_global,me)
 	elseif(convection.eq.'HYB4') then
       call advecu_HYB4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2)	 
@@ -170,7 +172,7 @@ c********************************************************************
      & periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecv_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global,me)
 	elseif(convection.eq.'HYB4') then
       call advecv_HYB4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -218,7 +220,7 @@ c********************************************************************
      &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecw_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global,me)
 	elseif(convection.eq.'HYB4') then
       call advecw_HYB4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -332,7 +334,7 @@ c
       implicit none
 !       include 'param.txt'
 !       include 'common.txt'
-      integer  ib,ie,jb,je,kb,ke,n,t
+      integer  ib,ie,jb,je,kb,ke,n,t,me
       real     doldc(nfrac,0:i1,0:j1,0:k1),dnewc(nfrac,0:i1,0:j1,0:k1)
       real     dold(0:i1,0:j1,0:k1),dnew(0:i1,0:j1,0:k1)
       real     wsed(nfrac,0:i1,0:j1,0:k1),sumWkm(0:i1,0:j1,0:k1)
@@ -349,7 +351,7 @@ c
 !	Diffcof=ekm/Sc/Rnew 
 
 
-	
+	me = momentum_exchange_obstacles !100 or 101 or 111 means no advection momentum exchange with bed-cells with HYB6
 c********************************************************************
 c     CALCULATE slipvelocity
 c********************************************************************
@@ -438,7 +440,7 @@ c********************************************************************
      & ,periodicx,periodicy,wf,wd,numdiff2)
 	elseif(convection.eq.'HYB6') then
       call advecu_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2,fc_global)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2,fc_global,me)
 	elseif(convection.eq.'HYB4') then
       call advecu_HYB4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2)	 
@@ -490,7 +492,7 @@ c********************************************************************
      & periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecv_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global,me)
 	elseif(convection.eq.'HYB4') then
       call advecv_HYB4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -538,7 +540,7 @@ c********************************************************************
      &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecw_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global,me)
 	elseif(convection.eq.'HYB4') then
       call advecw_HYB4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -658,7 +660,7 @@ c
 	  include 'mpif.h'
 !       include 'param.txt'
 !       include 'common.txt'
-      integer  ib,ie,jb,je,kb,ke,n,t,kpp,kp,km,ip,im,jp,jm
+      integer  ib,ie,jb,je,kb,ke,n,t,kpp,kp,km,ip,im,jp,jm,me
       real     doldc(nfrac,0:i1,0:j1,0:k1),dnewc(nfrac,0:i1,0:j1,0:k1)
       real     dold(0:i1,0:j1,0:k1),dnew(0:i1,0:j1,0:k1),dnew2(0:i1,0:j1,0:k1)
       real     wsed(nfrac,0:i1,0:j1,0:k1),sumWkm(0:i1,0:j1,0:k1)
@@ -683,13 +685,8 @@ c
 	real ddd1(0:i1,0:j1,0:k1),ddd2(0:i1,0:j1,0:k1),ddd3(0:i1,0:j1,0:k1)
 !	real eee1(0:i1,0:j1,0:k1),eee2(0:i1,0:j1,0:k1),eee3(0:i1,0:j1,0:k1) !als deze twee regels uitgezet worden dan komen er andere uitkomsten bij CN31?
 !	real fff1(0:i1,0:j1,0:k1),fff2(0:i1,0:j1,0:k1),fff3(0:i1,0:j1,0:k1)
-	real fcg(0:i1,0:px*jmax+1,0:k1)
 
-	if (momentum_exchange_obstacles.eq.100.or.momentum_exchange_obstacles.eq.101) then  !no advection momentum exchange with obstacle-cells
-		fcg=fc_global
-	else 
-		fcg=1. !all momentum interactions are active
-	endif
+	me = momentum_exchange_obstacles !100 or 101 or 111 means no advection momentum exchange with bed-cells with HYB6
 
 c********************************************************************
 c     CALCULATE coefficients for AB3 interpolation with variable dt
@@ -1155,7 +1152,7 @@ c********************************************************************
      & ,periodicx,periodicy,wf,wd,numdiff2)
 	elseif(convection.eq.'HYB6') then
       call advecu_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2,fcg)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2,fc_global,me)
 	elseif(convection.eq.'HYB4') then
       call advecu_HYB4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2)	 
@@ -1249,7 +1246,7 @@ c********************************************************************
      & ,periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecv_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,fcg)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global,me)
 	elseif(convection.eq.'HYB4') then
       call advecv_HYB4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -1342,7 +1339,7 @@ c********************************************************************
      &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecw_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,fcg)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global,me)
 	elseif(convection.eq.'HYB4') then
       call advecw_HYB4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -1847,7 +1844,7 @@ c
       implicit none
 !       include 'param.txt'
 !       include 'common.txt'
-      integer  ib,ie,jb,je,kb,ke,n,t,kpp,km,kp
+      integer  ib,ie,jb,je,kb,ke,n,t,kpp,km,kp,me
       real     wsed(nfrac,0:i1,0:j1,0:k1),sumWkm(0:i1,0:j1,0:k1)
       real     c2,c3,a21,a31,a32,b1,b2,b3,cn1,cn2,cn3
 	real   b1tvd,b2tvd,b3tvd
@@ -1885,6 +1882,7 @@ c
 !	dVdt1=dvdt
 !	dWdt1=dwdt
 
+	me = momentum_exchange_obstacles !100 or 101 or 111 means no advection momentum exchange with bed-cells with HYB6
 
 !	Diffcof=ekm/Sc/Rnew 
 
@@ -2097,7 +2095,7 @@ c********************************************************************
      & periodicx,periodicy,wf,wd,numdiff2)
 	elseif(convection.eq.'HYB6') then
       call advecu_HYB6(k1u,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2,fc_global)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2,fc_global,me)
 	elseif(convection.eq.'HYB4') then
       call advecu_HYB4(k1u,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2)	 
@@ -2126,7 +2124,7 @@ c********************************************************************
      & periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecv_HYB6(k1v,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global,me)
 	elseif(convection.eq.'HYB4') then
       call advecv_HYB4(k1v,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -2155,7 +2153,7 @@ c********************************************************************
      &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecw_HYB6(k1w,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global,me)
 	elseif(convection.eq.'HYB4') then
       call advecw_HYB4(k1w,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -2585,7 +2583,7 @@ c********************************************************************
      & periodicx,periodicy,wf,wd,numdiff2)
 	elseif(convection.eq.'HYB6') then
       call advecu_HYB6(k2u,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2,fc_global)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2,fc_global,me)
 	elseif(convection.eq.'HYB4') then
       call advecu_HYB4(k2u,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2)	 
@@ -2614,7 +2612,7 @@ c********************************************************************
      & periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecv_HYB6(k2v,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global,me)
 	elseif(convection.eq.'HYB4') then
       call advecv_HYB4(k2v,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -2643,7 +2641,7 @@ c********************************************************************
      &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecw_HYB6(k2w,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global,me)
 	elseif(convection.eq.'HYB4') then
       call advecw_HYB4(k2w,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -3075,7 +3073,7 @@ c********************************************************************
      & periodicx,periodicy,wf,wd,numdiff2)
 	elseif(convection.eq.'HYB6') then
       call advecu_HYB6(k3u,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2,fc_global)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2,fc_global,me)
 	elseif(convection.eq.'HYB4') then
       call advecu_HYB4(k3u,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2)	 
@@ -3105,7 +3103,7 @@ c********************************************************************
      & periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecv_HYB6(k3v,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global,me)
 	elseif(convection.eq.'HYB4') then
       call advecv_HYB4(k3v,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -3134,7 +3132,7 @@ c********************************************************************
      &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecw_HYB6(k3w,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global,me)
 	elseif(convection.eq.'HYB4') then
       call advecw_HYB4(k3w,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -3350,7 +3348,7 @@ c
       implicit none
 !       include 'param.txt'
 !       include 'common.txt'
-      integer  ib,ie,jb,je,kb,ke,n,t,kpp,kp,km
+      integer  ib,ie,jb,je,kb,ke,n,t,kpp,kp,km,me
       real     doldc(nfrac,0:i1,0:j1,0:k1),dnewc(nfrac,0:i1,0:j1,0:k1)
       real     dold(0:i1,0:j1,0:k1),dnew(0:i1,0:j1,0:k1)
 	  real     wsed(nfrac,0:i1,0:j1,0:k1),sumWkm(0:i1,0:j1,0:k1)
@@ -3360,14 +3358,10 @@ c
 	real utr(0:i1,0:j1,0:k1),vtr(0:i1,0:j1,0:k1),wtr(0:i1,0:j1,0:k1)	
 !		real dUdt1(0:i1,0:j1,0:k1),dVdt1(0:i1,0:j1,0:k1),dWdt1(0:i1,0:j1,0:k1)
 	real ws(0:i1,0:j1,0:k1),gvector,CNz
-	real fcg(0:i1,0:px*jmax+1,0:k1)
 
-	if (momentum_exchange_obstacles.eq.100.or.momentum_exchange_obstacles.eq.101) then  !no advection momentum exchange with obstacle-cells
-		fcg=fc_global
-	else 
-		fcg=1. !all momentum interactions are active
-	endif
-	
+
+	me = momentum_exchange_obstacles !100 or 101 or 111 means no advection momentum exchange with bed-cells with HYB6
+
 
 	dcdt = 0.
 	sumWkm = 0.
@@ -3562,7 +3556,7 @@ c********************************************************************
      & periodicx,periodicy,wf,wd,numdiff2)
 	elseif(convection.eq.'HYB6') then
       call advecu_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2,fcg)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2,fc_global,me)
 	elseif(convection.eq.'HYB4') then
       call advecu_HYB4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2)	 
@@ -3608,7 +3602,7 @@ c********************************************************************
      &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecv_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,
-     & rank,px,numdiff,periodicx,periodicy,kbed,wf,wd,fcg)
+     & rank,px,numdiff,periodicx,periodicy,kbed,wf,wd,fc_global,me)
 	elseif(convection.eq.'HYB4') then
       call advecv_HYB4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,
      & rank,px,numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -3651,7 +3645,7 @@ c********************************************************************
      &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecw_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,fcg)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global,me)
 	elseif(convection.eq.'HYB4') then
       call advecw_HYB4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)
