@@ -371,9 +371,11 @@ c******************************************************************
 		rold =rho_b
 		rnew =rho_b
 		drdt=rho_b
-		rhoU=0.
-		rhoV=0.
-		rhoW=0.
+		if (transporteq_fracs.eq.'massfrac') then
+			rhoU=0.
+			rhoV=0.
+			rhoW=0.
+		endif 
 
 
 	! rotation ship for ambient side current
@@ -1349,12 +1351,11 @@ C ...  Locals
 !	REAL*4 Ppropx_dummy(0:i1,0:px*jmax+1,0:k1)
 !	REAL*4 Ppropy_dummy(0:i1,0:px*jmax+1,0:k1)
 !	REAL*4 Ppropz_dummy(0:i1,0:px*jmax+1,0:k1)
-	INTEGER i_inVpunt_rudder_dummy(i1*px*k1)
-	INTEGER j_inVpunt_rudder_dummy(i1*px*k1)
-	INTEGER k_inVpunt_rudder_dummy(i1*px*k1)
+	INTEGER*2 i_inVpunt_rudder_dummy(i1*px*k1)
+	INTEGER*2 j_inVpunt_rudder_dummy(i1*px*k1)
+	INTEGER*2 k_inVpunt_rudder_dummy(i1*px*k1)
         integer ileng,ierr,itag,status(MPI_STATUS_SIZE)
 
-	
 	
 	! rotation ship for ambient side current
 	if (LOA<0.) then 
@@ -1566,9 +1567,9 @@ C ...  Locals
 
 	IF (LOA>0.) THEN
 	call mpi_bcast(tel1,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-	call mpi_bcast(i_inVpunt_rudder_dummy,i1*px*k1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-	call mpi_bcast(j_inVpunt_rudder_dummy,i1*px*k1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
-	call mpi_bcast(k_inVpunt_rudder_dummy,i1*px*k1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+	call mpi_bcast(i_inVpunt_rudder_dummy,i1*px*k1,MPI_INTEGER2,0,MPI_COMM_WORLD,ierr)
+	call mpi_bcast(j_inVpunt_rudder_dummy,i1*px*k1,MPI_INTEGER2,0,MPI_COMM_WORLD,ierr)
+	call mpi_bcast(k_inVpunt_rudder_dummy,i1*px*k1,MPI_INTEGER2,0,MPI_COMM_WORLD,ierr)
 
 	
 	IF (rank.eq.0) THEN

@@ -1,3 +1,3 @@
-      gitversion = '36d4834'
+      gitversion = '706fcdc'
       url = 'https://github.com/openearth/tudflow3d'
-      date_make = 'Mon Jul  8 22:41:17 CEST 2024'
+      date_make = 'Mon Aug 26 22:14:57 CEST 2024'

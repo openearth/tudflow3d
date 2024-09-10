@@ -531,8 +531,8 @@
      &			/rcfd(i,j,kbedp(i,j))			
 !			Fix = (ppp_avg(i+1,j)-ppp_avg(i-1,j))/sqrt((Rp(i+1)-Rp(i-1))**2+(zbed(i+1,j)-zbed(i-1,j))**2)/rcfd(i,j,kbedp(i,j))
 !			Fiy = (ppp_avg(i,j+1)-ppp_avg(i,j-1))/sqrt((Rp(i)*(phip(j+1)-phip(j-1)))**2+(zbed(i,j+1)-zbed(i,j-1))**2)/rcfd(i,j,kbedp(i,j))			
-			TBLEsed_dpdx(i,j)=TBLEsed_grad_relax*Fix+(1.-TBLE_grad_relax)*TBLEsed_dpdx(i,j)	
-			TBLEsed_dpdy(i,j)=TBLEsed_grad_relax*Fiy+(1.-TBLE_grad_relax)*TBLEsed_dpdy(i,j)		
+			TBLEsed_dpdx(i,j)=TBLEsed_grad_relax*Fix+(1.-TBLEsed_grad_relax)*TBLEsed_dpdx(i,j)	
+			TBLEsed_dpdy(i,j)=TBLEsed_grad_relax*Fiy+(1.-TBLEsed_grad_relax)*TBLEsed_dpdy(i,j)		
 		  ENDDO 
 		ENDDO 
 	  ENDIF
@@ -1031,14 +1031,14 @@
 					IF (wallmodel_tau_sed.eq.3) THEN
 						CALL wall_fun_TBL_Ploc(uu/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,vv/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,
      & 			 		TBLEsed_dpdx(i,j),TBLEsed_dpdy(i,j),rho_b,2.*distance_to_bed,frac(n)%kn_sed,kappa,nu_sediment_pickup,
-     &	 				ust_frac_old(n,i,j),ust)
+     &	 				ust_frac_old(n,i,j),ust,nWM)
 					ELSEIF (wallmodel_tau_sed.eq.4) THEN
 						CALL wall_fun_TBL2_Ploc(uu/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,vv/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,
      & 			 		TBLEsed_dpdx(i,j),TBLEsed_dpdy(i,j),rho_b,2.*distance_to_bed,frac(n)%kn_sed,kappa,nu_sediment_pickup,
-     &	 				ust_frac_old(n,i,j),ust)
+     &	 				ust_frac_old(n,i,j),ust,nWM)
 					ELSEIF (wallmodel_tau_sed.eq.5) THEN
 						CALL wall_fun_VD_Ploc(uu/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,vv/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,
-     & 				rho_b,2.*distance_to_bed,frac(n)%kn_sed,kappa,nu_sediment_pickup,ust_frac_old(n,i,j),ust)	
+     & 				rho_b,2.*distance_to_bed,frac(n)%kn_sed,kappa,nu_sediment_pickup,ust_frac_old(n,i,j),ust,nWM)	
 					ELSEIF (wallmodel_tau_sed.eq.8) THEN
 						CALL wall_fun_GWF_Ploc(uu/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,vv/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,
      & 			 	TBLEsed_dpdx(i,j),TBLEsed_dpdy(i,j),rho_b,2.*distance_to_bed,frac(n)%kn_sed,kappa,nu_sediment_pickup,ust)
@@ -1502,6 +1502,10 @@
      &					*MIN(bednotfixed(i+1,j,kbed(i+1,j)),bednotfixed(i-1,j,kbed(i-1,j)))
      &                  *MIN(bednotfixed(i,j+1,kbed(i,j+1)),bednotfixed(i,j-1,kbed(i,j-1)))  
 				  ENDIF
+				ELSE 
+				  qb=0.
+				  fnorm=0.
+				  ust_bl_new(i,j)=0.
 				ENDIF 
 !				!temporary write statements to check bedslope parameters:
 !				wf(i,j,1)=dzbed_dx

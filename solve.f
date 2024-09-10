@@ -1637,7 +1637,7 @@ c********************************************************************
 !!!					dVdt=dVdt+0.25*dt*dt*(eee1*eee2+eee1*eee3+eee2*eee3)+0.125*dt*dt*dt*(eee1*eee2*eee3)-CNdiff_factor*dt*dnew2/rhV 
 !!!					dWdt=dWdt+0.25*dt*dt*(fff1*fff2+fff1*fff3+fff2*fff3)+0.125*dt*dt*dt*(fff1*fff2*fff3)-CNdiff_factor*dt*dold/rhW	 				
 !!!				endif 
-				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,
      & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)	
 				CALL diffuvw_ydir_CDS2_CNimpl
 				
@@ -1647,7 +1647,7 @@ c********************************************************************
 				dUdt = dUdt - CNdiff_factor*dt*dnew/rhU  
 				dVdt = dVdt - CNdiff_factor*dt*dnew2/rhV
 				dWdt = dWdt - CNdiff_factor*dt*dold/rhW
-				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,
      & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)		 
 				CALL diffuvw_xdir_CDS2_CNimpl 
 				
@@ -1656,7 +1656,7 @@ c********************************************************************
 				dUdt = dUdt - CNdiff_factor*dt*dnew/rhU  
 				dVdt = dVdt - CNdiff_factor*dt*dnew2/rhV
 				dWdt = dWdt - CNdiff_factor*dt*dold/rhW			
-				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,
      & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)								
 				CALL diffuvw_zdir_CDS2_CNimpl
 !			ELSEIF (dir_order.eq.2) THEN  
@@ -1711,11 +1711,11 @@ c********************************************************************
 				dUdt = dUdt + dt*CNdiff_factor/3.*dnew/rhU  
 				dVdt = dVdt + dt*CNdiff_factor/3.*dnew2/rhV
 				dWdt = dWdt + dt*CNdiff_factor/3.*dold/rhW			
-				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,
      & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)	
 				CNdiffz=12 !to get correct implicit diff from diffuvw_.dir_CDS2_CNimpl
 				CALL diffuvw_ydir_CDS2_CNimpl
-				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,
      & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)				
 				! Chang 1991 ADI method 
 				CNdiffz=0 !to get 100% explicit diff from diffuvw_.dir_CDS2_CNexpl
@@ -1727,11 +1727,11 @@ c********************************************************************
 				dUdt = dUdt + dt*CNdiff_factor/3.*ddd1/rhU  
 				dVdt = dVdt + dt*CNdiff_factor/3.*ddd2/rhV
 				dWdt = dWdt + dt*CNdiff_factor/3.*ddd3/rhW	
-				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,
      & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
 				CNdiffz=12 !to get correct implicit diff from diffuvw_.dir_CDS2_CNimpl	 
 				CALL diffuvw_xdir_CDS2_CNimpl 
-				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,
      & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)				
 				! Chang 1991 ADI method 
 				CNdiffz=0 !to get 100% explicit diff from diffuvw_.dir_CDS2_CNexpl
@@ -1743,7 +1743,7 @@ c********************************************************************
 				dUdt = dUdt + dt*CNdiff_factor/3.*ddd1/rhU  
 				dVdt = dVdt + dt*CNdiff_factor/3.*ddd2/rhV
 				dWdt = dWdt + dt*CNdiff_factor/3.*ddd3/rhW	
-				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,
      & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
 				CNdiffz=12 !to get correct implicit diff from diffuvw_.dir_CDS2_CNimpl
 				CALL diffuvw_zdir_CDS2_CNimpl
@@ -1764,7 +1764,7 @@ c********************************************************************
 				dVdt = dVdt + (1.-CNdiff_factor)*dt*dnew2/rhV
 				dWdt = dWdt + (1.-CNdiff_factor)*dt*dold/rhW		
 			ENDIF 
-			call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+			call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,
      & 		Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
 			CALL diffuvw_CDS2_3DCNimpl 
 			
@@ -4493,7 +4493,8 @@ c
         enddo
       enddo
 	 ENDIF
-	 call bound_rhoU(dUdt,dVdt,dWdt,drdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
+	 call bound_rhoU(dUdt,dVdt,dWdt,drdt,MIN(0,slip_bot),monopile,time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,
+     &	 Ub3new,Vb3new,Wb3new)
 	 IF (oPRHO.eq.1) THEN !use Unew for contribution of u*div(rho)
 			upred = Unew
 			vpred = Vnew
@@ -6354,6 +6355,7 @@ C.. Termination and release of memory
 !		Lynyrd de Wit, September 2015
 
       USE nlist
+!	  USE fftpk90
       !USE sparse_matrix
 	  
       implicit none
@@ -6378,6 +6380,7 @@ C.. All other variables
         INTEGER maxfct, mnum, mtype, phase, n, nrhs, error, msglvl
         !INTEGER iparm(64)
         INTEGER idum(1)
+		real, dimension(:), allocatable :: wk2
 		
 		
 	 
@@ -6420,8 +6423,6 @@ C.. Fill all arrays containing matrix data.
         mtype = 11 !11 !1 !11 !-2 ! symmetric, indefinite !3-9-2020 switch to 11 nonsymmetric for k_pzero>1
 		
 		
-	!   set up lookup tables
-      call vcosqi(kmax,wk)
       do j=1,jmax
          do i=1,imax
          ipos = (j-1)*imax + i
@@ -6430,8 +6431,16 @@ C.. Fill all arrays containing matrix data.
             enddo
          enddo
       enddo
-
-      call vcosqb(imax*jmax,kmax,vfftk,rhs,imax*jmax,wk)
+	  
+!	  if (fft_routines.eq.1) then !good-old vfft.f 
+		call vcosqi(kmax,wk) !   set up lookup tables
+		call vcosqb(imax*jmax,kmax,vfftk,rhs,imax*jmax,wk)
+!	  elseif (fft_routines.eq.2) then !vfftpack_netlib_Clarke 
+!		allocate(wk2(ftqiq(kmax)))
+!		call ftqi (wk2) !   set up lookup tables
+!		call ftqcb (vfftk,wk2) !  ftqcb is similar to vcosqb
+!	  endif 
+		
 
       do j=1,jmax
          do i=1,imax
@@ -6492,7 +6501,12 @@ C.. Fill all arrays containing matrix data.
             enddo
          enddo
       enddo
-      call vcosqf(imax*jmax,kmax,vfftk,rhs,imax*jmax,wk)
+!	  if (fft_routines.eq.1) then !good-old vfft.f 
+		call vcosqf(imax*jmax,kmax,vfftk,rhs,imax*jmax,wk)
+!	  elseif (fft_routines.eq.2) then !vfftpack_netlib_Clarke 
+!		call ftqcf (vfftk,wk2) !  ftqcb is similar to vcosqb
+!	  endif 	  
+      
       do j=1,jmax
          do i=1,imax
          ipos = (j-1)*imax + i
@@ -7006,7 +7020,7 @@ c  J --> direction      (yrt)
       if (periodicy.eq.0.or.periodicy.eq.2) then
 	      call vcosqb(imax*kmax/px,jmax*px,vfftj,rhs,imax*kmax/px,wj)
       else 
-	      call vrfftf(imax*kmax/px,jmax*px,vfftj,rhs,imax*kmax/px,wj)
+	      call vrfftf(imax*kmax/px,jmax*px,vfftj,rhs,imax*kmax/px,wj) !not a typo that forward is used instead of backward for periodicy.eq.0, test 23-8-2024 shows that this is right 
       endif
       do k=1,kmax/px
          do i=1,imax
@@ -7103,7 +7117,7 @@ c  J --> direction      (yrt)
       if (periodicy.eq.0.or.periodicy.eq.2) then
 	      call vcosqf(imax*kmax/px,jmax*px,vfftj,rhs,imax*kmax/px,wj)
       else 
-	      call vrfftb(imax*kmax/px,jmax*px,vfftj,rhs,imax*kmax/px,wj)
+	      call vrfftb(imax*kmax/px,jmax*px,vfftj,rhs,imax*kmax/px,wj) !not a typo that forward is used instead of backward for periodicy.eq.0, test 23-8-2024 shows that this is right 
       endif
 
       do k=1,kmax/px
@@ -7143,7 +7157,7 @@ c  J --> direction      (yrt)
 ! 	include 'param.txt'
       real c(nfrac,0:i1,0:j1,0:k1)
       real rho(0:i1,0:j1,0:k1)
-      integer n,n2,inout,ierr
+      integer n,n2,inout,ierr,tel
 	real xTSHD(4),yTSHD(4),phi,xx,yy
       
       do k=0,k1
@@ -7238,7 +7252,7 @@ c  J --> direction      (yrt)
 ! 	include 'param.txt'
       real c(nfrac,0:i1,0:j1,0:k1)
       real rho(0:i1,0:j1,0:k1)
-      integer n,n2,inout,ierr
+      integer n,n2,inout,ierr,tel
 	real xTSHD(4),yTSHD(4),phi,xx,yy,summ
       
       do k=0,k1

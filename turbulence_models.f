@@ -38,9 +38,8 @@
 	real var_T(1:ie,0:je*px+1,1:ke/px),filt_var_T(1:ie,1:je*px,1:ke/px)
 
 	real Uvel2(0:i1,0:j1,0:k1),Vvel2(0:i1,0:j1,0:k1),Wvel2(0:i1,0:j1,0:k1)
-	integer tmax_inPpunt,i_inPpunt(i1*j1),j_inPpunt(i1*j1)
-	integer tmax_inVpunt,i_inVpunt(i1*j1),j_inVpunt(i1*j1)
-	integer tmax_inUpunt,i_inUpunt(i1*j1),j_inUpunt(i1*j1)
+	integer tmax_inPpunt,tmax_inVpunt,tmax_inUpunt
+	integer*2 i_inUpunt(i1*j1),j_inUpunt(i1*j1),i_inVpunt(i1*j1),j_inVpunt(i1*j1),i_inPpunt(i1*j1),j_inPpunt(i1*j1)
 	integer kjet,t
 
        	bbx_1ie=1.
@@ -5155,7 +5154,7 @@ c*************************************************************
 		boxside_x=0.6*(depth-bc_obst_h)+0.22*(depth-bc_obst_h)/tan(phig) !Lx_max=0.6 (depth-bc_obst_h), Ly_max=0.22 (depth-bc_obst_h)
 		boxside_y=2*0.22*(depth-bc_obst_h)+(Rp(imax)-Rp(0))*sin(phig)
 		Vbox1=2.*boxside_x*boxside_y*(depth-bc_obst_h)
-		fac1=1./sqrt(REAL(nmax1))*sqrt(1.5)*1.5
+		fac1=1./sqrt(MAX(1.,REAL(nmax1)))*sqrt(1.5)*1.5 !if nmax1=0 then fac1 is never used
 
       !! boundary at i=0
 	      i=0
@@ -5202,7 +5201,7 @@ c*************************************************************
   	yymin=Rp(0)*sin_vt(0)-0.22*(depth-bc_obst_h) !boxsize
   	yymax=Rp(0)*sin_vt(jmax*px)+0.22*(depth-bc_obst_h) !boxsize
 	Vbox2=1.2*(depth-bc_obst_h)*(yymax-yymin)*(depth-bc_obst_h)
-	fac2=1./sqrt(REAL(nmax2))*sqrt(1.5)*1.5
+	fac2=1./sqrt(MAX(1.,REAL(nmax2)))*sqrt(1.5)*1.5 !if nmax2=0 then fac2 is never used
 		
 
 	       if (rank.eq.0) then	      !! boundary at j=0

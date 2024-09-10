@@ -1,4 +1,5 @@
-F77 = mpif90 -autodouble -132 -traceback -O3 -heap-arrays 10 -qmkl -fstack-protector-all # -axcore-avx2,avx ## dit was nodig, maar zonder malloc en heap-arrays opties 3% sneller
+F77 = mpif90 -autodouble -132 -traceback -O3 -heap-arrays 10 -qmkl -fstack-protector-all # default option for Deltares runs 2024 #-axcore-avx2,avx ## dit was nodig, maar zonder malloc en heap-arrays opties 3% sneller
+#F77 = mpif90 -autodouble -132 -traceback -O0 -heap-arrays 10 -qmkl -fstack-protector-all # -axcore-avx2,avx ## dit was nodig, maar zonder malloc en heap-arrays opties 3% sneller
 #F77 = mpiifort -autodouble -132 -traceback -O0 -heap-arrays 10 -qmkl # -axcore-avx2,avx ## dit was nodig, maar zonder malloc en heap-arrays opties 3% sneller
 #F77 = mpif90 -autodouble -132 -traceback -O3 -qopt-malloc-options=4 -heap-arrays 10 # -axcore-avx2,avx ## dit was nodig, maar zonder malloc en heap-arrays opties 3% sneller
 #F77 = mpif90 -autodouble -132 -traceback -O3 -axavx -qopt-malloc-options=4 -heap-arrays 10 # -axavx is even snel als axcor-avx2,avx
@@ -9,6 +10,8 @@ F77 = mpif90 -autodouble -132 -traceback -O3 -heap-arrays 10 -qmkl -fstack-prote
 FLAGS =  
 
 ## debug options two lines below:
+#FLAGS = -diag-disable:7712 -diag-disable:5194 -g -fpe0 -ftrapuv -warn all,noexternal -debug extended -check all -check:noarg_temp_created
+#FLAGS = -diag-disable:7712 -diag-disable:5194 -g -fpe0 -ftrapuv -warn all,noexternal -debug extended -check all -check:noarg_temp_created
 #F77 = mpif90 -autodouble -132 -traceback -O0 -qopt-malloc-options=4 -heap-arrays 10 # -axcore-avx2,avx
 #FLAGS = -diag-disable:7712 -diag-disable:5194 -g -fpe0 -ftrapuv -warn -debug extended -check all 
 #FLAGS = -diag-disable:7712 -diag-disable:5194 -g -fpe0 -ftrapuv -check all 
@@ -74,7 +77,7 @@ all: $(PROGRAM)
 #$(PROGRAM): $(OBJS)
 #	$(F77) $(FLAGS) -o $(PROGRAM) $(OBJS) $(LIBS2) $(LIBMKL)	
 $(PROGRAM): $(OBJS)
-	$(F77) $(FLAGS) -o $(PROGRAM) $(OBJS) $(LIBS2) 
+	$(F77) $(FLAGS) -o $(PROGRAM) $(OBJS) $(LIBS2)
 	
 ###########################
 main.o: main.f makefile

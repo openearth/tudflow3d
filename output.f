@@ -1421,7 +1421,7 @@
 	    use netcdf
 
 	    integer, intent ( in) :: status
-	    integer :: status2
+	    integer :: status2,ncid  
 
 	    if(status /= nf90_noerr) then
 	       !UNIT=6 for stdout and UNIT=0 for stderr.

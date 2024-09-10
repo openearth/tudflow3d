@@ -23,7 +23,7 @@
 	!include 'mpif.h'
 	
 	integer ib,ie,jb,je,kb,ke
-	integer kbed_dummy(0:i1,0:j1)
+	integer*8 kbed_dummy(0:i1,0:j1)
 	real lambda_advec(0:i1,0:j1,0:k1)
 	
 	lambda_advec(:,:,:)=0.

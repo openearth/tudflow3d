@@ -714,7 +714,8 @@ c          other parameters  : all unchanged
 c
 c********************************************************************
       integer  i,j,k,im,ip,jm,jp,km,kp,i1,j1,k1,ib,ie,jb,je,kb,ke
-	  integer kmm,kpp,imm,ipp,jmm,jpp,rank,px,periodicx,periodicy,kbed(0:i1,0:j1)
+	  integer kmm,kpp,imm,ipp,jmm,jpp,rank,px,periodicx,periodicy
+	  integer*8 kbed(0:i1,0:j1)
       real     putout(0:i1,0:j1,0:k1),putin(0:i1,0:j1,0:k1),
      +         Uvel(0:i1,0:j1,0:k1),rho(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
@@ -1073,7 +1074,8 @@ c          other parameters  : all unchanged
 c
 c********************************************************************
       integer  i,j,k,im,ip,jm,jp,km,kp,i1,j1,k1,ib,ie,jb,je,kb,ke
-	  integer kmm,kpp,imm,ipp,jmm,jpp,rank,px,periodicx,periodicy,kbed(0:i1,0:j1)
+	  integer kmm,kpp,imm,ipp,jmm,jpp,rank,px,periodicx,periodicy
+	  integer*8 kbed(0:i1,0:j1)
       real     putout(0:i1,0:j1,0:k1),putin(0:i1,0:j1,0:k1),
      +         Uvel(0:i1,0:j1,0:k1),rho(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),

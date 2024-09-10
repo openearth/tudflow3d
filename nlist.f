@@ -77,7 +77,7 @@
 	  REAL dt_factor_avg,CNdiff_factor,CNdiff_ho,CNdiff_dtfactor,CNdiff_tol,Apvisc_shear_relax
 	  INTEGER n_dtavg,CNdiff_pc,CNdiff_maxi,CNdiff_ini,initPhydrostatic,npresIBM_viscupdate,rheo_shear_method,Apvisc_force_eq
 	  INTEGER tmax_inPpuntTSHDini,tmax_inUpuntTSHDini,tmax_inVpuntTSHDini,tmax_inWpuntTSHDini
-	  INTEGER nobst_files,nobst_file,momentum_exchange_obstacles,erosion_cbed_start,movebed_absorb_cfluid
+	  INTEGER nobst_files,nobst_file,momentum_exchange_obstacles,erosion_cbed_start,movebed_absorb_cfluid,fft_routines
 	  CHARACTER(len=256) :: obst_file_series(5000)
 	  REAL :: obst_starttimes(5000)
 	  INTEGER cbc_perx_j(2),taulayerTBLE,obstfile_erodepo,nWM,vel_start_after_ero,nsmooth_bed,k_ust_tau_sed_range(2)
@@ -281,7 +281,7 @@
      & continuity_solver,transporteq_fracs,split_rho_cont,driftfluxforce_calfac,depo_implicit,IBMorder,npresPRHO,
      & pres_in_predictor_step,Poutflow,oPRHO,applyVOF,k_ust_tau,Uoutflow,dUVdn_IBMbed,k_pzero,numdiff2,CNdiff_factor,CNdiff_ho,
      & CNdiff_dtfactor,CNdiff_pc,CNdiff_maxi,CNdiff_tol,CNdiff_ini,initPhydrostatic,npresIBM_viscupdate,momentum_exchange_obstacles
-     & ,k_ust_tau_flow,nsmooth_bed,k_ust_tau_sed_range	 
+     & ,k_ust_tau_flow,nsmooth_bed,k_ust_tau_sed_range,fft_routines	 
 	NAMELIST /ambient/U_b,V_b,W_b,bcfile,rho_b,SEM,nmax2,nmax1,nmax3,lm_min,lm_min3,slip_bot,taulayerTBLE,kn,interaction_bed,
      & periodicx,periodicy,dpdx,dpdy,W_ox,Hs,Tp,nx_w,ny_w,obst,bc_obst_h,U_b3,V_b3,surf_layer,wallup,bedlevelfile,
      & U_bSEM,V_bSEM,U_w,V_w,c_bed,cfixedbed,U_init,V_init,initconditionsfile,rho_b2,monopile,kn_mp,kn_sidewalls,obstfile,
@@ -391,6 +391,7 @@
 	initPhydrostatic = 0 !default 0 no initial hydrostatic pressure; 1 = initialize hydrostatic pressure before first timestep 
 	momentum_exchange_obstacles = 1 !default there is momentum exchange between flow and obstacles, optional 0 makes momenum terms zero in case the advective velocity is inside or at edge obstacle 
 	nsmooth_bed=2000000000 !default no smoothing bed, if defined every nsmooth_bed a 2nd order Shapiro low-pass filter is applied to 2D bed-level to redistribute sediment inside the bed in a mass-conserving manner to get rid of bed-wiggles 
+	fft_routines = 1 ! 1 (default) = good-old vfft.f Crayfishpack, 2 = Netlib vfftpack Clarke https://www.netlib.org/vfftpack/f90.tgz
 	!! ambient:
 	U_b = -999.
 	V_b = -999.
@@ -1958,12 +1959,16 @@
 		b_update=0. 	
 		b_update(istart_morf2(1):i1)=1.
 		if (istart_morf1(2)>0) b_update(istart_morf1(2):i1)=0.
-		do i=istart_morf1(1),istart_morf2(1)
-		  b_update(i)=DBLE(i-istart_morf1(1))/DBLE(istart_morf2(1)-istart_morf1(1)) !linear grow 0 -> 1
-		enddo	
-		do i=istart_morf2(2),istart_morf1(2)
-		  b_update(i)=1.-DBLE(i-istart_morf2(2))/DBLE(istart_morf1(2)-istart_morf2(2)) !linear decrease 1 -> 0
-		enddo	
+		if ((istart_morf2(1)-istart_morf1(1))>0) then 
+			do i=istart_morf1(1),istart_morf2(1)
+			  b_update(i)=DBLE(i-istart_morf1(1))/DBLE(istart_morf2(1)-istart_morf1(1)) !linear grow 0 -> 1
+			enddo	
+		endif
+		if ((istart_morf1(2)-istart_morf2(2))>0) then 		
+			do i=istart_morf2(2),istart_morf1(2)
+			  b_update(i)=1.-DBLE(i-istart_morf2(2))/DBLE(istart_morf1(2)-istart_morf2(2)) !linear decrease 1 -> 0
+			enddo	
+		endif 
 		b_update(0:1)=0. ! no bed-update at inflow
 		b_update(imax:i1)=0. ! no bed-update at outflow			
 	ENDIF 	

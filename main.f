@@ -360,7 +360,7 @@
 		IF (MAXVAL(bp(1:nbedplume)%dt_history)>0.) THEN 
 		   call update_his_bedplume(time_n)
 		ENDIF
-		if (time_np.ge.obst_starttimes(nobst_file).and.obstfile.ne.'') then
+		if (time_np.ge.obst_starttimes(MAX(1,nobst_file)).and.obstfile.ne.'') then
 		   CALL read_obstacle(tmax_inPpuntTSHDini,tmax_inUpuntTSHDini,tmax_inVpuntTSHDini,tmax_inWpuntTSHDini) 
 		endif		
 		
@@ -425,7 +425,7 @@
 				dUdt = dUdt/rhU
 				dVdt = dVdt/rhV 
 				dWdt = dWdt/rhW
-				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,
      & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
 				CALL diffuvw_CDS2_3DCNimpl 		
 				dUdt = dUdt*rhU 
@@ -489,17 +489,21 @@
 		!extra call bound_rhoU only needed for determination rhU,cU with split_rho_cont.eq.'VL2' based on direction of rhoU^n+1 instead of rhoU^* 
 		!nov-2018 not used because 1) consistent with splitting rho of from rhoU^* 2) faster
 		!only drawback is that it is not fully consistent with update C as this is based on c_edge based on direction U^n+1
-		
+	
 		if (time_np.ge.tstart_morf2) then 
 			b_update=0. 	
 			b_update(istart_morf2(1):i1)=1.
 			if (istart_morf1(2)>0) b_update(istart_morf1(2):i1)=0.
-			do i=istart_morf1(1),istart_morf2(1)
-			  b_update(i)=DBLE(i-istart_morf1(1))/DBLE(istart_morf2(1)-istart_morf1(1)) !linear grow 0 -> 1
-			enddo	
-			do i=istart_morf2(2),istart_morf1(2)
-			  b_update(i)=1.-DBLE(i-istart_morf2(2))/DBLE(istart_morf1(2)-istart_morf2(2)) !linear decrease 1 -> 0
-			enddo	
+			if ((istart_morf2(1)-istart_morf1(1))>0) then 
+				do i=istart_morf1(1),istart_morf2(1)
+				  b_update(i)=DBLE(i-istart_morf1(1))/DBLE(istart_morf2(1)-istart_morf1(1)) !linear grow 0 -> 1
+				enddo	
+			endif 
+			if ((istart_morf1(2)-istart_morf2(2))>0) then 		
+				do i=istart_morf2(2),istart_morf1(2)
+				  b_update(i)=1.-DBLE(i-istart_morf2(2))/DBLE(istart_morf1(2)-istart_morf2(2)) !linear decrease 1 -> 0
+				enddo
+			endif
 		    b_update(0:1)=0. ! no bed-update at inflow
 		    b_update(imax:i1)=0. ! no bed-update at outflow			
 		endif 

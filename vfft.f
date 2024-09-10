@@ -877,7 +877,8 @@ C
      *                 MDIMC,WA)
       DIMENSION    CH(MDIMC,IDO,L1,IP)    ,CC(MDIMC,IDO,IP,L1) ,
      1           C1(MDIMC,IDO,L1,IP)     ,C2(MDIMC,IDL1,IP),
-     2                CH2(MDIMC,IDL1,IP)       ,WA(IDO)
+     2                CH2(MDIMC,IDL1,IP)       ,WA(IDO*(IP-1))  
+	 !originally WA(IDO), but if I read the code correctly, it should be IDO*(IP-1) large, with WA(IDO) I do get mem-bound errors, L. de Wit 26-8-2024
       TPI=2.*PIMACH(1.0)
       ARG = TPI/FLOAT(IP)
       DCP = COS(ARG)
@@ -1058,6 +1059,8 @@ C
             DO 140 I=3,IDO,2
                IDIJ = IDIJ+2
                DO 1040 M=1,MP
+			   IF (IDIJ.eq.12.or.IDIJ.eq.13) THEN 
+			   ENDIF 
                C1(M,I-1,K,J) = WA(IDIJ-1)*CH(M,I-1,K,J)-WA(IDIJ)*
      1          CH(M,I,K,J)
                C1(M,I,K,J) = WA(IDIJ-1)*CH(M,I,K,J)+WA(IDIJ)*
@@ -1357,7 +1360,8 @@ C     VRFFTPK, VERSION 1, AUGUST 1985
 C
       DIMENSION     CH(MDIMC,IDO,L1,IP)   ,CC(MDIMC,IDO,IP,L1)  ,
      1            C1(MDIMC,IDO,L1,IP)    ,C2(MDIMC,IDL1,IP),
-     2                CH2(MDIMC,IDL1,IP)           ,WA(IDO)
+     2                CH2(MDIMC,IDL1,IP)           ,WA(IDO*(IP-1))
+	 !originally WA(IDO), but if I read the code correctly, it should be IDO*(IP-1) large, with WA(IDO) I do get mem-bound errors, L. de Wit 26-8-2024
       TPI=2.*PIMACH(1.0)
       ARG = TPI/FLOAT(IP)
       DCP = COS(ARG)

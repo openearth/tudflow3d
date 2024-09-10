@@ -51,7 +51,8 @@ c          putout            : advection part
 c          other parameters  : all unchanged
 c
 c********************************************************************
-      integer  i,j,k,im,ip,jm,jp,km,kp,i1,j1,k1,ib,ie,jb,je,kb,ke,kbed(0:i1,0:j1),me
+      integer  i,j,k,im,ip,jm,jp,km,kp,i1,j1,k1,ib,ie,jb,je,kb,ke,me
+	  integer*8 kbed(0:i1,0:j1)
       real     putout(0:i1,0:j1,0:k1),Uvel(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
      +         dr(0:i1),phiv(0:j1),dz,Ru(0:i1),Rp(0:i1)
@@ -523,7 +524,8 @@ c          putout            : advection part
 c          other parameters  : all unchanged
 c
 c********************************************************************
-      integer  i,j,k,im,ip,jm,jp,km,kp,i1,j1,k1,ib,ie,jb,je,kb,ke,kbed(0:i1,0:j1),me
+      integer  i,j,k,im,ip,jm,jp,km,kp,i1,j1,k1,ib,ie,jb,je,kb,ke,me
+	  integer*8 kbed(0:i1,0:j1)
       real     putout(0:i1,0:j1,0:k1),Uvel(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
      +         dr(0:i1),phiv(0:j1),dz,Ru(0:i1),Rp(0:i1)
@@ -758,7 +760,8 @@ c          putout            : advection part
 c          other parameters  : all unchanged
 c
 c********************************************************************
-      integer  i,j,k,im,ip,jm,jp,km,kp,i1,j1,k1,ib,ie,jb,je,kb,ke,kbed(0:i1,0:j1),me
+      integer  i,j,k,im,ip,jm,jp,km,kp,i1,j1,k1,ib,ie,jb,je,kb,ke,me
+	  integer*8 kbed(0:i1,0:j1)
       real     putout(0:i1,0:j1,0:k1),Uvel(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
      +         dr(0:i1),phiv(0:j1),dz,Ru(0:i1),Rp(0:i1)

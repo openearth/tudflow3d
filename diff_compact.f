@@ -2328,7 +2328,7 @@ c*****************************************************************
 			v0 = v0 + CNdiff_factor*dt*Cy3D/rhV
 			w0 = w0 + CNdiff_factor*dt*Cz3D/rhW		
 			
-			call bound_incljet(u0,v0,w0,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+			call bound_incljet(u0,v0,w0,dRdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,
      & 		Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
 		ELSEIF (CNdiff_ini.eq.4) THEN  !start iteration with velocity field determined with implicit ADI diffusion terms:
 			Ax3D = dUdt !backup of dUdt 
@@ -2356,7 +2356,7 @@ c*****************************************************************
 			dVdt = dVdt + dt*Cy3D/rhV
 			dWdt = dWdt + dt*Cz3D/rhW				
 
-			call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+			call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,
      & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)	
 			CNdiffz=11 !get right theta inside subroutine:
 			CALL diffuvw_ydir_CDS2_CNimpl
@@ -2367,7 +2367,7 @@ c*****************************************************************
 			dUdt = dUdt - CNdiff_factor*dt*Cx3D/rhU  
 			dVdt = dVdt - CNdiff_factor*dt*Cy3D/rhV
 			dWdt = dWdt - CNdiff_factor*dt*Cz3D/rhW
-			call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+			call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,
      & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
 			CNdiffz=11 !get right theta inside subroutine:
 			CALL diffuvw_xdir_CDS2_CNimpl 
@@ -2377,7 +2377,7 @@ c*****************************************************************
 			dUdt = dUdt - CNdiff_factor*dt*Cx3D/rhU  
 			dVdt = dVdt - CNdiff_factor*dt*Cy3D/rhV
 			dWdt = dWdt - CNdiff_factor*dt*Cz3D/rhW			
-			call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+			call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,
      & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)								
 			CNdiffz=11 !get right theta inside subroutine:
 			CALL diffuvw_zdir_CDS2_CNimpl		
@@ -2385,7 +2385,7 @@ c*****************************************************************
 			u0 = dUdt 
 			v0 = dVdt 
 			w0 = dWdt	
-			call bound_incljet(u0,v0,w0,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+			call bound_incljet(u0,v0,w0,dRdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,
      & 		Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)			
 			dUdt = Ax3D !put back original dUdt 
 			dVdt = Ay3D 

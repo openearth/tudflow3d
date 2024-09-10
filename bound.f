@@ -1669,7 +1669,8 @@ c
 	  integer i_inflowU,i_inflowVW,i_outflowU,i_outflowVW,i_shift,n2
 	  real outflow_factor,dudx,dudy,dvdx,dvdy
 	  real absUU,bedslope_angle,distance_to_bed,bwal,dbed,dpdx_temp,dpdy_temp,dL
-
+	  real Rp2(-1:i1),Ru2(-1:i1)
+	  
 c
 c
 c*************************************************************
@@ -1683,6 +1684,12 @@ c
 c*************************************************************
 c	Ubc,Vbc,Wbc are boundary velocities in carthesian
 c	x,y,z coordinate system, not in r,theta,z like this code
+
+	! needed for some dudx,dvdy terms:
+	 Rp2(0:i1)=Rp
+	 Rp2(-1)=Rp(0)-(Rp(2)-Rp(1))
+	 Ru2(0:i1)=Ru
+	 Ru2(-1)=Ru(0)-(Ru(2)-Ru(1))
 
 	! rotation ship for ambient side current
 	if (LOA<0.) then 
@@ -3291,7 +3298,7 @@ c 	influence of waves on lateral boundaries:
 				  
 				  TBLEdpdx(i,j)=TBLE_grad_relax*((ppp(i+1,j,kpp)-ppp(i,j,kpp))/(Rp(i+1)-Rp(i))/rr1)
      &				  +(1.-TBLE_grad_relax)*TBLEdpdx(i,j)										!at U-gridpoint
-				  TBLEdudx(i,j)=TBLE_grad_relax*((Ubound2(i+1,j,kpp)-Ubound2(i-1,j,kpp))/(Ru(i+1)-Ru(i-1))/rr1)
+				  TBLEdudx(i,j)=TBLE_grad_relax*((Ubound2(i+1,j,kpp)-Ubound2(i-1,j,kpp))/(Ru(i+1)-Ru2(i-1))/rr1)
      &				  +(1.-TBLE_grad_relax)*TBLEdudx(i,j)
 				  TBLEdudy(i,j)=TBLE_grad_relax*((Ubound2(i,j+1,kpp)-Ubound2(i,j-1,kpp))/(Ru(i)*(phip(j+1)-phip(j-1)))/rr1)
      &				  +(1.-TBLE_grad_relax)*TBLEdudy(i,j) 
@@ -3371,7 +3378,7 @@ c 	influence of waves on lateral boundaries:
 				  
 				  TBLEdpdy(i,j)=TBLE_grad_relax*((ppp(i,j+1,kpp)-ppp(i,j,kpp))/(Rp(i)*(phip(j+1)-phip(j)))/rr2)
      &            +(1.-TBLE_grad_relax)*TBLEdpdy(i,j) 				  !at V-gridpoint	
-				  TBLEdvdx(i,j)=TBLE_grad_relax*((Vbound2(i+1,j,kpp)-Vbound2(i-1,j,kpp))/(Rp(i+1)-Rp(i-1))/rr2)
+				  TBLEdvdx(i,j)=TBLE_grad_relax*((Vbound2(i+1,j,kpp)-Vbound2(i-1,j,kpp))/(Rp(i+1)-Rp2(i-1))/rr2) 
      &            +(1.-TBLE_grad_relax)*TBLEdvdx(i,j)				  
 				  TBLEdvdy(i,j)=TBLE_grad_relax*((Vbound2(i,j+1,kpp)-Vbound2(i,j-1,kpp))/(Rp(i)*(phiv(j+1)-phiv(j-1)))/rr2) 
      &            +(1.-TBLE_grad_relax)*TBLEdvdy(i,j)				  
@@ -4947,7 +4954,7 @@ c*************************************************************
 	real uu0 ! input/output var, uu0 gets adapted in this subroutine
 	real tau_x !output var 
 	integer tel !local var 
-	real zplus,u_p,u_c,alpha_p,beta_p,a2,a3,b0,b1,b2,b3,b4,c0,c1,c2,c3,c4,f1,f2,f10,zplus_p,tau_y,ust,z0,absU !local variables 
+	real zplus,u_p,u_c,alpha_p,beta_p,a2,a3,b0,b1,b2,b3,b4,c0,c1,c2,c3,c4,f1,f2,f2s,f10,zplus_p,tau_y,ust,z0,absU !local variables 
 
 	absU=sqrt((uu/rr)**2+(vv/rr)**2)
 	ust=0.1*absU
@@ -4959,12 +4966,35 @@ c*************************************************************
 	alpha_p=5.
 	beta_p=8.
 	
+	a2=0.5
+	a3=-7.31e-3
+	b0=-15.138
+	b1=8.4688
+	b2=-0.81976
+	b3=3.7292e-2
+	b4=-6.3866e-4
+	c0=11.925
+	c1=0.934
+	c2=-2.7805e-2
+	c3=4.6262e-4
+	c4=-3.1442e-6		
+	zplus_p=u_p*dist_velpoint/nu_mol ! Shih et al 1999
+	if (zplus_p>30.) then 
+		f2s=alpha_p*log(zplus_p)+beta_p	
+	elseif (zplus_p>15.) then 
+		f2s=c0+c1*zplus_p+c2*zplus_p**2+c3*zplus_p**3+c4*zplus_p**4
+	elseif (zplus_p>4.) then 
+		f2s=b0+b1*zplus_p+b2*zplus_p**2+b3*zplus_p**3+b4*zplus_p**4
+	else 
+		f2s=a2*zplus_p**2+a3*zplus_p**3
+	endif	
 	if (kn>0.) then !walls with rougness (log-law used which can be hydr smooth or hydr rough):
 		do tel=1,10
 			u_c=MAX(1.e-9,u_p+ust)
 			z0=kn/30.+0.11*nu_mol/MAX(ust,1.e-9)
 			f1=log(MAX(dist_velpoint/z0,1.001))/kappa
-			f2=alpha_p*log(MAX(dist_velpoint/z0,1.001))
+			!f2=alpha_p*log(MAX(dist_velpoint/z0,1.001))
+			f2=MIN(f2s,alpha_p*log(MAX(dist_velpoint/z0,1.001))) !use minimum from hydr smooth f2 and hydr rough f2 (reasoning is that f2 rough may never, also not for very small dpdx, be larger than f2-smooth)
 			! avoid dividing by f10=0 when ust is 0, by rewriting f10 and tau_x,tau_y 
 			f10 = f1/u_c !f10=ust/u_c*f1
 			!use f2 without u_p/u_c to get similar influence of dpdx for kn=0 (smooth formula) and kn very small (this formula)
@@ -4982,18 +5012,6 @@ c*************************************************************
 			ust = sqrt(sqrt(tau_x**2+tau_y**2)/rr) !next iteration
 		enddo
 	else
-		a2=0.5
-		a3=-7.31e-3
-		b0=-15.138
-		b1=8.4688
-		b2=-0.81976
-		b3=3.7292e-2
-		b4=-6.3866e-4
-		c0=11.925
-		c1=0.934
-		c2=-2.7805e-2
-		c3=4.6262e-4
-		c4=-3.1442e-6	
 		do tel=1,10 
 			u_c=MAX(1.e-9,u_p+ust)
 			zplus = ust*dist_velpoint/nu_mol
@@ -5005,18 +5023,9 @@ c*************************************************************
 				f1 = MAX(1.e-9,ust*dist_velpoint/nu_mol) !viscour sublayer where zplus=Uplus --> f1=zplus 
 			endif 
 !!!			zplus_p=u_c*dist_velpoint/nu_mol ! Shih et al 2003 
-			zplus_p=u_p*dist_velpoint/nu_mol ! Shih et al 1999
-			if (zplus_p>30.) then 
-				f2=alpha_p*log(zplus_p)+beta_p	
-			elseif (zplus_p>15.) then 
-				f2=c0+c1*zplus_p+c2*zplus_p**2+c3*zplus_p**3+c4*zplus_p**4
-			elseif (zplus_p>4.) then 
-				f2=b0+b1*zplus_p+b2*zplus_p**2+b3*zplus_p**3+b4*zplus_p**4
-			else 
-			    f2=a2*zplus_p**2+a3*zplus_p**3
-			endif
 			! avoid dividing by f10=0 when ust is 0, by rewriting f10 and tau_x,tau_y 
 			f10 = f1/u_c !f10=ust/u_c*f1
+			f2=f2s
 !!!			!use f2 without u_p/u_c to get similar influence of dpdx for kn=0 (smooth formula) and kn very small (this formula)
 !!!			! Shih et al 2003:
 !!!			tau_x = ((uu/rr)/u_c-nu_mol*Fix/u_c**3*f2)*rr*ust/f10  !*rr*ust*ust/f10 
@@ -5068,24 +5077,49 @@ c*************************************************************
 	real uu0 ! input/output var, uu0 gets adapted in this subroutine
 	real tau_x !output var 
 	integer tel !local var 
-	real zplus,u_p,u_c,alpha_p,beta_p,a2,a3,b0,b1,b2,b3,b4,c0,c1,c2,c3,c4,f1,f2,f10,zplus_p,tau_y,ust,z0,absU !local variables 
+	real zplus,u_p,u_c,alpha_p,beta_p,a2,a3,b0,b1,b2,b3,b4,c0,c1,c2,c3,c4,f1,f2,f2s,f10,zplus_p,tau_y,ust,z0,absU,Fix2,Fiy2 !local variables 
 
 	absU=sqrt((uu/rr)**2+(vv/rr)**2)
 	ust=0.1*absU
 !	! only favorable dpdx and dpdy are used 
-	IF (Fix*uu>0.) Fix=0.  !if Fix and uu have same sign then adverse dpdx which is made 0  
-	IF (Fiy*vv>0.) Fiy=0.  !if Fix and uu have same sign then adverse dpdx which is made 0 
-	u_p=sqrt((nu_mol*abs(Fix))**(0.6666667)+(nu_mol*abs(Fiy))**(0.6666667))
+	Fix2=Fix
+	Fiy2=Fiy
+	IF (Fix*uu>0.) Fix2=0.  !if Fix and uu have same sign then adverse dpdx which is made 0  
+	IF (Fiy*vv>0.) Fiy2=0.  !if Fix and uu have same sign then adverse dpdx which is made 0 
+	u_p=sqrt((nu_mol*abs(Fix2))**(0.6666667)+(nu_mol*abs(Fiy2))**(0.6666667))
 	!my interpretation is that u_p, u_c and ust are determined for combination of x,y direction, Shih 2003 is not clear about this, but his 3D tau explanation seem to suggest this and it would make sense
 	alpha_p=5.
 	beta_p=8.
-	
+
+	a2=0.5
+	a3=-7.31e-3
+	b0=-15.138
+	b1=8.4688
+	b2=-0.81976
+	b3=3.7292e-2
+	b4=-6.3866e-4
+	c0=11.925
+	c1=0.934
+	c2=-2.7805e-2
+	c3=4.6262e-4
+	c4=-3.1442e-6		
+	zplus_p=u_p*dist_velpoint/nu_mol ! Shih et al 1999
+	if (zplus_p>30.) then 
+		f2s=alpha_p*log(zplus_p)+beta_p	
+	elseif (zplus_p>15.) then 
+		f2s=c0+c1*zplus_p+c2*zplus_p**2+c3*zplus_p**3+c4*zplus_p**4
+	elseif (zplus_p>4.) then 
+		f2s=b0+b1*zplus_p+b2*zplus_p**2+b3*zplus_p**3+b4*zplus_p**4
+	else 
+		f2s=a2*zplus_p**2+a3*zplus_p**3
+	endif	
 	if (kn>0.) then !walls with rougness (log-law used which can be hydr smooth or hydr rough):
 		do tel=1,10
 			u_c=MAX(1.e-9,u_p+ust)
 			z0=kn/30.+0.11*nu_mol/MAX(ust,1.e-9)
 			f1=log(MAX(dist_velpoint/z0,1.001))/kappa
-			f2=alpha_p*log(MAX(dist_velpoint/z0,1.001))
+			!f2=alpha_p*log(MAX(dist_velpoint/z0,1.001))
+			f2=MIN(f2s,alpha_p*log(MAX(dist_velpoint/z0,1.001))) !use minimum from hydr smooth f2 and hydr rough f2 (reasoning is that f2 rough may never, also not for very small dpdx, be larger than f2-smooth)
 			! avoid dividing by f10=0 when ust is 0, by rewriting f10 and tau_x,tau_y 
 			f10 = f1/u_c !f10=ust/u_c*f1
 			!use f2 without u_p/u_c to get similar influence of dpdx for kn=0 (smooth formula) and kn very small (this formula)
@@ -5094,8 +5128,8 @@ c*************************************************************
 !!!			tau_y = ((vv/rr)/u_c-nu_mol*Fiy/u_c**3*f2)*rr*ust/f10  !*rr*ust*ust/f10  
 			
 			! Shih et al 1999:
-			tau_x = ((uu/rr)/u_c-nu_mol*Fix/MAX(u_p,1.e-6)**3*f2*u_p/u_c)*rr*ust/f10  !*rr*ust*ust/f10 
-			tau_y = ((vv/rr)/u_c-nu_mol*Fiy/MAX(u_p,1.e-6)**3*f2*u_p/u_c)*rr*ust/f10  !*rr*ust*ust/f10  			
+			tau_x = ((uu/rr)/u_c-nu_mol*Fix2/MAX(u_p,1.e-6)**3*f2*u_p/u_c)*rr*ust/f10  !*rr*ust*ust/f10 
+			tau_y = ((vv/rr)/u_c-nu_mol*Fiy2/MAX(u_p,1.e-6)**3*f2*u_p/u_c)*rr*ust/f10  !*rr*ust*ust/f10  			
 			
 			! uu and Fi both have their direction (positive or negative) which leads to enhanced or reduced tau_x 
 !			if (tau_x*uu<0) tau_x=0. ! they have different signs which would result in tau enhancing the flow instead of slowing it down: for stability don't accelerate flow, but don't slow down either
@@ -5103,18 +5137,6 @@ c*************************************************************
 			ust = sqrt(sqrt(tau_x**2+tau_y**2)/rr) !next iteration
 		enddo
 	else
-		a2=0.5
-		a3=-7.31e-3
-		b0=-15.138
-		b1=8.4688
-		b2=-0.81976
-		b3=3.7292e-2
-		b4=-6.3866e-4
-		c0=11.925
-		c1=0.934
-		c2=-2.7805e-2
-		c3=4.6262e-4
-		c4=-3.1442e-6	
 		do tel=1,10 
 			u_c=MAX(1.e-9,u_p+ust)
 			zplus = ust*dist_velpoint/nu_mol
@@ -5126,26 +5148,17 @@ c*************************************************************
 				f1 = MAX(1.e-9,ust*dist_velpoint/nu_mol) !viscour sublayer where zplus=Uplus --> f1=zplus 
 			endif 
 !!!			zplus_p=u_c*dist_velpoint/nu_mol ! Shih et al 2003 
-			zplus_p=u_p*dist_velpoint/nu_mol ! Shih et al 1999
-			if (zplus_p>30.) then 
-				f2=alpha_p*log(zplus_p)+beta_p	
-			elseif (zplus_p>15.) then 
-				f2=c0+c1*zplus_p+c2*zplus_p**2+c3*zplus_p**3+c4*zplus_p**4
-			elseif (zplus_p>4.) then 
-				f2=b0+b1*zplus_p+b2*zplus_p**2+b3*zplus_p**3+b4*zplus_p**4
-			else 
-			    f2=a2*zplus_p**2+a3*zplus_p**3
-			endif
 			! avoid dividing by f10=0 when ust is 0, by rewriting f10 and tau_x,tau_y 
 			f10 = f1/u_c !f10=ust/u_c*f1
+			f2=f2s
 !!!			!use f2 without u_p/u_c to get similar influence of dpdx for kn=0 (smooth formula) and kn very small (this formula)
 !!!			! Shih et al 2003:
 !!!			tau_x = ((uu/rr)/u_c-nu_mol*Fix/u_c**3*f2)*rr*ust/f10  !*rr*ust*ust/f10 
 !!!			tau_y = ((vv/rr)/u_c-nu_mol*Fiy/u_c**3*f2)*rr*ust/f10  !*rr*ust*ust/f10  
 			
 			! Shih et al 1999:
-			tau_x = ((uu/rr)/u_c-nu_mol*Fix/MAX(u_p,1.e-6)**3*f2*u_p/u_c)*rr*ust/f10  !*rr*ust*ust/f10 
-			tau_y = ((vv/rr)/u_c-nu_mol*Fiy/MAX(u_p,1.e-6)**3*f2*u_p/u_c)*rr*ust/f10  !*rr*ust*ust/f10  						
+			tau_x = ((uu/rr)/u_c-nu_mol*Fix2/MAX(u_p,1.e-6)**3*f2*u_p/u_c)*rr*ust/f10  !*rr*ust*ust/f10 
+			tau_y = ((vv/rr)/u_c-nu_mol*Fiy2/MAX(u_p,1.e-6)**3*f2*u_p/u_c)*rr*ust/f10  !*rr*ust*ust/f10  						
 			! uu and Fi both have their direction (positive or negative) which leads to enhanced or reduced tau_x 
 !			if (tau_x*uu<0) tau_x=0. ! they have different signs which would result in tau enhancing the flow instead of slowing it down: for stability don't accelerate flow, but don't slow down either
 !			if (tau_y*vv<0) tau_y=0. ! they have different signs which would result in tau enhancing the flow instead of slowing it down: for stability don't accelerate flow, but don't slow down either
@@ -5521,7 +5534,8 @@ c*************************************************************
 	real uu,vv,Fix,Fiy,rr,dz,kn,kappa,nu_mol !in coming variable
 	real ustnew !out going variable
 	integer tel  !local variable
-	real z0,absU,u_p,u_c,alpha_p,beta_p,f1,f2,f10,taux,tauy,ust !local variable
+	real z0,absU,u_p,u_c,alpha_p,beta_p,f1,f2,f2s,f10,taux,tauy,ust !local variable
+	real a2,a3,b0,b1,b2,b3,b4,c0,c1,c2,c3,c4,zplus_p
 	
 	absU=sqrt(uu**2+vv**2)
 	ust=0.1*absU
@@ -5532,12 +5546,36 @@ c*************************************************************
 	!my interpretation is that u_p, u_c and ust are determined for combination of x,y direction, Shih 2003 is not clear about this, but his 3D tau explanation seem to suggest this and it would make sense
 	alpha_p=5.
 	beta_p=8.
+
+	a2=0.5
+	a3=-7.31e-3
+	b0=-15.138
+	b1=8.4688
+	b2=-0.81976
+	b3=3.7292e-2
+	b4=-6.3866e-4
+	c0=11.925
+	c1=0.934
+	c2=-2.7805e-2
+	c3=4.6262e-4
+	c4=-3.1442e-6		
+	zplus_p=u_p*0.5*dz/nu_mol ! Shih et al 1999
+	if (zplus_p>30.) then 
+		f2s=alpha_p*log(zplus_p)+beta_p	
+	elseif (zplus_p>15.) then 
+		f2s=c0+c1*zplus_p+c2*zplus_p**2+c3*zplus_p**3+c4*zplus_p**4
+	elseif (zplus_p>4.) then 
+		f2s=b0+b1*zplus_p+b2*zplus_p**2+b3*zplus_p**3+b4*zplus_p**4
+	else 
+		f2s=a2*zplus_p**2+a3*zplus_p**3
+	endif	
 	! wall_fun_rho_TBL_Ploc is only used for sediment with kn>0
 	do tel=1,10
 		u_c=MAX(1.e-9,u_p+ust)
 		z0=kn/30.+0.11*nu_mol/MAX(ust,1.e-9)
 		f1=log(MAX(0.5*dz/z0,1.001))/kappa
-		f2=alpha_p*log(MAX(0.5*dz/z0,1.001))
+		!f2=alpha_p*log(MAX(0.5*dz/z0,1.001))
+		f2=MIN(f2s,alpha_p*log(MAX(0.5*dz/z0,1.001))) !use minimum from hydr smooth f2 and hydr rough f2 (reasoning is that f2 rough may never, also not for very small dpdx, be larger than f2-smooth)	
 		! avoid dividing by f10=0 when ust is 0, by rewriting f10 and tau_x,tau_y 
 		f10 = f1/u_c !f10=ust/u_c*f1
 		
@@ -5577,23 +5615,50 @@ c*************************************************************
 	real uu,vv,Fix,Fiy,rr,dz,kn,kappa,nu_mol !in coming variable
 	real ustnew !out going variable
 	integer tel  !local variable
-	real z0,absU,u_p,u_c,alpha_p,beta_p,f1,f2,f10,taux,tauy,ust !local variable
+	real z0,absU,u_p,u_c,alpha_p,beta_p,f1,f2,f2s,f10,taux,tauy,ust !local variable
+	real a2,a3,b0,b1,b2,b3,b4,c0,c1,c2,c3,c4,zplus_p,Fix2,Fiy2
 	
 	absU=sqrt(uu**2+vv**2)
 	ust=0.1*absU
 !	! only favorable dpdx and dpdy are used 
-	IF (Fix*uu>0.) Fix=0.  !if Fix and uu have same sign then adverse dpdx which is made 0  
-	IF (Fiy*vv>0.) Fiy=0.  !if Fix and uu have same sign then adverse dpdx which is made 0 	
-	u_p=sqrt((nu_mol*abs(Fix))**(0.6666667)+(nu_mol*abs(Fiy))**(0.6666667))
+	Fix2=Fix
+	Fiy2=Fiy
+	IF (Fix*uu>0.) Fix2=0.  !if Fix and uu have same sign then adverse dpdx which is made 0  
+	IF (Fiy*vv>0.) Fiy2=0.  !if Fix and uu have same sign then adverse dpdx which is made 0 	
+	u_p=sqrt((nu_mol*abs(Fix2))**(0.6666667)+(nu_mol*abs(Fiy2))**(0.6666667))
 	!my interpretation is that u_p, u_c and ust are determined for combination of x,y direction, Shih 2003 is not clear about this, but his 3D tau explanation seem to suggest this and it would make sense
 	alpha_p=5.
 	beta_p=8.
+	
+	a2=0.5
+	a3=-7.31e-3
+	b0=-15.138
+	b1=8.4688
+	b2=-0.81976
+	b3=3.7292e-2
+	b4=-6.3866e-4
+	c0=11.925
+	c1=0.934
+	c2=-2.7805e-2
+	c3=4.6262e-4
+	c4=-3.1442e-6		
+	zplus_p=u_p*0.5*dz/nu_mol ! Shih et al 1999
+	if (zplus_p>30.) then 
+		f2s=alpha_p*log(zplus_p)+beta_p	
+	elseif (zplus_p>15.) then 
+		f2s=c0+c1*zplus_p+c2*zplus_p**2+c3*zplus_p**3+c4*zplus_p**4
+	elseif (zplus_p>4.) then 
+		f2s=b0+b1*zplus_p+b2*zplus_p**2+b3*zplus_p**3+b4*zplus_p**4
+	else 
+		f2s=a2*zplus_p**2+a3*zplus_p**3
+	endif	
 	! wall_fun_rho_TBL_Ploc is only used for sediment with kn>0
 	do tel=1,10
 		u_c=MAX(1.e-9,u_p+ust)
 		z0=kn/30.+0.11*nu_mol/MAX(ust,1.e-9)
 		f1=log(MAX(0.5*dz/z0,1.001))/kappa
-		f2=alpha_p*log(MAX(0.5*dz/z0,1.001))
+		!f2=alpha_p*log(MAX(0.5*dz/z0,1.001))
+		f2=MIN(f2s,alpha_p*log(MAX(0.5*dz/z0,1.001))) !use minimum from hydr smooth f2 and hydr rough f2 (reasoning is that f2 rough may never, also not for very small dpdx, be larger than f2-smooth)	
 		! avoid dividing by f10=0 when ust is 0, by rewriting f10 and tau_x,tau_y 
 		f10 = f1/u_c !f10=ust/u_c*f1
 		
@@ -5603,8 +5668,8 @@ c*************************************************************
 !!!		tauy = (vv/u_c-nu_mol*Fiy/u_c**3*f2)*rr*ust/f10  !*rr*ust*ust/f10 
 
 		! Shih et al. 1999:
-		taux = (uu/u_c-nu_mol*Fix/MAX(u_p,1.e-6)**3*f2*u_p/u_c)*rr*ust/f10  !*rr*ust*ust/f10 
-		tauy = (vv/u_c-nu_mol*Fiy/MAX(u_p,1.e-6)**3*f2*u_p/u_c)*rr*ust/f10  !*rr*ust*ust/f10 
+		taux = (uu/u_c-nu_mol*Fix2/MAX(u_p,1.e-6)**3*f2*u_p/u_c)*rr*ust/f10  !*rr*ust*ust/f10 
+		tauy = (vv/u_c-nu_mol*Fiy2/MAX(u_p,1.e-6)**3*f2*u_p/u_c)*rr*ust/f10  !*rr*ust*ust/f10 
 		
 		! uu and Fi both have their direction (positive or negative) which leads to enhanced or reduced tau_x 
 !		if (taux*uu<0) taux=0. ! they have different signs which complicates bedload transport direction, for stability reasons made 0 
