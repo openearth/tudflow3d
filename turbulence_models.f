@@ -5424,7 +5424,7 @@ c*************************************************************
 	    z=(k-kbed0(i,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
 	    y=Ru(0)*sin_u(j)
 	    do ii=1,nmax2
-	      if(ABS(y-ySEM2(ii))/lmySEM2(ii).lt.1..and.ABS(z-zSEM2(ii))/lmzSEM2(ii).lt.1.and.llmax2(j,k)<1000) then
+	      if(ABS(y-ySEM2(ii))/lmySEM2(ii).lt.1..and.ABS(z-zSEM2(ii))/lmzSEM2(ii).lt.1.and.llmax2(j,k)<nmax2/10) then
 		llmax2(j,k)=llmax2(j,k)+1
 		llist2(j,k,llmax2(j,k))=ii
 	      endif
@@ -5472,7 +5472,7 @@ c*************************************************************
 	      z=(k-kbed0(i,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
  	      y=Rp(i)*sin_v(0)
  	      do ii=1,nmax1
- 		if(ABS(y-ySEM1(ii))/lmySEM1(ii).lt.1..and.ABS(z-zSEM1(ii))/lmzSEM1(ii).lt.1.and.llmax1(i,k)<2000) then
+ 		if(ABS(y-ySEM1(ii))/lmySEM1(ii).lt.1..and.ABS(z-zSEM1(ii))/lmzSEM1(ii).lt.1.and.llmax1(i,k)<nmax1/10) then
  		  llmax1(i,k)=llmax1(i,k)+1
  		  llist1(i,k,llmax1(i,k))=ii
  		endif
@@ -5519,7 +5519,7 @@ c*************************************************************
 		  z=(k-kbed0(i,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
  	      y=Rp(i)*sin_v(jmax)
  	      do ii=1,nmax1
- 		if(ABS(y-ySEM1(ii))/lmySEM1(ii).lt.1..and.ABS(z-zSEM1(ii))/lmzSEM1(ii).lt.1.and.llmax1(i,k)<2000) then
+ 		if(ABS(y-ySEM1(ii))/lmySEM1(ii).lt.1..and.ABS(z-zSEM1(ii))/lmzSEM1(ii).lt.1.and.llmax1(i,k)<nmax1/10) then
  		  llmax1(i,k)=llmax1(i,k)+1
  		  llist1(i,k,llmax1(i,k))=ii
  		endif
@@ -5819,7 +5819,7 @@ c*************************************************************
 	 	    do ii=0,i1
 			  z=(k-kbed0(ii,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
 	 	      y=Rp(ii)*sin_v(0)
-	 	      if(ABS(y-ySEM1(i))/lmySEM1(i).lt.1..and.ABS(z-zSEM1(i))/lmzSEM1(i).lt.1.and.llmax1(ii,k)<2000) then
+	 	      if(ABS(y-ySEM1(i))/lmySEM1(i).lt.1..and.ABS(z-zSEM1(i))/lmzSEM1(i).lt.1.and.llmax1(ii,k)<nmax1/10) then
 	 		  llmax1(ii,k)=llmax1(ii,k)+1
 	 		  llist1(ii,k,llmax1(ii,k))=i
 	 	      endif
@@ -5884,7 +5884,7 @@ c*************************************************************
 	 	    do ii=0,i1
 			  z=(k-kbed0(ii,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
 	 	      y=Rp(ii)*sin_v(jmax)
-	 	      if(ABS(y-ySEM1(i))/lmySEM1(i).lt.1..and.ABS(z-zSEM1(i))/lmzSEM1(i).lt.1.and.llmax1(ii,k)<2000) then
+	 	      if(ABS(y-ySEM1(i))/lmySEM1(i).lt.1..and.ABS(z-zSEM1(i))/lmzSEM1(i).lt.1.and.llmax1(ii,k)<nmax1/10) then
 	 		  llmax1(ii,k)=llmax1(ii,k)+1
 	 		  llist1(ii,k,llmax1(ii,k))=i
 	 	      endif
@@ -6018,7 +6018,7 @@ c*************************************************************
 	    do j=0,j1 !jminSEM,jmaxSEM
 		  z=(k-kbed0(i,j))*dz-0.5*dz !z here is local distance from bed; not global z-coordinate; hence kind of local rescaling and shifting of SEM points for kbed 
 	      y=Ru(0)*sin_u(j)	
-	      if(ABS(y-ySEM2(ii))/lmySEM2(ii).lt.1..and.ABS(z-zSEM2(ii))/lmzSEM2(ii).lt.1.and.llmax2(j,k)<1000) then
+	      if(ABS(y-ySEM2(ii))/lmySEM2(ii).lt.1..and.ABS(z-zSEM2(ii))/lmzSEM2(ii).lt.1.and.llmax2(j,k)<nmax2/10) then
 		llmax2(j,k)=llmax2(j,k)+1
 		llist2(j,k,llmax2(j,k))=ii
 	      endif

@@ -1059,8 +1059,6 @@ C
             DO 140 I=3,IDO,2
                IDIJ = IDIJ+2
                DO 1040 M=1,MP
-			   IF (IDIJ.eq.12.or.IDIJ.eq.13) THEN 
-			   ENDIF 
                C1(M,I-1,K,J) = WA(IDIJ-1)*CH(M,I-1,K,J)-WA(IDIJ)*
      1          CH(M,I,K,J)
                C1(M,I,K,J) = WA(IDIJ-1)*CH(M,I,K,J)+WA(IDIJ)*

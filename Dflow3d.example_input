@@ -37,6 +37,8 @@ dt_output_movie = 10.				! Time interval for low-storage concentration output us
 te_output_movie = 450.				! End time for low-storage concentration output usable for movies [s]
 tstart_morf = 1. 					! Start time interaction with bed [s] (default 0), before tstart_morf no exchange of sediment between bed and fluid
 tstart_morf2 = 1.					! Start time bedupdate [s] (default 0), before tstart_morf2 there is exchange of sediment between bed and fluid, but no bedupdate (all changes to bed are annihilated) 
+tmorf_tseriesfile = ''				! file containing timeseries of 0 or 1 (default not defined), when 0 there is no exchange of sediment between bed and fluid, when 1 there is 
+tmorf2_tseriesfile = ''				! file containing timeseries of 0 or 1 (default not defined), when 0 there is exchange of sediment between bed and fluid, but no bedupdate (all changes to bed are annihilated), when 1 there is exchange and bedupdate
 /
 
 &num_scheme
@@ -50,7 +52,7 @@ continuity_solver =36   			!default is 1 (drdt+drudx=0). Optional:  35 (dudx=0 U
 npresIBM = 0						! number of extra pres-correction steps to make IBM objects better impermeable (default 0)
 npresPRHO = 0						! number of extra pres-correction steps to get predicted P^n+1 as input in variable-density-Poisson-solver more accurate (default 0)
 oPRHO = 2							! (default 2) 2 = linear extrapolation for predicted P*; 1 = predicted P* equal to P^n; 3 = linear extrapolation for predicted P* using 2dt before to reduce wiggles in time; 4 = high order extrapolation for dPdt to get predicted P*
-pres_in_predictor_step = 1 			! 1 (default) = apply P^n in predictor step and apply corrector step with dP; 0 = predictor step without pressure and apply corrector step with P^n+1; 2 = like 1, but every 100th timestep like 0; 3 = apply spatial filter on P^n in predictor step for more stable results with morphological bed-update; 4 = like 3 but filter only inside bed
+pres_in_predictor_step = 1 			! 1 (default) = apply P^n in predictor step and apply corrector step with dP; 0 = predictor step without pressure and apply corrector step with P^n+1; 2 = like 1, but every 100th timestep like 0; 3 = apply plain spatial filter on P^n in predictor step for more stable results with morphological bed-update; 4 = like 3 but filter only inside bed, 5 = like 3 and every 1000th timesteps like 0, 6 = apply spatial 3D Shapiro filter on P^n in predictor step (filtering away high freq fluctuations), 7 = like 6 and every 1000th timesteps like 0  
 Poutflow=0 							! 0 (default, most robust) Poutflow is zero for complete outflow crosssection at rmax; 1 (optional) Poutflow is zero at just one grid-location at rmax --> sometimes more accurate but less robust
 k_pzero=1 							! default 1, defines vertical level where p=0 when Poutflow=1 is used
 Uoutflow=0 							! 0 (default) Neumann outflow dUdn=0 (for U,V,W); 2 means convective outflow condition dUdt+U_normal*dUdn=0 (for U,V,W)
@@ -122,6 +124,7 @@ V_b3 = -0.29						! Ambient bc V velocity [m/s] in surf_layer with respect to TS
 surf_layer = 0.						! Layer depth [m] from free surface with U_b3,V_b3 ambient current (default 0)
 wallup=0							! 0 wall is down; 1 wall is up; 2 wall both up and down (default 0)
 bedlevelfile = ''					! Input netcdf file for bedlevel which are simulated by IBM obstacles (filled with zbed(1:imax,0:jmax*px+1) [m])
+bedupdatefile = ''					! Input netcdf file for spatially varying bed-update factor (filled with bu(1:imax,0:jmax*px+1) [-]) which scales bedupdate: there is exchange of sediment between bed and fluid to update SSC in the water column, but morfological changes to bed are multiplied with factor fu which (partly) annihilates morfological bed update
 c_bed= 0.1 							! Initial volume fractions inside bed [-] (length vector must be nfrac large and sum must be equal to cfixedbed)
 cfixedbed = 0.6						! Volume concentration threshold for fixed bed (default 0.6)
 Hs=0.7								! Significant waveheigth [m] (using linear wave theory to mimic wave-orbital velocity)

@@ -2925,7 +2925,22 @@ C ...  Locals
 !!!			ENDDO 
 !!!			call bound_cbot_integer(kbed22) 
 !!!		  ENDIF 
+
+		if (bedupdatefile.ne.'') then
+			status2 = nf90_open(bedupdatefile, nf90_NoWrite, ncid) 
+			IF (status2/= nf90_noerr) THEN
+				write(*,*),'bedupdatefile =',bedupdatefile
+				CALL writeerror(606)
+			ENDIF
+			call check( nf90_inq_varid(ncid, "bu",rhVarid) )
+			call check( nf90_get_var(ncid,rhVarid,b_update(1:imax,0:j1),start=(/1,rank*jmax+1/),count=(/imax,jmax+2/)) )
+			call check( nf90_close(ncid) )
+			b_update(0,0:j1)=b_update(1,0:j1)
+			b_update(i1,0:j1)=b_update(imax,0:j1)
+		endif !endif bedupdatefile
+	
       end
+	  
 
 		subroutine read_obstacle(tel1start,tel2start,tel3start,tel4start) 
 		

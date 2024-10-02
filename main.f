@@ -25,7 +25,7 @@
       include 'mpif.h'
 
       integer  ib,ie,jb,je,kb,ke,ploc,ierr,istep_output,itag,n,t,istep_output_movie,status,kbp,i_target 
-      real     cput1,cput2,t_output,t_output_movie
+      real     cput1,cput2,t_output,t_output_movie,tm_temp,interpseries
       real     cput10a,cput10b,cput11a,cput11b
 	  !real     cput1b,cput2b,t_output,t_output_movie,crate
 	  !integer cput1,cput2,cr
@@ -268,6 +268,22 @@
 		if (U_b_tseriesfile.ne.''.or.V_b_tseriesfile.ne.''.or.W_b_tseriesfile.ne.'') then 
 			call inflow_profiles_front_sides(time_n)
 		endif 
+		if (tmorf_tseriesfile.ne.'') then 
+		  tm_temp=interpseries(tmorf_tseries,tmorf_series,tmorf_seriesloc,time_n)
+		  if (tm_temp<1.) then !when interpolated tm_temp is < 1
+		    tstart_morf=t_end 	!giving present time is before tstart_morf which allows for NO exchange of sediment between bed and fluid
+		  else 
+			tstart_morf=0. 		!giving present time is after tstart_morf which allows for exchange of sediment between bed and fluid
+		  endif
+		endif
+		if (tmorf2_tseriesfile.ne.'') then 
+		  tm_temp=interpseries(tmorf2_tseries,tmorf2_series,tmorf2_seriesloc,time_n)
+		  if (tm_temp<1.) then !when interpolated tm_temp is < 1
+		    tstart_morf2=t_end 	!giving present time is before tstart_morf2 which allows for exchange of sediment between bed and fluid but no bedupdate 
+		  else 
+			tstart_morf2=0. 		!giving present time is after tstart_morf2 which allows for exchange of sediment between bed and fluid and bedupdate
+		  endif
+		endif		
 		if (Cs>0.or.sgs_model.eq.'MixLe'.or.sgs_model.eq.'ReaKE'.or.sgs_model.eq.'DSmag') then
 		  if (sgs_model.eq.'SSmag') then
 			call LES_smagorinsky(Unew,Vnew,Wnew,rnew)
@@ -492,20 +508,20 @@
 	
 		if (time_np.ge.tstart_morf2) then 
 			b_update=0. 	
-			b_update(istart_morf2(1):i1)=1.
-			if (istart_morf1(2)>0) b_update(istart_morf1(2):i1)=0.
+			b_update(istart_morf2(1):i1,0:j1)=1.
+			if (istart_morf1(2)>0) b_update(istart_morf1(2):i1,0:j1)=0.
 			if ((istart_morf2(1)-istart_morf1(1))>0) then 
 				do i=istart_morf1(1),istart_morf2(1)
-				  b_update(i)=DBLE(i-istart_morf1(1))/DBLE(istart_morf2(1)-istart_morf1(1)) !linear grow 0 -> 1
+				  b_update(i,0:j1)=DBLE(i-istart_morf1(1))/DBLE(istart_morf2(1)-istart_morf1(1)) !linear grow 0 -> 1
 				enddo	
 			endif 
 			if ((istart_morf1(2)-istart_morf2(2))>0) then 		
 				do i=istart_morf2(2),istart_morf1(2)
-				  b_update(i)=1.-DBLE(i-istart_morf2(2))/DBLE(istart_morf1(2)-istart_morf2(2)) !linear decrease 1 -> 0
+				  b_update(i,0:j1)=1.-DBLE(i-istart_morf2(2))/DBLE(istart_morf1(2)-istart_morf2(2)) !linear decrease 1 -> 0
 				enddo
 			endif
-		    b_update(0:1)=0. ! no bed-update at inflow
-		    b_update(imax:i1)=0. ! no bed-update at outflow			
+		    b_update(0:1,0:j1)=0. ! no bed-update at inflow
+		    b_update(imax:i1,0:j1)=0. ! no bed-update at outflow			
 		endif 
 		if (mod(istep,100).eq.0) then
 			call chkdiv
@@ -513,7 +529,8 @@
 				pres_in_predictor_step = 0 ! use no Pold in predictor step every 100 time steps to remove spurious strange pressure relicts in immersed boundary zero flow zones
 			endif 
 		else
-		  if (pres_in_predictor_step_internal.ne.3.or.pres_in_predictor_step_internal.ne.4.or.pres_in_predictor_step_internal.ne.5) then 
+		  if (pres_in_predictor_step_internal.ne.3.or.pres_in_predictor_step_internal.ne.4.or.pres_in_predictor_step_internal.ne.5
+     &		  .or.pres_in_predictor_step_internal.ne.6.or.pres_in_predictor_step_internal.ne.7) then 
 			pres_in_predictor_step = pres_in_predictor_step_internal
 		  endif 
 		endif
@@ -523,8 +540,7 @@
 		  do i=1,imax
 			do j=1,jmax
 			  do k=1,kmax !MIN(kmax,kbed(i,j))
-			    pold(i,j,k) = (dp(i-1,j,k)+dp(i+1,j,k)+dp(i,j-1,k)+dp(i,j+1,k)+dp(i,j,k)+dp(i,j,k-1)+dp(i,j,k+1))/7.-p(i,j,k) 
-				! filter pold 
+			    pold(i,j,k) = (dp(i-1,j,k)+dp(i+1,j,k)+dp(i,j-1,k)+dp(i,j+1,k)+dp(i,j,k)+dp(i,j,k-1)+dp(i,j,k+1))/7.-p(i,j,k) ! filter pold 
 			  enddo
 			enddo	
 		  enddo	
@@ -534,8 +550,7 @@
 		  do i=1,imax
 			do j=1,jmax
 			  do k=1,MIN(kmax,kbed(i,j))
-			    pold(i,j,k) = (dp(i-1,j,k)+dp(i+1,j,k)+dp(i,j-1,k)+dp(i,j+1,k)+dp(i,j,k)+dp(i,j,k-1)+dp(i,j,k+1))/7.-p(i,j,k) 
-				! filter pold 
+			    pold(i,j,k) = (dp(i-1,j,k)+dp(i+1,j,k)+dp(i,j-1,k)+dp(i,j+1,k)+dp(i,j,k)+dp(i,j,k-1)+dp(i,j,k+1))/7.-p(i,j,k) ! filter pold 
 !				pold(i,j,k) = 	((1.-fc_global(i-1,j+jmax*rank,k))*dp(i-1,j,k)+(1.-fc_global(i+1,j+jmax*rank,k))*dp(i+1,j,k)
 !     &				  +dp(i,j,k)+(1.-fc_global(i,j+jmax*rank-1,k))*dp(i,j-1,k)+(1.-fc_global(i,j+jmax*rank+1,k))*dp(i,j+1,k)
 !     &	 						+(1.-fc_global(i,j+jmax*rank,k-1))*dp(i,j,k-1)+(1.-fc_global(i,j+jmax*rank,k+1))*dp(i,j,k+1))
@@ -553,13 +568,72 @@
 			  call bound_3D(dp)
 			  do i=1,imax
 				do j=1,jmax
-				  do k=1,MIN(kmax,kbed(i,j))
-					pold(i,j,k) = (dp(i-1,j,k)+dp(i+1,j,k)+dp(i,j-1,k)+dp(i,j+1,k)+dp(i,j,k)+dp(i,j,k-1)+dp(i,j,k+1))/7.-p(i,j,k) 
-					! filter pold 
+				  do k=1,kmax !MIN(kmax,kbed(i,j))
+					pold(i,j,k) = (dp(i-1,j,k)+dp(i+1,j,k)+dp(i,j-1,k)+dp(i,j+1,k)+dp(i,j,k)+dp(i,j,k-1)+dp(i,j,k+1))/7.-p(i,j,k) ! filter pold 
 				  enddo
 				enddo	
 			  enddo
 		  endif 
+		elseif (pres_in_predictor_step_internal.eq.6) then !
+			  dp(1:imax,1:jmax,1:kmax)=pold+p 
+			  call bound_3D(dp)
+			  do i=1,imax
+				do j=1,jmax
+				  do k=1,kmax !MIN(kmax,kbed(i,j))
+					pold(i,j,k) = (dp(i-1,j,k)+dp(i+1,j,k)+2.*dp(i,j,k))/4.-p(i,j,k)  ! i-dir
+				  enddo
+				enddo	
+			  enddo
+			  dp(1:imax,1:jmax,1:kmax)=pold+p
+			  call bound_3D(dp)
+			  do i=1,imax
+				do j=1,jmax
+				  do k=1,kmax !MIN(kmax,kbed(i,j))
+					pold(i,j,k) = (dp(i,j,k-1)+dp(i,j,k+1)+2.*dp(i,j,k))/4.-p(i,j,k)   !k-dir 
+				  enddo
+				enddo	
+			  enddo	
+			  dp(1:imax,1:jmax,1:kmax)=pold+p
+			  call bound_3D(dp)
+			  do i=1,imax
+				do j=1,jmax
+				  do k=1,kmax !MIN(kmax,kbed(i,j))
+					pold(i,j,k) = (dp(i,j-1,k)+dp(i,j+1,k)+2.*dp(i,j,k))/4.-p(i,j,k)  !j-dir 
+				  enddo
+				enddo	
+			  enddo	
+		elseif (pres_in_predictor_step_internal.eq.7) then !
+		  if (mod(istep,1000).eq.0) then
+		    pold=-p !forcing pold=0 in in predictor step in solve.f
+		  else
+			  dp(1:imax,1:jmax,1:kmax)=pold+p 
+			  call bound_3D(dp)
+			  do i=1,imax
+				do j=1,jmax
+				  do k=1,kmax !MIN(kmax,kbed(i,j))
+					pold(i,j,k) = (dp(i-1,j,k)+dp(i+1,j,k)+2.*dp(i,j,k))/4.-p(i,j,k)  ! i-dir
+				  enddo
+				enddo	
+			  enddo
+			  dp(1:imax,1:jmax,1:kmax)=pold+p
+			  call bound_3D(dp)
+			  do i=1,imax
+				do j=1,jmax
+				  do k=1,kmax !MIN(kmax,kbed(i,j))
+					pold(i,j,k) = (dp(i,j,k-1)+dp(i,j,k+1)+2.*dp(i,j,k))/4.-p(i,j,k)   !k-dir 
+				  enddo
+				enddo	
+			  enddo	
+			  dp(1:imax,1:jmax,1:kmax)=pold+p
+			  call bound_3D(dp)
+			  do i=1,imax
+				do j=1,jmax
+				  do k=1,kmax !MIN(kmax,kbed(i,j))
+					pold(i,j,k) = (dp(i,j-1,k)+dp(i,j+1,k)+2.*dp(i,j,k))/4.-p(i,j,k)  !j-dir 
+				  enddo
+				enddo	
+			  enddo	
+		  endif 		  
 		endif 
 		  !!    Make pressure zero at one point in outflow:
 		  if((U_b.ge.0.and.LOA<0).or.((U_TSHD-U_b).ge.0.and.LOA>0.)) THEN 

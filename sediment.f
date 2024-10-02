@@ -1065,7 +1065,7 @@
      &				(1.-MAX(0.,(1.-tau/frac(n)%tau_d))*MIN(0.,Wsed(n,i,j,kbed(i,j)))*ddt/dz*bednotfixed_depo(i,j,kbed(i,j))*morfac)
 					 depositionf(n) = MAX(0.,(1.-tau/frac(n)%tau_d))*ccnew(n,i,j,kplus)*MIN(0.,Wsed(n,i,j,kbed(i,j)))*ddt !ccfd
      & *bednotfixed_depo(i,j,kbed(i,j))*morfac				 ! m --> dep is negative due to negative wsed					 
-					 cbotnew(n,i,j)=cbotnew(n,i,j)-b_update(i)*morfac2*(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-]  !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+					 cbotnew(n,i,j)=cbotnew(n,i,j)-b_update(i,j)*morfac2*(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-]  !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
 					 cbotnewtot=cbotnewtot+cbotnew(n,i,j)
 					 cbotnewtot_pos=cbotnewtot_pos+MAX(cbotnew(n,i,j),0.)
 					 ctot_firstcel=ccnew(n,i,j,kplus)+ctot_firstcel					
@@ -1073,7 +1073,7 @@
 					 depositionf(n) = MAX(0.,(1.-tau/frac(n)%tau_d))*ccnew(n,i,j,kplus)*MIN(0.,Wsed(n,i,j,kbed(i,j)))*ddt !ccfd
      & *bednotfixed_depo(i,j,kbed(i,j))*morfac			 ! m --> dep is negative due to negative wsed
 					 ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus)+(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-]
-					 cbotnew(n,i,j)=cbotnew(n,i,j)-b_update(i)*morfac2*(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-]  !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+					 cbotnew(n,i,j)=cbotnew(n,i,j)-b_update(i,j)*morfac2*(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-]  !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
 					 cbotnewtot=cbotnewtot+cbotnew(n,i,j)
 					 cbotnewtot_pos=cbotnewtot_pos+MAX(cbotnew(n,i,j),0.)
 					 ctot_firstcel=ccnew(n,i,j,kplus)+ctot_firstcel
@@ -1579,7 +1579,7 @@
      &	   *MIN(bednotfixed_depo(i,j,kbed(i,j)),bednotfixed_depo(i,j,kplus))*morfac)	!no deposition in case of present cell is non-depo or when above cell is non-depo				
 					depositionf(n) = ccnew(n,i,j,kplus)*(MIN(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))-wsedbed)*ddt !ccfd
      &     *MIN(bednotfixed_depo(i,j,kbed(i,j)),bednotfixed_depo(i,j,kplus))*morfac! m --> dep is negative due to negative wsed, !no deposition in case of present cell is non-depo or when above cell is non-depo									
-					cbotnew(n,i,j)=cbotnew(n,i,j)-b_update(i)*morfac2*(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-] !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+					cbotnew(n,i,j)=cbotnew(n,i,j)-b_update(i,j)*morfac2*(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-] !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
 					cbotnewtot=cbotnewtot+cbotnew(n,i,j)
 					cbotnewtot_pos=cbotnewtot_pos+MAX(cbotnew(n,i,j),0.)
 					ctot_firstcel=ccnew(n,i,j,kplus)+ctot_firstcel
@@ -1587,7 +1587,7 @@
 					depositionf(n) = ccnew(n,i,j,kplus)*(MIN(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))-wsedbed)*ddt !ccfd
      &     *MIN(bednotfixed_depo(i,j,kbed(i,j)),bednotfixed_depo(i,j,kplus))*morfac ! m --> dep is negative due to negative wsed
 					ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus)+(erosionf(n)*ero_factor+depositionf(n))/(dz) ! vol conc. [-]
-					cbotnew(n,i,j)=cbotnew(n,i,j)-b_update(i)*morfac2*(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-] !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+					cbotnew(n,i,j)=cbotnew(n,i,j)-b_update(i,j)*morfac2*(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-] !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
 					cbotnewtot=cbotnewtot+cbotnew(n,i,j)
 					cbotnewtot_pos=cbotnewtot_pos+MAX(cbotnew(n,i,j),0.)
 					ctot_firstcel=ccnew(n,i,j,kplus)+ctot_firstcel
@@ -1609,26 +1609,26 @@
 						flux = (uuRrel*qbf(n)-qbf(n)*0.5*(vvLrel+vvRrel)*fnorm)*Ru(i)*dphi2(j)*ddt ![kg] change in mass over this edge
 						IF (flux>0.) THEN !upwind 
 							flux = flux * MIN(bednotfixed_depo(i+1,j,kbed(i+1,j)),bednotfixed_depo(i+1,j,MIN(kbed(i+1,j)+1,k1))) !target cell may not recieve bedload sediment when this may lead to sedimentation into an obstacle now or after bedupdate 
-							d_cbotnew(n,i,j) = d_cbotnew(n,i,j) - flux/(rho_sand*dr(i)*Rp(i)*dphi2(j)*dz)*b_update(i)
-							d_cbotnew(n,i+1,j) = d_cbotnew(n,i+1,j) + flux/(rho_sand*dr(i+1)*Rp(i+1)*dphi2(j)*dz)*b_update(i+1)
+							d_cbotnew(n,i,j) = d_cbotnew(n,i,j) - flux/(rho_sand*dr(i)*Rp(i)*dphi2(j)*dz)*b_update(i,j)
+							d_cbotnew(n,i+1,j) = d_cbotnew(n,i+1,j) + flux/(rho_sand*dr(i+1)*Rp(i+1)*dphi2(j)*dz)*b_update(i+1,j)
 						ENDIF 
 						flux = (uuLrel*qbf(n)-qbf(n)*0.5*(vvLrel+vvRrel)*fnorm)*Ru(i-1)*dphi2(j)*ddt ![kg] change in mass over this edge
 						IF (flux<0.) THEN
 							flux = flux * MIN(bednotfixed_depo(i-1,j,kbed(i-1,j)),bednotfixed_depo(i-1,j,MIN(kbed(i-1,j)+1,k1))) !target cell may not recieve bedload sediment when this may lead to sedimentation into an obstacle now or after bedupdate 
-							d_cbotnew(n,i,j) = d_cbotnew(n,i,j) + flux/(rho_sand*dr(i)*Rp(i)*dphi2(j)*dz)*b_update(i)
-							d_cbotnew(n,i-1,j) = d_cbotnew(n,i-1,j) - flux/(rho_sand*dr(i-1)*Rp(i-1)*dphi2(j)*dz)*b_update(i-1)
+							d_cbotnew(n,i,j) = d_cbotnew(n,i,j) + flux/(rho_sand*dr(i)*Rp(i)*dphi2(j)*dz)*b_update(i,j)
+							d_cbotnew(n,i-1,j) = d_cbotnew(n,i-1,j) - flux/(rho_sand*dr(i-1)*Rp(i-1)*dphi2(j)*dz)*b_update(i-1,j)
 						ENDIF 						
 						flux = (vvRrel*qbf(n)+qbf(n)*0.5*(uuLrel+uuRrel)*fnorm)*dr(i)*ddt ![kg] change in mass over this edge
 						IF (flux>0.) THEN 
 							flux = flux * MIN(bednotfixed_depo(i,j+1,kbed(i,j+1)),bednotfixed_depo(i,j+1,MIN(kbed(i,j+1)+1,k1))) !target cell may not recieve bedload sediment when this may lead to sedimentation into an obstacle now or after bedupdate						
-							d_cbotnew(n,i,j) = d_cbotnew(n,i,j) - flux/(rho_sand*dr(i)*Rp(i)*dphi2(j)*dz)*b_update(i)
-							d_cbotnew(n,i,j+1) = d_cbotnew(n,i,j+1) + flux/(rho_sand*dr(i)*Rp(i)*dphi2(j+1)*dz)*b_update(i)
+							d_cbotnew(n,i,j) = d_cbotnew(n,i,j) - flux/(rho_sand*dr(i)*Rp(i)*dphi2(j)*dz)*b_update(i,j)
+							d_cbotnew(n,i,j+1) = d_cbotnew(n,i,j+1) + flux/(rho_sand*dr(i)*Rp(i)*dphi2(j+1)*dz)*b_update(i,j+1)
 						ENDIF 
 						flux = (vvLrel*qbf(n)+qbf(n)*0.5*(uuLrel+uuRrel)*fnorm)*dr(i)*ddt ![kg] change in mass over this edge
 						IF (flux<0.) THEN
 							flux = flux * MIN(bednotfixed_depo(i,j-1,kbed(i,j-1)),bednotfixed_depo(i,j-1,MIN(kbed(i,j-1)+1,k1))) !target cell may not recieve bedload sediment when this may lead to sedimentation into an obstacle now or after bedupdate	
-							d_cbotnew(n,i,j) = d_cbotnew(n,i,j) + flux/(rho_sand*dr(i)*Rp(i)*dphi2(j)*dz)*b_update(i)
-							d_cbotnew(n,i,j-1) = d_cbotnew(n,i,j-1) - flux/(rho_sand*dr(i)*Rp(i)*dphi2(j-1)*dz)*b_update(i)
+							d_cbotnew(n,i,j) = d_cbotnew(n,i,j) + flux/(rho_sand*dr(i)*Rp(i)*dphi2(j)*dz)*b_update(i,j)
+							d_cbotnew(n,i,j-1) = d_cbotnew(n,i,j-1) - flux/(rho_sand*dr(i)*Rp(i)*dphi2(j-1)*dz)*b_update(i,j-1)
 						ENDIF						
 					ENDIF 
 					erosionf(n)=erosionf(n)*ero_factor !below erosionf(n) is used to redistribute SSC lowest fluid cell, should be including ero_factor  
@@ -1753,7 +1753,7 @@
 						!rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density							
 					ENDDO	
 				ELSEIF (ctot_firstcel.ge.cfixedbed.and.kbed(i,j)+1.le.kmax.and.(bednotfixed(i,j,kplus)>0.9.or.
-     &             bednotfixed_depo(i,j,kplus)>0.9).and.b_update(i)>0.01.and. 
+     &             bednotfixed_depo(i,j,kplus)>0.9).and.b_update(i,j)>0.01.and. 
      &             (SUM(Clivebed(1:nfrac,i,j,kbed(i,j))).ge.cfixedbed-1.e-9.or.kbed(i,j).eq.0)) THEN 
 	 !only kbed+1 if cell above is not part of an non-erodable obstacle (which is the case when both bednotfixed and bednotfixed_depo are 0, so when either of those is 1 then it is not an obstacle) which would lead to a sedimentbed which can never erode again; a sediment bed may deposit up to touching an obstacle plate or pipe but it may not deposit into such construction  
 					kbed(i,j)=kbed(i,j)+1
@@ -2298,7 +2298,8 @@
 							CYCLE 
 						ENDIF
 						dbed_allowed = dl/MAX(av_slope(i,j,kbed(i,j))*bednotfixed(i,j,kbed(i,j)),1.e-18)
-						dbed_adjust = vol_Vp(itrgt,jtrgt)/(vol_Vp(i,j)+vol_Vp(itrgt,jtrgt))*(dbed - dbed_allowed)*b_update(i)*b_update(itrgt)
+						dbed_adjust = vol_Vp(itrgt,jtrgt)/(vol_Vp(i,j)+vol_Vp(itrgt,jtrgt))*(dbed - dbed_allowed)
+     &						*MIN(b_update(i,j),b_update(itrgt,jtrgt))
 						dz_botlayer =SUM(cbotnew(1:nfrac,i,j))/cfixedbed*dz
       ! write(*,*),'rank,i,j:',rank,i,j,dbed,dbed_allowed,dbed_adjust,dz_botlayer,maxbedslope(i,j),av_slope(kbed(i,j))	
 						IF (dbed_adjust.le.dz_botlayer) THEN ! only cbotnew adjusted
@@ -2582,7 +2583,7 @@
 					  DO n=1,nfrac 
 						c_adjust = dbed_adjust * cbotnew(n,itrgt,jtrgt)/dz_botlayer
 						c_adjust = MIN(c_adjust,(cbotnew(n,itrgt,jtrgt)+SUM(Clivebed(n,itrgt,jtrgt,0:kbed(itrgt,jtrgt))))/morfac2) ! not more material can be eroded as available 
-						d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt)-c_adjust*b_update(itrgt)*morfac2 
+						d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt)-c_adjust*b_update(itrgt,jtrgt)*morfac2 
 						c_adjust = c_adjust / MAX(1.,DBLE(kbed(itrgt,jtrgt)-kbed(i,j)-1))
 						DO k=kbed(i,j)+1,MIN(MAX(kbed(itrgt,jtrgt),kbed(i,j)+1),k1) !typically sideslope is multiple k high and sediment distributed along slope, but at least place all in lowest cell
 						  ccnew(n,i,j,k)=ccnew(n,i,j,k)+c_adjust*vol_Vp(itrgt,jtrgt)/vol_Vp(i,j) ! add to suspension of cells along the slope	
@@ -2592,7 +2593,7 @@
 					  DO n=1,nfrac 
 						c_adjust = dbed_adjust * Clivebed(n,itrgt,jtrgt,kbed(itrgt,jtrgt))/dz
 						c_adjust = MIN(c_adjust,(cbotnew(n,itrgt,jtrgt)+SUM(Clivebed(n,itrgt,jtrgt,0:kbed(itrgt,jtrgt))))/morfac2) ! not more material can be eroded as available 
-						d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt)-c_adjust*b_update(itrgt)*morfac2  
+						d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt)-c_adjust*b_update(itrgt,jtrgt)*morfac2  
 						c_adjust = c_adjust / MAX(1.,DBLE(kbed(itrgt,jtrgt)-kbed(i,j)-1)) 
 						DO k=kbed(i,j)+1,MIN(MAX(kbed(itrgt,jtrgt),kbed(i,j)+1),k1) !typically sideslope is multiple k high and sediment distributed along slope, but at least place all in lowest cell
 						  ccnew(n,i,j,k)=ccnew(n,i,j,k)+c_adjust*vol_Vp(itrgt,jtrgt)/vol_Vp(i,j) ! add to suspension of cells along the slope	
@@ -2688,7 +2689,7 @@
 					  DO n=1,nfrac 
 						c_adjust = dbed_adjust * cbotnew(n,itrgt,jtrgt)/dz_botlayer
 						c_adjust = MIN(c_adjust,(cbotnew(n,itrgt,jtrgt)+SUM(Clivebed(n,itrgt,jtrgt,0:kbed(itrgt,jtrgt))))/morfac2) ! not more material can be eroded as available 
-						d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt)-c_adjust*b_update(itrgt)*morfac2 
+						d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt)-c_adjust*b_update(itrgt,jtrgt)*morfac2 
 						c_adjust = c_adjust / MAX(1.,DBLE(kbed(itrgt,jtrgt)-kbed(i,j)-1))
 						DO k=kbed(i,j)+1,MIN(MAX(kbed(itrgt,jtrgt),kbed(i,j)+1),k1) !typically sideslope is multiple k high and sediment distributed along slope, but at least place all in lowest cell
 						  ccnew(n,i,j,k)=ccnew(n,i,j,k)+c_adjust*vol_Vp(itrgt,jtrgt)/vol_Vp(i,j) ! add to suspension of cells along the slope	
@@ -2698,7 +2699,7 @@
 					  DO n=1,nfrac 
 						c_adjust = dbed_adjust * Clivebed(n,itrgt,jtrgt,kbed(itrgt,jtrgt))/dz
 						c_adjust = MIN(c_adjust,(cbotnew(n,itrgt,jtrgt)+SUM(Clivebed(n,itrgt,jtrgt,0:kbed(itrgt,jtrgt))))/morfac2) ! not more material can be eroded as available 
-						d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt)-c_adjust*b_update(itrgt)*morfac2  
+						d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt)-c_adjust*b_update(itrgt,jtrgt)*morfac2  
 						c_adjust = c_adjust / MAX(1.,DBLE(kbed(itrgt,jtrgt)-kbed(i,j)-1)) 
 						DO k=kbed(i,j)+1,MIN(MAX(kbed(itrgt,jtrgt),kbed(i,j)+1),k1) !typically sideslope is multiple k high and sediment distributed along slope, but at least place all in lowest cell
 						  ccnew(n,i,j,k)=ccnew(n,i,j,k)+c_adjust*vol_Vp(itrgt,jtrgt)/vol_Vp(i,j) ! add to suspension of cells along the slope	
@@ -2795,7 +2796,7 @@
 					  DO n=1,nfrac 
 						c_adjust = dbed_adjust * cbotnew(n,itrgt,jtrgt)/dz_botlayer
 						c_adjust = MIN(c_adjust,(cbotnew(n,itrgt,jtrgt)+SUM(Clivebed(n,itrgt,jtrgt,0:kbed(itrgt,jtrgt))))/morfac2) ! not more material can be eroded as available 
-						d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt)-c_adjust*b_update(itrgt)*morfac2 
+						d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt)-c_adjust*b_update(itrgt,jtrgt)*morfac2 
 						c_adjust = c_adjust / MAX(1.,DBLE(kbed(itrgt,jtrgt)-kbed(i,j)-1))
 						DO k=kbed(i,j)+1,MIN(MAX(kbed(itrgt,jtrgt),kbed(i,j)+1),k1) !typically sideslope is multiple k high and sediment distributed along slope, but at least place all in lowest cell
 						  ccnew(n,i,j,k)=ccnew(n,i,j,k)+c_adjust*vol_Vp(itrgt,jtrgt)/vol_Vp(i,j) ! add to suspension of cells along the slope	
@@ -2805,7 +2806,7 @@
 					  DO n=1,nfrac 
 						c_adjust = dbed_adjust * Clivebed(n,itrgt,jtrgt,kbed(itrgt,jtrgt))/dz
 						c_adjust = MIN(c_adjust,(cbotnew(n,itrgt,jtrgt)+SUM(Clivebed(n,itrgt,jtrgt,0:kbed(itrgt,jtrgt))))/morfac2) ! not more material can be eroded as available 
-						d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt)-c_adjust*b_update(itrgt)*morfac2  
+						d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt)-c_adjust*b_update(itrgt,jtrgt)*morfac2  
 						c_adjust = c_adjust / MAX(1.,DBLE(kbed(itrgt,jtrgt)-kbed(i,j)-1)) 
 						DO k=kbed(i,j)+1,MIN(MAX(kbed(itrgt,jtrgt),kbed(i,j)+1),k1) !typically sideslope is multiple k high and sediment distributed along slope, but at least place all in lowest cell
 						  ccnew(n,i,j,k)=ccnew(n,i,j,k)+c_adjust*vol_Vp(itrgt,jtrgt)/vol_Vp(i,j) ! add to suspension of cells along the slope	
@@ -2897,7 +2898,7 @@
 					  DO n=1,nfrac 
 						c_adjust = dbed_adjust * cbotnew(n,itrgt,jtrgt)/dz_botlayer
 						c_adjust = MIN(c_adjust,(cbotnew(n,itrgt,jtrgt)+SUM(Clivebed(n,itrgt,jtrgt,0:kbed(itrgt,jtrgt))))/morfac2) ! not more material can be eroded as available 
-						d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt)-c_adjust*b_update(itrgt)*morfac2 
+						d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt)-c_adjust*b_update(itrgt,jtrgt)*morfac2 
 						c_adjust = c_adjust / MAX(1.,DBLE(kbed(itrgt,jtrgt)-kbed(i,j)-1))
 						DO k=kbed(i,j)+1,MIN(MAX(kbed(itrgt,jtrgt),kbed(i,j)+1),k1) !typically sideslope is multiple k high and sediment distributed along slope, but at least place all in lowest cell
 						  ccnew(n,i,j,k)=ccnew(n,i,j,k)+c_adjust*vol_Vp(itrgt,jtrgt)/vol_Vp(i,j) ! add to suspension of cells along the slope	
@@ -2907,7 +2908,7 @@
 					  DO n=1,nfrac 
 						c_adjust = dbed_adjust * Clivebed(n,itrgt,jtrgt,kbed(itrgt,jtrgt))/dz
 						c_adjust = MIN(c_adjust,(cbotnew(n,itrgt,jtrgt)+SUM(Clivebed(n,itrgt,jtrgt,0:kbed(itrgt,jtrgt))))/morfac2) ! not more material can be eroded as available 
-						d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt)-c_adjust*b_update(itrgt)*morfac2  
+						d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt)-c_adjust*b_update(itrgt,jtrgt)*morfac2  
 						c_adjust = c_adjust / MAX(1.,DBLE(kbed(itrgt,jtrgt)-kbed(i,j)-1)) 
 						DO k=kbed(i,j)+1,MIN(MAX(kbed(itrgt,jtrgt),kbed(i,j)+1),k1) !typically sideslope is multiple k high and sediment distributed along slope, but at least place all in lowest cell
 						  ccnew(n,i,j,k)=ccnew(n,i,j,k)+c_adjust*vol_Vp(itrgt,jtrgt)/vol_Vp(i,j) ! add to suspension of cells along the slope	
@@ -3447,7 +3448,7 @@
 					  DO n=1,nfrac 
 						c_adjust = dbed_adjust * cbotnew(n,itrgt,jtrgt)/dz_botlayer
 						c_adjust = MIN(c_adjust,(cbotnew(n,itrgt,jtrgt)+SUM(Clivebed(n,itrgt,jtrgt,0:kbed(itrgt,jtrgt))))/morfac2) ! not more material can be eroded as available 
-						d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt)-c_adjust*b_update(itrgt)*morfac2 
+						d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt)-c_adjust*b_update(itrgt,jtrgt)*morfac2 
 						c_adjust = c_adjust / MAX(1.,DBLE(kbed(itrgt,jtrgt)-kbed(i,j)-1))
 						DO k=kbed(i,j)+1,MIN(MAX(kbed(itrgt,jtrgt),kbed(i,j)+1),k1) !typically sideslope is multiple k high and sediment distributed along slope, but at least place all in lowest cell
 						  ccnew(n,i,j,k)=ccnew(n,i,j,k)+c_adjust*vol_Vp(itrgt,jtrgt)/vol_Vp(i,j) ! add to suspension of cells along the slope	
@@ -3457,7 +3458,7 @@
 					  DO n=1,nfrac 
 						c_adjust = dbed_adjust * Clivebed(n,itrgt,jtrgt,kbed(itrgt,jtrgt))/dz
 						c_adjust = MIN(c_adjust,(cbotnew(n,itrgt,jtrgt)+SUM(Clivebed(n,itrgt,jtrgt,0:kbed(itrgt,jtrgt))))/morfac2) ! not more material can be eroded as available 
-						d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt)-c_adjust*b_update(itrgt)*morfac2  
+						d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt)-c_adjust*b_update(itrgt,jtrgt)*morfac2  
 						c_adjust = c_adjust / MAX(1.,DBLE(kbed(itrgt,jtrgt)-kbed(i,j)-1)) 
 						DO k=kbed(i,j)+1,MIN(MAX(kbed(itrgt,jtrgt),kbed(i,j)+1),k1) !typically sideslope is multiple k high and sediment distributed along slope, but at least place all in lowest cell
 						  ccnew(n,i,j,k)=ccnew(n,i,j,k)+c_adjust*vol_Vp(itrgt,jtrgt)/vol_Vp(i,j) ! add to suspension of cells along the slope	
@@ -3560,7 +3561,7 @@
 					  DO n=1,nfrac 
 						c_adjust = dbed_adjust * cbotnew(n,itrgt,jtrgt)/dz_botlayer
 						c_adjust = MIN(c_adjust,(cbotnew(n,itrgt,jtrgt)+SUM(Clivebed(n,itrgt,jtrgt,0:kbed(itrgt,jtrgt))))/morfac2) ! not more material can be eroded as available 
-						d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt)-c_adjust*b_update(itrgt)*morfac2 
+						d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt)-c_adjust*b_update(itrgt,jtrgt)*morfac2 
 						c_adjust = c_adjust / MAX(1.,DBLE(kbed(itrgt,jtrgt)-kbed(i,j)-1))
 						DO k=kbed(i,j)+1,MIN(MAX(kbed(itrgt,jtrgt),kbed(i,j)+1),k1) !typically sideslope is multiple k high and sediment distributed along slope, but at least place all in lowest cell
 						  ccnew(n,i,j,k)=ccnew(n,i,j,k)+c_adjust*vol_Vp(itrgt,jtrgt)/vol_Vp(i,j) ! add to suspension of cells along the slope	
@@ -3570,7 +3571,7 @@
 					  DO n=1,nfrac 
 						c_adjust = dbed_adjust * Clivebed(n,itrgt,jtrgt,kbed(itrgt,jtrgt))/dz
 						c_adjust = MIN(c_adjust,(cbotnew(n,itrgt,jtrgt)+SUM(Clivebed(n,itrgt,jtrgt,0:kbed(itrgt,jtrgt))))/morfac2) ! not more material can be eroded as available 
-						d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt)-c_adjust*b_update(itrgt)*morfac2  
+						d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt)-c_adjust*b_update(itrgt,jtrgt)*morfac2  
 						c_adjust = c_adjust / MAX(1.,DBLE(kbed(itrgt,jtrgt)-kbed(i,j)-1)) 
 						DO k=kbed(i,j)+1,MIN(MAX(kbed(itrgt,jtrgt),kbed(i,j)+1),k1) !typically sideslope is multiple k high and sediment distributed along slope, but at least place all in lowest cell
 						  ccnew(n,i,j,k)=ccnew(n,i,j,k)+c_adjust*vol_Vp(itrgt,jtrgt)/vol_Vp(i,j) ! add to suspension of cells along the slope	
@@ -3673,7 +3674,7 @@
 					  DO n=1,nfrac 
 						c_adjust = dbed_adjust * cbotnew(n,itrgt,jtrgt)/dz_botlayer
 						c_adjust = MIN(c_adjust,(cbotnew(n,itrgt,jtrgt)+SUM(Clivebed(n,itrgt,jtrgt,0:kbed(itrgt,jtrgt))))/morfac2) ! not more material can be eroded as available 
-						d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt)-c_adjust*b_update(itrgt)*morfac2 
+						d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt)-c_adjust*b_update(itrgt,jtrgt)*morfac2 
 						c_adjust = c_adjust / MAX(1.,DBLE(kbed(itrgt,jtrgt)-kbed(i,j)-1))
 						DO k=kbed(i,j)+1,MIN(MAX(kbed(itrgt,jtrgt),kbed(i,j)+1),k1) !typically sideslope is multiple k high and sediment distributed along slope, but at least place all in lowest cell
 						  ccnew(n,i,j,k)=ccnew(n,i,j,k)+c_adjust*vol_Vp(itrgt,jtrgt)/vol_Vp(i,j) ! add to suspension of cells along the slope	
@@ -3683,7 +3684,7 @@
 					  DO n=1,nfrac 
 						c_adjust = dbed_adjust * Clivebed(n,itrgt,jtrgt,kbed(itrgt,jtrgt))/dz
 						c_adjust = MIN(c_adjust,(cbotnew(n,itrgt,jtrgt)+SUM(Clivebed(n,itrgt,jtrgt,0:kbed(itrgt,jtrgt))))/morfac2) ! not more material can be eroded as available 
-						d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt)-c_adjust*b_update(itrgt)*morfac2  
+						d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt)-c_adjust*b_update(itrgt,jtrgt)*morfac2  
 						c_adjust = c_adjust / MAX(1.,DBLE(kbed(itrgt,jtrgt)-kbed(i,j)-1)) 
 						DO k=kbed(i,j)+1,MIN(MAX(kbed(itrgt,jtrgt),kbed(i,j)+1),k1) !typically sideslope is multiple k high and sediment distributed along slope, but at least place all in lowest cell
 						  ccnew(n,i,j,k)=ccnew(n,i,j,k)+c_adjust*vol_Vp(itrgt,jtrgt)/vol_Vp(i,j) ! add to suspension of cells along the slope	
@@ -3781,7 +3782,7 @@
 					  DO n=1,nfrac 
 						c_adjust = dbed_adjust * cbotnew(n,itrgt,jtrgt)/dz_botlayer
 						c_adjust = MIN(c_adjust,(cbotnew(n,itrgt,jtrgt)+SUM(Clivebed(n,itrgt,jtrgt,0:kbed(itrgt,jtrgt))))/morfac2) ! not more material can be eroded as available 
-						d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt)-c_adjust*b_update(itrgt)*morfac2 
+						d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt)-c_adjust*b_update(itrgt,jtrgt)*morfac2 
 						c_adjust = c_adjust / MAX(1.,DBLE(kbed(itrgt,jtrgt)-kbed(i,j)-1))
 						DO k=kbed(i,j)+1,MIN(MAX(kbed(itrgt,jtrgt),kbed(i,j)+1),k1) !typically sideslope is multiple k high and sediment distributed along slope, but at least place all in lowest cell
 						  ccnew(n,i,j,k)=ccnew(n,i,j,k)+c_adjust*vol_Vp(itrgt,jtrgt)/vol_Vp(i,j) ! add to suspension of cells along the slope	
@@ -3791,7 +3792,7 @@
 					  DO n=1,nfrac 
 						c_adjust = dbed_adjust * Clivebed(n,itrgt,jtrgt,kbed(itrgt,jtrgt))/dz
 						c_adjust = MIN(c_adjust,(cbotnew(n,itrgt,jtrgt)+SUM(Clivebed(n,itrgt,jtrgt,0:kbed(itrgt,jtrgt))))/morfac2) ! not more material can be eroded as available 
-						d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt)-c_adjust*b_update(itrgt)*morfac2  
+						d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt)-c_adjust*b_update(itrgt,jtrgt)*morfac2  
 						c_adjust = c_adjust / MAX(1.,DBLE(kbed(itrgt,jtrgt)-kbed(i,j)-1)) 
 						DO k=kbed(i,j)+1,MIN(MAX(kbed(itrgt,jtrgt),kbed(i,j)+1),k1) !typically sideslope is multiple k high and sediment distributed along slope, but at least place all in lowest cell
 						  ccnew(n,i,j,k)=ccnew(n,i,j,k)+c_adjust*vol_Vp(itrgt,jtrgt)/vol_Vp(i,j) ! add to suspension of cells along the slope	
@@ -3890,9 +3891,9 @@
 			call bound_cbot(zb_avg) 
 			DO i=1,imax
 				DO j=1,jmax
-					dbed = MAX(0.,zb_all(i,j)-zb_avg(i,j))*b_update(i)*bednotfixed(i,j,kbed(i,j)) !if positive then distribute this excess sediment over neighbours
-					dbedL = -0.5*MIN(0.,zb_all(i-1,j)-zb_avg(i-1,j))*b_update(i-1)*bednotfixed(i-1,j,kbed(i-1,j)) 
-					dbedR = -0.5*MIN(0.,zb_all(i+1,j)-zb_avg(i+1,j))*b_update(i+1)*bednotfixed(i+1,j,kbed(i+1,j)) 
+					dbed = MAX(0.,zb_all(i,j)-zb_avg(i,j))*b_update(i,j)*bednotfixed(i,j,kbed(i,j)) !if positive then distribute this excess sediment over neighbours
+					dbedL = -0.5*MIN(0.,zb_all(i-1,j)-zb_avg(i-1,j))*b_update(i-1,j)*bednotfixed(i-1,j,kbed(i-1,j)) 
+					dbedR = -0.5*MIN(0.,zb_all(i+1,j)-zb_avg(i+1,j))*b_update(i+1,j)*bednotfixed(i+1,j,kbed(i+1,j)) 
 					!if >0 neigbbour can use sediment, only 50% of needed sediment may come from this neighbour, leaving the other 50% for the other neighbour to make sure no new maxima are generated			
 					dz_botlayer =MAX(0.,SUM(cbotnew(1:nfrac,i,j))/cfixedbed*dz) !m bed-layer incl pores 
 					dbed_adjust = MIN(dz_botlayer,dbedL+dbedR,dbed)  !*vol_Vp(i,j)/dz !m*m3/m=m3 sediment including pores 
@@ -3913,9 +3914,9 @@
 			call bound_cbot(zb_avg) 
 			DO i=1,imax
 				DO j=1,jmax
-					dbed = MAX(0.,zb_all(i,j)-zb_avg(i,j))*b_update(i)*bednotfixed(i,j,kbed(i,j)) !if positive then distribute this excess sediment over neighbours
-					dbedL = -0.5*MIN(0.,zb_all(i,j-1)-zb_avg(i,j-1))*b_update(i)*bednotfixed(i,j-1,kbed(i,j-1)) 
-					dbedR = -0.5*MIN(0.,zb_all(i,j+1)-zb_avg(i,j+1))*b_update(i)*bednotfixed(i,j+1,kbed(i,j+1)) 
+					dbed = MAX(0.,zb_all(i,j)-zb_avg(i,j))*b_update(i,j)*bednotfixed(i,j,kbed(i,j)) !if positive then distribute this excess sediment over neighbours
+					dbedL = -0.5*MIN(0.,zb_all(i,j-1)-zb_avg(i,j-1))*b_update(i,j-1)*bednotfixed(i,j-1,kbed(i,j-1)) 
+					dbedR = -0.5*MIN(0.,zb_all(i,j+1)-zb_avg(i,j+1))*b_update(i,j+1)*bednotfixed(i,j+1,kbed(i,j+1)) 
 					!if >0 neigbbour can use sediment, only 50% of needed sediment may come from this neighbour, leaving the other 50% for the other neighbour to make sure no new maxima are generated			
 					dz_botlayer =MAX(0.,SUM(cbotnew(1:nfrac,i,j))/cfixedbed*dz)
 					dbed_adjust = MIN(dz_botlayer,dbedL+dbedR,dbed)  !*vol_Vp(i,j)/dz !m*m3/m=m3 sediment including pores 

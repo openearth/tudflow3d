@@ -42,7 +42,7 @@
       INTEGER nfrac,slipvel,interaction_bed,nobst,nbedplume,continuity_solver,hindered_settling,settling_along_gvector
       INTEGER nfr_silt,nfr_sand,nfr_air,istart_morf1(2),istart_morf2(2),i_periodicx,hindered_settling_c
       CHARACTER*256 hisfile,restart_dir,inpfile,plumetseriesfile,bcfile,plumetseriesfile2,bedlevelfile,initconditionsfile
-	  CHARACTER*256 U_b_tseriesfile,V_b_tseriesfile,W_b_tseriesfile
+	  CHARACTER*256 U_b_tseriesfile,V_b_tseriesfile,W_b_tseriesfile,bedupdatefile,tmorf_tseriesfile,tmorf2_tseriesfile
       CHARACTER*3 time_int,advec_conc,cutter,split_rho_cont
       CHARACTER*5 sgs_model
       CHARACTER*4 damping_drho_dz,extra_mix_visc
@@ -56,8 +56,9 @@
       REAL plumeUseries2(1:10000),c_bed(100)
 	  REAL U_b_series(1:10000),V_b_series(1:10000),W_b_series(1:10000)
 	  REAL U_b_tseries(1:10000),V_b_tseries(1:10000),W_b_tseries(1:10000)
+	  REAL tmorf_series(1:10000),tmorf2_series(1:10000),tmorf_tseries(1:10000),tmorf2_tseries(1:10000)
       INTEGER plumeseriesloc,plumeseriesloc2,plumeQseriesloc,plumecseriesloc
-	  INTEGER U_b_seriesloc,V_b_seriesloc,W_b_seriesloc
+	  INTEGER U_b_seriesloc,V_b_seriesloc,W_b_seriesloc,tmorf_seriesloc,tmorf2_seriesloc 
       INTEGER nr_HPfilter,depo_implicit,depo_cbed_option,monopile
       REAL timeAB_real(1:4),dpdx,dpdy,kn_d50_multiplier,avalanche_slope(100),av_slope_z(100)
 	  REAL dpdx1,dpdy1,Uavold,Vavold,U3avold,V3avold,dpdx3,dpdy3
@@ -135,12 +136,12 @@
 
       INTEGER*2, DIMENSION(:,:,:),ALLOCATABLE :: llist1,llist2,llist3
       INTEGER*2, DIMENSION(:,:),ALLOCATABLE :: llmax1,llmax2,llmax3 !,kbed,kbedt,kbed2
-      INTEGER*8, DIMENSION(:,:),ALLOCATABLE :: kbed,kbedt,kbed0,kbedold !,kbed2,kbed22
+      INTEGER*8, DIMENSION(:,:),ALLOCATABLE :: kbed,kbedt,kbed0,kbedold,b_update !,kbed2,kbed22
       INTEGER, DIMENSION(:,:),ALLOCATABLE :: Xkk,Tii
       INTEGER, DIMENSION(:),ALLOCATABLE :: Xii,Tkk,nfrac_air,nfrac_silt,nfrac_sand,nfrac_air2
 	  INTEGER*8, DIMENSION(:),ALLOCATABLE :: kbedin
       REAL, DIMENSION(:),ALLOCATABLE :: cos_u,cos_v,sin_u,sin_v,cos_ut,sin_ut,cos_vt,sin_vt
-      REAL, DIMENSION(:),ALLOCATABLE :: Ru,Rp,dr,phivt,phipt,dphi2t,phiv,phip,dphi2,b_update
+      REAL, DIMENSION(:),ALLOCATABLE :: Ru,Rp,dr,phivt,phipt,dphi2t,phiv,phip,dphi2
       REAL*8, DIMENSION(:),ALLOCATABLE :: xSEM1,ySEM1,zSEM1,uSEM1
       REAL*8, DIMENSION(:),ALLOCATABLE :: lmxSEM1,lmySEM1,lmzSEM1
       REAL*8, DIMENSION(:),ALLOCATABLE :: xSEM2,ySEM2,zSEM2,uSEM2 
@@ -286,7 +287,7 @@
      & periodicx,periodicy,dpdx,dpdy,W_ox,Hs,Tp,nx_w,ny_w,obst,bc_obst_h,U_b3,V_b3,surf_layer,wallup,bedlevelfile,
      & U_bSEM,V_bSEM,U_w,V_w,c_bed,cfixedbed,U_init,V_init,initconditionsfile,rho_b2,monopile,kn_mp,kn_sidewalls,obstfile,
      & istart_morf1,istart_morf2,i_periodicx,kn_flow_file,kn_flow_d50_multiplier,U_b_tseriesfile,V_b_tseriesfile,W_b_tseriesfile
-     & ,cbc_perx_j,cbc_relax,obstfile_erodepo,TBLE_grad_relax
+     & ,cbc_perx_j,cbc_relax,obstfile_erodepo,TBLE_grad_relax,bedupdatefile
 	NAMELIST /plume/W_j,plumetseriesfile,Awjet,Aujet,Avjet,Strouhal,azi_n,kjet,radius_j,Sc,slipvel,outflow_overflow_down,
      & U_j2,plumetseriesfile2,Awjet2,Aujet2,Avjet2,Strouhal2,azi_n2,radius_j2,zjet2,bedplume,radius_inner_j,xj,yj,W_j_powerlaw,
      & plume_z_outflow_belowsurf,hindered_settling,hindered_settling_c,Q_j,plumeQtseriesfile,plumectseriesfile
@@ -351,6 +352,12 @@
 	tstart_morf=0.
 	tstart_morf2=0.
 	trestart=0.
+	tmorf_tseriesfile=''
+	tmorf_tseries=-99999.
+	tmorf_series=-99999.
+	tmorf2_tseriesfile=''
+	tmorf2_tseries=-99999.
+	tmorf2_series=-99999.	
 	!! num_scheme
 	convection = 'ARGH'
 	numdiff = 0.
@@ -450,6 +457,7 @@
 	U_w=-9999.
 	V_w=-9999.	
 	bedlevelfile = ''
+	bedupdatefile = ''
 	initconditionsfile = ''
 	cfixedbed=0.6
 	c_bed(:)=-1.
@@ -801,6 +809,34 @@
 	IF (n_dtavg>0) THEN 
 		ALLOCATE(dt_series(n_dtavg))
 	ENDIF 
+	IF (tmorf_tseriesfile.eq.'') THEN
+	ELSE
+	   call readtseries(tmorf_tseriesfile,tmorf_tseries,tmorf_series)
+	   tmorf_seriesloc=1
+	   n3=0
+	   DO WHILE (tmorf_tseries(n3+1).NE.-99999.)
+		n3=n3+1
+	   END DO	  
+	   IF (tmorf_tseries(n3).lt.t_end) THEN
+				write(*,*),' time series shorter than t_end'
+				write(*,*),' series file:',tmorf_tseriesfile
+				CALL writeerror(039)
+		ENDIF	   
+	ENDIF
+	IF (tmorf2_tseriesfile.eq.'') THEN
+	ELSE
+	   call readtseries(tmorf2_tseriesfile,tmorf2_tseries,tmorf2_series)
+	   tmorf2_seriesloc=1
+	   n3=0
+	   DO WHILE (tmorf2_tseries(n3+1).NE.-99999.)
+		n3=n3+1
+	   END DO	  
+	   IF (tmorf2_tseries(n3).lt.t_end) THEN
+				write(*,*),' time series shorter than t_end'
+				write(*,*),' series file:',tmorf2_tseriesfile
+				CALL writeerror(039)
+		ENDIF	   
+	ENDIF	
 	READ (UNIT=1,NML=num_scheme,IOSTAT=ios)
 	!! check input num_scheme
 	IF (convection.ne.'CDS2'.AND.convection.ne.'CDS6'.AND.convection.ne.'COM4'.AND.convection.ne.'CDS4'
@@ -825,7 +861,8 @@
 	IF (CNdiffz.ne.0.and.CNdiffz.ne.1.and.CNdiffz.ne.2.and.CNdiffz.ne.11.and.CNdiffz.ne.12.and.CNdiffz.ne.31) CALL writeerror(406)
 	IF (npresIBM<0) CALL writeerror(407)
 	pres_in_predictor_step_internal = pres_in_predictor_step
-	IF (pres_in_predictor_step_internal.eq.3.or.pres_in_predictor_step_internal.eq.4.or.pres_in_predictor_step_internal.eq.5) THEN !make Pold in bed zero every timestep; use pres_in_predictor_step=1 in the rest of the code
+	IF (pres_in_predictor_step_internal.eq.3.or.pres_in_predictor_step_internal.eq.4.or.pres_in_predictor_step_internal.eq.5
+     & 	.or.pres_in_predictor_step_internal.eq.6.or.pres_in_predictor_step_internal.eq.7) THEN !make Pold in bed zero every timestep; use pres_in_predictor_step=1 in the rest of the code
 		pres_in_predictor_step = 1 
 	ENDIF 
 	IF (k_ust_tau<1.or.k_ust_tau>kmax) CALL writeerror(409)
@@ -1840,9 +1877,11 @@
 	IF (SEM.eq.1) THEN
 	IF (nmax1.gt.0.or.nmax2.gt.0) THEN
 	  IF (rank.eq.0.or.rank.eq.px-1) THEN
-		ALLOCATE(llist1(0:i1,1:kmax,1:2000))
+!		ALLOCATE(llist1(0:i1,1:kmax,1:2000))
+		ALLOCATE(llist1(0:i1,1:kmax,1:MAX(1,nmax1/10)))
 	  ENDIF
-	  ALLOCATE(llist2(0:j1,1:kmax,1:1000))
+!	  ALLOCATE(llist2(0:j1,1:kmax,1:1000))
+	  ALLOCATE(llist2(0:j1,1:kmax,1:MAX(1,nmax2/10)))
 	  ALLOCATE(llmax1(0:i1,1:kmax))
 	  ALLOCATE(llmax2(0:j1,1:kmax))	  	  
 	ENDIF	
@@ -1865,7 +1904,8 @@
 	ALLOCATE(lmySEM2(nmax2))
 	ALLOCATE(lmzSEM2(nmax2))
 	IF (nmax3.gt.0) THEN
-	  ALLOCATE(llist3(0:i1,0:j1,1:1000))
+!	  ALLOCATE(llist3(0:i1,0:j1,1:1000))
+	  ALLOCATE(llist3(0:i1,0:j1,1:MAX(1,nmax3/4)))
 	  ALLOCATE(llmax3(0:i1,0:j1))
 	ENDIF
 	ALLOCATE(AA3(3,3,0:i1,0:j1))	
@@ -1952,25 +1992,25 @@
 			Coldbot=0.
 			Cnewbot=0.
 			dCdtbot=0.
-	ALLOCATE(b_update(0:i1))
+	ALLOCATE(b_update(0:i1,0:j1))
 	IF (tstart_morf2.gt.1e-6) THEN 
 		b_update=0. 
 	ELSE
 		b_update=0. 	
-		b_update(istart_morf2(1):i1)=1.
-		if (istart_morf1(2)>0) b_update(istart_morf1(2):i1)=0.
+		b_update(istart_morf2(1):i1,0:j1)=1.
+		if (istart_morf1(2)>0) b_update(istart_morf1(2):i1,0:j1)=0.
 		if ((istart_morf2(1)-istart_morf1(1))>0) then 
 			do i=istart_morf1(1),istart_morf2(1)
-			  b_update(i)=DBLE(i-istart_morf1(1))/DBLE(istart_morf2(1)-istart_morf1(1)) !linear grow 0 -> 1
+			  b_update(i,0:j1)=DBLE(i-istart_morf1(1))/DBLE(istart_morf2(1)-istart_morf1(1)) !linear grow 0 -> 1
 			enddo	
 		endif
 		if ((istart_morf1(2)-istart_morf2(2))>0) then 		
 			do i=istart_morf2(2),istart_morf1(2)
-			  b_update(i)=1.-DBLE(i-istart_morf2(2))/DBLE(istart_morf1(2)-istart_morf2(2)) !linear decrease 1 -> 0
+			  b_update(i,0:j1)=1.-DBLE(i-istart_morf2(2))/DBLE(istart_morf1(2)-istart_morf2(2)) !linear decrease 1 -> 0
 			enddo	
 		endif 
-		b_update(0:1)=0. ! no bed-update at inflow
-		b_update(imax:i1)=0. ! no bed-update at outflow			
+		b_update(0:1,0:j1)=0. ! no bed-update at inflow
+		b_update(imax:i1,0:j1)=0. ! no bed-update at outflow			
 	ENDIF 	
 !	if (cbc_perx_j(1)>0) then  !use quasi periodic bc for concentration:
 !	  b_update(0:1)=0. ! no bed-update at inflow

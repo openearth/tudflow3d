@@ -6380,7 +6380,7 @@ C.. All other variables
         INTEGER maxfct, mnum, mtype, phase, n, nrhs, error, msglvl
         !INTEGER iparm(64)
         INTEGER idum(1)
-		real, dimension(:), allocatable :: wk2
+!		real, dimension(:), allocatable :: wk2
 		
 		
 	 
