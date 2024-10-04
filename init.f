@@ -2931,6 +2931,8 @@ C ...  Locals
 			IF (status2/= nf90_noerr) THEN
 				write(*,*),'bedupdatefile =',bedupdatefile
 				CALL writeerror(606)
+			ELSE 
+				write(*,*),'read input from bedupdatefile =',bedupdatefile
 			ENDIF
 			call check( nf90_inq_varid(ncid, "bu",rhVarid) )
 			call check( nf90_get_var(ncid,rhVarid,b_update(1:imax,0:j1),start=(/1,rank*jmax+1/),count=(/imax,jmax+2/)) )
@@ -3289,6 +3291,9 @@ C ...  Locals
 
 	real phi,z,ust_U_b,ust_V_b,z0_U,z0_V,correction,tt,interpseries,ust,z0,absU,signU_b_old
 	integer ii
+	INTEGER maxfct, mnum, mtype, phase, n, nrhs, error, msglvl
+	INTEGER idum(1)
+	REAL*8 ddum(1)
 	signU_b_old=signU_b
     !! Set time-varying boundary conditions:
 	if (U_b_tseriesfile.ne.'') then
@@ -3309,7 +3314,11 @@ C ...  Locals
 	endif
 	if (signU_b*signU_b_old<0.) then !U_b switched sign and re-initialization Pardiso matrix coefficients is needed
       IF (poissolver.eq.3) THEN
-	    CALL SOLVEpois_vg_init_pardiso
+        phase = -1 ! release internal memory ! Termination and release of memory PARDISO 
+        CALL pardiso (pt, maxfct, mnum, mtype, phase, n, ddum, idum, 
+     &  idum, idum, nrhs, iparm, msglvl, ddum, ddum, error)	    
+	    CALL SOLVEpois_vg_init_pardiso !re-initialize Pardiso matrix coefficients 
+		pold=-p !forcing pold=0 in in predictor step in solve.f
       ENDIF	
 	endif 
 	if (V_b_tseriesfile.ne.'') then

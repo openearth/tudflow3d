@@ -506,23 +506,24 @@
 		!nov-2018 not used because 1) consistent with splitting rho of from rhoU^* 2) faster
 		!only drawback is that it is not fully consistent with update C as this is based on c_edge based on direction U^n+1
 	
-		if (time_np.ge.tstart_morf2) then 
-			b_update=0. 	
-			b_update(istart_morf2(1):i1,0:j1)=1.
-			if (istart_morf1(2)>0) b_update(istart_morf1(2):i1,0:j1)=0.
-			if ((istart_morf2(1)-istart_morf1(1))>0) then 
-				do i=istart_morf1(1),istart_morf2(1)
-				  b_update(i,0:j1)=DBLE(i-istart_morf1(1))/DBLE(istart_morf2(1)-istart_morf1(1)) !linear grow 0 -> 1
-				enddo	
-			endif 
-			if ((istart_morf1(2)-istart_morf2(2))>0) then 		
-				do i=istart_morf2(2),istart_morf1(2)
-				  b_update(i,0:j1)=1.-DBLE(i-istart_morf2(2))/DBLE(istart_morf1(2)-istart_morf2(2)) !linear decrease 1 -> 0
-				enddo
-			endif
-		    b_update(0:1,0:j1)=0. ! no bed-update at inflow
-		    b_update(imax:i1,0:j1)=0. ! no bed-update at outflow			
-		endif 
+		!! b_update is defined in allocate_global_vars, so this below is double + it annihilates b_update from a bedupdatefile which is read in determine_indices_ship_in
+!		if (time_np.ge.tstart_morf2) then 
+!			b_update=0. 	
+!			b_update(istart_morf2(1):i1,0:j1)=1.
+!			if (istart_morf1(2)>0) b_update(istart_morf1(2):i1,0:j1)=0.
+!			if ((istart_morf2(1)-istart_morf1(1))>0) then 
+!				do i=istart_morf1(1),istart_morf2(1)
+!				  b_update(i,0:j1)=DBLE(i-istart_morf1(1))/DBLE(istart_morf2(1)-istart_morf1(1)) !linear grow 0 -> 1
+!				enddo	
+!			endif 
+!			if ((istart_morf1(2)-istart_morf2(2))>0) then 		
+!				do i=istart_morf2(2),istart_morf1(2)
+!				  b_update(i,0:j1)=1.-DBLE(i-istart_morf2(2))/DBLE(istart_morf1(2)-istart_morf2(2)) !linear decrease 1 -> 0
+!				enddo
+!			endif
+!		    b_update(0:1,0:j1)=0. ! no bed-update at inflow
+!		    b_update(imax:i1,0:j1)=0. ! no bed-update at outflow			
+!		endif 
 		if (mod(istep,100).eq.0) then
 			call chkdiv
 			if (pres_in_predictor_step_internal.eq.2) then 

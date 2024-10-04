@@ -689,7 +689,7 @@
 		write(*,*) '# cbc_perx_j(2) should be <=jmax/px              #'			
 	CASE(623)
 		write(*,*) '# namelist &ambient                              #'			
-		write(*,*) '# cbc_relax and TBLE_grad_relax and TBLEsed_grad_relax should be between 0-1     #'	
+		write(*,*) '# cbc_relax and TBLE_grad_relax and TBLEsl_grad_relax and TBLEbl_grad_relax should be between 0-1     #'	
 	CASE(624)
 		write(*,*) '# namelist &ambient                              #'			
 		write(*,*) '# taulayerTBLE should be 1 (default) or 50       #'			

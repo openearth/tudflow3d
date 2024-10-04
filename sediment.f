@@ -507,36 +507,36 @@
 		ppp(1:imax,1:jmax,1:kmax)=pold+p
 	ENDIF 
 	call bound_3D(ppp)	
-	IF(time_n.ge.tstart_morf) THEN 
-	  IF (wallmodel_tau_sed.eq.3.or.wallmodel_tau_sed.eq.4.or.wallmodel_tau_sed.eq.8.or.wallmodel_tau_sed.eq.9) THEN 
-!			DO i=1,imax
-!				DO j=1,jmax
-!					ppp_avg2(i,j)=0.25*ppp(i-1,j,kbedp(i-1,j))+0.5*ppp(i,j,kbedp(i,j))+0.25*ppp(i+1,j,kbedp(i+1,j))
-!				ENDDO
-!			ENDDO 
-!			call bound_cbot(ppp_avg2) 
-!			DO i=1,imax
-!				DO j=1,jmax
-!					ppp_avg(i,j)=0.25*ppp_avg2(i,j-1)+0.5*ppp_avg2(i,j)+0.25*ppp_avg2(i,j+1)
-!				ENDDO
-!			ENDDO 
-!			call bound_cbot(ppp_avg) 	
-		DO i=2,imax-1 !leave inflow and outflow dpdx zero 1,imax
-		  DO j=1,jmax
-!			Fix = (ppp(i+1,j,kbedp(i+1,j))-ppp(i-1,j,kbedp(i-1,j)))/(Rp(i+1)-Rp(i-1))/rcfd(i,j,kbedp(i,j))
-!			Fiy = (ppp(i,j+1,kbedp(i,j+1))-ppp(i,j-1,kbedp(i,j-1)))/(Rp(i)*(phip(j+1)-phip(j-1)))/rcfd(i,j,kbedp(i,j))
-			Fix = (ppp(i+1,j,kbedp(i+1,j))-ppp(i-1,j,kbedp(i-1,j)))/sqrt((Rp(i+1)-Rp(i-1))**2+(zbed(i+1,j)-zbed(i-1,j))**2)
-     &			/rcfd(i,j,kbedp(i,j))
-			Fiy = (ppp(i,j+1,kbedp(i,j+1))-ppp(i,j-1,kbedp(i,j-1)))/sqrt((Rp(i)*(phip(j+1)-phip(j-1)))**2+(zbed(i,j+1)-zbed(i,j-1))**2)
-     &			/rcfd(i,j,kbedp(i,j))			
-!			Fix = (ppp_avg(i+1,j)-ppp_avg(i-1,j))/sqrt((Rp(i+1)-Rp(i-1))**2+(zbed(i+1,j)-zbed(i-1,j))**2)/rcfd(i,j,kbedp(i,j))
-!			Fiy = (ppp_avg(i,j+1)-ppp_avg(i,j-1))/sqrt((Rp(i)*(phip(j+1)-phip(j-1)))**2+(zbed(i,j+1)-zbed(i,j-1))**2)/rcfd(i,j,kbedp(i,j))			
-			TBLEsed_dpdx(i,j)=TBLEsed_grad_relax*Fix+(1.-TBLEsed_grad_relax)*TBLEsed_dpdx(i,j)	
-			TBLEsed_dpdy(i,j)=TBLEsed_grad_relax*Fiy+(1.-TBLEsed_grad_relax)*TBLEsed_dpdy(i,j)		
-		  ENDDO 
-		ENDDO 
-	  ENDIF
-	ENDIF 
+!!!	IF(time_n.ge.tstart_morf) THEN 
+!!!	  IF (wallmodel_tau_sed.eq.3.or.wallmodel_tau_sed.eq.4.or.wallmodel_tau_sed.eq.8.or.wallmodel_tau_sed.eq.9) THEN 
+!!!!			DO i=1,imax
+!!!!				DO j=1,jmax
+!!!!					ppp_avg2(i,j)=0.25*ppp(i-1,j,kbedp(i-1,j))+0.5*ppp(i,j,kbedp(i,j))+0.25*ppp(i+1,j,kbedp(i+1,j))
+!!!!				ENDDO
+!!!!			ENDDO 
+!!!!			call bound_cbot(ppp_avg2) 
+!!!!			DO i=1,imax
+!!!!				DO j=1,jmax
+!!!!					ppp_avg(i,j)=0.25*ppp_avg2(i,j-1)+0.5*ppp_avg2(i,j)+0.25*ppp_avg2(i,j+1)
+!!!!				ENDDO
+!!!!			ENDDO 
+!!!!			call bound_cbot(ppp_avg) 	
+!!!		DO i=2,imax-1 !leave inflow and outflow dpdx zero 1,imax
+!!!		  DO j=1,jmax
+!!!!			Fix = (ppp(i+1,j,kbedp(i+1,j))-ppp(i-1,j,kbedp(i-1,j)))/(Rp(i+1)-Rp(i-1))/rcfd(i,j,kbedp(i,j))
+!!!!			Fiy = (ppp(i,j+1,kbedp(i,j+1))-ppp(i,j-1,kbedp(i,j-1)))/(Rp(i)*(phip(j+1)-phip(j-1)))/rcfd(i,j,kbedp(i,j))
+!!!			Fix = (ppp(i+1,j,kbedp(i+1,j))-ppp(i-1,j,kbedp(i-1,j)))/sqrt((Rp(i+1)-Rp(i-1))**2+(zbed(i+1,j)-zbed(i-1,j))**2)
+!!!     &			/rcfd(i,j,kbedp(i,j))
+!!!			Fiy = (ppp(i,j+1,kbedp(i,j+1))-ppp(i,j-1,kbedp(i,j-1)))/sqrt((Rp(i)*(phip(j+1)-phip(j-1)))**2+(zbed(i,j+1)-zbed(i,j-1))**2)
+!!!     &			/rcfd(i,j,kbedp(i,j))			
+!!!!			Fix = (ppp_avg(i+1,j)-ppp_avg(i-1,j))/sqrt((Rp(i+1)-Rp(i-1))**2+(zbed(i+1,j)-zbed(i-1,j))**2)/rcfd(i,j,kbedp(i,j))
+!!!!			Fiy = (ppp_avg(i,j+1)-ppp_avg(i,j-1))/sqrt((Rp(i)*(phip(j+1)-phip(j-1)))**2+(zbed(i,j+1)-zbed(i,j-1))**2)/rcfd(i,j,kbedp(i,j))			
+!!!			TBLEsed_dpdx(i,j)=TBLEsed_grad_relax*Fix+(1.-TBLEsed_grad_relax)*TBLEsed_dpdx(i,j)	
+!!!			TBLEsed_dpdy(i,j)=TBLEsed_grad_relax*Fiy+(1.-TBLEsed_grad_relax)*TBLEsed_dpdy(i,j)		
+!!!		  ENDDO 
+!!!		ENDDO 
+!!!	  ENDIF
+!!!	ENDIF 
 	IF (wallmodel_tau_sed.eq.11) THEN 
 		IF (mod(istep,ndtbed).eq.0) THEN 
 			telUVWbed=telUVWbed+1
@@ -578,7 +578,14 @@
 			ELSE 
 			  k_ust_tau_temp = k_ust_tau 
 			ENDIF 
-			
+			IF (wallmodel_tau_sed.eq.3.or.wallmodel_tau_sed.eq.4.or.wallmodel_tau_sed.eq.8.or.wallmodel_tau_sed.eq.9) THEN 
+			  Fix = (ppp(i+1,j,MIN(k1,kbed(i+1,j)+k_ust_tau_temp))-ppp(i-1,j,MIN(k1,kbed(i-1,j)+k_ust_tau_temp)))
+     &			/sqrt((Rp(i+1)-Rp(i-1))**2+(zbed(i+1,j)-zbed(i-1,j))**2)/rcfd(i,j,MIN(k1,kbed(i,j)+k_ust_tau_temp))
+			  Fiy = (ppp(i,j+1,MIN(k1,kbed(i,j+1)+k_ust_tau_temp))-ppp(i,j-1,MIN(k1,kbed(i,j-1)+k_ust_tau_temp)))
+     &			/sqrt((Rp(i)*(phip(j+1)-phip(j-1)))**2+(zbed(i,j+1)-zbed(i,j-1))**2)/rcfd(i,j,MIN(k1,kbed(i,j)+k_ust_tau_temp))			
+			  TBLEsl_dpdx(i,j)=TBLEsl_grad_relax*Fix+(1.-TBLEsl_grad_relax)*TBLEsl_dpdx(i,j)	
+			  TBLEsl_dpdy(i,j)=TBLEsl_grad_relax*Fiy+(1.-TBLEsl_grad_relax)*TBLEsl_dpdy(i,j)		
+			ENDIF			
 			!! First Ubot_TSHD and Vbot_TSHD is subtracted to determine tau 
 			!! only over ambient velocities not over U_TSHD
 			IF (IBMorder.eq.2) THEN
@@ -644,20 +651,20 @@
 			ENDIF 
 			DO n=1,nfrac
 				IF (wallmodel_tau_sed.eq.3) THEN
-				  CALL wall_fun_TBL_Ploc(uu/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,vv/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,TBLEsed_dpdx(i,j),
-     & 			 TBLEsed_dpdy(i,j),rho_b,2.*distance_to_bed,frac(n)%kn_sed,kappa,nu_sediment_pickup,ust_frac_old(n,i,j),ust,nWM)
+				  CALL wall_fun_TBL_Ploc(uu/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,vv/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,TBLEsl_dpdx(i,j),
+     & 			 TBLEsl_dpdy(i,j),rho_b,2.*distance_to_bed,frac(n)%kn_sed,kappa,nu_sediment_pickup,ust_frac_old(n,i,j),ust,nWM)
 				ELSEIF (wallmodel_tau_sed.eq.4) THEN
-				  CALL wall_fun_TBL2_Ploc(uu/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,vv/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,TBLEsed_dpdx(i,j),
-     & 			 TBLEsed_dpdy(i,j),rho_b,2.*distance_to_bed,frac(n)%kn_sed,kappa,nu_sediment_pickup,ust_frac_old(n,i,j),ust,nWM)
+				  CALL wall_fun_TBL2_Ploc(uu/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,vv/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,TBLEsl_dpdx(i,j),
+     & 			 TBLEsl_dpdy(i,j),rho_b,2.*distance_to_bed,frac(n)%kn_sed,kappa,nu_sediment_pickup,ust_frac_old(n,i,j),ust,nWM)
 				ELSEIF (wallmodel_tau_sed.eq.5) THEN
 				  CALL wall_fun_VD_Ploc(uu/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,vv/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,
      & 				  rho_b,2.*distance_to_bed,frac(n)%kn_sed,kappa,nu_sediment_pickup,ust_frac_old(n,i,j),ust,nWM)	 
 				ELSEIF (wallmodel_tau_sed.eq.8) THEN
-				  CALL wall_fun_GWF_Ploc(uu/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,vv/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,TBLEsed_dpdx(i,j),
-     & 			 TBLEsed_dpdy(i,j),rho_b,2.*distance_to_bed,frac(n)%kn_sed,kappa,nu_sediment_pickup,ust)
+				  CALL wall_fun_GWF_Ploc(uu/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,vv/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,TBLEsl_dpdx(i,j),
+     & 			 TBLEsl_dpdy(i,j),rho_b,2.*distance_to_bed,frac(n)%kn_sed,kappa,nu_sediment_pickup,ust)
 				ELSEIF (wallmodel_tau_sed.eq.9) THEN
-				  CALL wall_fun_GWF_dpdlfavo_Ploc(uu/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,vv/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,TBLEsed_dpdx(i,j),
-     & 			 TBLEsed_dpdy(i,j),rho_b,2.*distance_to_bed,frac(n)%kn_sed,kappa,nu_sediment_pickup,ust)	 
+				  CALL wall_fun_GWF_dpdlfavo_Ploc(uu/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,vv/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,TBLEsl_dpdx(i,j),
+     & 			 TBLEsl_dpdy(i,j),rho_b,2.*distance_to_bed,frac(n)%kn_sed,kappa,nu_sediment_pickup,ust)	 
 				ELSE			
 				  ust=0.1*absU
 				  do tel=1,10 ! 10 iter is more than enough
@@ -762,7 +769,16 @@
 			ELSE 
 			  k_ust_tau_temp = k_ust_tau 
 			ENDIF 
-			
+			IF (wallmodel_tau_sed.eq.3.or.wallmodel_tau_sed.eq.4.or.wallmodel_tau_sed.eq.8.or.wallmodel_tau_sed.eq.9) THEN 
+			  Fix = (ppp(i+1,j,MIN(k1,kbed(i+1,j)+k_ust_tau_temp))-ppp(i-1,j,MIN(k1,kbed(i-1,j)+k_ust_tau_temp)))
+     &			/sqrt((Rp(i+1)-Rp(i-1))**2+(zbed(i+1,j)-zbed(i-1,j))**2)/rcfd(i,j,MIN(k1,kbed(i,j)+k_ust_tau_temp))
+			  Fiy = (ppp(i,j+1,MIN(k1,kbed(i,j+1)+k_ust_tau_temp))-ppp(i,j-1,MIN(k1,kbed(i,j-1)+k_ust_tau_temp)))
+     &			/sqrt((Rp(i)*(phip(j+1)-phip(j-1)))**2+(zbed(i,j+1)-zbed(i,j-1))**2)/rcfd(i,j,MIN(k1,kbed(i,j)+k_ust_tau_temp))			
+			  TBLEsl_dpdx(i,j)=TBLEsl_grad_relax*Fix+(1.-TBLEsl_grad_relax)*TBLEsl_dpdx(i,j)	
+			  TBLEsl_dpdy(i,j)=TBLEsl_grad_relax*Fiy+(1.-TBLEsl_grad_relax)*TBLEsl_dpdy(i,j)
+			  TBLEbl_dpdx(i,j)=TBLEbl_grad_relax*Fix+(1.-TBLEbl_grad_relax)*TBLEbl_dpdx(i,j)	
+			  TBLEbl_dpdy(i,j)=TBLEbl_grad_relax*Fiy+(1.-TBLEbl_grad_relax)*TBLEbl_dpdy(i,j)			  
+			ENDIF			
 			!! First Ubot_TSHD and Vbot_TSHD is subtracted to determine tau 
 			!! only over ambient velocities not over U_TSHD
 			IF (IBMorder.eq.2) THEN
@@ -976,20 +992,20 @@
 					tau_e_avg=frac(nfrac_silt(1))%tau_e
 				ENDIF
 				IF (wallmodel_tau_sed.eq.3) THEN
-				CALL wall_fun_TBL_Ploc(uu/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,vv/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,TBLEsed_dpdx(i,j),
-     & 			 TBLEsed_dpdy(i,j),rho_b,2.*distance_to_bed,kn_sed_avg,kappa,nu_sediment_pickup,ust_mud_old(i,j),ust,nWM)
+				CALL wall_fun_TBL_Ploc(uu/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,vv/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,TBLEsl_dpdx(i,j),
+     & 			 TBLEsl_dpdy(i,j),rho_b,2.*distance_to_bed,kn_sed_avg,kappa,nu_sediment_pickup,ust_mud_old(i,j),ust,nWM)
 				ELSEIF (wallmodel_tau_sed.eq.4) THEN
-				CALL wall_fun_TBL2_Ploc(uu/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,vv/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,TBLEsed_dpdx(i,j),
-     & 			 TBLEsed_dpdy(i,j),rho_b,2.*distance_to_bed,kn_sed_avg,kappa,nu_sediment_pickup,ust_mud_old(i,j),ust,nWM)
+				CALL wall_fun_TBL2_Ploc(uu/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,vv/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,TBLEsl_dpdx(i,j),
+     & 			 TBLEsl_dpdy(i,j),rho_b,2.*distance_to_bed,kn_sed_avg,kappa,nu_sediment_pickup,ust_mud_old(i,j),ust,nWM)
 				ELSEIF (wallmodel_tau_sed.eq.5) THEN
 					CALL wall_fun_VD_Ploc(uu/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,vv/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,
      & 				rho_b,2.*distance_to_bed,kn_sed_avg,kappa,nu_sediment_pickup,ust_mud_old(i,j),ust,nWM)
 	 			ELSEIF (wallmodel_tau_sed.eq.8) THEN
-				  CALL wall_fun_GWF_Ploc(uu/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,vv/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,TBLEsed_dpdx(i,j),
-     & 			 TBLEsed_dpdy(i,j),rho_b,2.*distance_to_bed,kn_sed_avg,kappa,nu_sediment_pickup,ust)
+				  CALL wall_fun_GWF_Ploc(uu/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,vv/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,TBLEsl_dpdx(i,j),
+     & 			 TBLEsl_dpdy(i,j),rho_b,2.*distance_to_bed,kn_sed_avg,kappa,nu_sediment_pickup,ust)
 	 			ELSEIF (wallmodel_tau_sed.eq.9) THEN
-				  CALL wall_fun_GWF_dpdlfavo_Ploc(uu/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,vv/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,TBLEsed_dpdx(i,j),
-     & 			 TBLEsed_dpdy(i,j),rho_b,2.*distance_to_bed,kn_sed_avg,kappa,nu_sediment_pickup,ust)	 
+				  CALL wall_fun_GWF_dpdlfavo_Ploc(uu/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,vv/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,TBLEsl_dpdx(i,j),
+     & 			 TBLEsl_dpdy(i,j),rho_b,2.*distance_to_bed,kn_sed_avg,kappa,nu_sediment_pickup,ust)	 
 				ELSEIF (wallmodel_tau_sed.eq.11) THEN
 					ustu2=(SUM(sigUWbed(:,i,j))-SUM(sigUbed(:,i,j))*SUM(sigWbed(:,i,j))/SUM(sigtbed))/SUM(sigtbed)
 					ustv2=(SUM(sigVWbed(:,i,j))-SUM(sigVbed(:,i,j))*SUM(sigWbed(:,i,j))/SUM(sigtbed))/SUM(sigtbed)
@@ -1030,21 +1046,21 @@
 					ENDIF
 					IF (wallmodel_tau_sed.eq.3) THEN
 						CALL wall_fun_TBL_Ploc(uu/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,vv/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,
-     & 			 		TBLEsed_dpdx(i,j),TBLEsed_dpdy(i,j),rho_b,2.*distance_to_bed,frac(n)%kn_sed,kappa,nu_sediment_pickup,
+     & 			 		TBLEsl_dpdx(i,j),TBLEsl_dpdy(i,j),rho_b,2.*distance_to_bed,frac(n)%kn_sed,kappa,nu_sediment_pickup,
      &	 				ust_frac_old(n,i,j),ust,nWM)
 					ELSEIF (wallmodel_tau_sed.eq.4) THEN
 						CALL wall_fun_TBL2_Ploc(uu/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,vv/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,
-     & 			 		TBLEsed_dpdx(i,j),TBLEsed_dpdy(i,j),rho_b,2.*distance_to_bed,frac(n)%kn_sed,kappa,nu_sediment_pickup,
+     & 			 		TBLEsl_dpdx(i,j),TBLEsl_dpdy(i,j),rho_b,2.*distance_to_bed,frac(n)%kn_sed,kappa,nu_sediment_pickup,
      &	 				ust_frac_old(n,i,j),ust,nWM)
 					ELSEIF (wallmodel_tau_sed.eq.5) THEN
 						CALL wall_fun_VD_Ploc(uu/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,vv/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,
      & 				rho_b,2.*distance_to_bed,frac(n)%kn_sed,kappa,nu_sediment_pickup,ust_frac_old(n,i,j),ust,nWM)	
 					ELSEIF (wallmodel_tau_sed.eq.8) THEN
 						CALL wall_fun_GWF_Ploc(uu/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,vv/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,
-     & 			 	TBLEsed_dpdx(i,j),TBLEsed_dpdy(i,j),rho_b,2.*distance_to_bed,frac(n)%kn_sed,kappa,nu_sediment_pickup,ust)
+     & 			 	TBLEsl_dpdx(i,j),TBLEsl_dpdy(i,j),rho_b,2.*distance_to_bed,frac(n)%kn_sed,kappa,nu_sediment_pickup,ust)
 					ELSEIF (wallmodel_tau_sed.eq.9) THEN
 						CALL wall_fun_GWF_dpdlfavo_Ploc(uu/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,vv/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,
-     & 			 	TBLEsed_dpdx(i,j),TBLEsed_dpdy(i,j),rho_b,2.*distance_to_bed,frac(n)%kn_sed,kappa,nu_sediment_pickup,ust)	 
+     & 			 	TBLEsl_dpdx(i,j),TBLEsl_dpdy(i,j),rho_b,2.*distance_to_bed,frac(n)%kn_sed,kappa,nu_sediment_pickup,ust)	 
 					ELSEIF (wallmodel_tau_sed.eq.11) THEN
 					ustu2=(SUM(sigUWbed(:,i,j))-SUM(sigUbed(:,i,j))*SUM(sigWbed(:,i,j))/SUM(sigtbed))/SUM(sigtbed)
 					ustv2=(SUM(sigVWbed(:,i,j))-SUM(sigVbed(:,i,j))*SUM(sigWbed(:,i,j))/SUM(sigtbed))/SUM(sigtbed)
@@ -1250,21 +1266,21 @@
 				kn_sed_avg=kn_d50_multiplier*d50 !  kn=2*d50 is mentioned in VanRijn1984 paper, the pickup function which is applied here, however elsewhere vanRijn mentions larger kn_sed like 6*d50...)
 				IF (wallmodel_tau_sed.eq.3) THEN
 					CALL wall_fun_TBL_Ploc(uu/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,vv/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,
-     & 				TBLEsed_dpdx(i,j),TBLEsed_dpdy(i,j),rho_b,2.*distance_to_bed,kn_sed_avg,kappa,nu_sediment_pickup,
+     & 				TBLEsl_dpdx(i,j),TBLEsl_dpdy(i,j),rho_b,2.*distance_to_bed,kn_sed_avg,kappa,nu_sediment_pickup,
      &				ust_sl_old(i,j),ust,nWM)	 
 				ELSEIF (wallmodel_tau_sed.eq.4) THEN
 					CALL wall_fun_TBL2_Ploc(uu/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,vv/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,
-     & 				TBLEsed_dpdx(i,j),TBLEsed_dpdy(i,j),rho_b,2.*distance_to_bed,kn_sed_avg,kappa,nu_sediment_pickup,
+     & 				TBLEsl_dpdx(i,j),TBLEsl_dpdy(i,j),rho_b,2.*distance_to_bed,kn_sed_avg,kappa,nu_sediment_pickup,
      &				ust_sl_old(i,j),ust,nWM)
 				ELSEIF (wallmodel_tau_sed.eq.5) THEN
 					CALL wall_fun_VD_Ploc(uu/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,vv/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,
      & 				rho_b,2.*distance_to_bed,kn_sed_avg,kappa,nu_sediment_pickup,ust_sl_old(i,j),ust,nWM)
 	 			ELSEIF (wallmodel_tau_sed.eq.8) THEN
-				  CALL wall_fun_GWF_Ploc(uu/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,vv/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,TBLEsed_dpdx(i,j),
-     & 			 TBLEsed_dpdy(i,j),rho_b,2.*distance_to_bed,kn_sed_avg,kappa,nu_sediment_pickup,ust)
+				  CALL wall_fun_GWF_Ploc(uu/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,vv/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,TBLEsl_dpdx(i,j),
+     & 			 TBLEsl_dpdy(i,j),rho_b,2.*distance_to_bed,kn_sed_avg,kappa,nu_sediment_pickup,ust)
 	 			ELSEIF (wallmodel_tau_sed.eq.9) THEN
-				  CALL wall_fun_GWF_dpdlfavo_Ploc(uu/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,vv/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,TBLEsed_dpdx(i,j),
-     & 			 TBLEsed_dpdy(i,j),rho_b,2.*distance_to_bed,kn_sed_avg,kappa,nu_sediment_pickup,ust)	 
+				  CALL wall_fun_GWF_dpdlfavo_Ploc(uu/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,vv/MAX(1.e-6,sqrt(uu**2+vv**2))*absU,TBLEsl_dpdx(i,j),
+     & 			 TBLEsl_dpdy(i,j),rho_b,2.*distance_to_bed,kn_sed_avg,kappa,nu_sediment_pickup,ust)	 
 				ELSEIF (wallmodel_tau_sed.eq.11) THEN
 					ustu2=(SUM(sigUWbed(:,i,j))-SUM(sigUbed(:,i,j))*SUM(sigWbed(:,i,j))/SUM(sigtbed))/SUM(sigtbed)
 					ustv2=(SUM(sigVWbed(:,i,j))-SUM(sigVbed(:,i,j))*SUM(sigWbed(:,i,j))/SUM(sigtbed))/SUM(sigtbed)
@@ -1438,21 +1454,21 @@
 				  kn_sed_avg=kn_d50_multiplier_bl*d50
 				  IF (wallmodel_tau_sed.eq.3) THEN
 					CALL wall_fun_TBL_Ploc(0.5*(uuRrel+uuLrel)*absUbl,0.5*(vvRrel+vvLrel)*absUbl,
-     & 				TBLEsed_dpdx(i,j),TBLEsed_dpdy(i,j),rho_b,2.*distance_to_bed,kn_sed_avg,kappa,nu_sediment_pickup,
+     & 				TBLEbl_dpdx(i,j),TBLEbl_dpdy(i,j),rho_b,2.*distance_to_bed,kn_sed_avg,kappa,nu_sediment_pickup,
      & 				ust_bl_old(i,j),ust,nWM)	 
 				  ELSEIF (wallmodel_tau_sed.eq.4) THEN
 					CALL wall_fun_TBL2_Ploc(0.5*(uuRrel+uuLrel)*absUbl,0.5*(vvRrel+vvLrel)*absUbl,
-     & 				TBLEsed_dpdx(i,j),TBLEsed_dpdy(i,j),rho_b,2.*distance_to_bed,kn_sed_avg,kappa,nu_sediment_pickup,
+     & 				TBLEbl_dpdx(i,j),TBLEbl_dpdy(i,j),rho_b,2.*distance_to_bed,kn_sed_avg,kappa,nu_sediment_pickup,
      & 				ust_bl_old(i,j),ust,nWM)
 				  ELSEIF (wallmodel_tau_sed.eq.5) THEN
 					CALL wall_fun_VD_Ploc(0.5*(uuRrel+uuLrel)*absUbl,0.5*(vvRrel+vvLrel)*absUbl,
      & 				rho_b,2.*distance_to_bed,kn_sed_avg,kappa,nu_sediment_pickup,ust_bl_old(i,j),ust,nWM)
 				  ELSEIF (wallmodel_tau_sed.eq.8) THEN
-				    CALL wall_fun_GWF_Ploc(0.5*(uuRrel+uuLrel)*absUbl,0.5*(vvRrel+vvLrel)*absUbl,TBLEsed_dpdx(i,j),
-     & 			 TBLEsed_dpdy(i,j),rho_b,2.*distance_to_bed,kn_sed_avg,kappa,nu_sediment_pickup,ust)	 
+				    CALL wall_fun_GWF_Ploc(0.5*(uuRrel+uuLrel)*absUbl,0.5*(vvRrel+vvLrel)*absUbl,TBLEbl_dpdx(i,j),
+     & 			 TBLEbl_dpdy(i,j),rho_b,2.*distance_to_bed,kn_sed_avg,kappa,nu_sediment_pickup,ust)	 
 				  ELSEIF (wallmodel_tau_sed.eq.9) THEN
-				    CALL wall_fun_GWF_dpdlfavo_Ploc(0.5*(uuRrel+uuLrel)*absUbl,0.5*(vvRrel+vvLrel)*absUbl,TBLEsed_dpdx(i,j),
-     & 			 TBLEsed_dpdy(i,j),rho_b,2.*distance_to_bed,kn_sed_avg,kappa,nu_sediment_pickup,ust)	 	 
+				    CALL wall_fun_GWF_dpdlfavo_Ploc(0.5*(uuRrel+uuLrel)*absUbl,0.5*(vvRrel+vvLrel)*absUbl,TBLEbl_dpdx(i,j),
+     & 			 TBLEbl_dpdy(i,j),rho_b,2.*distance_to_bed,kn_sed_avg,kappa,nu_sediment_pickup,ust)	 	 
 				  ELSEIF (wallmodel_tau_sed.eq.11) THEN
 					ustu2=(SUM(sigUWbed(:,i,j))-SUM(sigUbed(:,i,j))*SUM(sigWbed(:,i,j))/SUM(sigtbed))/SUM(sigtbed)
 					ustv2=(SUM(sigVWbed(:,i,j))-SUM(sigVbed(:,i,j))*SUM(sigWbed(:,i,j))/SUM(sigtbed))/SUM(sigtbed)

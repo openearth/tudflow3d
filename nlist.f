@@ -82,7 +82,7 @@
 	  CHARACTER(len=256) :: obst_file_series(5000)
 	  REAL :: obst_starttimes(5000)
 	  INTEGER cbc_perx_j(2),taulayerTBLE,obstfile_erodepo,nWM,vel_start_after_ero,nsmooth_bed,k_ust_tau_sed_range(2)
-	  REAL cbc_relax,TBLE_grad_relax,TBLEsed_grad_relax,dpbed_zone
+	  REAL cbc_relax,TBLE_grad_relax,TBLEsl_grad_relax,TBLEbl_grad_relax,dpbed_zone
 	  
 	  
 	  !new variables rheology
@@ -177,7 +177,7 @@
 	  REAL, DIMENSION(:,:),ALLOCATABLE :: ust_mud_new,ust_mud_old,kn_flow,d50field,tau_fl_Utop,tau_fl_Vtop
 	  REAL, DIMENSION(:,:,:),ALLOCATABLE :: qbU,qbV,ust_frac_old,ust_frac_new,sigUWbed,sigVWbed,sigUbed,sigVbed,sigWbed
 	  REAL, DIMENSION(:,:),ALLOCATABLE :: TBLEdudx,TBLEdudy,TBLEdvdx,TBLEdvdy,TBLEdpdx,TBLEdpdy,TBLEdpdxo,TBLEdpdyo
-	  REAL, DIMENSION(:,:),ALLOCATABLE :: TBLEsed_dpdx,TBLEsed_dpdy,absU_sed_relax
+	  REAL, DIMENSION(:,:),ALLOCATABLE :: TBLEsl_dpdx,TBLEsl_dpdy,TBLEbl_dpdx,TBLEbl_dpdy,absU_sed_relax
  !     REAL, DIMENSION(:,:,:),ALLOCATABLE :: Uf,Vf,Wf
 
 !      REAL, DIMENSION(:,:,:),ALLOCATABLE :: div
@@ -298,8 +298,8 @@
      & avfile,settling_along_gvector,vwal,nl,permeability_kl,pickup_fluctuations_ampl,pickup_fluctuations,pickup_correction,
      & cbed_method,z_tau_sed,k_layer_pickup,pickup_bedslope_geo,bedload_formula,kn_d50_multiplier_bl,calibfac_sand_bedload,bl_relax
      & ,fcor,wbed_correction,bedslope_effect,bedslope_mu_s,alfabs_bl,alfabn_bl,phi_sediment,wallmodel_tau_sed,nrmsbed,ndtbed,
-     & erosion_cbed_start,movebed_absorb_cfluid,power_VR2019,ekm_sediment_pickup,dz_sidewall,TBLEsed_grad_relax,pickup_formula_swe
-     & ,vel_start_after_ero,dpbed_zone,sl_relax
+     & erosion_cbed_start,movebed_absorb_cfluid,power_VR2019,ekm_sediment_pickup,dz_sidewall,pickup_formula_swe
+     & ,vel_start_after_ero,dpbed_zone,sl_relax,TBLEsl_grad_relax,TBLEbl_grad_relax
 	NAMELIST /fractions_in_plume/fract
 	NAMELIST /ship/U_TSHD,LOA,Lfront,Breadth,Draught,Lback,Hback,xfront,yfront,kn_TSHD,nprop,Dprop,xprop,yprop,zprop,
      &   Pprop,rudder,rot_prop,draghead,Dsp,xdh,perc_dh_suction,softnose,Hfront,cutter
@@ -670,7 +670,8 @@
 	cbed_method = 1
 	k_layer_pickup = 1
 	wallmodel_tau_sed = 1
-	TBLEsed_grad_relax = 1.
+	TBLEsl_grad_relax = 1.
+	TBLEbl_grad_relax = 1.
 	ndtbed = 10
 	nrmsbed = 100 
 	z_tau_sed = -999.
@@ -1623,7 +1624,8 @@
 	IF (wallmodel_tau_sed.ne.1.and.wallmodel_tau_sed.ne.3.and.wallmodel_tau_sed.ne.4.and.wallmodel_tau_sed.ne.5.
      &	and.wallmodel_tau_sed.ne.8.and.wallmodel_tau_sed.ne.9.and.wallmodel_tau_sed.ne.11) THEN 
 		CALL writeerror(145)
-	IF (TBLEsed_grad_relax.gt.1.or.TBLEsed_grad_relax.lt.0) CALL writeerror(623)
+	IF (TBLEsl_grad_relax.gt.1.or.TBLEsl_grad_relax.lt.0) CALL writeerror(623)
+	IF (TBLEbl_grad_relax.gt.1.or.TBLEbl_grad_relax.lt.0) CALL writeerror(623)
 	IF (power_VR2019<0.) CALL writeerror(146)
 	ENDIF 
 	 
@@ -2167,11 +2169,14 @@
 	TBLEdpdy = 0.	
 	TBLEdpdxo = 0. 
 	TBLEdpdyo = 0.		
-	ALLOCATE(TBLEsed_dpdx(0:i1,0:j1))
-	ALLOCATE(TBLEsed_dpdy(0:i1,0:j1))		
-	TBLEsed_dpdx = 0. 
-	TBLEsed_dpdy = 0.
-	
+	ALLOCATE(TBLEsl_dpdx(0:i1,0:j1))
+	ALLOCATE(TBLEsl_dpdy(0:i1,0:j1))
+	ALLOCATE(TBLEbl_dpdx(0:i1,0:j1))
+	ALLOCATE(TBLEbl_dpdy(0:i1,0:j1))	
+	TBLEsl_dpdx = 0. 
+	TBLEsl_dpdy = 0.
+	TBLEbl_dpdx = 0. 
+	TBLEbl_dpdy = 0.	
 	if (monopile.eq.3) then 
 		ALLOCATE(tau2Vold(0:j1,0:k1))
 		ALLOCATE(tau2Wold(0:j1,0:k1))
