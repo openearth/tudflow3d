@@ -270,7 +270,7 @@
 		endif 
 		if (tmorf_tseriesfile.ne.'') then 
 		  tm_temp=interpseries(tmorf_tseries,tmorf_series,tmorf_seriesloc,time_n)
-		  if (tm_temp<1.) then !when interpolated tm_temp is < 1
+		  if (tm_temp<0.5) then !when interpolated tm_temp is < 0.5
 		    tstart_morf=t_end 	!giving present time is before tstart_morf which allows for NO exchange of sediment between bed and fluid
 		  else 
 			tstart_morf=0. 		!giving present time is after tstart_morf which allows for exchange of sediment between bed and fluid
@@ -278,7 +278,7 @@
 		endif
 		if (tmorf2_tseriesfile.ne.'') then 
 		  tm_temp=interpseries(tmorf2_tseries,tmorf2_series,tmorf2_seriesloc,time_n)
-		  if (tm_temp<1.) then !when interpolated tm_temp is < 1
+		  if (tm_temp<0.5) then !when interpolated tm_temp is < 0.5
 		    tstart_morf2=t_end 	!giving present time is before tstart_morf2 which allows for exchange of sediment between bed and fluid but no bedupdate 
 		  else 
 			tstart_morf2=0. 		!giving present time is after tstart_morf2 which allows for exchange of sediment between bed and fluid and bedupdate
@@ -505,25 +505,29 @@
 		!extra call bound_rhoU only needed for determination rhU,cU with split_rho_cont.eq.'VL2' based on direction of rhoU^n+1 instead of rhoU^* 
 		!nov-2018 not used because 1) consistent with splitting rho of from rhoU^* 2) faster
 		!only drawback is that it is not fully consistent with update C as this is based on c_edge based on direction U^n+1
-	
-		!! b_update is defined in allocate_global_vars, so this below is double + it annihilates b_update from a bedupdatefile which is read in determine_indices_ship_in
-!		if (time_np.ge.tstart_morf2) then 
-!			b_update=0. 	
-!			b_update(istart_morf2(1):i1,0:j1)=1.
-!			if (istart_morf1(2)>0) b_update(istart_morf1(2):i1,0:j1)=0.
-!			if ((istart_morf2(1)-istart_morf1(1))>0) then 
-!				do i=istart_morf1(1),istart_morf2(1)
-!				  b_update(i,0:j1)=DBLE(i-istart_morf1(1))/DBLE(istart_morf2(1)-istart_morf1(1)) !linear grow 0 -> 1
-!				enddo	
-!			endif 
-!			if ((istart_morf1(2)-istart_morf2(2))>0) then 		
-!				do i=istart_morf2(2),istart_morf1(2)
-!				  b_update(i,0:j1)=1.-DBLE(i-istart_morf2(2))/DBLE(istart_morf1(2)-istart_morf2(2)) !linear decrease 1 -> 0
-!				enddo
-!			endif
-!		    b_update(0:1,0:j1)=0. ! no bed-update at inflow
-!		    b_update(imax:i1,0:j1)=0. ! no bed-update at outflow			
-!		endif 
+		if (time_np.ge.tstart_morf2) then 
+			if (bedupdatefile.ne.'') then ! start using b_update from bedupdatefile again 
+				b_update = b_update_bu
+			else  
+				b_update=0. 	
+				b_update(istart_morf2(1):i1,0:j1)=1.
+				if (istart_morf1(2)>0) b_update(istart_morf1(2):i1,0:j1)=0.
+				if ((istart_morf2(1)-istart_morf1(1))>0) then 
+					do i=istart_morf1(1),istart_morf2(1)
+					  b_update(i,0:j1)=DBLE(i-istart_morf1(1))/DBLE(istart_morf2(1)-istart_morf1(1)) !linear grow 0 -> 1
+					enddo	
+				endif 
+				if ((istart_morf1(2)-istart_morf2(2))>0) then 		
+					do i=istart_morf2(2),istart_morf1(2)
+					  b_update(i,0:j1)=1.-DBLE(i-istart_morf2(2))/DBLE(istart_morf1(2)-istart_morf2(2)) !linear decrease 1 -> 0
+					enddo
+				endif
+				b_update(0:1,0:j1)=0. ! no bed-update at inflow
+				b_update(imax:i1,0:j1)=0. ! no bed-update at outflow
+			endif 
+		else 
+			b_update=0. !force b_update to 0 because time_np is before tstart_morf2 
+		endif 
 		if (mod(istep,100).eq.0) then
 			call chkdiv
 			if (pres_in_predictor_step_internal.eq.2) then 

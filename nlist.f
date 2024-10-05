@@ -136,7 +136,7 @@
 
       INTEGER*2, DIMENSION(:,:,:),ALLOCATABLE :: llist1,llist2,llist3
       INTEGER*2, DIMENSION(:,:),ALLOCATABLE :: llmax1,llmax2,llmax3 !,kbed,kbedt,kbed2
-      INTEGER*8, DIMENSION(:,:),ALLOCATABLE :: kbed,kbedt,kbed0,kbedold,b_update !,kbed2,kbed22
+      INTEGER*8, DIMENSION(:,:),ALLOCATABLE :: kbed,kbedt,kbed0,kbedold,b_update,b_update_bu !,kbed2,kbed22
       INTEGER, DIMENSION(:,:),ALLOCATABLE :: Xkk,Tii
       INTEGER, DIMENSION(:),ALLOCATABLE :: Xii,Tkk,nfrac_air,nfrac_silt,nfrac_sand,nfrac_air2
 	  INTEGER*8, DIMENSION(:),ALLOCATABLE :: kbedin
@@ -277,7 +277,7 @@
 	NAMELIST /simulation/px,imax,jmax,kmax,imax_grid,dr_grid,Rmin,schuif_x,dy,depth,hisfile,restart_dir
      & ,lim_r_grid,fac_r_grid,jmax_grid,lim_y_grid,fac_y_grid,sym_grid_y,dy_grid
 	NAMELIST /times/t_end,t0_output,dt_output,te_output,tstart_rms,dt_max,dt_ini,time_int,CFL,
-     & t0_output_movie,dt_output_movie,te_output_movie,tstart_morf,te_rms,tstart_morf2,n_dtavg
+     & t0_output_movie,dt_output_movie,te_output_movie,tstart_morf,te_rms,tstart_morf2,n_dtavg,tmorf_tseriesfile,tmorf2_tseriesfile
 	NAMELIST /num_scheme/convection,numdiff,wiggle_detector,diffusion,comp_filter_a,comp_filter_n,CNdiffz,npresIBM,advec_conc,
      & continuity_solver,transporteq_fracs,split_rho_cont,driftfluxforce_calfac,depo_implicit,IBMorder,npresPRHO,
      & pres_in_predictor_step,Poutflow,oPRHO,applyVOF,k_ust_tau,Uoutflow,dUVdn_IBMbed,k_pzero,numdiff2,CNdiff_factor,CNdiff_ho,
@@ -1995,6 +1995,7 @@
 			Cnewbot=0.
 			dCdtbot=0.
 	ALLOCATE(b_update(0:i1,0:j1))
+	ALLOCATE(b_update_bu(0:i1,0:j1))
 	IF (tstart_morf2.gt.1e-6) THEN 
 		b_update=0. 
 	ELSE

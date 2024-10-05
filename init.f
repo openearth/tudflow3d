@@ -2939,6 +2939,7 @@ C ...  Locals
 			call check( nf90_close(ncid) )
 			b_update(0,0:j1)=b_update(1,0:j1)
 			b_update(i1,0:j1)=b_update(imax,0:j1)
+			b_update_bu = b_update 
 		endif !endif bedupdatefile
 	
       end
