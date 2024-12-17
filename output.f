@@ -685,6 +685,7 @@
 	real uu(1:imax,1:jmax,1:kmax)
 	real vv(1:imax,1:jmax,1:kmax),zzbed(1:imax,1:jmax),zzbed2(1:imax,1:jmax)
 	real mass_bed(1:nfrac,1:imax,1:jmax)
+	integer*2 write_var(1:nfrac,1:imax,1:jmax,1:kmax)
 !	integer(4) ps
 
        ! We are writing 3D data, a nx x ny x nz grid.
@@ -707,7 +708,7 @@
       include 'version.inc'       
 
 		WRITE(FILE_NAME,'(a,i9.9,a,i4.4,a)')'movie3D_',INT(istap),'_',INT(rank),'.nc'
-	!WRITE(*,'(a,i9.9,a,i4.4,a)')'movie3D_',INT(istap),'_',INT(rank),'.nc'
+		WRITE(*,'(a,i9.9,a,i4.4,a)')'movie3D_',INT(istap),'_',INT(rank),'.nc'
 	
        ! Create the netCDF file. The nf90_clobber parameter tells netCDF to
        ! overwrite this file, if it already exists.
@@ -817,6 +818,7 @@
        ! reading and writing subsets of data, in this case we write all the
        ! data in one operation.
 
+       call check( nf90_put_var(ncid, varid8, tt) )
 		do i=1,imax
 		   do j=1,jmax
 				do n=1,nfrac
@@ -836,35 +838,6 @@
 		call check( nf90_put_var(ncid, varid21, zzbed(1:imax,1:jmax) ))
 		call check( nf90_put_var(ncid, varid24, zzbed2(1:imax,1:jmax) ))
 		call check( nf90_put_var(ncid, varid25, kbed(1:imax,1:jmax) ))		
-       if (nfrac>0) then
-		call check( nf90_put_var(ncid, varid20, mass_bed(1:nfrac,1:imax,1:jmax)) )
-		add_offset = MINVAL(Cnew(1:nfrac,1:imax,1:jmax,1:kmax))
-		data_range = MAXVAL(Cnew(1:nfrac,1:imax,1:jmax,1:kmax))-MINVAL(Cnew(1:nfrac,1:imax,1:jmax,1:kmax))
-		scale_factor = data_range/(2.**15-1.)
-		if (scale_factor > 0.) then
-          call check( nf90_put_var(ncid, varid4, nint((Cnew(1:nfrac,1:imax,1:jmax,1:kmax)-add_offset)/scale_factor) ))
-          call check( nf90_put_var(ncid, varid9, scale_factor) )
-          call check( nf90_put_var(ncid, varid10, add_offset) )
-		else
-		  call check( nf90_put_var(ncid, varid4, nint(0.*Cnew(1:nfrac,1:imax,1:jmax,1:kmax)) ))
-		  call check( nf90_put_var(ncid, varid9, scale_factor) )
-		  call check( nf90_put_var(ncid, varid10, add_offset) )
-        endif
-		if (interaction_bed.ge.4) then 
-			add_offset = MINVAL(Clivebed(1:nfrac,1:imax,1:jmax,1:kmax))
-			data_range = MAXVAL(Clivebed(1:nfrac,1:imax,1:jmax,1:kmax))-MINVAL(Clivebed(1:nfrac,1:imax,1:jmax,1:kmax))
-			scale_factor = data_range/(2.**15-1.)
-			if (scale_factor > 0.) then			
-				  call check( nf90_put_var(ncid, varid22, nint((Clivebed(1:nfrac,1:imax,1:jmax,1:kmax)-add_offset)/scale_factor) ))
-				  call check( nf90_put_var(ncid, varid26, scale_factor) )
-				  call check( nf90_put_var(ncid, varid27, add_offset) )
-			else
-				  call check( nf90_put_var(ncid, varid22, nint(0.*Clivebed(1:nfrac,1:imax,1:jmax,1:kmax)) ))
-				  call check( nf90_put_var(ncid, varid26, scale_factor) )
-				  call check( nf90_put_var(ncid, varid27, add_offset) )
-			endif	
-		endif 
-       endif
 		
         do k=1,kmax
 			do j=1,jmax
@@ -878,12 +851,16 @@
 		add_offset = MINVAL(uu(1:imax,1:jmax,1:kmax))
 		data_range = MAXVAL(uu(1:imax,1:jmax,1:kmax))-MINVAL(uu(1:imax,1:jmax,1:kmax))
 		scale_factor = data_range/(2.**15-1.)
-		if (scale_factor > 0.) then
-			  call check( nf90_put_var(ncid, varid11, nint((uu(1:imax,1:jmax,1:kmax)-add_offset)/scale_factor) ))
+		if (data_range > 0.) then
+			  call check( nf90_put_var(ncid, varid11, nint(MAX(uu(1:imax,1:jmax,1:kmax)-add_offset,0.)/scale_factor) ))
+!			  call check( nf90_put_att(ncid, varid11, "scale_factor", real(scale_factor)) )
+!			  call check( nf90_put_att(ncid, varid11, "add_offset", real(add_offset)) )					  
 			  call check( nf90_put_var(ncid, varid12, scale_factor) )
 			  call check( nf90_put_var(ncid, varid13, add_offset) )
 		else	  ! scale_factor is zero, prevent division by zero:
 			  call check( nf90_put_var(ncid, varid11, nint(0.*uu(1:imax,1:jmax,1:kmax)) ))
+!			  call check( nf90_put_att(ncid, varid11, "scale_factor", real(scale_factor)) )
+!			  call check( nf90_put_att(ncid, varid11, "add_offset", real(add_offset)) )					  			  
 			  call check( nf90_put_var(ncid, varid12, scale_factor) )
 			  call check( nf90_put_var(ncid, varid13, add_offset) )
 		endif
@@ -891,12 +868,16 @@
 		add_offset = MINVAL(vv(1:imax,1:jmax,1:kmax))
 		data_range = MAXVAL(vv(1:imax,1:jmax,1:kmax))-MINVAL(vv(1:imax,1:jmax,1:kmax))
 		scale_factor = data_range/(2.**15-1.)
-		if (scale_factor > 0.) then
-			  call check( nf90_put_var(ncid, varid14, nint((vv(1:imax,1:jmax,1:kmax)-add_offset)/scale_factor) ))
+		if (data_range > 0.) then
+			  call check( nf90_put_var(ncid, varid14, nint(MAX(vv(1:imax,1:jmax,1:kmax)-add_offset,0.)/scale_factor) ))
+!			  call check( nf90_put_att(ncid, varid14, "scale_factor", real(scale_factor)) )
+!			  call check( nf90_put_att(ncid, varid14, "add_offset", real(add_offset)) )					  			  
 			  call check( nf90_put_var(ncid, varid15, scale_factor) )
 			  call check( nf90_put_var(ncid, varid16, add_offset) )
 		else
 			  call check( nf90_put_var(ncid, varid14, nint(0.*vv(1:imax,1:jmax,1:kmax)) ))
+!			  call check( nf90_put_att(ncid, varid14, "scale_factor", real(scale_factor)) )
+!			  call check( nf90_put_att(ncid, varid14, "add_offset", real(add_offset)) )				  
 			  call check( nf90_put_var(ncid, varid15, scale_factor) )
 			  call check( nf90_put_var(ncid, varid16, add_offset) )
 		endif
@@ -904,18 +885,66 @@
 		add_offset = MINVAL(wnew(1:imax,1:jmax,1:kmax))
 		data_range = MAXVAL(wnew(1:imax,1:jmax,1:kmax))-MINVAL(wnew(1:imax,1:jmax,1:kmax))
 		scale_factor = data_range/(2.**15-1.)
-		if (scale_factor > 0.) then
-			  call check( nf90_put_var(ncid, varid17, nint((wnew(1:imax,1:jmax,1:kmax)-add_offset)/scale_factor) ))
+		if (data_range > 0.) then
+			  call check( nf90_put_var(ncid, varid17, nint(MAX(wnew(1:imax,1:jmax,1:kmax)-add_offset,0.)/scale_factor) ))
+!			  call check( nf90_put_att(ncid, varid17, "scale_factor", real(scale_factor)) )
+!			  call check( nf90_put_att(ncid, varid17, "add_offset", real(add_offset)) )				  
 			  call check( nf90_put_var(ncid, varid18, scale_factor) )
 			  call check( nf90_put_var(ncid, varid19, add_offset) )
 		else
 			  call check( nf90_put_var(ncid, varid17, nint(0.*wnew(1:imax,1:jmax,1:kmax)) ))
+!			  call check( nf90_put_att(ncid, varid17, "scale_factor", real(scale_factor)) )
+!			  call check( nf90_put_att(ncid, varid17, "add_offset", real(add_offset)) )				  
 			  call check( nf90_put_var(ncid, varid18, scale_factor) )
 			  call check( nf90_put_var(ncid, varid19, add_offset) )
 		endif
-
-       call check( nf90_put_var(ncid, varid8, tt) )
-     
+		
+       if (nfrac>0) then
+		call check( nf90_put_var(ncid, varid20, mass_bed(1:nfrac,1:imax,1:jmax)) )
+		add_offset = MINVAL(Cnew(1:nfrac,1:imax,1:jmax,1:kmax))
+		data_range = MAXVAL(Cnew(1:nfrac,1:imax,1:jmax,1:kmax))-MINVAL(Cnew(1:nfrac,1:imax,1:jmax,1:kmax))
+		scale_factor = data_range/(2.**15-1.)
+		if (data_range > 0.) then
+		  write_var = nint(MAX(Cnew(1:nfrac,1:imax,1:jmax,1:kmax)-add_offset,0.)/scale_factor)
+          call check( nf90_put_var(ncid, varid4, write_var ))
+		  !idnint gives integer(2) inint gives integer(2) output for real(4) input 
+		  
+!		  call check( nf90_put_att(ncid, varid4, "scale_factor", real(scale_factor)) )
+!		  call check( nf90_put_att(ncid, varid4, "add_offset", real(add_offset)) )
+          call check( nf90_put_var(ncid, varid9, scale_factor) )
+          call check( nf90_put_var(ncid, varid10, add_offset) )
+		else
+		  !call check( nf90_put_var(ncid, varid4, nint(MAX(0.*Cnew(1:nfrac,1:imax,1:jmax,1:kmax),0.)) ))
+		write_var = nint(0.*Cnew(1:nfrac,1:imax,1:jmax,1:kmax))
+		  call check( nf90_put_var(ncid, varid4, write_var ))
+!		  call check( nf90_put_var(ncid, varid4, nint(MAX(0.*Cnew(1:nfrac,1:imax,1:jmax,1:kmax),0.)) ))
+!		  call check( nf90_put_att(ncid, varid4, "scale_factor", real(scale_factor)) )
+!		  call check( nf90_put_att(ncid, varid4, "add_offset", real(add_offset)) )		  
+		  call check( nf90_put_var(ncid, varid9, scale_factor) )
+		  call check( nf90_put_var(ncid, varid10, add_offset) )
+        endif
+		if (interaction_bed.ge.4) then 
+			add_offset = MINVAL(Clivebed(1:nfrac,1:imax,1:jmax,1:kmax))
+			data_range = MAXVAL(Clivebed(1:nfrac,1:imax,1:jmax,1:kmax))-MINVAL(Clivebed(1:nfrac,1:imax,1:jmax,1:kmax))
+			scale_factor = data_range/(2.**15-1.)
+			if (data_range > 0.) then	
+				  write_var = nint(MAX(Clivebed(1:nfrac,1:imax,1:jmax,1:kmax)-add_offset,0.)/scale_factor)
+				  call check( nf90_put_var(ncid, varid22,  write_var))
+!				  call check( nf90_put_att(ncid, varid22, "scale_factor", real(scale_factor)) )
+!				  call check( nf90_put_att(ncid, varid22, "add_offset", real(add_offset)) )				  
+				  call check( nf90_put_var(ncid, varid26, scale_factor) )
+				  call check( nf90_put_var(ncid, varid27, add_offset) )
+			else
+			      write_var = nint(0.*Clivebed(1:nfrac,1:imax,1:jmax,1:kmax))
+				  call check( nf90_put_var(ncid, varid22, write_var ))
+!				  call check( nf90_put_att(ncid, varid22, "scale_factor", real(scale_factor)) )
+!				  call check( nf90_put_att(ncid, varid22, "add_offset", real(add_offset)) )						  
+				  call check( nf90_put_var(ncid, varid26, scale_factor) )
+				  call check( nf90_put_var(ncid, varid27, add_offset) )
+			endif	
+		endif 
+       endif
+	
        ! Close the file. This frees up any internal netCDF resources
        ! associated with the file, and flushes any buffers.
        call check( nf90_close(ncid) )

@@ -77,12 +77,12 @@
 	  REAL bedslope_mu_s,alfabs_bl,alfabn_bl,phi_sediment
 	  REAL dt_factor_avg,CNdiff_factor,CNdiff_ho,CNdiff_dtfactor,CNdiff_tol,Apvisc_shear_relax
 	  INTEGER n_dtavg,CNdiff_pc,CNdiff_maxi,CNdiff_ini,initPhydrostatic,npresIBM_viscupdate,rheo_shear_method,Apvisc_force_eq
-	  INTEGER tmax_inPpuntTSHDini,tmax_inUpuntTSHDini,tmax_inVpuntTSHDini,tmax_inWpuntTSHDini
+	  INTEGER tmax_inPpuntTSHDini,tmax_inUpuntTSHDini,tmax_inVpuntTSHDini,tmax_inWpuntTSHDini,correction_sl_with_bl
 	  INTEGER nobst_files,nobst_file,momentum_exchange_obstacles,erosion_cbed_start,movebed_absorb_cfluid,fft_routines
 	  CHARACTER(len=256) :: obst_file_series(5000)
 	  REAL :: obst_starttimes(5000)
-	  INTEGER cbc_perx_j(2),taulayerTBLE,obstfile_erodepo,nWM,vel_start_after_ero,nsmooth_bed,k_ust_tau_sed_range(2)
-	  REAL cbc_relax,TBLE_grad_relax,TBLEsl_grad_relax,TBLEbl_grad_relax,dpbed_zone
+	  INTEGER cbc_perx_j(2),taulayerTBLE,obstfile_erodepo,nWM,vel_start_after_ero,nsmooth_bed,k_ust_tau_sed_range(2),dpdx_ref_j(2)
+	  REAL cbc_relax,TBLE_grad_relax,TBLEsl_grad_relax,TBLEbl_grad_relax,dpbed_zone,TBLEsed_grad_relax
 	  
 	  
 	  !new variables rheology
@@ -136,7 +136,8 @@
 
       INTEGER*2, DIMENSION(:,:,:),ALLOCATABLE :: llist1,llist2,llist3
       INTEGER*2, DIMENSION(:,:),ALLOCATABLE :: llmax1,llmax2,llmax3 !,kbed,kbedt,kbed2
-      INTEGER*8, DIMENSION(:,:),ALLOCATABLE :: kbed,kbedt,kbed0,kbedold,b_update,b_update_bu !,kbed2,kbed22
+      INTEGER*8, DIMENSION(:,:),ALLOCATABLE :: kbed,kbedt,kbed0,kbedold !,kbed2,kbed22
+	  REAL, DIMENSION(:,:),ALLOCATABLE :: b_update,b_update_bu !,kbed2,kbed22 
       INTEGER, DIMENSION(:,:),ALLOCATABLE :: Xkk,Tii
       INTEGER, DIMENSION(:),ALLOCATABLE :: Xii,Tkk,nfrac_air,nfrac_silt,nfrac_sand,nfrac_air2
 	  INTEGER*8, DIMENSION(:),ALLOCATABLE :: kbedin
@@ -287,7 +288,7 @@
      & periodicx,periodicy,dpdx,dpdy,W_ox,Hs,Tp,nx_w,ny_w,obst,bc_obst_h,U_b3,V_b3,surf_layer,wallup,bedlevelfile,
      & U_bSEM,V_bSEM,U_w,V_w,c_bed,cfixedbed,U_init,V_init,initconditionsfile,rho_b2,monopile,kn_mp,kn_sidewalls,obstfile,
      & istart_morf1,istart_morf2,i_periodicx,kn_flow_file,kn_flow_d50_multiplier,U_b_tseriesfile,V_b_tseriesfile,W_b_tseriesfile
-     & ,cbc_perx_j,cbc_relax,obstfile_erodepo,TBLE_grad_relax,bedupdatefile
+     & ,cbc_perx_j,cbc_relax,obstfile_erodepo,TBLE_grad_relax,bedupdatefile,dpdx_ref_j
 	NAMELIST /plume/W_j,plumetseriesfile,Awjet,Aujet,Avjet,Strouhal,azi_n,kjet,radius_j,Sc,slipvel,outflow_overflow_down,
      & U_j2,plumetseriesfile2,Awjet2,Aujet2,Avjet2,Strouhal2,azi_n2,radius_j2,zjet2,bedplume,radius_inner_j,xj,yj,W_j_powerlaw,
      & plume_z_outflow_belowsurf,hindered_settling,hindered_settling_c,Q_j,plumeQtseriesfile,plumectseriesfile
@@ -299,7 +300,7 @@
      & cbed_method,z_tau_sed,k_layer_pickup,pickup_bedslope_geo,bedload_formula,kn_d50_multiplier_bl,calibfac_sand_bedload,bl_relax
      & ,fcor,wbed_correction,bedslope_effect,bedslope_mu_s,alfabs_bl,alfabn_bl,phi_sediment,wallmodel_tau_sed,nrmsbed,ndtbed,
      & erosion_cbed_start,movebed_absorb_cfluid,power_VR2019,ekm_sediment_pickup,dz_sidewall,pickup_formula_swe
-     & ,vel_start_after_ero,dpbed_zone,sl_relax,TBLEsl_grad_relax,TBLEbl_grad_relax
+     & ,vel_start_after_ero,dpbed_zone,sl_relax,TBLEsl_grad_relax,TBLEbl_grad_relax,TBLEsed_grad_relax,correction_sl_with_bl
 	NAMELIST /fractions_in_plume/fract
 	NAMELIST /ship/U_TSHD,LOA,Lfront,Breadth,Draught,Lback,Hback,xfront,yfront,kn_TSHD,nprop,Dprop,xprop,yprop,zprop,
      &   Pprop,rudder,rot_prop,draghead,Dsp,xdh,perc_dh_suction,softnose,Hfront,cutter
@@ -445,6 +446,7 @@
 	cbc_perx_j(1:2)=0 
 	cbc_relax = 1. 
 	TBLE_grad_relax = 1.
+	dpdx_ref_j(1:2)=0 
 	Uavold=0.
 	Vavold=0.
 	U3avold=0. 
@@ -649,6 +651,7 @@
 	calibfac_Shields_cr_bl = -1. !(when not defined calibfac_Shields_cr is also used as calibfac_Shields_cr_bl)
 	pickup_formula = 'vanrijn1984' !default
 	bedload_formula ='nonenon0000' !default no bedload taken into account 
+	correction_sl_with_bl = 0
 	kn_d50_multiplier = 2. !default, kn=2*d50 defined in paper Van Rijn 1984
 	kn_d50_multiplier_bl = 2. !default, kn=d90~2*d50 
 	avalanche_slope = -99. 
@@ -672,6 +675,7 @@
 	wallmodel_tau_sed = 1
 	TBLEsl_grad_relax = 1.
 	TBLEbl_grad_relax = 1.
+	TBLEsed_grad_relax = -1.
 	ndtbed = 10
 	nrmsbed = 100 
 	z_tau_sed = -999.
@@ -913,6 +917,9 @@
 	ENDIF 
 	IF (cbc_relax.gt.1.or.cbc_relax.lt.0) CALL writeerror(623)
 	IF (TBLE_grad_relax.gt.1.or.TBLE_grad_relax.lt.0) CALL writeerror(623)
+	IF (dpdx_ref_j(1).ne.0.and.dpdx_ref_j(2).ne.0) THEN 
+	  IF(dpdx_ref_j(2).lt.dpdx_ref_j(1).or.dpdx_ref_j(1).lt.1.or.dpdx_ref_j(2).gt.jmax) CALL writeerror(627)
+	ENDIF 	
 	!IF (periodicx.eq.1.and.dpdx.eq.0.) CALL writeerror(54)
 	IF (Hs>0.and.Hs>depth) CALL writeerror(55)
 	IF (Hs>0.and.Tp.le.0) CALL writeerror(56)
@@ -1626,6 +1633,7 @@
 		CALL writeerror(145)
 	IF (TBLEsl_grad_relax.gt.1.or.TBLEsl_grad_relax.lt.0) CALL writeerror(623)
 	IF (TBLEbl_grad_relax.gt.1.or.TBLEbl_grad_relax.lt.0) CALL writeerror(623)
+	IF (TBLEsed_grad_relax.gt.0.) CALL writeerror(626)
 	IF (power_VR2019<0.) CALL writeerror(146)
 	ENDIF 
 	 

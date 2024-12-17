@@ -1631,7 +1631,8 @@ c 	influence of waves on lateral boundaries:
 c
 !       include 'param.txt'
 !       include 'common.txt'
-
+	   include 'mpif.h'
+      integer ierr
 c
       integer jtmp,botstress,n,t,jp,inout,im,jm,kplus,kplus2,tel,mpstress,itrgt,jtrgt
 	real xTSHD(1:4),yTSHD(1:4)
@@ -1669,7 +1670,7 @@ c
 	  integer i_inflowU,i_inflowVW,i_outflowU,i_outflowVW,i_shift,n2
 	  real outflow_factor,dudx,dudy,dvdx,dvdy
 	  real absUU,bedslope_angle,distance_to_bed,bwal,dbed,dpdx_temp,dpdy_temp,dL
-	  real Rp2(-1:i1),Ru2(-1:i1)
+	  real Rp2(-1:i1),Ru2(-1:i1),pR1,pR2,pL1,pL2,Fix_ref
 	  
 c
 c
@@ -1941,7 +1942,32 @@ c 	influence of waves on lateral boundaries:
 	  ENDIF 
 	  call bound_3D(ppp) 
 	ENDIF
-
+	pL1=0. 
+	pR1=0.
+	pL2=0. 
+	pR2=0.			  
+	IF (dpdx_ref_j(1)>0) THEN  !determine ambient background pressure gradient on left and right edge of CFD domain
+	  IF (rank.eq.0) THEN 
+		do j=dpdx_ref_j(1),dpdx_ref_j(2)
+		  pL1 = pL1+ppp(1,j,MIN(k1,kbed(1,j)+k_ust_tau_flow))
+		  pR1 = pR1+ppp(imax,j,MIN(k1,kbed(imax,j)+k_ust_tau_flow))
+		enddo 
+		pL1 = pL1 / DBLE(dpdx_ref_j(2)-dpdx_ref_j(1)+1)
+		pR1 = pR1 / DBLE(dpdx_ref_j(2)-dpdx_ref_j(1)+1)
+	  ELSEIF (rank.eq.px-1) THEN 
+		do j=dpdx_ref_j(1),dpdx_ref_j(2)
+		  pL2 = pL2+ppp(1,j1-j,MIN(k1,kbed(1,j1-j)+k_ust_tau_flow))
+		  pR2 = pR2+ppp(imax,j1-j,MIN(k1,kbed(imax,j1-j)+k_ust_tau_flow))
+		enddo 
+		pL2 = pL2 / DBLE(dpdx_ref_j(2)-dpdx_ref_j(1)+1)
+		pR2 = pR2 / DBLE(dpdx_ref_j(2)-dpdx_ref_j(1)+1)
+	  ENDIF
+	  call mpi_bcast(pL1,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+	  call mpi_bcast(pR1,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+	  call mpi_bcast(pL2,1,MPI_REAL8,px-1,MPI_COMM_WORLD,ierr)
+	  call mpi_bcast(pR2,1,MPI_REAL8,px-1,MPI_COMM_WORLD,ierr)
+	ENDIF 			  
+	Fix_ref = 0.5*((pR1+pR2)-(pL1+pL2))/(Rp(imax)-Rp(1))/rho_b
 !	IF ((interaction_bed.ge.4.or.bedlevelfile.ne.''.or.nobst>0).and.IBMorder.eq.2) THEN ! order-2 IBM before information is exchanged between partitions (hence only j=1-jmax); order-0 IBM is done at and of this subroutine 
 !		DO i=1,imax
 !			DO j=1,jmax
@@ -2713,7 +2739,7 @@ c 	influence of waves on lateral boundaries:
 			rr2=rhV(i,j,kbedt(i,j)+k_ust_tau_flow) 																	!at V-gridpoint
 
 			TBLEdpdx(i,j)=TBLE_grad_relax*((ppp(i+1,j,kbedt(i,j)+k_ust_tau_flow)-ppp(i,j,kbedt(i,j)+k_ust_tau_flow))
-     &            /(Rp(i+1)-Rp(i))/rr1)+(1.-TBLE_grad_relax)*TBLEdpdx(i,j)			!at U-gridpoint			
+     &            /(Rp(i+1)-Rp(i))/rr1-Fix_ref)+(1.-TBLE_grad_relax)*TBLEdpdx(i,j)			!at U-gridpoint			
 			TBLEdpdy(i,j)=TBLE_grad_relax*((ppp(i,j+1,kbedt(i,j)+k_ust_tau_flow)-ppp(i,j,kbedt(i,j)+k_ust_tau_flow))
      &            /(Rp(i)*(phip(j+1)-phip(j)))/rr2)+(1.-TBLE_grad_relax)*TBLEdpdy(i,j)			!at V-gridpoint
 
@@ -3296,7 +3322,7 @@ c 	influence of waves on lateral boundaries:
 				  uu0=Ubound2(i,j,kp)-Ubot_TSHD(j)*rr0
 				  vv0=0.25*(Vbound2(i,j,kp)+Vbound2(i+1,j,kp)+Vbound2(i,j-1,kp)+Vbound2(i+1,j-1,kp))-Vbot_TSHD(j)*rr0
 				  
-				  TBLEdpdx(i,j)=TBLE_grad_relax*((ppp(i+1,j,kpp)-ppp(i,j,kpp))/(Rp(i+1)-Rp(i))/rr1)
+				  TBLEdpdx(i,j)=TBLE_grad_relax*((ppp(i+1,j,kpp)-ppp(i,j,kpp))/(Rp(i+1)-Rp(i))/rr1-Fix_ref)
      &				  +(1.-TBLE_grad_relax)*TBLEdpdx(i,j)										!at U-gridpoint
 				  TBLEdudx(i,j)=TBLE_grad_relax*((Ubound2(i+1,j,kpp)-Ubound2(i-1,j,kpp))/(Ru(i+1)-Ru2(i-1))/rr1)
      &				  +(1.-TBLE_grad_relax)*TBLEdudx(i,j)
@@ -5046,7 +5072,9 @@ c*************************************************************
 	!uu0 = uu0 / (1. + tau_x*dt/dz/MAX(ABS(uu0),1.e-9)) 	!! only uu is adjusted ! implicit = more stable
 	
 	IF (tau_x*uu0<0.) THEN ! they have different signs --> tau enhancing the flow instead of slowing it down
-		uu0 = uu0 - tau_x*dt/dz 	!! only uu is adjusted
+		!for stability make tau_x = 0. to not accelerate the flow
+		tau_x = 0. 
+		!uu0 = uu0 - tau_x*dt/dz 	!! only uu is adjusted
 	ELSE 
 		uu0 = uu0 / (1. + ABS(tau_x)*dt/dz/MAX(ABS(uu0),1.e-9)) 	!! only uu is adjusted ! implicit = more stable
 	ENDIF 

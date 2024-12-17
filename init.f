@@ -753,7 +753,7 @@ c******************************************************************
 		IF (load_var.eq.1) THEN 
 		  do n=1,nfrac
 			 IF (interaction_bed.ge.4) THEN
-			   call bound_c(Clivebed(n,:,:,:),0.,n,0.)
+			   call bound_3D(Clivebed(n,:,:,:)) !apply internal boundaries and d.dn=0 at outer boundaries
 			 ENDIF
 		  enddo			
 		ENDIF 		
@@ -3263,10 +3263,12 @@ C ...  Locals
 					  bednotfixed(i,j,k)=obb_ero(i,j,k) ! obstacle in bed cannot be avalanched or eroded if 0. (default) user can choose to have erosion: 1.
 					  bednotfixed_depo(i,j,k)=obb_depo(i,j,k) ! obstacle in bed cannot have deposition if 0. (default)
 				  endif 
-				  if (kbed(i,j).eq.k-1.and.obb(i,j,kmax).eq.0) then  !obstacle is connected to floor and not complete vertical is obstacle so include in kbed + this works only for k=0,k1 upward counting inner loop in i,j loop
-					kbed(i,j)=k
-					zbed(i,j)=MAX(zbed(i,j),kbed(i,j)*dz)
-				  endif 
+				  !!! switched off below 4 lines 12-12-2024 LdW; not logical to need at least 1*dz inbetween mudmat or other non-erodable obstacle and bed without the bed absorbing the obstacle; 
+				  !!! with these lines commented obstacles and bed can touch without absorbing
+!				  if (kbed(i,j).eq.k-1.and.obb(i,j,kmax).eq.0) then  !obstacle is connected to floor and not complete vertical is obstacle so include in kbed, bed shear stress is defined for flow above it + this works only for k=0,k1 upward counting inner loop in i,j loop
+!					kbed(i,j)=k
+!					zbed(i,j)=MAX(zbed(i,j),kbed(i,j)*dz)
+!				  endif 
 				  !_inPpuntTSHD is hard 1/0 switch also when ibm1 for U,V,W is applied; its only use is for determination fc_global which prevents momentum/diffusion exchange between ibm-cells and fluid-cells
 				  tel1=tel1+1
 				  i_inPpuntTSHD(tel1)=i  

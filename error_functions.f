@@ -697,7 +697,16 @@
 		write(*,*) '# 50 means using tau_top from TBLE as bc CFD     #'		
 	CASE(625)
 		write(*,*) '# namelist &ambient                              #'			
-		write(*,*) '# obstfile_erodepo should be 1 or 2              #'			
+		write(*,*) '# obstfile_erodepo should be 1 or 2              #'	
+	CASE(626)
+		write(*,*) '# namelist &ambient                              #'			
+		write(*,*) '# TBLEsed_grad_relax is no longer used           #'			
+		write(*,*) '# use TBLEsl_grad_relax and TBLEbl_grad_relax instead  #'	
+	CASE(627)
+		write(*,*) '# namelist &ambient                              #'			
+		write(*,*) '# dpdx_ref_j(1) should be <= dpdx_ref_j(2)       #'			
+		write(*,*) '# dpdx_ref_j(1) should be >0                     #'			
+		write(*,*) '# dpdx_ref_j(2) should be <=jmax/px              #'			
    	CASE(701)
 		write(*,*) '# namelist &simulation                           #'			
 		write(*,*) '# restart_dir does not give correct files        #'	

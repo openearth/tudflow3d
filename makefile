@@ -1,4 +1,6 @@
-F77 = mpif90 -autodouble -132 -traceback -O3 -heap-arrays 10 -qmkl -fstack-protector-all # default option for Deltares runs 2024 #-axcore-avx2,avx ## dit was nodig, maar zonder malloc en heap-arrays opties 3% sneller
+F77 = mpif90 -autodouble -132 -traceback -O3 -heap-arrays 10 -qmkl -fstack-protector-all -march=x86-64-v3 # this line is 30% faster than line below with -Ofast on H7-16vcpu, on H7-4pcpu the performance is same for both lines, -march=x86-64-v4 does not work on 4pcpu older cores and is not tested 
+#F77 = mpif90 -autodouble -132 -traceback -Ofast -heap-arrays 10 -qmkl -fstack-protector-all -march=x86-64-v3 # default option for Deltares runs 2024 #-axcore-avx2,avx ## dit was nodig, maar zonder malloc en heap-arrays opties 3% sneller
+#F77 = mpif90 -autodouble -132 -traceback -O3 -heap-arrays 10 -qmkl -fstack-protector-all # default option for Deltares runs 2024 #-axcore-avx2,avx ## dit was nodig, maar zonder malloc en heap-arrays opties 3% sneller
 #F77 = mpif90 -autodouble -132 -traceback -O0 -heap-arrays 10 -qmkl -fstack-protector-all # -axcore-avx2,avx ## dit was nodig, maar zonder malloc en heap-arrays opties 3% sneller
 #F77 = mpiifort -autodouble -132 -traceback -O0 -heap-arrays 10 -qmkl # -axcore-avx2,avx ## dit was nodig, maar zonder malloc en heap-arrays opties 3% sneller
 #F77 = mpif90 -autodouble -132 -traceback -O3 -qopt-malloc-options=4 -heap-arrays 10 # -axcore-avx2,avx ## dit was nodig, maar zonder malloc en heap-arrays opties 3% sneller
