@@ -612,8 +612,8 @@
 				lambda_b(i,j,k)=1./(((BAGNOLD_phi_max/(1.e-12+phi_sand(i,j,k)))**(1./3.))-1.)				!linear sand concentration Bagnold 1956
 				sol_eff(i,j,k)=exp(BAGNOLD_beta*lambda_b(i,j,k))											!exponential term expressing influens of sand and silt
 				W_rel(i,j,k)=(rho_b/(JACOBS_Aclay*rho_sed))*((1.-phi_solids(i,j,k))/(1.e-12+phi_fines(i,j,k)))		!relative water content
-				tauY(i,j,k)=sol_eff(i,j,k)*JACOBS_Ky*(W_rel(i,j,k)**JACOBS_By)
-				muB(i,j,k)=sol_eff(i,j,k)*(JACOBS_muw+JACOBS_Kmu*(W_rel(i,j,k)**JACOBS_Bmu))
+				tauY(i,j,k)=MIN(MAX_tauy,sol_eff(i,j,k)*JACOBS_Ky*(W_rel(i,j,k)**JACOBS_By))
+				muB(i,j,k)=MIN(MAX_mu,sol_eff(i,j,k)*(JACOBS_muw+JACOBS_Kmu*(W_rel(i,j,k)**JACOBS_Bmu)))
 			enddo
 		enddo
 	enddo
@@ -656,9 +656,10 @@
 				lambda_b(i,j,k)=1./(((BAGNOLD_phi_max/(1.e-12+phi_sand(i,j,k)))**(1./3.))-1.)				!linear sand concentration Bagnold 1956
 				sol_eff(i,j,k)=exp(BAGNOLD_beta*lambda_b(i,j,k))									!exponential term expressing influens of sand and silt
 				sol_frac(i,j,k)=phi_fines(i,j,k)/(1.-phi_sand(i,j,k))
-				tauY(i,j,k)=sol_eff(i,j,k)*WINTER_Ay*sol_frac(i,j,k)**(2./(3.-WINTER_nf))
+				tauY(i,j,k)=MIN(MAX_tauy,sol_eff(i,j,k)*WINTER_Ay*sol_frac(i,j,k)**(2./(3.-WINTER_nf)))
 				shear_thin(i,j,k)=((1./(1.e-12+strain(i,j,k)))**(((WINTER_af+1.)*(3.-WINTER_nf))/3.))
 				muB(i,j,k)= sol_eff(i,j,k)*(WINTER_muw+WINTER_Amu*(sol_frac(i,j,k)**(((2.*(WINTER_af+1.))/3.)))*shear_thin(i,j,k))
+				muB(i,j,k)=MIN(MAX_mu,muB(i,j,k))
 			enddo
 		enddo
 	enddo
@@ -672,7 +673,7 @@
 	
 	real phi_sand(0:i1,0:j1,0:k1),phi_fines(0:i1,0:j1,0:k1),phi_solids(0:i1,0:j1,0:k1)
 	real sol_eff_y(0:i1,0:j1,0:k1),sol_eff_mu(0:i1,0:j1,0:k1)
-	integer n
+	integer n,n1
 	
 	phi_solids(:,:,:)=0.
 	phi_fines(:,:,:)=0.
@@ -681,18 +682,27 @@
 	do i=1,imax 
 		do j=1,jmax
 			do k=1,kmax
-				do n=1,nfrac
-					if (frac(n)%dpart.le.44) then								!fines < 45 micron
+				do n1=1,nfr_silt 
+					n=nfrac_silt(n1)				
 					phi_fines(i,j,k)= phi_fines(i,j,k)+cnew(n,i,j,k)
-					elseif (frac(n)%dpart.gt.44) then 							!To include all fractions we let sand > 44 micron (instead of 63 micron)
+				enddo 
+				do n1=1,nfr_sand 
+					n=nfrac_sand(n1)				
 					phi_sand(i,j,k)= phi_sand(i,j,k)+cnew(n,i,j,k)
-					endif
-				enddo
-				phi_solids(i,j,k)=phi_fines(i,j,k)+phi_sand(i,j,k)
+				enddo 
+!				do n=1,nfrac
+!					if (frac(n)%type.eq.1) then								!fines < 45 micron
+!					elseif (frac(n)%type.eq.2) then 							!To include all fractions we let sand > 44 micron (instead of 63 micron)
+!					phi_sand(i,j,k)= phi_sand(i,j,k)+cnew(n,i,j,k)
+!					endif
+!				enddo
+				phi_solids(i,j,k)=MIN(THOMAS_phi_sand_max,phi_fines(i,j,k)+phi_sand(i,j,k))
+				phi_sand(i,j,k)=MIN(THOMAS_phi_sand_max,phi_sand(i,j,k))
+				phi_fines(i,j,k)=MIN(THOMAS_phi_sand_max,phi_fines(i,j,k))
 				sol_eff_y(i,j,k)=(1.-(phi_sand(i,j,k)/(THOMAS_ky*THOMAS_phi_sand_max)))**-2.5		!solids effect
 				sol_eff_mu(i,j,k)=(1.-(phi_sand(i,j,k)/(THOMAS_kmu*THOMAS_phi_sand_max)))**-2.5
-				tauY(i,j,k)=THOMAS_Cy*((phi_fines(i,j,k)/(1.-phi_sand(i,j,k)))**THOMAS_Py)*sol_eff_y(i,j,k)		!depends on definition of fines (in-/excluding silt)
-				muB(i,j,k)=THOMAS_Cmu*exp(THOMAS_Pmu*(phi_fines(i,j,k)/(1.-phi_solids(i,j,k))))*sol_eff_mu(i,j,k)
+				tauY(i,j,k)=MIN(MAX_tauy,THOMAS_Cy*((phi_fines(i,j,k)/(1.-phi_sand(i,j,k)))**THOMAS_Py)*sol_eff_y(i,j,k))		!depends on definition of fines (in-/excluding silt)
+				muB(i,j,k)=MIN(MAX_mu,THOMAS_Cmu*exp(THOMAS_Pmu*(phi_fines(i,j,k)/(1.-phi_solids(i,j,k))))*sol_eff_mu(i,j,k))
 			enddo
 		enddo
 	enddo
@@ -862,7 +872,7 @@
 !!		enddo
 !!	  ENDDO 
 !!	ENDIF 
-	ekm= ekm + muA
+	ekm= ekm + muA - ekm_mol !in muB (part of muA) ekm_mol is included  
 	call stress_magnitude !calculate the stress magnitude
 	call bound_3D(ekm)
 	call bound_3D(muA) 
@@ -1005,7 +1015,7 @@
 		enddo
 	endif 
 
-	ekm= ekm + muA
+	ekm= ekm + muA - ekm_mol !in muB (part of muA) ekm_mol is included  
 	call stress_magnitude !calculate the stress magnitude
 	call bound_3D(ekm)
 	call bound_3D(muA) 

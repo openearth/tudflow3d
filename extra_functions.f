@@ -275,13 +275,23 @@
 	  dt=MIN(dt,dtold*1.1) !change in time step never more than +10% in one timestep for extra stability
 
 	if (isnan(dt).or.dt<1.e-12) then
-		call output_nc('flow3D_',999999999,time_np)
+		drdt=rnew
+		dcdt=cnew
+		dudt=unew
+		dvdt=vnew
+		dwdt=wnew		
 		rnew=rold 
 		cnew=cold 
 		unew=uold
 		vnew=vold
 		wnew=wold
 		call output_nc('flow3D_',999999998,time_np) !output file with rcuvw from previous timestep (hopefully not crashed)
+		rnew=drdt 
+		cnew=dcdt 
+		unew=dudt
+		vnew=dvdt
+		wnew=dwdt		
+		call output_nc('flow3D_',999999999,time_np)
 	endif 
 	  
 	if (isnan(dt)) stop 'ERROR, QUITING TUDFLOW3D: "dt" is a NaN'
@@ -1342,8 +1352,9 @@
 !				ENDIF			
 			IF (eps<=tol) THEN 
 				IF (rank.eq.0) THEN 
-					write(*,*),'CN3Dcg iteration finished; tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',
-     & 					tel,tol,eps,b2_global,MINVAL(DD3D(ib:ie,jb:je,kb:ke)),MAXVAL(DD3D(ib:ie,jb:je,kb:ke))
+!					write(*,*),'CN3Dcg iteration finished; tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',
+!     & 					tel,tol,eps,b2_global,MINVAL(DD3D(ib:ie,jb:je,kb:ke)),MAXVAL(DD3D(ib:ie,jb:je,kb:ke))
+					write(*,*),'CN3Dpcg_d finished; tel,tol,eps,b2_global:',tel,tol,eps,b2_global	 
 !					write(*,*),'xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)',xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)
 !					write(*,*),'RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)',RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)
 !					write(*,*),'DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)',DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)
@@ -1542,8 +1553,9 @@
 			IF (eps<=tol) THEN 
 				xnew = xnew/sqrt(DD3D)
 				IF (rank.eq.0) THEN 
-					write(*,*),'CN3Dcg iteration finished; tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',
-     & 					tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D)
+!					write(*,*),'CN3Dcg iteration finished; tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',
+!     & 					tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D)
+					write(*,*),'CN3Dpcg_d2 finished; tel,tol,eps,b2_global:',tel,tol,eps,b2_global
 !					write(*,*),'xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)',xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)
 !					write(*,*),'RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)',RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)
 !					write(*,*),'DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)',DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)
@@ -1693,8 +1705,9 @@
 !				ENDIF			
 			IF (eps<=tol) THEN 
 				IF (rank.eq.0) THEN 
-					write(*,*),'CN3Dcg iteration finished; tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',
-     & 					tel,tol,eps,b2_global,MINVAL(DD3D(ib:ie,jb:je,kb:ke)),MAXVAL(DD3D(ib:ie,jb:je,kb:ke))
+!					write(*,*),'CN3Dcg iteration finished; tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',
+!     & 					tel,tol,eps,b2_global,MINVAL(DD3D(ib:ie,jb:je,kb:ke)),MAXVAL(DD3D(ib:ie,jb:je,kb:ke))
+					write(*,*),'CN3Dcg finished; tel,tol,eps,b2_global:',tel,tol,eps,b2_global	 
 !					write(*,*),'xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)',xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)
 !					write(*,*),'RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)',RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)
 !					write(*,*),'DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)',DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)
@@ -1847,8 +1860,9 @@
 !				ENDIF			
 			IF (eps<=tol) THEN 
 				IF (rank.eq.0) THEN 
-					write(*,*),'CN3Dcg iteration finished; tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',
-     & 					tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D)
+!					write(*,*),'CN3Dcg iteration finished; tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',
+!     & 					tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D)
+					write(*,*),'CN3Dcg2 finished; tel,tol,eps,b2_global:',tel,tol,eps,b2_global	 
 !					write(*,*),'xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)',xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)
 !					write(*,*),'RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)',RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)
 !					write(*,*),'DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)',DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)
@@ -2177,8 +2191,9 @@
 !				ENDIF			
 			IF (eps<=tol) THEN 
 				IF (rank.eq.0) THEN 
-					write(*,*),'CN3Dcg iteration finished; tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',
-     & 					tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D)
+!					write(*,*),'CN3Dcg iteration finished; tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',
+!     & 					tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D)
+					write(*,*),'CN3Dpcg_ic finished; tel,tol,eps,b2_global:',tel,tol,eps,b2_global
 !					write(*,*),'xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)',xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)
 !					write(*,*),'RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)',RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)
 !					write(*,*),'DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)',DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)
@@ -2488,8 +2503,9 @@
 !				ENDIF			
 			IF (eps<=tol) THEN 
 				IF (rank.eq.0) THEN 
-					write(*,*),'CN3Dcg iteration finished; tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',
-     & 					tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D)
+!					write(*,*),'CN3Dcg iteration finished; tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',
+!     & 					tel,tol,eps,b2_global,MINVAL(DD3D),MAXVAL(DD3D)
+					write(*,*),'CN3Dpcg_ilu finished; tel,tol,eps,b2_global:',tel,tol,eps,b2_global	 
 !					write(*,*),'xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)',xnew(imax,1,1),xnew(imax,1,32),xnew(imax,1,kmax)
 !					write(*,*),'RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)',RHS3D(imax,1,1),RHS3D(imax,1,32),RHS3D(imax,1,kmax)
 !					write(*,*),'DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)',DD3D(imax,1,1),DD3D(imax,1,32),DD3D(imax,1,kmax)
@@ -2770,8 +2786,9 @@
 				eps = sqrt(rnew2_global)/sqrt(b2_global) 
 				IF (eps<=tol) THEN
 					IF (rank.eq.0) THEN 
-							write(*,*),'CN3Dcg iteration finished; tel,tol,eps,g,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',
-     & 						tel,tol,eps,g,b2_global,MINVAL(DD3D),MAXVAL(DD3D)
+!							write(*,*),'CN3Dcg iteration finished; tel,tol,eps,g,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',
+!     & 						tel,tol,eps,g,b2_global,MINVAL(DD3D),MAXVAL(DD3D)
+					write(*,*),'CN3Dpcg_pol finished; tel,tol,eps,b2_global:',tel,tol,eps,b2_global	 
 					ENDIF	
 					xnew = xnew/sqrt(DD3D)
 					EXIT 
@@ -3042,8 +3059,9 @@
 				eps = sqrt(rnew2_global)/sqrt(b2_global) 
 				IF (eps<=tol) THEN
 					IF (rank.eq.0) THEN 
-							write(*,*),'CN3Dcg iteration finished; tel,tol,eps,g,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',
-     & 						tel,tol,eps,g,b2_global,MINVAL(DD3D),MAXVAL(DD3D)
+!							write(*,*),'CN3Dcg iteration finished; tel,tol,eps,g,b2_global,MINVAL(DD3D),MAXVAL(DD3D):',
+!     & 						tel,tol,eps,g,b2_global,MINVAL(DD3D),MAXVAL(DD3D)
+					write(*,*),'CN3Dpcg_pol2 finished; tel,tol,eps,b2_global:',tel,tol,eps,b2_global	 
 					ENDIF	
 					!xnew = xnew/sqrt(DD3D)
 					EXIT 

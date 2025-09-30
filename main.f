@@ -24,8 +24,8 @@
       implicit none
       include 'mpif.h'
 
-      integer  ib,ie,jb,je,kb,ke,ploc,ierr,istep_output,itag,n,t,istep_output_movie,status,kbp,i_target 
-      real     cput1,cput2,t_output,t_output_movie,tm_temp,interpseries
+      integer  ib,ie,jb,je,kb,ke,ploc,ierr,itag,n,t,status,kbp,i_target 
+      real     cput1,cput2,tm_temp,interpseries
       real     cput10a,cput10b,cput11a,cput11b
 	  !real     cput1b,cput2b,t_output,t_output_movie,crate
 	  !integer cput1,cput2,cr
@@ -222,11 +222,13 @@
       call chkdt
 	  if (restart_dir.eq.'') then
 	    time_n=0.
+		mortime=0.
 	  endif
 	  time_nm2=time_n-2*dt 
       time_nm=time_n-dt
 	  time_np=time_n+dt
 	  dt_old=dt
+	  
       
 	  call output_init_nc(time_np)
 	  call update_nvol_bedplume(time_n)
@@ -283,7 +285,19 @@
 		  else 
 			tstart_morf2=0. 		!giving present time is after tstart_morf2 which allows for exchange of sediment between bed and fluid and bedupdate
 		  endif
-		endif		
+		endif	
+		if (morfac_tseriesfile.ne.'') then
+			morfac=interpseries(morfac_tseries,morfac_series,morfac_seriesloc,time_n)
+			IF (morfac<0.) CALL writeerror(101)
+		endif 
+		if (morfac2_tseriesfile.ne.'') then
+			morfac2=interpseries(morfac2_tseries,morfac2_series,morfac2_seriesloc,time_n)
+			IF (morfac2<1.) CALL writeerror(102)
+		endif
+		if (time_n>tstart_morf2) then 
+  		  mortime = mortime + dt*morfac2*morfac 
+		endif 
+		
 		if (Cs>0.or.sgs_model.eq.'MixLe'.or.sgs_model.eq.'ReaKE'.or.sgs_model.eq.'DSmag') then
 		  if (sgs_model.eq.'SSmag') then
 			call LES_smagorinsky(Unew,Vnew,Wnew,rnew)
@@ -668,18 +682,37 @@
 		endif		
 
 !		if (time_np.ge.t_output) then
-		if (time_np.ge.t_output.and.t_output.le.te_output+1.e-12) then
-		   istep_output=istep_output+1
-		   t_output=t_output+dt_output		   	
-		   call output_nc('flow3D_',istep_output,time_np)
-		endif
-		if (time_np.ge.t_output_movie.and.t_output_movie.le.te_output_movie+1.e-12) then
-		   istep_output_movie=istep_output_movie+1
-		   t_output_movie=t_output_movie+dt_output_movie		   	
-		   call output_nc_movie(istep_output_movie,time_np)
-		   if (rank.eq.0) then
-		     WRITE(*,'(a,i10.0,a)') ' # Movie file: ',istep_output_movie,'                   #' 	
-		   endif
+		if (output_times_morphology.eq.1) then 
+			if (mortime.ge.t_output.and.t_output.le.te_output+1.e-12) then
+			   istep_output=istep_output+1
+			   t_output=t_output+dt_output		   	
+			   call output_nc('flow3D_',istep_output,time_np)
+			endif
+		else
+			if (time_np.ge.t_output.and.t_output.le.te_output+1.e-12) then
+			   istep_output=istep_output+1
+			   t_output=t_output+dt_output		   	
+			   call output_nc('flow3D_',istep_output,time_np)
+			endif
+		endif 
+		if (output_times_morphology.eq.1) then
+			if (mortime.ge.t_output_movie.and.t_output_movie.le.te_output_movie+1.e-12) then
+			   istep_output_movie=istep_output_movie+1
+			   t_output_movie=t_output_movie+dt_output_movie		   	
+			   call output_nc_movie(istep_output_movie,time_np)
+			   if (rank.eq.0) then
+				 WRITE(*,'(a,i10.0,a)') ' # Movie file: ',istep_output_movie,'                   #' 	
+			   endif
+			endif
+		else 
+			if (time_np.ge.t_output_movie.and.t_output_movie.le.te_output_movie+1.e-12) then
+			   istep_output_movie=istep_output_movie+1
+			   t_output_movie=t_output_movie+dt_output_movie		   	
+			   call output_nc_movie(istep_output_movie,time_np)
+			   if (rank.eq.0) then
+				 WRITE(*,'(a,i10.0,a)') ' # Movie file: ',istep_output_movie,'                   #' 	
+			   endif
+			endif
 		endif
 		if (hisfile.ne.'') then
 		  call appendhis !(rank,istep,time_np,Unew,Vnew,Wnew,P,Cnew,Rnew)

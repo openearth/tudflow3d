@@ -25,14 +25,14 @@
       
       INTEGER i,j,k,imax,jmax,kmax,i1,j1,k1,px,rank,kjet,nmax1,nmax2,nmax3,istep,CNdiffz,npresIBM,counter,npresPRHO,oPRHO,k_pzero
       INTEGER Lmix_type,slip_bot,SEM,azi_n,outflow_overflow_down,azi_n2,wiggle_detector,wd,applyVOF,Poutflow,k_ust_tau,Uoutflow
-	  INTEGER k_ust_tau_flow
+	  INTEGER k_ust_tau_flow,dpdx_smoother,uv_sed_smoother,istep_output,istep_output_movie,output_times_morphology
       REAL ekm_mol,nu_mol,pi,kappa,gx,gy,gz,Cs,Sc,calibfac_sand_pickup,calibfac_Shields_cr,morfac,morfac2,calibfac_sand_bedload
       REAL dt,time_nm,time_n,time_np,t_end,t0_output,dt_output,te_output,dt_max,tstart_rms,CFL,dt_ini,tstart_morf,trestart,dt_old
       REAL dt_output_movie,t0_output_movie,te_output_movie,te_rms,time_nm2,tstart_morf2,fcor,calibfac_Shields_cr_bl
       REAL U_b,V_b,W_b,rho_b,W_j,Awjet,Aujet,Avjet,Strouhal,radius_j,kn,W_ox,U_bSEM,V_bSEM,U_w,V_w,U_init,V_init
       REAL U_j2,Awjet2,Aujet2,Avjet2,Strouhal2,radius_j2,zjet2,rho_b2,ekm_sediment_pickup,nu_sediment_pickup
-      REAL xj(4),yj(4),radius_inner_j,W_j_powerlaw,plume_z_outflow_belowsurf
-      REAL dy,dz,schuif_x,depth,lm_min,lm_min3,Rmin,bc_obst_h
+      REAL xj(4),yj(4),radius_inner_j,W_j_powerlaw,plume_z_outflow_belowsurf,mortime,t_output,t_output_movie
+      REAL dy,dz,schuif_x,depth,lm_min,lm_min3,Rmin,bc_obst_h,factorsABv3(3)
       REAL dr_grid(1:100),dy_grid(1:100),fac_y_grid(1:100),lim_y_grid(1:100),fac_r_grid(1:100),lim_r_grid(1:100)
       INTEGER imax_grid(1:100),jmax_grid(1:100),sym_grid_y
       INTEGER tmax_inPpunt,tmax_inUpunt,tmax_inVpunt,tmax_inPpuntrand
@@ -43,6 +43,7 @@
       INTEGER nfr_silt,nfr_sand,nfr_air,istart_morf1(2),istart_morf2(2),i_periodicx,hindered_settling_c
       CHARACTER*256 hisfile,restart_dir,inpfile,plumetseriesfile,bcfile,plumetseriesfile2,bedlevelfile,initconditionsfile
 	  CHARACTER*256 U_b_tseriesfile,V_b_tseriesfile,W_b_tseriesfile,bedupdatefile,tmorf_tseriesfile,tmorf2_tseriesfile
+	  CHARACTER*256 morfac_tseriesfile,morfac2_tseriesfile
       CHARACTER*3 time_int,advec_conc,cutter,split_rho_cont
       CHARACTER*5 sgs_model
       CHARACTER*4 damping_drho_dz,extra_mix_visc
@@ -57,22 +58,23 @@
 	  REAL U_b_series(1:10000),V_b_series(1:10000),W_b_series(1:10000)
 	  REAL U_b_tseries(1:10000),V_b_tseries(1:10000),W_b_tseries(1:10000)
 	  REAL tmorf_series(1:10000),tmorf2_series(1:10000),tmorf_tseries(1:10000),tmorf2_tseries(1:10000)
+	  REAL morfac_series(1:10000),morfac2_series(1:10000),morfac_tseries(1:10000),morfac2_tseries(1:10000)
       INTEGER plumeseriesloc,plumeseriesloc2,plumeQseriesloc,plumecseriesloc
-	  INTEGER U_b_seriesloc,V_b_seriesloc,W_b_seriesloc,tmorf_seriesloc,tmorf2_seriesloc 
+	  INTEGER U_b_seriesloc,V_b_seriesloc,W_b_seriesloc,tmorf_seriesloc,tmorf2_seriesloc,morfac_seriesloc,morfac2_seriesloc
       INTEGER nr_HPfilter,depo_implicit,depo_cbed_option,monopile
       REAL timeAB_real(1:4),dpdx,dpdy,kn_d50_multiplier,avalanche_slope(100),av_slope_z(100)
 	  REAL dpdx1,dpdy1,Uavold,Vavold,U3avold,V3avold,dpdx3,dpdy3
       INTEGER periodicx,periodicy,wallup,dUVdn_IBMbed
       REAL U_b3,V_b3,surf_layer,reduction_sedimentation_shields,kn_mp,kn_sidewalls
       INTEGER ksurf_bc,kmaxTSHD_ind,nair
-      INTEGER poissolver,nm1,istep_output_bpmove,avalanche_until_done,IBMorder
+      INTEGER poissolver,nm1,istep_output_bpmove,avalanche_until_done,IBMorder,avalanche_max_x
       INTEGER iparm(64)
       CHARACTER*256 plumeQtseriesfile,plumectseriesfile,avfile,obstfile,kn_flow_file      
       REAL Q_j,plumeQseries(1:10000),plumeQtseries(1:10000),plumectseries(1:10000),plumecseries(30,1:10000) !c(30) matches with size frac_init
       REAL Aplume,driftfluxforce_calfac,kn_flow_d50_multiplier,dz_sidewall,sl_relax
 	  REAL vwal,vwal2,delta_nsed,nl,permeability_kl,pickup_fluctuations_ampl,z_tau_sed,kn_d50_multiplier_bl,bl_relax,power_VR2019
 	  INTEGER pickup_fluctuations,cbed_method,k_layer_pickup,nu_minimum_wall,pickup_bedslope_geo,wbed_correction,bedslope_effect
-	  INTEGER wallmodel_tau_sed,ndtbed,nrmsbed,telUVWbed,tel_dt
+	  INTEGER wallmodel_tau_sed,ndtbed,nrmsbed,telUVWbed,tel_dt,avalanche_fines
 	  REAL Const1eps,Const2,Sc_k,Sc_eps,Cal_buoyancy_k,Cal_buoyancy_eps,Cs_relax
 	  REAL bedslope_mu_s,alfabs_bl,alfabn_bl,phi_sediment
 	  REAL dt_factor_avg,CNdiff_factor,CNdiff_ho,CNdiff_dtfactor,CNdiff_tol,Apvisc_shear_relax
@@ -83,17 +85,18 @@
 	  REAL :: obst_starttimes(5000)
 	  INTEGER cbc_perx_j(2),taulayerTBLE,obstfile_erodepo,nWM,vel_start_after_ero,nsmooth_bed,k_ust_tau_sed_range(2),dpdx_ref_j(2)
 	  REAL cbc_relax,TBLE_grad_relax,TBLEsl_grad_relax,TBLEbl_grad_relax,dpbed_zone,TBLEsed_grad_relax
+	  INTEGER cbc_inflow_correction,k_dpdx_sed_range(2)
 	  
 	  
-	  !new variables rheology
-	  INTEGER Non_Newtonian, Apvisc_interp
+	  !variables rheology
+	  INTEGER Non_Newtonian, Apvisc_interp,shear_settling
 	  REAL SIMPLE_tauy,SIMPLE_muB,SIMPLE_climit(30) 
 	  REAL JACOBS_Ky,JACOBS_Kmu,JACOBS_Aclay,JACOBS_By,JACOBS_Bmu,JACOBS_muw
 	  REAL WINTER_Ay,WINTER_Amu,WINTER_nf,WINTER_af,WINTER_muw
 	  REAL THOMAS_Cy,THOMAS_Cmu,THOMAS_ky,THOMAS_kmu,THOMAS_Py,THOMAS_Pmu,THOMAS_phi_sand_max
 	  REAL BAGNOLD_beta,BAGNOLD_phi_max,PAPANASTASIOUS_m,shear0limit
 	  REAL Lambda_init,Kin_eq_a,Kin_eq_b,Kin_eq_lambda_0
-	  REAL HOUSKA_n,HOUSKA_eta_0,HOUSKA_eta_inf,HOUSKA_tauy_0,HOUSKA_tauy_inf
+	  REAL HOUSKA_n,HOUSKA_eta_0,HOUSKA_eta_inf,HOUSKA_tauy_0,HOUSKA_tauy_inf,MAX_tauy,MAX_mu
 	  
 
 	  REAL, DIMENSION(:,:,:),ALLOCATABLE :: tauY,muB
@@ -174,6 +177,7 @@
 	  REAL, DIMENSION(:,:),ALLOCATABLE :: Uhisbp,Vhisbp,Whisbp
 	  REAL*8, DIMENSION(:,:,:),ALLOCATABLE :: fc_global
 	  REAL, DIMENSION(:,:),ALLOCATABLE :: uuR_relax,uuL_relax,vvR_relax,vvL_relax,tau2Vold,tau2Vnew,tau2Wold,tau2Wnew,qb_relax
+	  REAL, DIMENSION(:,:),ALLOCATABLE :: uuR_relax2,uuL_relax2,vvR_relax2,vvL_relax2,absU_sed_relax2
 	  REAL, DIMENSION(:,:),ALLOCATABLE :: tau_fl_Uold,tau_fl_Vold,tau_fl_Unew,tau_fl_Vnew,ust_sl_new,ust_sl_old,ust_bl_new,ust_bl_old
 	  REAL, DIMENSION(:,:),ALLOCATABLE :: ust_mud_new,ust_mud_old,kn_flow,d50field,tau_fl_Utop,tau_fl_Vtop
 	  REAL, DIMENSION(:,:,:),ALLOCATABLE :: qbU,qbV,ust_frac_old,ust_frac_new,sigUWbed,sigVWbed,sigUbed,sigVbed,sigWbed
@@ -279,16 +283,17 @@
      & ,lim_r_grid,fac_r_grid,jmax_grid,lim_y_grid,fac_y_grid,sym_grid_y,dy_grid
 	NAMELIST /times/t_end,t0_output,dt_output,te_output,tstart_rms,dt_max,dt_ini,time_int,CFL,
      & t0_output_movie,dt_output_movie,te_output_movie,tstart_morf,te_rms,tstart_morf2,n_dtavg,tmorf_tseriesfile,tmorf2_tseriesfile
+     & ,output_times_morphology,factorsABv3	 
 	NAMELIST /num_scheme/convection,numdiff,wiggle_detector,diffusion,comp_filter_a,comp_filter_n,CNdiffz,npresIBM,advec_conc,
      & continuity_solver,transporteq_fracs,split_rho_cont,driftfluxforce_calfac,depo_implicit,IBMorder,npresPRHO,
      & pres_in_predictor_step,Poutflow,oPRHO,applyVOF,k_ust_tau,Uoutflow,dUVdn_IBMbed,k_pzero,numdiff2,CNdiff_factor,CNdiff_ho,
      & CNdiff_dtfactor,CNdiff_pc,CNdiff_maxi,CNdiff_tol,CNdiff_ini,initPhydrostatic,npresIBM_viscupdate,momentum_exchange_obstacles
-     & ,k_ust_tau_flow,nsmooth_bed,k_ust_tau_sed_range,fft_routines	 
+     & ,k_ust_tau_flow,nsmooth_bed,k_ust_tau_sed_range,fft_routines,k_dpdx_sed_range
 	NAMELIST /ambient/U_b,V_b,W_b,bcfile,rho_b,SEM,nmax2,nmax1,nmax3,lm_min,lm_min3,slip_bot,taulayerTBLE,kn,interaction_bed,
      & periodicx,periodicy,dpdx,dpdy,W_ox,Hs,Tp,nx_w,ny_w,obst,bc_obst_h,U_b3,V_b3,surf_layer,wallup,bedlevelfile,
      & U_bSEM,V_bSEM,U_w,V_w,c_bed,cfixedbed,U_init,V_init,initconditionsfile,rho_b2,monopile,kn_mp,kn_sidewalls,obstfile,
      & istart_morf1,istart_morf2,i_periodicx,kn_flow_file,kn_flow_d50_multiplier,U_b_tseriesfile,V_b_tseriesfile,W_b_tseriesfile
-     & ,cbc_perx_j,cbc_relax,obstfile_erodepo,TBLE_grad_relax,bedupdatefile,dpdx_ref_j
+     & ,cbc_perx_j,cbc_relax,obstfile_erodepo,TBLE_grad_relax,bedupdatefile,dpdx_ref_j,cbc_inflow_correction,dpdx_smoother
 	NAMELIST /plume/W_j,plumetseriesfile,Awjet,Aujet,Avjet,Strouhal,azi_n,kjet,radius_j,Sc,slipvel,outflow_overflow_down,
      & U_j2,plumetseriesfile2,Awjet2,Aujet2,Avjet2,Strouhal2,azi_n2,radius_j2,zjet2,bedplume,radius_inner_j,xj,yj,W_j_powerlaw,
      & plume_z_outflow_belowsurf,hindered_settling,hindered_settling_c,Q_j,plumeQtseriesfile,plumectseriesfile
@@ -301,15 +306,16 @@
      & ,fcor,wbed_correction,bedslope_effect,bedslope_mu_s,alfabs_bl,alfabn_bl,phi_sediment,wallmodel_tau_sed,nrmsbed,ndtbed,
      & erosion_cbed_start,movebed_absorb_cfluid,power_VR2019,ekm_sediment_pickup,dz_sidewall,pickup_formula_swe
      & ,vel_start_after_ero,dpbed_zone,sl_relax,TBLEsl_grad_relax,TBLEbl_grad_relax,TBLEsed_grad_relax,correction_sl_with_bl
+     & ,uv_sed_smoother,morfac_tseriesfile,morfac2_tseriesfile,avalanche_max_x,avalanche_fines
 	NAMELIST /fractions_in_plume/fract
 	NAMELIST /ship/U_TSHD,LOA,Lfront,Breadth,Draught,Lback,Hback,xfront,yfront,kn_TSHD,nprop,Dprop,xprop,yprop,zprop,
      &   Pprop,rudder,rot_prop,draghead,Dsp,xdh,perc_dh_suction,softnose,Hfront,cutter
 	NAMELIST /rheology/Non_Newtonian,Rheological_model,PAPANASTASIOUS_m,shear0limit,Apvisc_interp,SIMPLE_tauy,SIMPLE_muB,SIMPLE_climit,
-     & JACOBS_Ky,JACOBS_Kmu,JACOBS_Aclay,JACOBS_By,JACOBS_Bmu,JACOBS_muw,
+     & MAX_tauy,MAX_mu,JACOBS_Ky,JACOBS_Kmu,JACOBS_Aclay,JACOBS_By,JACOBS_Bmu,JACOBS_muw,
      & WINTER_Ay,WINTER_Amu,WINTER_nf,WINTER_af,WINTER_muw,
      & THOMAS_Cy,THOMAS_Cmu,THOMAS_ky,THOMAS_kmu,THOMAS_Py,THOMAS_Pmu,THOMAS_phi_sand_max,
      & Lambda_init,Kin_eq_a,Kin_eq_b,Kin_eq_lambda_0,HOUSKA_n,HOUSKA_eta_0,HOUSKA_eta_inf,HOUSKA_tauy_0,HOUSKA_tauy_inf,
-     & BAGNOLD_beta,BAGNOLD_phi_max,rheo_shear_method,Apvisc_shear_relax,Apvisc_force_eq
+     & BAGNOLD_beta,BAGNOLD_phi_max,rheo_shear_method,Apvisc_shear_relax,Apvisc_force_eq,shear_settling
 
 
 	!! initialise:
@@ -359,6 +365,10 @@
 	tmorf2_tseriesfile=''
 	tmorf2_tseries=-99999.
 	tmorf2_series=-99999.	
+	output_times_morphology = 0
+	factorsABv3(1) = 23./12. !default AB3 settings
+	factorsABv3(2) = -4./3.  !default AB3 settings
+	factorsABv3(3) = 5./12.  !default AB3 settings	
 	!! num_scheme
 	convection = 'ARGH'
 	numdiff = 0.
@@ -395,6 +405,7 @@
 	k_ust_tau=1
 	k_ust_tau_flow=1
 	k_ust_tau_sed_range(1:2) = -1
+	k_dpdx_sed_range(1:2)= -1
 	dUVdn_IBMbed=-1 !default no correction, but with 0 then dUdn and dVdn is made zero over immersed bed and with -2  to apply UV(1:kbed)=0 also for IBM2
 	initPhydrostatic = 0 !default 0 no initial hydrostatic pressure; 1 = initialize hydrostatic pressure before first timestep 
 	momentum_exchange_obstacles = 1 !default there is momentum exchange between flow and obstacles, optional 0 makes momenum terms zero in case the advective velocity is inside or at edge obstacle 
@@ -445,8 +456,10 @@
 	dpdy3=0.	
 	cbc_perx_j(1:2)=0 
 	cbc_relax = 1. 
+	cbc_inflow_correction = 1 
 	TBLE_grad_relax = 1.
 	dpdx_ref_j(1:2)=0 
+	dpdx_smoother = 0
 	Uavold=0.
 	Vavold=0.
 	U3avold=0. 
@@ -662,6 +675,8 @@
 	morfac = 1.
 	morfac2 = 1.
 	avalanche_until_done=0
+	avalanche_max_x=1000000000
+	avalanche_fines = 1
 	pickup_correction='nonenonenonenonenone'
 	vwal=-999.
 	wbed_correction = 0
@@ -681,6 +696,7 @@
 	z_tau_sed = -999.
 	dz_sidewall = -999. 
 	pickup_bedslope_geo=0
+	uv_sed_smoother = 0	
 	bl_relax=0.01 
 	sl_relax=1. 
 	bedslope_effect=0
@@ -694,6 +710,12 @@
 	pickup_formula_swe = 'vanrijn1984' !default
 	vel_start_after_ero = 0 
 	dpbed_zone = 1.e12 
+	morfac_tseriesfile=''
+	morfac_tseries=-99999.
+	morfac_series=-99999.
+	morfac2_tseriesfile=''
+	morfac2_tseries=-99999.
+	morfac2_series=-99999.	
 	
 	
 	!! ship
@@ -713,7 +735,7 @@
 	yprop=-999.
 	zprop=-999.
 	Pprop=-999.
-	rot_prop=-9999.
+	rot_prop=0.25 !-9999.
 	rudder=-9
 	draghead='none'
 	Dsp=0.	
@@ -732,6 +754,9 @@
 	rheo_shear_method = 1
 	Apvisc_shear_relax=1. !default no relaxation 
 	Apvisc_force_eq = 0 !default no additional direct force terms from rheology 
+	shear_settling = 0
+	MAX_tauy = 1.e9
+	MAX_mu = 1.e9
 	SIMPLE_tauy=0.2
 	SIMPLE_muB=0.1
 	SIMPLE_climit(:) = 0.
@@ -796,7 +821,7 @@
 	IF (dt_output<0.) CALL writeerror(31)
 	IF (te_output<0.) CALL writeerror(31)
 	IF (tstart_rms<0.) CALL writeerror(32)
-	IF (te_rms<tstart_rms) CALL writeerror(36)
+	IF (te_rms.le.tstart_rms) CALL writeerror(36)
 	IF (dt_max<0.) CALL writeerror(33) 
 	IF (dt_ini<0.) THEN 
 	  dt_ini = dt_max
@@ -881,6 +906,15 @@
 		  call writeerror(412)
 		ENDIF
 	ENDIF 
+	IF (k_dpdx_sed_range(1).ne.-1.or.k_dpdx_sed_range(2).ne.-1) THEN 
+		IF (k_dpdx_sed_range(1)>k_dpdx_sed_range(2)) THEN 
+		  call writeerror(413)
+		ELSEIF (k_dpdx_sed_range(1)<1.or.k_dpdx_sed_range(2)<1) THEN 
+		  call writeerror(413)
+		ENDIF
+	ENDIF 
+	
+	
 		
 
 	READ (UNIT=1,NML=ambient,IOSTAT=ios)
@@ -916,6 +950,7 @@
 	  IF(cbc_perx_j(2).lt.cbc_perx_j(1).or.cbc_perx_j(1).lt.1.or.cbc_perx_j(2).gt.jmax) CALL writeerror(622)
 	ENDIF 
 	IF (cbc_relax.gt.1.or.cbc_relax.lt.0) CALL writeerror(623)
+	IF (cbc_inflow_correction.ne.0.and.cbc_inflow_correction.ne.1) CALL writeerror(628)
 	IF (TBLE_grad_relax.gt.1.or.TBLE_grad_relax.lt.0) CALL writeerror(623)
 	IF (dpdx_ref_j(1).ne.0.and.dpdx_ref_j(2).ne.0) THEN 
 	  IF(dpdx_ref_j(2).lt.dpdx_ref_j(1).or.dpdx_ref_j(1).lt.1.or.dpdx_ref_j(2).gt.jmax) CALL writeerror(627)
@@ -987,7 +1022,8 @@
 	IF (Sc<0.) CALL writeerror(67)
 	IF (slipvel.ne.0.and.slipvel.ne.1.and.slipvel.ne.2) CALL writeerror(68)
 	IF (hindered_settling.ne.1.and.hindered_settling.ne.2.and.hindered_settling.ne.3) CALL writeerror(280)
-	IF (hindered_settling_c.ne.0.and.hindered_settling_c.ne.1) CALL writeerror(282)
+	IF (hindered_settling_c.ne.0.and.hindered_settling_c.ne.1.and.hindered_settling_c.ne.2.and.hindered_settling_c.ne.3) 
+     &	CALL writeerror(282)
 	
 	IF (U_j2.eq.999.and.radius_j2>0.) CALL writeerror(260)
 	IF (U_j2>-999.and.Awjet2<0.) CALL writeerror(261)
@@ -1636,6 +1672,34 @@
 	IF (TBLEsed_grad_relax.gt.0.) CALL writeerror(626)
 	IF (power_VR2019<0.) CALL writeerror(146)
 	ENDIF 
+	IF (morfac_tseriesfile.eq.'') THEN
+	ELSE
+	   call readtseries(morfac_tseriesfile,morfac_tseries,morfac_series)
+	   morfac_seriesloc=1
+	   n3=0
+	   DO WHILE (morfac_tseries(n3+1).NE.-99999.)
+		n3=n3+1
+	   END DO	  
+	   IF (morfac_tseries(n3).lt.t_end) THEN
+				write(*,*),' time series shorter than t_end'
+				write(*,*),' series file:',morfac_tseriesfile
+				CALL writeerror(039)
+		ENDIF	   
+	ENDIF
+	IF (morfac2_tseriesfile.eq.'') THEN
+	ELSE
+	   call readtseries(morfac2_tseriesfile,morfac2_tseries,morfac2_series)
+	   morfac2_seriesloc=1
+	   n3=0
+	   DO WHILE (morfac2_tseries(n3+1).NE.-99999.)
+		n3=n3+1
+	   END DO	  
+	   IF (morfac2_tseries(n3).lt.t_end) THEN
+				write(*,*),' time series shorter than t_end'
+				write(*,*),' series file:',morfac2_tseriesfile
+				CALL writeerror(039)
+		ENDIF	   
+	ENDIF	
 	 
 	READ (UNIT=1,NML=ship,IOSTAT=ios)
 	!! check input constants
@@ -1654,7 +1718,7 @@
 	IF (nprop>0.and.(zprop<0.or.zprop>depth)) CALL writeerror(314)
 	IF (nprop>0.and.Pprop<0.) CALL writeerror(315)
 	IF (kn_TSHD.eq.-999.) CALL writeerror(316)
-	IF (rot_prop<-9990.) CALL writeerror(317)	
+	IF (nprop>0.and.ABS(rot_prop)>1.) CALL writeerror(317)	
 	IF (rudder<0) CALL writeerror(318)
 	IF (draghead.ne.'star'.and.draghead.ne.'port'.and.draghead.ne.'both'.and.draghead.ne.'none') CALL writeerror(319)
 	IF ((Dsp<0.and.draghead.eq.'star').or.(Dsp<0.and.draghead.eq.'port').or.(Dsp<0.and.draghead.eq.'both')) CALL writeerror(320)
@@ -1987,7 +2051,7 @@
 	ALLOCATE(Coldbot(nfrac,0:i1,0:j1))
 	ALLOCATE(Cnewbot(nfrac,0:i1,0:j1))
 	ALLOCATE(dCdtbot(nfrac,0:i1,0:j1))
-	IF (interaction_bed.ge.4) THEN
+	IF (interaction_bed.ge.1) THEN
 	  ALLOCATE(bednotfixed(0:i1,0:j1,0:k1))	
 	  ALLOCATE(bednotfixed_depo(0:i1,0:j1,0:k1))
 	  bednotfixed=1. !default avalanche or erosion is allowed everywhere, only in obstacles connected to bed not allowed, see init.f
@@ -2153,6 +2217,11 @@
 	ALLOCATE(vvL_relax(0:i1,0:j1))	
 	ALLOCATE(qb_relax(0:i1,0:j1))
 	ALLOCATE(absU_sed_relax(0:i1,0:j1))
+	ALLOCATE(uuR_relax2(0:i1,0:j1))
+	ALLOCATE(uuL_relax2(0:i1,0:j1))
+	ALLOCATE(vvR_relax2(0:i1,0:j1))
+	ALLOCATE(vvL_relax2(0:i1,0:j1))		
+	ALLOCATE(absU_sed_relax2(0:i1,0:j1))
 	uuR_relax = 0. 
 	uuL_relax = 0. 
 	vvR_relax = 0. 
@@ -2161,6 +2230,11 @@
 	qbU = 0.
 	qbV = 0.
 	absU_sed_relax = 0. 
+	uuR_relax2 = 0. 
+	uuL_relax2 = 0. 
+	vvR_relax2 = 0. 
+	vvL_relax2 = 0. 
+	absU_sed_relax2 = 0. 
 	
 	ALLOCATE(TBLEdudx(0:i1,0:j1))
 	ALLOCATE(TBLEdvdx(0:i1,0:j1))
@@ -2234,8 +2308,9 @@
 		ALLOCATE(muB(0:i1,0:j1,0:k1))
 		ALLOCATE(stress(0:i1,0:j1,0:k1))
 		ALLOCATE(strain(0:i1,0:j1,0:k1))
-		ALLOCATE(muA(0:i1,0:j1,0:k1))
 	ENDIF
+	ALLOCATE(muA(0:i1,0:j1,0:k1)) !for shear settling muA is required in sediment.f also when Non_Newtonian is not 1 or 2
+	muA = 0. 
 	IF (Non_Newtonian.eq.2) THEN
 		ALLOCATE(lambda_old(0:i1,0:j1,0:k1))
 		ALLOCATE(lambda_new(0:i1,0:j1,0:k1))

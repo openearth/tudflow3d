@@ -1660,9 +1660,9 @@ c
 
 !      real  Ubound2(0:i1,0:j1,0:k1),Vbound2(0:i1,0:j1,0:k1),Wbound2(0:i1,0:j1,0:k1)
       real  Ubound2(-1:i1+1,-1:j1+1,0:k1),Vbound2(-1:i1+1,-1:j1+1,0:k1),Wbound2(-1:i1+1,-1:j1+1,0:k1),rho2(-1:i1+1,-1:j1+1,0:k1),rr1,rr2
-	real Propx_dummy(0:i1,0:px*jmax+1,1:kmax)
-	real Propy_dummy(0:i1,0:px*jmax+1,1:kmax)
-	real Propz_dummy(0:i1,0:px*jmax+1,1:kmax)	  
+!!!	real Propx_dummy(0:i1,0:px*jmax+1,1:kmax)
+!!!	real Propy_dummy(0:i1,0:px*jmax+1,1:kmax)
+!!!	real Propz_dummy(0:i1,0:px*jmax+1,1:kmax)	  
 	  integer kp,kpp,kb,jbeg,jend
 	  real zb_W,zb_U,zb_V,vel_ibm2,distance_to_bed_kp,distance_to_bed_kpp,yplus,absU,z0,ust,rr2,ww1,ww2
 	  real dpdz1,dpdy2,tauw1,tauv1,tauw2,tauv2,ust1,ust2,tauu1,tauu2,dpdx11,dpdy22,tau,u0,v0,rr1a,rr2a,rr0
@@ -1670,7 +1670,7 @@ c
 	  integer i_inflowU,i_inflowVW,i_outflowU,i_outflowVW,i_shift,n2
 	  real outflow_factor,dudx,dudy,dvdx,dvdy
 	  real absUU,bedslope_angle,distance_to_bed,bwal,dbed,dpdx_temp,dpdy_temp,dL
-	  real Rp2(-1:i1),Ru2(-1:i1),pR1,pR2,pL1,pL2,Fix_ref
+	  real Rp2(-1:i1),Ru2(-1:i1),pR1,pR2,pL1,pL2,Fix_ref,ppp_avg(0:i1,0:j1),ppp_avg2(0:i1,0:j1)
 	  
 c
 c
@@ -1739,7 +1739,7 @@ c	x,y,z coordinate system, not in r,theta,z like this code
 	 else 
 		cU(1:nfrac,0:imax,0:j1,0:k1)=0.5*(dcdt(1:nfrac,0:imax,0:j1,0:k1)+dcdt(1:nfrac,1:imax+1,0:j1,0:k1)) !er stond hier cnew ipv dcdt, maar rest gebruikt rho==drdt <--> dcdt
 		cV(1:nfrac,0:i1,0:jmax,0:k1)=0.5*(dcdt(1:nfrac,0:i1,0:jmax,0:k1)+dcdt(1:nfrac,0:i1,1:jmax+1,0:k1)) !lijkt typo geweest te zijn (hierboven 'VL2' en 'SB2' wordt ook dcdt gebruikt)
-		IF (hindered_settling_c.eq.1) THEN 
+		IF (hindered_settling_c.eq.1.or.hindered_settling_c.eq.3) THEN 
 			cW(1:nfrac,0:i1,0:j1,0:kmax)=MAX(dcdt(1:nfrac,0:i1,0:j1,0:kmax),dcdt(1:nfrac,0:i1,0:j1,1:kmax+1))	 
 		ELSE 
 			cW(1:nfrac,0:i1,0:j1,0:kmax)=0.5*(dcdt(1:nfrac,0:i1,0:j1,0:kmax)+dcdt(1:nfrac,0:i1,0:j1,1:kmax+1))	 
@@ -1762,7 +1762,7 @@ c	x,y,z coordinate system, not in r,theta,z like this code
 		  ENDDO
 		 ENDDO
 		endif
-	 IF (applyVOF.eq.1) THEN !with apply_VOF=1 density on edges should not be real density but constant 
+	 IF (applyVOF.eq.1.or.applyVOF.eq.2) THEN !with apply_VOF=1 density on edges should not be real density but constant 
 		rhU=rho_b
 		rhV=rho_b
 		rhW=rho_b
@@ -1968,6 +1968,34 @@ c 	influence of waves on lateral boundaries:
 	  call mpi_bcast(pR2,1,MPI_REAL8,px-1,MPI_COMM_WORLD,ierr)
 	ENDIF 			  
 	Fix_ref = 0.5*((pR1+pR2)-(pL1+pL2))/(Rp(imax)-Rp(1))/rho_b
+	
+	  IF (slip_bot.eq.3.or.slip_bot.eq.4.or.slip_bot.eq.8.or.slip_bot.eq.9) THEN 
+		IF (dpdx_smoother.eq.1) THEN 
+			DO i=1,imax
+				DO j=1,jmax
+					ppp_avg2(i,j)=0.25*ppp(i-1,j,MIN(k1,kbedt(i-1,j)+k_ust_tau_flow))+0.5*ppp(i,j,MIN(k1,kbedt(i,j)+k_ust_tau_flow))+
+     &					0.25*ppp(i+1,j,MIN(k1,kbedt(i+1,j)+k_ust_tau_flow))
+				ENDDO
+			ENDDO 
+			call bound_cbot(ppp_avg2) 
+			DO i=1,imax
+				DO j=1,jmax
+					ppp_avg(i,j)=0.25*ppp_avg2(i,j-1)+0.5*ppp_avg2(i,j)+0.25*ppp_avg2(i,j+1)
+				ENDDO
+			ENDDO 
+			call bound_cbot(ppp_avg) 
+		ELSE
+			DO i=1,imax
+				DO j=1,jmax
+					ppp_avg(i,j)=ppp(i,j,kbedt(i,j)+k_ust_tau_flow)
+				ENDDO
+			ENDDO 
+			call bound_cbot(ppp_avg) 
+		ENDIF
+	  ENDIF 
+
+	
+	
 !	IF ((interaction_bed.ge.4.or.bedlevelfile.ne.''.or.nobst>0).and.IBMorder.eq.2) THEN ! order-2 IBM before information is exchanged between partitions (hence only j=1-jmax); order-0 IBM is done at and of this subroutine 
 !		DO i=1,imax
 !			DO j=1,jmax
@@ -2738,9 +2766,13 @@ c 	influence of waves on lateral boundaries:
 			rr1=rhU(i,j,kbedt(i,j)+k_ust_tau_flow) 					 												!at U-gridpoint
 			rr2=rhV(i,j,kbedt(i,j)+k_ust_tau_flow) 																	!at V-gridpoint
 
-			TBLEdpdx(i,j)=TBLE_grad_relax*((ppp(i+1,j,kbedt(i,j)+k_ust_tau_flow)-ppp(i,j,kbedt(i,j)+k_ust_tau_flow))
+!			TBLEdpdx(i,j)=TBLE_grad_relax*((ppp(i+1,j,kbedt(i,j)+k_ust_tau_flow)-ppp(i,j,kbedt(i,j)+k_ust_tau_flow))
+!     &            /(Rp(i+1)-Rp(i))/rr1-Fix_ref)+(1.-TBLE_grad_relax)*TBLEdpdx(i,j)			!at U-gridpoint			
+!			TBLEdpdy(i,j)=TBLE_grad_relax*((ppp(i,j+1,kbedt(i,j)+k_ust_tau_flow)-ppp(i,j,kbedt(i,j)+k_ust_tau_flow))
+!     &            /(Rp(i)*(phip(j+1)-phip(j)))/rr2)+(1.-TBLE_grad_relax)*TBLEdpdy(i,j)			!at V-gridpoint
+			TBLEdpdx(i,j)=TBLE_grad_relax*((ppp_avg(i+1,j)-ppp_avg(i,j))
      &            /(Rp(i+1)-Rp(i))/rr1-Fix_ref)+(1.-TBLE_grad_relax)*TBLEdpdx(i,j)			!at U-gridpoint			
-			TBLEdpdy(i,j)=TBLE_grad_relax*((ppp(i,j+1,kbedt(i,j)+k_ust_tau_flow)-ppp(i,j,kbedt(i,j)+k_ust_tau_flow))
+			TBLEdpdy(i,j)=TBLE_grad_relax*((ppp_avg(i,j+1)-ppp_avg(i,j))
      &            /(Rp(i)*(phip(j+1)-phip(j)))/rr2)+(1.-TBLE_grad_relax)*TBLEdpdy(i,j)			!at V-gridpoint
 
 			tauu1=tau_fl_Uold(i,j)																		!at U-gridpoint
@@ -3322,8 +3354,11 @@ c 	influence of waves on lateral boundaries:
 				  uu0=Ubound2(i,j,kp)-Ubot_TSHD(j)*rr0
 				  vv0=0.25*(Vbound2(i,j,kp)+Vbound2(i+1,j,kp)+Vbound2(i,j-1,kp)+Vbound2(i+1,j-1,kp))-Vbot_TSHD(j)*rr0
 				  
-				  TBLEdpdx(i,j)=TBLE_grad_relax*((ppp(i+1,j,kpp)-ppp(i,j,kpp))/(Rp(i+1)-Rp(i))/rr1-Fix_ref)
-     &				  +(1.-TBLE_grad_relax)*TBLEdpdx(i,j)										!at U-gridpoint
+!				  TBLEdpdx(i,j)=TBLE_grad_relax*((ppp(i+1,j,kpp)-ppp(i,j,kpp))/(Rp(i+1)-Rp(i))/rr1-Fix_ref)
+!     &				  +(1.-TBLE_grad_relax)*TBLEdpdx(i,j)										!at U-gridpoint
+				  TBLEdpdx(i,j)=TBLE_grad_relax*((ppp_avg(i+1,j)-ppp_avg(i,j))
+     &            /(Rp(i+1)-Rp(i))/rr1-Fix_ref)+(1.-TBLE_grad_relax)*TBLEdpdx(i,j)			!at U-gridpoint			
+	 
 				  TBLEdudx(i,j)=TBLE_grad_relax*((Ubound2(i+1,j,kpp)-Ubound2(i-1,j,kpp))/(Ru(i+1)-Ru2(i-1))/rr1)
      &				  +(1.-TBLE_grad_relax)*TBLEdudx(i,j)
 				  TBLEdudy(i,j)=TBLE_grad_relax*((Ubound2(i,j+1,kpp)-Ubound2(i,j-1,kpp))/(Ru(i)*(phip(j+1)-phip(j-1)))/rr1)
@@ -3402,8 +3437,10 @@ c 	influence of waves on lateral boundaries:
 				  uu0=0.25*(Ubound2(i,j,kp)+Ubound2(i,j+1,kp)+Ubound2(i-1,j,kp)+Ubound2(i-1,j+1,kp))-Ubot_TSHD(j)*rr0
 				  vv0=Vbound2(i,j,kp)-Vbot_TSHD(j)*rr0
 				  
-				  TBLEdpdy(i,j)=TBLE_grad_relax*((ppp(i,j+1,kpp)-ppp(i,j,kpp))/(Rp(i)*(phip(j+1)-phip(j)))/rr2)
-     &            +(1.-TBLE_grad_relax)*TBLEdpdy(i,j) 				  !at V-gridpoint	
+!				  TBLEdpdy(i,j)=TBLE_grad_relax*((ppp(i,j+1,kpp)-ppp(i,j,kpp))/(Rp(i)*(phip(j+1)-phip(j)))/rr2)
+!     &            +(1.-TBLE_grad_relax)*TBLEdpdy(i,j) 				  !at V-gridpoint	
+				  TBLEdpdy(i,j)=TBLE_grad_relax*((ppp_avg(i,j+1)-ppp_avg(i,j))
+     &            /(Rp(i)*(phip(j+1)-phip(j)))/rr2)+(1.-TBLE_grad_relax)*TBLEdpdy(i,j)			!at V-gridpoint	 
 				  TBLEdvdx(i,j)=TBLE_grad_relax*((Vbound2(i+1,j,kpp)-Vbound2(i-1,j,kpp))/(Rp(i+1)-Rp2(i-1))/rr2) 
      &            +(1.-TBLE_grad_relax)*TBLEdvdx(i,j)				  
 				  TBLEdvdy(i,j)=TBLE_grad_relax*((Vbound2(i,j+1,kpp)-Vbound2(i,j-1,kpp))/(Rp(i)*(phiv(j+1)-phiv(j-1)))/rr2) 
@@ -3884,7 +3921,11 @@ c*************************************************************
 			!depoflux_per_width1=0.1*depoflux_per_width1*cfixedbed/dt/morfac2 !*rhos = [m/s*m*kg/m3 = kg/s/m]	
 			depoflux_per_width2=depoflux_per_width2*cfixedbed/(1000.*dt )/morfac2 !*rhos = [m/s*m*kg/m3 = kg/s/m]	!use Tadapt=1000*dt, testing 10-100-1000 doesnt give much difference; 1000 slightly better
 			!depoflux_per_width=depoflux_per_width1+depoflux_per_width2
-			factor=MIN(MAX((sedflux_per_width-depoflux_per_width2)/(ABS(sedflux_per_width)+1.e-12),0.25),4.) !factor between 0.25 and 4 otherwise unrealisticly high concentration values could be given to inflow or 0 values	
+			if (cbc_inflow_correction.eq.1) then 
+				factor=MIN(MAX((sedflux_per_width-depoflux_per_width2)/(ABS(sedflux_per_width)+1.e-12),0.25),4.) !factor between 0.25 and 4 otherwise unrealisticly high concentration values could be given to inflow or 0 values	
+			else
+				factor = 1.
+			endif 
 			if (mod(istep,100).eq.0) then 
 			    write(*,*),'* cbc_perx_j SSC correction for sedimentation/erosion in domain'
 				write(*,*),'* sedflux/m width,depoflux from (z-z_init)/(1000*dt),factor:'
@@ -5398,7 +5439,7 @@ c	Determine ust for Pressure location
 c*************************************************************
 	real uu,vv,Fix,Fiy,rr,dz,kn,kappa,nu_mol,ust !in coming variable
 	real ustnew !out going variable
-	real int1,int2,AA,nu_tot,zplus,ddzz(1:nlayer),zz(1:nlayer),fac,kplus,z0,yplus,absU,taux,tauy !local variable
+	real int1,int2,AA,nu_tot,zplus,ddzz(1:nlayer),zz(1:nlayer),fac,kplus,z0,yplus,absU,taux1,tauy1 !local variable
 	integer tel,tel0,nlayer
 	
 	AA = 19. ! Van Driest damping factor (Wang and Moin 2002) and VanBalen use value 19, others often use 26. In my matlab tests 26 gives better velocity profiles, but 19 gives better (closer to log law) tau based on velocity at certain distance.
@@ -5460,9 +5501,9 @@ c*************************************************************
 !	taux = rr/int1*(uu-Fix*int2)
 !	tauy = rr/int1*(vv-Fiy*int2)
 	!consider both favorable and unfavorable dpdx,dpdy contribution and clip on max 4*tau_nodPdx:
-	taux = MIN(ABS(rr/int1*(uu-Fix*int2)),4.*ABS(rr/int1*(uu)))
-	tauy = MIN(ABS(rr/int1*(vv-Fiy*int2)),4.*ABS(rr/int1*(vv)))	
-	ustnew=((taux/rr)**2+(tauy/rr)**2)**0.25
+	taux1 = MIN(ABS(rr/int1*(uu-Fix*int2)),4.*ABS(rr/int1*(uu)))
+	tauy1 = MIN(ABS(rr/int1*(vv-Fiy*int2)),4.*ABS(rr/int1*(vv)))	
+	ustnew=((taux1/rr)**2+(tauy1/rr)**2)**0.25
 	ustnew = MIN(ustnew,0.25*sqrt(uu*uu+vv*vv)) !ust limited at maximum 0.25*u 
 	
 	end
@@ -5481,7 +5522,7 @@ c	Determine ust for Pressure location
 c*************************************************************
 	real uu,vv,Fix,Fiy,rr,dz,kn,kappa,nu_mol,ust !in coming variable
 	real ustnew !out going variable
-	real int1,int2,AA,nu_tot,zplus,ddzz(1:nlayer),zz(1:nlayer),fac,kplus,z0,yplus,absU,taux,tauy,ust2,taux2,tauy2 !local variable
+	real int1,int2,AA,nu_tot,zplus,ddzz(1:nlayer),zz(1:nlayer),fac,kplus,z0,yplus,absU,taux1,tauy1,ust2,taux2,tauy2 !local variable
 	integer tel,tel0,nlayer
 	
 	AA = 19. ! Van Driest damping factor (Wang and Moin 2002) and VanBalen use value 19, others often use 26. In my matlab tests 26 gives better velocity profiles, but 19 gives better (closer to log law) tau based on velocity at certain distance.
@@ -5523,23 +5564,23 @@ c*************************************************************
 	!consider only favorable dpdx,dpdy contribution increasing tau:
 !	taux = MAX(ABS(rr/int1*(uu-Fix*int2)),ABS(rr/int1*(uu)))
 !	tauy = MAX(ABS(rr/int1*(vv-Fiy*int2)),ABS(rr/int1*(vv)) )
-	taux = rr*ust2*ust2*uu/MAX(absU,1.e-9) !log-law tau
-	tauy = rr*ust2*ust2*vv/MAX(absU,1.e-9) !log-law tau
+	taux1 = rr*ust2*ust2*uu/MAX(absU,1.e-9) !log-law tau
+	tauy1 = rr*ust2*ust2*vv/MAX(absU,1.e-9) !log-law tau
 	!consider only favorable dpdx,dpdy contribution increasing tau:
 !	taux = MAX(ABS(taux-rr/int1*Fix*int2),ABS(taux)) 
 !	tauy = MAX(ABS(tauy-rr/int1*Fiy*int2),ABS(tauy)) 
 	!consider only favorable dpdx,dpdy contribution increasing tau and clip on max 4*tau_nodPdx:
 !	taux = MIN(4.*ABS(taux),MAX(ABS(taux-rr/int1*Fix*int2),ABS(taux))) 
 !	tauy = MIN(4.*ABS(tauy),MAX(ABS(tauy-rr/int1*Fiy*int2),ABS(tauy))) 
-	taux2=taux-rr/int1*Fix*int2
-	tauy2=tauy-rr/int1*Fiy*int2
+	taux2=taux1-rr/int1*Fix*int2
+	tauy2=tauy1-rr/int1*Fiy*int2
 	!consider favorable and unfavorable dpdx,dpdy contribution and clip on max 4*tau_nodPdx:
-	taux = MIN(4.*ABS(taux),ABS(taux-rr/int1*Fix*int2)) 
-	tauy = MIN(4.*ABS(tauy),ABS(tauy-rr/int1*Fiy*int2))
-	IF (taux2*uu<0.) taux=0.
-	IF (tauy2*vv<0.) tauy=0.
+	taux1 = MIN(4.*ABS(taux1),ABS(taux1-rr/int1*Fix*int2)) 
+	tauy1 = MIN(4.*ABS(tauy1),ABS(tauy1-rr/int1*Fiy*int2))
+	IF (taux2*uu<0.) taux1=0.
+	IF (tauy2*vv<0.) tauy1=0.
 
-	ustnew=((taux/rr)**2+(tauy/rr)**2)**0.25
+	ustnew=((taux1/rr)**2+(tauy1/rr)**2)**0.25
 	ustnew = MIN(ustnew,0.25*sqrt(uu*uu+vv*vv)) !ust limited at maximum 0.25*u 
 	
 	end
@@ -5562,7 +5603,7 @@ c*************************************************************
 	real uu,vv,Fix,Fiy,rr,dz,kn,kappa,nu_mol !in coming variable
 	real ustnew !out going variable
 	integer tel  !local variable
-	real z0,absU,u_p,u_c,alpha_p,beta_p,f1,f2,f2s,f10,taux,tauy,ust !local variable
+	real z0,absU,u_p,u_c,alpha_p,beta_p,f1,f2,f2s,f10,taux1,tauy1,ust !local variable
 	real a2,a3,b0,b1,b2,b3,b4,c0,c1,c2,c3,c4,zplus_p
 	
 	absU=sqrt(uu**2+vv**2)
@@ -5613,13 +5654,13 @@ c*************************************************************
 !!!		tauy = (vv/u_c-nu_mol*Fiy/u_c**3*f2)*rr*ust/f10  !*rr*ust*ust/f10 
 
 		! Shih et al. 1999:
-		taux = (uu/u_c-nu_mol*Fix/MAX(u_p,1.e-6)**3*f2*u_p/u_c)*rr*ust/f10  !*rr*ust*ust/f10 
-		tauy = (vv/u_c-nu_mol*Fiy/MAX(u_p,1.e-6)**3*f2*u_p/u_c)*rr*ust/f10  !*rr*ust*ust/f10 
+		taux1 = (uu/u_c-nu_mol*Fix/MAX(u_p,1.e-6)**3*f2*u_p/u_c)*rr*ust/f10  !*rr*ust*ust/f10 
+		tauy1 = (vv/u_c-nu_mol*Fiy/MAX(u_p,1.e-6)**3*f2*u_p/u_c)*rr*ust/f10  !*rr*ust*ust/f10 
 		
 		! uu and Fi both have their direction (positive or negative) which leads to enhanced or reduced tau_x 
 !		if (taux*uu<0) taux=0. ! they have different signs which complicates bedload transport direction, for stability reasons made 0 
 !		if (tauy*vv<0) tauy=0. ! they have different signs which complicates bedload transport direction, for stability reasons made 0
-		ust = ((taux/rr)**2+(tauy/rr)**2)**0.25 !next iteration
+		ust = ((taux1/rr)**2+(tauy1/rr)**2)**0.25 !next iteration
 	enddo
 	ustnew = MIN(ust,0.25*sqrt(uu*uu+vv*vv)) !ust limited at maximum 0.25*u 
 	
@@ -5643,7 +5684,7 @@ c*************************************************************
 	real uu,vv,Fix,Fiy,rr,dz,kn,kappa,nu_mol !in coming variable
 	real ustnew !out going variable
 	integer tel  !local variable
-	real z0,absU,u_p,u_c,alpha_p,beta_p,f1,f2,f2s,f10,taux,tauy,ust !local variable
+	real z0,absU,u_p,u_c,alpha_p,beta_p,f1,f2,f2s,f10,taux1,tauy1,ust !local variable
 	real a2,a3,b0,b1,b2,b3,b4,c0,c1,c2,c3,c4,zplus_p,Fix2,Fiy2
 	
 	absU=sqrt(uu**2+vv**2)
@@ -5696,13 +5737,13 @@ c*************************************************************
 !!!		tauy = (vv/u_c-nu_mol*Fiy/u_c**3*f2)*rr*ust/f10  !*rr*ust*ust/f10 
 
 		! Shih et al. 1999:
-		taux = (uu/u_c-nu_mol*Fix2/MAX(u_p,1.e-6)**3*f2*u_p/u_c)*rr*ust/f10  !*rr*ust*ust/f10 
-		tauy = (vv/u_c-nu_mol*Fiy2/MAX(u_p,1.e-6)**3*f2*u_p/u_c)*rr*ust/f10  !*rr*ust*ust/f10 
+		taux1 = (uu/u_c-nu_mol*Fix2/MAX(u_p,1.e-6)**3*f2*u_p/u_c)*rr*ust/f10  !*rr*ust*ust/f10 
+		tauy1 = (vv/u_c-nu_mol*Fiy2/MAX(u_p,1.e-6)**3*f2*u_p/u_c)*rr*ust/f10  !*rr*ust*ust/f10 
 		
 		! uu and Fi both have their direction (positive or negative) which leads to enhanced or reduced tau_x 
 !		if (taux*uu<0) taux=0. ! they have different signs which complicates bedload transport direction, for stability reasons made 0 
 !		if (tauy*vv<0) tauy=0. ! they have different signs which complicates bedload transport direction, for stability reasons made 0
-		ust = ((taux/rr)**2+(tauy/rr)**2)**0.25 !next iteration
+		ust = ((taux1/rr)**2+(tauy1/rr)**2)**0.25 !next iteration
 	enddo
 	ustnew = MIN(ust,0.25*sqrt(uu*uu+vv*vv)) !ust limited at maximum 0.25*u 
 	
@@ -5784,9 +5825,9 @@ c*************************************************************
 	integer n2,inout,n,tel
 	real xTSHD(4),yTSHD(4),phi,interpseries,xx,yy
 	real fbx2,fbx,fby2,fby,fbz2
-	real Propx_dummy(0:i1,0:px*jmax+1,1:kmax)
-	real Propy_dummy(0:i1,0:px*jmax+1,1:kmax)
-	real Propz_dummy(0:i1,0:px*jmax+1,1:kmax)
+!!!	real Propx_dummy(0:i1,0:px*jmax+1,1:kmax)
+!!!	real Propy_dummy(0:i1,0:px*jmax+1,1:kmax)
+!!!	real Propz_dummy(0:i1,0:px*jmax+1,1:kmax)
 
 	! rotation ship for ambient side current
 	if (LOA<0.) then 
@@ -5925,10 +5966,10 @@ c*************************************************************
 		  enddo
 		 enddo
 		enddo	  
-!		 if (bp(n2)%volncells.le.0.and.tt<bp(n2)%t_end) then
-!		   write(*,*),'WARNING, no cells found for bedplume number: ',n2,bp(n2)%volncells,rank
-!		   write(*,*),'In case a sedflux or Q has been defined the code will crash because of division by a zero volncells'
-!		 endif
+		 if (bp(n2)%volncells.le.0.and.tt<bp(n2)%t_end.and.inout.eq.1) then
+		   write(*,*),'WARNING, no cells found for bedplume, but it is defined inside domain. bp,rank:',n2,rank
+		   write(*,*),'In case a sedflux or Q has been defined the code will crash because of division by a zero volncells'
+		 endif
 		ENDIF ! bedplume loop
 	ENDDO	
 	

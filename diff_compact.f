@@ -715,11 +715,15 @@ c*****************************************************************
       real xx,yy,f,fluc,Wjet
       real divvR,divvL,CNz,CNx,CNy
       integer n,t
-	  real fcg2(0:i1,0:px*jmax+1,0:k1)
+	  !real fcg2(0:i1,0:px*jmax+1,0:k1)
+	  real fcg2(0:i1,0:j1,0:k1)
 	  logical me2
 
 	  if (momentum_exchange_obstacles.eq.100.or.momentum_exchange_obstacles.eq.110) then 
-		fcg2=fc_global
+	    do j=0,j1 
+		  fcg2(0:i1,j,0:k1)=fc_global(0:i1,j+rank*jmax,0:k1)
+		enddo 
+		!fcg2=fc_global
 	  else 
 		fcg2=1. !all momentum interactions are active
 	  endif	  
@@ -763,16 +767,16 @@ c*****************************************************************
 		  
       eppo = 0.25 * (
      +   ekm(i,j,k) + ekm(ip,j,k) + ekm(ip,jp,k) + ekm(i,jp,k)  )
-     + * MIN(fcg2(i,j+rank*jmax,k),fcg2(ip,j+rank*jmax,k),fcg2(ip,jp+rank*jmax,k),fcg2(i,jp+rank*jmax,k))	 
+     + * MIN(fcg2(i,j,k),fcg2(ip,j,k),fcg2(ip,jp,k),fcg2(i,jp,k))	 
       epmo = 0.25 * (
      +   ekm(i,j,k) + ekm(ip,j,k) + ekm(ip,jm,k) + ekm(i,jm,k)  )
-     + * MIN(fcg2(i,j+rank*jmax,k),fcg2(ip,j+rank*jmax,k),fcg2(ip,jm+rank*jmax,k),fcg2(i,jm+rank*jmax,k))	 
+     + * MIN(fcg2(i,j,k),fcg2(ip,j,k),fcg2(ip,jm,k),fcg2(i,jm,k))	 
       epop = 0.25 * (
      +   ekm(i,j,k) + ekm(ip,j,k) + ekm(ip,j,kp) + ekm(i,j,kp)  )
-     + * MIN(fcg2(i,j+rank*jmax,k),fcg2(ip,j+rank*jmax,k),fcg2(ip,j+rank*jmax,kp),fcg2(i,j+rank*jmax,kp))	 
+     + * MIN(fcg2(i,j,k),fcg2(ip,j,k),fcg2(ip,j,kp),fcg2(i,j,kp))	 
       epom = 0.25 * (
      +   ekm(i,j,k) + ekm(ip,j,k) + ekm(ip,j,km) + ekm(i,j,km)  )
-     + * MIN(fcg2(i,j+rank*jmax,k),fcg2(ip,j+rank*jmax,k),fcg2(ip,j+rank*jmax,km),fcg2(i,j+rank*jmax,km))	 
+     + * MIN(fcg2(i,j,k),fcg2(ip,j,k),fcg2(ip,j,km),fcg2(i,j,km))	 
 
       divvL= ( Ru(i)*Uvel(i,j,k) - Ru(i-1)*Uvel(i-1,j,k) ) / ( Rp(i)*dr(i) )
      +              +
@@ -786,10 +790,10 @@ c*****************************************************************
      3  (       Wvel(ip,j,k) -         Wvel(ip,j,k-1) ) * dzi   
 
       putout(i,j,k) = putout(i,j,k) +
-     1 (  Rp(ip) * ekm(ip,j,k) * fcg2(ip,j+rank*jmax,k)*CNx *
+     1 (  Rp(ip) * ekm(ip,j,k) * fcg2(ip,j,k)*CNx *
 !     1 (  Rp(ip) * ekm(ip,j,k)*CNx  *	 
      1            ((Uvel(ip,j,k) - Uvel(i,j,k) ) / ( dr(ip) ) - 1./3.*divvR) -
-     1    Rp(i ) * ekm(i,j,k) * fcg2(i,j+rank*jmax,k)*CNx *
+     1    Rp(i ) * ekm(i,j,k) * fcg2(i,j,k)*CNx *
 !     1    Rp(i ) * ekm(i,j,k)*CNx * 	 
      1            ((Uvel(i,j,k)  - Uvel(im,j,k)) / ( dr(i)  ) - 1./3.*divvL) )  /
      1 ( 0.5 * Ru(i) * ( drp ) )
@@ -810,7 +814,7 @@ c*****************************************************************
      3            + (Wvel(ip,j,km) - Wvel(i,j,km)) / (Rp(ip) - Rp(i))
      3          ) ) * dzi
      +              -
-     4   CNy*(ekm(i,j,k) + ekm(ip,j,k)) * MIN(fcg2(i,j+rank*jmax,k),fcg2(ip,j+rank*jmax,k)) * ( Uvel(i,j,k) +
+     4   CNy*(ekm(i,j,k) + ekm(ip,j,k)) * MIN(fcg2(i,j,k),fcg2(ip,j,k)) * ( Uvel(i,j,k) +
 !     4   CNy*(ekm(i,j,k) + ekm(ip,j,k)) * ( Uvel(i,j,k) +	 
      4   (Vvel(ip,j,k) + Vvel(i,j,k) - Vvel(ip,jm,k) - Vvel(i,jm,k)) /
      4   (2.0 * (phiv(j)-phiv(jm))) )/ ( Ru(i) * Ru(i) )
@@ -886,11 +890,15 @@ c*****************************************************************
       real xx,yy,f,fluc,Wjet
       integer n,t
 	real divvL,divvR,CNz,CNx,CNy
-	  real fcg2(0:i1,0:px*jmax+1,0:k1)
+	  !real fcg2(0:i1,0:px*jmax+1,0:k1)
+	  real fcg2(0:i1,0:j1,0:k1)
 	  logical me2
 
 	  if (momentum_exchange_obstacles.eq.100.or.momentum_exchange_obstacles.eq.110) then 
-		fcg2=fc_global
+	    do j=0,j1 
+		  fcg2(0:i1,j,0:k1)=fc_global(0:i1,j+rank*jmax,0:k1)
+		enddo 
+		!fcg2=fc_global
 	  else 
 		fcg2=1. !all momentum interactions are active
 	  endif	
@@ -934,16 +942,16 @@ c*****************************************************************
 
       eppo = 0.25 * (
      +   ekm(i,j,k) + ekm(ip,j,k) + ekm(ip,jp,k) + ekm(i,jp,k)  )
-     + * MIN(fcg2(i,j+rank*jmax,k),fcg2(ip,j+rank*jmax,k),fcg2(ip,jp+rank*jmax,k),fcg2(i,jp+rank*jmax,k))	 
+     + * MIN(fcg2(i,j,k),fcg2(ip,j,k),fcg2(ip,jp,k),fcg2(i,jp,k))	 
       empo = 0.25 * (
      +   ekm(i,j,k) + ekm(im,j,k) + ekm(i,jp,k)  + ekm(im,jp,k) )
-     + * MIN(fcg2(i,j+rank*jmax,k),fcg2(im,j+rank*jmax,k),fcg2(i,jp+rank*jmax,k),fcg2(im,jp+rank*jmax,k))	 
+     + * MIN(fcg2(i,j,k),fcg2(im,j,k),fcg2(i,jp,k),fcg2(im,jp,k))	 
       eopp = 0.25 * (
      +   ekm(i,j,k) + ekm(i,j,kp) + ekm(i,jp,k)  + ekm(i,jp,kp) )
-     + * MIN(fcg2(i,j+rank*jmax,k),fcg2(i,j+rank*jmax,kp),fcg2(i,jp+rank*jmax,k),fcg2(i,jp+rank*jmax,kp))	 
+     + * MIN(fcg2(i,j,k),fcg2(i,j,kp),fcg2(i,jp,k),fcg2(i,jp,kp))	 
       eopm = 0.25 * (
      +   ekm(i,j,k) + ekm(i,j,km) + ekm(i,jp,k)  + ekm(i,jp,km) )
-     + * MIN(fcg2(i,j+rank*jmax,k),fcg2(i,j+rank*jmax,km),fcg2(i,jp+rank*jmax,k),fcg2(i,jp+rank*jmax,km))	 
+     + * MIN(fcg2(i,j,k),fcg2(i,j,km),fcg2(i,jp,k),fcg2(i,jp,km))	 
 
       divvL= ( Ru(i)*Uvel(i,j,k) - Ru(i-1)*Uvel(i-1,j,k) ) / ( Rp(i)*dr(i) )
      +              +
@@ -974,12 +982,12 @@ c*****************************************************************
 !     1        + (Uvel(im,jp,k) - Uvel(im,j,k)) / (Ru(im)*dphi)
 !     1        ) * Ru(im) ) / ( Rp(i) * dr(i) )
      +              +
-     2 ( CNy*ekm(i,jp,k)*fcg2(i,jp+jmax*rank,k) * (   (Uvel(i,jp,k) + Uvel(im,jp,k)) / 2.0
+     2 ( CNy*ekm(i,jp,k)*fcg2(i,jp,k) * (   (Uvel(i,jp,k) + Uvel(im,jp,k)) / 2.0
 !     2 ( CNy*ekm(i,jp,k) * (   (Uvel(i,jp,k) + Uvel(im,jp,k)) / 2.0	 
      2                   + (Vvel(i,jp,k) - Vvel(i,j,k)  ) / (phiv(jp)-phiv(j))
      2                   - 1./3.*divvR*Rp(i)
      2                 )             -
-     2   CNy*ekm(i,j,k)*fcg2(i,j+jmax*rank,k)  * (   (Uvel(i,j,k)  + Uvel(im,j,k) ) / 2.0
+     2   CNy*ekm(i,j,k)*fcg2(i,j,k)  * (   (Uvel(i,j,k)  + Uvel(im,j,k) ) / 2.0
 !     2   CNy*ekm(i,j,k)  * (   (Uvel(i,j,k)  + Uvel(im,j,k) ) / 2.0	 
      2                   + (Vvel(i,j,k)  - Vvel(i,jm,k) ) / (phiv(j)-phiv(jm))
      2			 - 1./3.*divvL*Rp(i)
@@ -1050,10 +1058,14 @@ c*****************************************************************
       real xx,yy,f,fluc,Wjet,dzi
       integer n,t
 	real divvR,divvL,CNz,CNx,CNy
-	  real fcg2(0:i1,0:px*jmax+1,0:k1)
+	  !real fcg2(0:i1,0:px*jmax+1,0:k1)
+	  real fcg2(0:i1,0:j1,0:k1)
 
 	  if (momentum_exchange_obstacles.eq.100.or.momentum_exchange_obstacles.eq.110) then 
-		fcg2=fc_global
+	    do j=0,j1 
+		  fcg2(0:i1,j,0:k1)=fc_global(0:i1,j+rank*jmax,0:k1)
+		enddo 
+		!fcg2=fc_global
 	  else 
 		fcg2=1. !all momentum interactions are active
 	  endif	
@@ -1089,16 +1101,16 @@ c*****************************************************************
 	      km=k-1
       epop = 0.25 * (
      +   ekm(i,j,k) + ekm(i,j,kp) + ekm(ip,j,k) + ekm(ip,j,kp) )
-     + * MIN(fcg2(i,j+rank*jmax,k),fcg2(i,j+rank*jmax,kp),fcg2(ip,j+rank*jmax,k),fcg2(ip,j+rank*jmax,kp))
+     + * MIN(fcg2(i,j,k),fcg2(i,j,kp),fcg2(ip,j,k),fcg2(ip,j,kp))
       emop = 0.25 * (
      +   ekm(i,j,k) + ekm(i,j,kp) + ekm(im,j,k) + ekm(im,j,kp) )
-     + * MIN(fcg2(i,j+rank*jmax,k),fcg2(i,j+rank*jmax,kp),fcg2(im,j+rank*jmax,k),fcg2(im,j+rank*jmax,kp))	 
+     + * MIN(fcg2(i,j,k),fcg2(i,j,kp),fcg2(im,j,k),fcg2(im,j,kp))	 
       eopp = 0.25 * (
      +   ekm(i,j,k) + ekm(i,j,kp) + ekm(i,jp,k) + ekm(i,jp,kp) )
-     + * MIN(fcg2(i,j+rank*jmax,k),fcg2(i,j+rank*jmax,kp),fcg2(i,jp+rank*jmax,k),fcg2(i,jp+rank*jmax,kp))	 
+     + * MIN(fcg2(i,j,k),fcg2(i,j,kp),fcg2(i,jp,k),fcg2(i,jp,kp))	 
       eomp = 0.25 * (
      +   ekm(i,j,k) + ekm(i,j,kp) + ekm(i,jm,k) + ekm(i,jm,kp) )
-     + * MIN(fcg2(i,j+rank*jmax,k),fcg2(i,j+rank*jmax,kp),fcg2(i,jm+rank*jmax,k),fcg2(i,jm+rank*jmax,kp))	 
+     + * MIN(fcg2(i,j,k),fcg2(i,j,kp),fcg2(i,jm,k),fcg2(i,jm,kp))	 
 
       divvL= ( Ru(i)*Uvel(i,j,k) - Ru(i-1)*Uvel(i-1,j,k) ) / ( Rp(i)*dr(i) )
      +              +
@@ -1126,8 +1138,8 @@ c*****************************************************************
      2             +(Wvel(i,j,k)   - Wvel(i,jm,k) )/( Rp(i) * (phip(j)-phip(jm)) )
      2           ) ) / ( Rp(i) * (phiv(j)-phiv(jm)) )
      +             +
-     3 ( CNz*ekm(i,j,kp)*fcg2(i,j+rank*jmax,kp) * (CNz*(Wvel(i,j,kp) - Wvel(i,j,k ))*dzi - 1./3.*divvR ) -
-     3   CNz*ekm(i,j,k )*fcg2(i,j+rank*jmax,k) * (CNz*(Wvel(i,j,k)  - Wvel(i,j,km))*dzi - 1./3.*divvL )	 
+     3 ( CNz*ekm(i,j,kp)*fcg2(i,j,kp) * (CNz*(Wvel(i,j,kp) - Wvel(i,j,k ))*dzi - 1./3.*divvR ) -
+     3   CNz*ekm(i,j,k )*fcg2(i,j,k) * (CNz*(Wvel(i,j,k)  - Wvel(i,j,km))*dzi - 1./3.*divvL )	 
 !     3 ( ekm(i,j,kp)* CNz*((Wvel(i,j,kp) - Wvel(i,j,k ))*dzi - 1./3.*divvR ) -
 !     3   ekm(i,j,k )* CNz*((Wvel(i,j,k)  - Wvel(i,j,km))*dzi - 1./3.*divvL )
      3  	 ) *2.*dzi 

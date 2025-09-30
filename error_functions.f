@@ -319,7 +319,7 @@
 		write(*,*) '# morfac must be >=0.                            #'	
 	CASE(102)
 		write(*,*) '# namelist &constants                            #'			
-		write(*,*) '# morfac must be >=1.                            #'			
+		write(*,*) '# morfac2 must be >=1.                            #'			
 	CASE(103)
 		write(*,*) '# namelist &constants                            #'			
 		write(*,*) '# vwal must be >=0.                              #'			
@@ -491,7 +491,7 @@
 		write(*,*) '# bedplume covers >100000 cells in x,y plane     #'		
 	CASE(282)
 		write(*,*) '# namelist &plume                                #'			
-		write(*,*) '# hindered_settling_c should be 0,1              #'		
+		write(*,*) '# hindered_settling_c should be 0,1,2,3          #'		
 	CASE(283)
 		write(*,*) '# namelist &plume                                #'			
 		write(*,*) '# bedplume%kn_flow should be >0.                 #'				
@@ -542,7 +542,7 @@
 		write(*,*) '# kn_TSHD is not defined                         #'	
 	CASE(317)
 		write(*,*) '# namelist &ship                                 #'			
-		write(*,*) '# rot_prop is not defined                        #'	
+		write(*,*) '# rot_prop is not defined or not between 0-1     #'	
 	CASE(318)
 		write(*,*) '# namelist &ship                                 #'			
 		write(*,*) '# rudder is not defined                          #'	
@@ -616,7 +616,11 @@
 	CASE(412)
 		write(*,*) '# namelist &num_scheme                           #'		
 		write(*,*) '# k_ust_tau_sed_range(1) and k_ust_tau_sed_range(2) should be between 1 and kmax #'	
-		write(*,*) '# and k_ust_tau_sed_range(1)<k_ust_tau_sed_range(2)                              #'			
+		write(*,*) '# and k_ust_tau_sed_range(1)<k_ust_tau_sed_range(2)                              #'	
+	CASE(413)
+		write(*,*) '# namelist &num_scheme                           #'		
+		write(*,*) '# k_dpdx_sed_range(1) and k_dpdx_sed_range(2) should be >1 #'	
+		write(*,*) '# and k_dpdx_sed_range(1)<k_dpdx_sed_range(2)              #'			
 	CASE(501)
 		write(*,*) '# namelist &simulation                           #'			
 		write(*,*) '# imax_grid or jmax_grid is not increasing monotonously       #'	
@@ -707,6 +711,9 @@
 		write(*,*) '# dpdx_ref_j(1) should be <= dpdx_ref_j(2)       #'			
 		write(*,*) '# dpdx_ref_j(1) should be >0                     #'			
 		write(*,*) '# dpdx_ref_j(2) should be <=jmax/px              #'			
+	CASE(628)
+		write(*,*) '# namelist &ambient                              #'			
+		write(*,*) '# cbc_inflow_correction should be 0 or 1         #'		
    	CASE(701)
 		write(*,*) '# namelist &simulation                           #'			
 		write(*,*) '# restart_dir does not give correct files        #'	

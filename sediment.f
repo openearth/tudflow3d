@@ -163,11 +163,11 @@
 	ENDIF
 
 	csed2=cW !csed
-	IF (applyVOF.eq.1) THEN
+	IF (applyVOF.eq.1.or.applyVOF.eq.2) THEN
 		call state_edges(cW,rhW)
 	ENDIF 
 	rr2=rhW
-	IF (applyVOF.eq.1) THEN
+	IF (applyVOF.eq.1.or.applyVOF.eq.2) THEN
 		rhW=rho_b 
 	ENDIF 
 	if (nobst>0.or.bedlevelfile.ne.''.or.interaction_bed.ge.4) then ! default C(k=0)=C(k=1); therefore only for cases when bed is not necessarily at k=0 this fix is needed:
@@ -187,100 +187,168 @@
 	 ENDDO
 	endif
 
-
-	IF (slipvel.eq.2) THEN ! no hindered settling
-	 DO i=0,i1
-	  DO j=0,j1
-	    DO k=k1b,k1e ! at k=0 wsed should be zero at kmax wsed is calculated
-	      ctot=0.
-	      sum_c_ws=0.
-	      kp = MIN(k+1,k1)
-	      DO n=1,nfrac
-	        ccc(n) = csed2(n,i,j,k) !0.5*(csed2(n,i,j,k) + csed2(n,i,j,kp))	
-			ctot=ccc(n)*frac(n)%dfloc/frac(n)%dpart*0.5*(rhocorr_air_z(n,k)+rhocorr_air_z(n,kp))+ctot
-	        ws(n)=ws_basis(n)*wscorr_z(n,k)
-		! ws is positive downward, wsed is positive upward 
-			sum_c_ws=sum_c_ws+ws(n)*ccc(n)*frac(n)%rho/rr2(i,j,k) !(0.5*(rr2(i,j,k)+rr2(i,j,kp)))
-!!		! According to drift velocity literature the drift flux is calculated using the mass-fraction in stead of volume-fraction,
-!!		! because sum_c_ws is slipvelocity relative to mixture velocity not relative to volumetric flux!
-		! therefore an extra frac(n)%rho/rho_mix is included
-	      ENDDO
-		  ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
-	      DO n=1,nfrac
-			wsed(n,i,j,k)=Wcfd(i,j,k)+sum_c_ws-ws(n) ! wsed is positive upward
-	      ENDDO
-		  W_km_sum=0.
-		  do n=1,nfrac
-			W_km_sum=W_km_sum+ccc(n)*frac(n)%rho*(wsed(n,i,j,k)-Wcfd(i,j,k)) 
-		  enddo 
-		  W_km_sum=W_km_sum+(1.-ctot)*rho_b*sum_c_ws !sum_c_ws=fluid return velocity --> slipvelocity of fluid relative to mixture-velocity
-		  sumWkm(i,j,k)=W_km_sum !NEW 2-10-2018: contains sum of all fractions and fluid phase drift velocity for correct determination driftflux-force
-	    ENDDO
-	  ENDDO
-	 ENDDO
-	ELSE ! hindered settling
-	 DO i=0,i1
-	  DO j=0,j1
-	    DO k=k1b,k1e ! at k=0 wsed should be zero at kmax wsed is calculated
-	      ctot=0.
-	      sum_c_ws=0.
-	      kp = MIN(k+1,k1)
-	      DO n=1,nfrac
-	        ccc(n) = csed2(n,i,j,k) !0.5*(csed2(n,i,j,k) + csed2(n,i,j,kp))
-			ctot=ccc(n)*frac(n)%dfloc/frac(n)%dpart*0.5*(rhocorr_air_z(n,k)+rhocorr_air_z(n,kp))+ctot
-		! for mud Cfloc must be used to calculate Ctot (Cfloc=Ctot*dfloc/dpart)
-		! ccc(n) is used in drift flux correction sum_c_ws which is calculated with mass concentration based on Ctot (not on Cfloc)
-	      ENDDO
-	      ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
-	      DO n=1,nfrac
-	        ws(n)=ws_basis(n)*(1.-ctot)**(frac(n)%n)*wscorr_z(n,k) !frac(n)%n lowered with one already
-		! ws is positive downward, wsed is positive upward 
-		! Ri_Za is defined with volume concentration ctot
-  		sum_c_ws=sum_c_ws+ws(n)*ccc(n)*frac(n)%rho/rr2(i,j,k) !(0.5*(rr2(i,j,k)+rr2(i,j,kp)))
-!!		! According to drift velocity literature the drift flux is calculated using the mass-fraction in stead of volume-fraction,
-!!		! because sum_c_ws is slipvelocity relative to mixture velocity not relative to volumetric flux!
-		! therefore an extra frac(n)%rho/rho_mix is included
-	      ENDDO
-	      DO n=1,nfrac
-		wsed(n,i,j,k)=Wcfd(i,j,k)+sum_c_ws-ws(n) ! wsed is positive upward 
-	      ENDDO
-
-
-!	      DO iter=1,1
-!	        ! TVD interpolation csed for correct return current in drift flux:		     
-!		! calculate all again with new TVD interpolation of csed and use first calculation as first guess of direction Wsed
-!	      ctot=0.
-!	      sum_c_ws=0.
-!	      DO n=1,nfrac 
-!	        noemer = csed(n,i,j,kp)-csed(n,i,j,k)
-!		noemer = MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
-!		rrpos = (csed(n,i,j,k)-csed(n,i,j,km))/noemer
-!		rrneg = (csed(n,i,j,kpp+1)-csed(n,i,j,kp))/noemer
-!		if (Wsed(n,i,j,k)>0.) then
-!		  ccc(n)=csed(n,i,j,k )+0.5*limiter(rrpos)*(csed(n,i,j,kp)-csed(n,i,j,k ))*(1.-dt_dzi*ABS(Wsed(n,i,j,k)))
-!		else
-!		  ccc(n)=csed(n,i,j,kp)+0.5*limiter(rrneg)*(csed(n,i,j,k )-csed(n,i,j,kp))*(1.-dt_dzi*ABS(Wsed(n,i,j,k)))
-!		endif
-!		ctot=ccc(n)*frac(n)%dfloc/frac(n)%dpart+ctot      
-!	      ENDDO
-!	      ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
-!	      DO n=1,nfrac
-!	        ws(n)=frac(n)%ws*(1.-ctot)**(frac(n)%n) !frac(n)%n lowered with one already
-!		sum_c_ws=sum_c_ws+ws(n)*ccc(n)*frac(n)%rho/(0.5*(rr(i,j,k)+rr(i,j,kp)))
-!	      ENDDO
-!	      DO n=1,nfrac
-!		wsed(n,i,j,k)=Wcfd(i,j,k)+sum_c_ws-ws(n) ! wsed is positive upward
-!	      ENDDO
-!	      ENDDO
-			 W_km_sum=0.
-		  	 do n=1,nfrac
+	IF (shear_settling.eq.1.and.Non_Newtonian.ge.1) THEN 
+		IF (slipvel.eq.2) THEN ! no hindered settling
+		 DO i=0,i1
+		  DO j=0,j1
+			DO k=k1b,k1e ! at k=0 wsed should be zero at kmax wsed is calculated
+			  ctot=0.
+			  sum_c_ws=0.
+			  kp = MIN(k+1,k1)
+			  DO n=1,nfrac
+				ccc(n) = csed2(n,i,j,k) !0.5*(csed2(n,i,j,k) + csed2(n,i,j,kp))	
+				ctot=ccc(n)*frac(n)%dfloc/frac(n)%dpart*0.5*(rhocorr_air_z(n,k)+rhocorr_air_z(n,kp))+ctot
+				ws(n)=ws_basis(n)*wscorr_z(n,k)*ekm_mol/(MAX(ekm_mol,muA(i,j,k))) !correction ws for shear settling with apparent_viscosity muA
+			! ws is positive downward, wsed is positive upward 
+				sum_c_ws=sum_c_ws+ws(n)*ccc(n)*frac(n)%rho/rr2(i,j,k) !(0.5*(rr2(i,j,k)+rr2(i,j,kp)))
+	!!		! According to drift velocity literature the drift flux is calculated using the mass-fraction in stead of volume-fraction,
+	!!		! because sum_c_ws is slipvelocity relative to mixture velocity not relative to volumetric flux!
+			! therefore an extra frac(n)%rho/rho_mix is included
+			  ENDDO
+			  ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
+			  DO n=1,nfrac
+				wsed(n,i,j,k)=Wcfd(i,j,k)+sum_c_ws-ws(n) ! wsed is positive upward
+			  ENDDO
+			  W_km_sum=0.
+			  do n=1,nfrac
 				W_km_sum=W_km_sum+ccc(n)*frac(n)%rho*(wsed(n,i,j,k)-Wcfd(i,j,k)) 
-			 enddo 
-			 W_km_sum=W_km_sum+(1.-ctot)*rho_b*sum_c_ws !sum_c_ws=fluid return velocity --> slipvelocity of fluid relative to mixture-velocity
-		     sumWkm(i,j,k)=W_km_sum !NEW 2-10-2018: contains sum of all fractions and fluid phase drift velocity for correct determination driftflux-force
-	    ENDDO
-	  ENDDO
-	 ENDDO
+			  enddo 
+			  W_km_sum=W_km_sum+(1.-ctot)*rho_b*sum_c_ws !sum_c_ws=fluid return velocity --> slipvelocity of fluid relative to mixture-velocity
+			  sumWkm(i,j,k)=W_km_sum !NEW 2-10-2018: contains sum of all fractions and fluid phase drift velocity for correct determination driftflux-force
+			ENDDO
+		  ENDDO
+		 ENDDO
+		ELSE ! hindered settling
+		 DO i=0,i1
+		  DO j=0,j1
+			DO k=k1b,k1e ! at k=0 wsed should be zero at kmax wsed is calculated
+			  ctot=0.
+			  sum_c_ws=0.
+			  kp = MIN(k+1,k1)
+			  DO n=1,nfrac
+				ccc(n) = csed2(n,i,j,k) !0.5*(csed2(n,i,j,k) + csed2(n,i,j,kp))
+				ctot=ccc(n)*frac(n)%dfloc/frac(n)%dpart*0.5*(rhocorr_air_z(n,k)+rhocorr_air_z(n,kp))+ctot
+			! for mud Cfloc must be used to calculate Ctot (Cfloc=Ctot*dfloc/dpart)
+			! ccc(n) is used in drift flux correction sum_c_ws which is calculated with mass concentration based on Ctot (not on Cfloc)
+			  ENDDO
+			  ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
+			  DO n=1,nfrac
+				ws(n)=ws_basis(n)*(1.-ctot)**(frac(n)%n)*wscorr_z(n,k)*ekm_mol/(MAX(ekm_mol,muA(i,j,k))) !correction ws for shear settling with apparent_viscosity muA !frac(n)%n lowered with one already
+			! ws is positive downward, wsed is positive upward 
+			! Ri_Za is defined with volume concentration ctot
+			sum_c_ws=sum_c_ws+ws(n)*ccc(n)*frac(n)%rho/rr2(i,j,k) !(0.5*(rr2(i,j,k)+rr2(i,j,kp)))
+	!!		! According to drift velocity literature the drift flux is calculated using the mass-fraction in stead of volume-fraction,
+	!!		! because sum_c_ws is slipvelocity relative to mixture velocity not relative to volumetric flux!
+			! therefore an extra frac(n)%rho/rho_mix is included
+			  ENDDO
+			  DO n=1,nfrac
+			wsed(n,i,j,k)=Wcfd(i,j,k)+sum_c_ws-ws(n) ! wsed is positive upward 
+			  ENDDO
+				 W_km_sum=0.
+				 do n=1,nfrac
+					W_km_sum=W_km_sum+ccc(n)*frac(n)%rho*(wsed(n,i,j,k)-Wcfd(i,j,k)) 
+				 enddo 
+				 W_km_sum=W_km_sum+(1.-ctot)*rho_b*sum_c_ws !sum_c_ws=fluid return velocity --> slipvelocity of fluid relative to mixture-velocity
+				 sumWkm(i,j,k)=W_km_sum !NEW 2-10-2018: contains sum of all fractions and fluid phase drift velocity for correct determination driftflux-force
+			ENDDO
+		  ENDDO
+		 ENDDO
+		ENDIF	
+	ELSE
+		IF (slipvel.eq.2) THEN ! no hindered settling
+		 DO i=0,i1
+		  DO j=0,j1
+			DO k=k1b,k1e ! at k=0 wsed should be zero at kmax wsed is calculated
+			  ctot=0.
+			  sum_c_ws=0.
+			  kp = MIN(k+1,k1)
+			  DO n=1,nfrac
+				ccc(n) = csed2(n,i,j,k) !0.5*(csed2(n,i,j,k) + csed2(n,i,j,kp))	
+				ctot=ccc(n)*frac(n)%dfloc/frac(n)%dpart*0.5*(rhocorr_air_z(n,k)+rhocorr_air_z(n,kp))+ctot
+				ws(n)=ws_basis(n)*wscorr_z(n,k)
+			! ws is positive downward, wsed is positive upward 
+				sum_c_ws=sum_c_ws+ws(n)*ccc(n)*frac(n)%rho/rr2(i,j,k) !(0.5*(rr2(i,j,k)+rr2(i,j,kp)))
+	!!		! According to drift velocity literature the drift flux is calculated using the mass-fraction in stead of volume-fraction,
+	!!		! because sum_c_ws is slipvelocity relative to mixture velocity not relative to volumetric flux!
+			! therefore an extra frac(n)%rho/rho_mix is included
+			  ENDDO
+			  ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
+			  DO n=1,nfrac
+				wsed(n,i,j,k)=Wcfd(i,j,k)+sum_c_ws-ws(n) ! wsed is positive upward
+			  ENDDO
+			  W_km_sum=0.
+			  do n=1,nfrac
+				W_km_sum=W_km_sum+ccc(n)*frac(n)%rho*(wsed(n,i,j,k)-Wcfd(i,j,k)) 
+			  enddo 
+			  W_km_sum=W_km_sum+(1.-ctot)*rho_b*sum_c_ws !sum_c_ws=fluid return velocity --> slipvelocity of fluid relative to mixture-velocity
+			  sumWkm(i,j,k)=W_km_sum !NEW 2-10-2018: contains sum of all fractions and fluid phase drift velocity for correct determination driftflux-force
+			ENDDO
+		  ENDDO
+		 ENDDO
+		ELSE ! hindered settling
+		 DO i=0,i1
+		  DO j=0,j1
+			DO k=k1b,k1e ! at k=0 wsed should be zero at kmax wsed is calculated
+			  ctot=0.
+			  sum_c_ws=0.
+			  kp = MIN(k+1,k1)
+			  DO n=1,nfrac
+				ccc(n) = csed2(n,i,j,k) !0.5*(csed2(n,i,j,k) + csed2(n,i,j,kp))
+				ctot=ccc(n)*frac(n)%dfloc/frac(n)%dpart*0.5*(rhocorr_air_z(n,k)+rhocorr_air_z(n,kp))+ctot
+			! for mud Cfloc must be used to calculate Ctot (Cfloc=Ctot*dfloc/dpart)
+			! ccc(n) is used in drift flux correction sum_c_ws which is calculated with mass concentration based on Ctot (not on Cfloc)
+			  ENDDO
+			  ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
+			  DO n=1,nfrac
+				ws(n)=ws_basis(n)*(1.-ctot)**(frac(n)%n)*wscorr_z(n,k) !frac(n)%n lowered with one already
+			! ws is positive downward, wsed is positive upward 
+			! Ri_Za is defined with volume concentration ctot
+			sum_c_ws=sum_c_ws+ws(n)*ccc(n)*frac(n)%rho/rr2(i,j,k) !(0.5*(rr2(i,j,k)+rr2(i,j,kp)))
+	!!		! According to drift velocity literature the drift flux is calculated using the mass-fraction in stead of volume-fraction,
+	!!		! because sum_c_ws is slipvelocity relative to mixture velocity not relative to volumetric flux!
+			! therefore an extra frac(n)%rho/rho_mix is included
+			  ENDDO
+			  DO n=1,nfrac
+			wsed(n,i,j,k)=Wcfd(i,j,k)+sum_c_ws-ws(n) ! wsed is positive upward 
+			  ENDDO
+
+
+	!	      DO iter=1,1
+	!	        ! TVD interpolation csed for correct return current in drift flux:		     
+	!		! calculate all again with new TVD interpolation of csed and use first calculation as first guess of direction Wsed
+	!	      ctot=0.
+	!	      sum_c_ws=0.
+	!	      DO n=1,nfrac 
+	!	        noemer = csed(n,i,j,kp)-csed(n,i,j,k)
+	!		noemer = MAX(ABS(noemer),1.e-6)*sign(1.,noemer)
+	!		rrpos = (csed(n,i,j,k)-csed(n,i,j,km))/noemer
+	!		rrneg = (csed(n,i,j,kpp+1)-csed(n,i,j,kp))/noemer
+	!		if (Wsed(n,i,j,k)>0.) then
+	!		  ccc(n)=csed(n,i,j,k )+0.5*limiter(rrpos)*(csed(n,i,j,kp)-csed(n,i,j,k ))*(1.-dt_dzi*ABS(Wsed(n,i,j,k)))
+	!		else
+	!		  ccc(n)=csed(n,i,j,kp)+0.5*limiter(rrneg)*(csed(n,i,j,k )-csed(n,i,j,kp))*(1.-dt_dzi*ABS(Wsed(n,i,j,k)))
+	!		endif
+	!		ctot=ccc(n)*frac(n)%dfloc/frac(n)%dpart+ctot      
+	!	      ENDDO
+	!	      ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
+	!	      DO n=1,nfrac
+	!	        ws(n)=frac(n)%ws*(1.-ctot)**(frac(n)%n) !frac(n)%n lowered with one already
+	!		sum_c_ws=sum_c_ws+ws(n)*ccc(n)*frac(n)%rho/(0.5*(rr(i,j,k)+rr(i,j,kp)))
+	!	      ENDDO
+	!	      DO n=1,nfrac
+	!		wsed(n,i,j,k)=Wcfd(i,j,k)+sum_c_ws-ws(n) ! wsed is positive upward
+	!	      ENDDO
+	!	      ENDDO
+				 W_km_sum=0.
+				 do n=1,nfrac
+					W_km_sum=W_km_sum+ccc(n)*frac(n)%rho*(wsed(n,i,j,k)-Wcfd(i,j,k)) 
+				 enddo 
+				 W_km_sum=W_km_sum+(1.-ctot)*rho_b*sum_c_ws !sum_c_ws=fluid return velocity --> slipvelocity of fluid relative to mixture-velocity
+				 sumWkm(i,j,k)=W_km_sum !NEW 2-10-2018: contains sum of all fractions and fluid phase drift velocity for correct determination driftflux-force
+			ENDDO
+		  ENDDO
+		 ENDDO
+		ENDIF
 	ENDIF
 
 	IF (k1b.eq.1.and.k1e.eq.(k1-1)) THEN
@@ -316,13 +384,13 @@
 	  DO n=1,nfrac
 	    ws_basis(n)=frac(n)%ws_dep
 	  ENDDO
-
+	
 	csed2=cW !csed
-	IF (applyVOF.eq.1) THEN
+	IF (applyVOF.eq.1.or.applyVOF.eq.2) THEN
 		call state_edges(cW,rhW)
 	ENDIF 
 	rr2=rhW
-	IF (applyVOF.eq.1) THEN
+	IF (applyVOF.eq.1.or.applyVOF.eq.2) THEN
 		rhW=rho_b 
 	ENDIF 
 	if (nobst>0.or.bedlevelfile.ne.''.or.interaction_bed.ge.4) then ! default C(k=0)=C(k=1); therefore only for cases when bed is not necessarily at k=0 this fix is needed:
@@ -342,82 +410,227 @@
 	 ENDDO
 	endif
 
+	IF (shear_settling.eq.1.and.Non_Newtonian.ge.1) THEN 
+		IF (hindered_settling_c.eq.2.or.hindered_settling_c.eq.3) THEN ! use settling velocity without hindered settling for deposition at bed
+			 DO i=0,i1
+			  DO j=0,j1
+				 !DO k=k1b,k1e ! at k=0 wsed should be zero at kmax wsed is calculated
+				 k=kbed(i,j)
+				 ctot=0.
+				 sum_c_ws=0.
+				 kp = MIN(k+1,k1)
+				 DO n=1,nfrac
+					ccc(n) = csed2(n,i,j,k) !0.5*(csed2(n,i,j,k) + csed2(n,i,j,kp))
+					ctot=ccc(n)*frac(n)%dfloc/frac(n)%dpart*0.5*(rhocorr_air_z(n,k)+rhocorr_air_z(n,kp))+ctot
+				! for mud Cfloc must be used to calculate Ctot (Cfloc=Ctot*dfloc/dpart)
+				! ccc(n) is used in drift flux correction sum_c_ws which is calculated with mass concentration based on Ctot (not on Cfloc)
+				 ENDDO
+				 ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
+				 DO n=1,nfrac
+					ws(n)=ws_basis(n)*wscorr_z(n,k)*ekm_mol/(MAX(ekm_mol,muA(i,j,k))) !correction ws for shear settling with apparent_viscosity muA
+				 ! ws is positive downward, wsed is positive upward 
+				 ! Ri_Za is defined with volume concentration ctot
+				 sum_c_ws=sum_c_ws+ws(n)*ccc(n)*frac(n)%rho/rr2(i,j,k) !(0.5*(rr2(i,j,k)+rr2(i,j,kp)))
+		!!		 ! According to drift velocity literature the drift flux is calculated using the mass-fraction in stead of volume-fraction,
+		!!		 ! because sum_c_ws is slipvelocity relative to mixture velocity not relative to volumetric flux!
+				 ! therefore an extra frac(n)%rho/rho_mix is included
+				 ENDDO
+				 DO n=1,nfrac
+					wsed(n,i,j,k)=sum_c_ws-ws(n) ! wsed is positive upward at bed Wcfd must be zero
+				 ENDDO
+				 W_km_sum=0.
+				 do n=1,nfrac
+					!W_km_sum=W_km_sum+ccc(n)*frac(n)%rho*(wsed(n,i,j,k)-Wcfd(i,j,k)) 
+					W_km_sum=W_km_sum+ccc(n)*frac(n)%rho*(wsed(n,i,j,k)) !at bed Wcfd is zero
+				 enddo 
+				 W_km_sum=W_km_sum+(1.-ctot)*rho_b*sum_c_ws !sum_c_ws=fluid return velocity --> slipvelocity of fluid relative to mixture-velocity
+				 sumWkm(i,j,k)=W_km_sum !NEW 2-10-2018: contains sum of all fractions and fluid phase drift velocity for correct determination driftflux-force
+			  ENDDO
+			 ENDDO
+		ELSE ! include hindered settling like in rest domain 
+			IF (slipvel.eq.2) THEN ! no hindered settling
+			  DO i=0,i1
+			   DO j=0,j1
+				k=kbed(i,j)
+				!DO k=k1b,k1e ! at k=0 wsed should be zero at kmax wsed is calculated
+				ctot=0.
+				sum_c_ws=0.
+				kp = MIN(k+1,k1)
+				DO n=1,nfrac
+					ccc(n) = csed2(n,i,j,k) !0.5*(csed2(n,i,j,k) + csed2(n,i,j,kp))	
+					ctot=ccc(n)*frac(n)%dfloc/frac(n)%dpart*0.5*(rhocorr_air_z(n,k)+rhocorr_air_z(n,kp))+ctot
+					ws(n)=ws_basis(n)*wscorr_z(n,k)*ekm_mol/(MAX(ekm_mol,muA(i,j,k))) !correction ws for shear settling with apparent_viscosity muA
+				! ws is positive downward, wsed is positive upward 
+					sum_c_ws=sum_c_ws+ws(n)*ccc(n)*frac(n)%rho/rr2(i,j,k) !(0.5*(rr2(i,j,k)+rr2(i,j,kp)))
+		!!		! According to drift velocity literature the drift flux is calculated using the mass-fraction in stead of volume-fraction,
+		!!		! because sum_c_ws is slipvelocity relative to mixture velocity not relative to volumetric flux!
+				! therefore an extra frac(n)%rho/rho_mix is included
+				ENDDO
+				ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
+				DO n=1,nfrac
+					!wsed(n,i,j,k)=Wcfd(i,j,k)+sum_c_ws-ws(n) ! wsed is positive upward
+					wsed(n,i,j,k)=sum_c_ws-ws(n) ! wsed is positive upward at bed Wcfd is zero
+				ENDDO
+				W_km_sum=0.
+				do n=1,nfrac
+					!W_km_sum=W_km_sum+ccc(n)*frac(n)%rho*(wsed(n,i,j,k)-Wcfd(i,j,k)) 
+					W_km_sum=W_km_sum+ccc(n)*frac(n)%rho*(wsed(n,i,j,k)) !at bed Wcfd is zero
+				enddo 
+				W_km_sum=W_km_sum+(1.-ctot)*rho_b*sum_c_ws !sum_c_ws=fluid return velocity --> slipvelocity of fluid relative to mixture-velocity
+				sumWkm(i,j,k)=W_km_sum !NEW 2-10-2018: contains sum of all fractions and fluid phase drift velocity for correct determination driftflux-force
+			   ENDDO
+			  ENDDO
+			ELSE ! hindered settling
+			  DO i=0,i1
+			   DO j=0,j1
+				!DO k=k1b,k1e ! at k=0 wsed should be zero at kmax wsed is calculated
+				k=kbed(i,j)
+				ctot=0.
+				sum_c_ws=0.
+				kp = MIN(k+1,k1)
+				DO n=1,nfrac
+					ccc(n) = csed2(n,i,j,k) !0.5*(csed2(n,i,j,k) + csed2(n,i,j,kp))
+					ctot=ccc(n)*frac(n)%dfloc/frac(n)%dpart*0.5*(rhocorr_air_z(n,k)+rhocorr_air_z(n,kp))+ctot
+				! for mud Cfloc must be used to calculate Ctot (Cfloc=Ctot*dfloc/dpart)
+				! ccc(n) is used in drift flux correction sum_c_ws which is calculated with mass concentration based on Ctot (not on Cfloc)
+				ENDDO
+				ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
+				DO n=1,nfrac
+					ws(n)=ws_basis(n)*(1.-ctot)**(frac(n)%n)*wscorr_z(n,k)*ekm_mol/(MAX(ekm_mol,muA(i,j,k))) !correction ws for shear settling with apparent_viscosity muA !frac(n)%n lowered with one already
+				! ws is positive downward, wsed is positive upward 
+				! Ri_Za is defined with volume concentration ctot
+					sum_c_ws=sum_c_ws+ws(n)*ccc(n)*frac(n)%rho/rr2(i,j,k) !(0.5*(rr2(i,j,k)+rr2(i,j,kp)))
+		!!		! According to drift velocity literature the drift flux is calculated using the mass-fraction in stead of volume-fraction,
+		!!		! because sum_c_ws is slipvelocity relative to mixture velocity not relative to volumetric flux!
+				! therefore an extra frac(n)%rho/rho_mix is included
+				ENDDO
+				DO n=1,nfrac
+					!wsed(n,i,j,k)=Wcfd(i,j,k)+sum_c_ws-ws(n) ! wsed is positive upward 
+					wsed(n,i,j,k)=sum_c_ws-ws(n) ! wsed is positive upward at bed Wcfd must be zero
+				ENDDO
+					W_km_sum=0.
+					do n=1,nfrac
+						!W_km_sum=W_km_sum+ccc(n)*frac(n)%rho*(wsed(n,i,j,k)-Wcfd(i,j,k)) 
+						W_km_sum=W_km_sum+ccc(n)*frac(n)%rho*(wsed(n,i,j,k)) !at bed Wcfd is zero
+					enddo 
+					W_km_sum=W_km_sum+(1.-ctot)*rho_b*sum_c_ws !sum_c_ws=fluid return velocity --> slipvelocity of fluid relative to mixture-velocity
+					sumWkm(i,j,k)=W_km_sum !NEW 2-10-2018: contains sum of all fractions and fluid phase drift velocity for correct determination driftflux-force
+			   ENDDO
+			  ENDDO
+			ENDIF
+		ENDIF	
+	ELSE !no shear_settling 
+		IF (hindered_settling_c.eq.2.or.hindered_settling_c.eq.3) THEN ! use settling velocity without hindered settling for deposition at bed
+			 DO i=0,i1
+			  DO j=0,j1
+				 !DO k=k1b,k1e ! at k=0 wsed should be zero at kmax wsed is calculated
+				 k=kbed(i,j)
+				 ctot=0.
+				 sum_c_ws=0.
+				 kp = MIN(k+1,k1)
+				 DO n=1,nfrac
+					ccc(n) = csed2(n,i,j,k) !0.5*(csed2(n,i,j,k) + csed2(n,i,j,kp))
+					ctot=ccc(n)*frac(n)%dfloc/frac(n)%dpart*0.5*(rhocorr_air_z(n,k)+rhocorr_air_z(n,kp))+ctot
+				! for mud Cfloc must be used to calculate Ctot (Cfloc=Ctot*dfloc/dpart)
+				! ccc(n) is used in drift flux correction sum_c_ws which is calculated with mass concentration based on Ctot (not on Cfloc)
+				 ENDDO
+				 ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
+				 DO n=1,nfrac
+					ws(n)=ws_basis(n)*wscorr_z(n,k)
+				 ! ws is positive downward, wsed is positive upward 
+				 ! Ri_Za is defined with volume concentration ctot
+				 sum_c_ws=sum_c_ws+ws(n)*ccc(n)*frac(n)%rho/rr2(i,j,k) !(0.5*(rr2(i,j,k)+rr2(i,j,kp)))
+		!!		 ! According to drift velocity literature the drift flux is calculated using the mass-fraction in stead of volume-fraction,
+		!!		 ! because sum_c_ws is slipvelocity relative to mixture velocity not relative to volumetric flux!
+				 ! therefore an extra frac(n)%rho/rho_mix is included
+				 ENDDO
+				 DO n=1,nfrac
+					wsed(n,i,j,k)=sum_c_ws-ws(n) ! wsed is positive upward at bed Wcfd must be zero
+				 ENDDO
+				 W_km_sum=0.
+				 do n=1,nfrac
+					!W_km_sum=W_km_sum+ccc(n)*frac(n)%rho*(wsed(n,i,j,k)-Wcfd(i,j,k)) 
+					W_km_sum=W_km_sum+ccc(n)*frac(n)%rho*(wsed(n,i,j,k)) !at bed Wcfd is zero
+				 enddo 
+				 W_km_sum=W_km_sum+(1.-ctot)*rho_b*sum_c_ws !sum_c_ws=fluid return velocity --> slipvelocity of fluid relative to mixture-velocity
+				 sumWkm(i,j,k)=W_km_sum !NEW 2-10-2018: contains sum of all fractions and fluid phase drift velocity for correct determination driftflux-force
+			  ENDDO
+			 ENDDO
+		ELSE ! include hindered settling like in rest domain 
+			IF (slipvel.eq.2) THEN ! no hindered settling
+			  DO i=0,i1
+			   DO j=0,j1
+				k=kbed(i,j)
+				!DO k=k1b,k1e ! at k=0 wsed should be zero at kmax wsed is calculated
+				ctot=0.
+				sum_c_ws=0.
+				kp = MIN(k+1,k1)
+				DO n=1,nfrac
+					ccc(n) = csed2(n,i,j,k) !0.5*(csed2(n,i,j,k) + csed2(n,i,j,kp))	
+					ctot=ccc(n)*frac(n)%dfloc/frac(n)%dpart*0.5*(rhocorr_air_z(n,k)+rhocorr_air_z(n,kp))+ctot
+					ws(n)=ws_basis(n)*wscorr_z(n,k)
+				! ws is positive downward, wsed is positive upward 
+					sum_c_ws=sum_c_ws+ws(n)*ccc(n)*frac(n)%rho/rr2(i,j,k) !(0.5*(rr2(i,j,k)+rr2(i,j,kp)))
+		!!		! According to drift velocity literature the drift flux is calculated using the mass-fraction in stead of volume-fraction,
+		!!		! because sum_c_ws is slipvelocity relative to mixture velocity not relative to volumetric flux!
+				! therefore an extra frac(n)%rho/rho_mix is included
+				ENDDO
+				ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
+				DO n=1,nfrac
+					!wsed(n,i,j,k)=Wcfd(i,j,k)+sum_c_ws-ws(n) ! wsed is positive upward
+					wsed(n,i,j,k)=sum_c_ws-ws(n) ! wsed is positive upward at bed Wcfd is zero
+				ENDDO
+				W_km_sum=0.
+				do n=1,nfrac
+					!W_km_sum=W_km_sum+ccc(n)*frac(n)%rho*(wsed(n,i,j,k)-Wcfd(i,j,k)) 
+					W_km_sum=W_km_sum+ccc(n)*frac(n)%rho*(wsed(n,i,j,k)) !at bed Wcfd is zero
+				enddo 
+				W_km_sum=W_km_sum+(1.-ctot)*rho_b*sum_c_ws !sum_c_ws=fluid return velocity --> slipvelocity of fluid relative to mixture-velocity
+				sumWkm(i,j,k)=W_km_sum !NEW 2-10-2018: contains sum of all fractions and fluid phase drift velocity for correct determination driftflux-force
+			   ENDDO
+			  ENDDO
+			ELSE ! hindered settling
+			  DO i=0,i1
+			   DO j=0,j1
+				!DO k=k1b,k1e ! at k=0 wsed should be zero at kmax wsed is calculated
+				k=kbed(i,j)
+				ctot=0.
+				sum_c_ws=0.
+				kp = MIN(k+1,k1)
+				DO n=1,nfrac
+					ccc(n) = csed2(n,i,j,k) !0.5*(csed2(n,i,j,k) + csed2(n,i,j,kp))
+					ctot=ccc(n)*frac(n)%dfloc/frac(n)%dpart*0.5*(rhocorr_air_z(n,k)+rhocorr_air_z(n,kp))+ctot
+				! for mud Cfloc must be used to calculate Ctot (Cfloc=Ctot*dfloc/dpart)
+				! ccc(n) is used in drift flux correction sum_c_ws which is calculated with mass concentration based on Ctot (not on Cfloc)
+				ENDDO
+				ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
+				DO n=1,nfrac
+					ws(n)=ws_basis(n)*(1.-ctot)**(frac(n)%n)*wscorr_z(n,k) !frac(n)%n lowered with one already
+				! ws is positive downward, wsed is positive upward 
+				! Ri_Za is defined with volume concentration ctot
+					sum_c_ws=sum_c_ws+ws(n)*ccc(n)*frac(n)%rho/rr2(i,j,k) !(0.5*(rr2(i,j,k)+rr2(i,j,kp)))
+		!!		! According to drift velocity literature the drift flux is calculated using the mass-fraction in stead of volume-fraction,
+		!!		! because sum_c_ws is slipvelocity relative to mixture velocity not relative to volumetric flux!
+				! therefore an extra frac(n)%rho/rho_mix is included
+				ENDDO
+				DO n=1,nfrac
+					!wsed(n,i,j,k)=Wcfd(i,j,k)+sum_c_ws-ws(n) ! wsed is positive upward 
+					wsed(n,i,j,k)=sum_c_ws-ws(n) ! wsed is positive upward at bed Wcfd must be zero
+				ENDDO
+					W_km_sum=0.
+					do n=1,nfrac
+						!W_km_sum=W_km_sum+ccc(n)*frac(n)%rho*(wsed(n,i,j,k)-Wcfd(i,j,k)) 
+						W_km_sum=W_km_sum+ccc(n)*frac(n)%rho*(wsed(n,i,j,k)) !at bed Wcfd is zero
+					enddo 
+					W_km_sum=W_km_sum+(1.-ctot)*rho_b*sum_c_ws !sum_c_ws=fluid return velocity --> slipvelocity of fluid relative to mixture-velocity
+					sumWkm(i,j,k)=W_km_sum !NEW 2-10-2018: contains sum of all fractions and fluid phase drift velocity for correct determination driftflux-force
+			   ENDDO
+			  ENDDO
+			ENDIF
+		ENDIF
+	ENDIF 
 
-	IF (slipvel.eq.2) THEN ! no hindered settling
-	 DO i=0,i1
-	  DO j=0,j1
-	    k=kbed(i,j)
-	    !DO k=k1b,k1e ! at k=0 wsed should be zero at kmax wsed is calculated
-	      ctot=0.
-	      sum_c_ws=0.
-	      kp = MIN(k+1,k1)
-	      DO n=1,nfrac
-	        ccc(n) = csed2(n,i,j,k) !0.5*(csed2(n,i,j,k) + csed2(n,i,j,kp))	
-			ctot=ccc(n)*frac(n)%dfloc/frac(n)%dpart*0.5*(rhocorr_air_z(n,k)+rhocorr_air_z(n,kp))+ctot
-	        ws(n)=ws_basis(n)*wscorr_z(n,k)
-		! ws is positive downward, wsed is positive upward 
-			sum_c_ws=sum_c_ws+ws(n)*ccc(n)*frac(n)%rho/rr2(i,j,k) !(0.5*(rr2(i,j,k)+rr2(i,j,kp)))
-!!		! According to drift velocity literature the drift flux is calculated using the mass-fraction in stead of volume-fraction,
-!!		! because sum_c_ws is slipvelocity relative to mixture velocity not relative to volumetric flux!
-		! therefore an extra frac(n)%rho/rho_mix is included
-	      ENDDO
-		  ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
-	      DO n=1,nfrac
-			!wsed(n,i,j,k)=Wcfd(i,j,k)+sum_c_ws-ws(n) ! wsed is positive upward
-			wsed(n,i,j,k)=sum_c_ws-ws(n) ! wsed is positive upward at bed Wcfd is zero
-	      ENDDO
-		  W_km_sum=0.
-		  do n=1,nfrac
-			!W_km_sum=W_km_sum+ccc(n)*frac(n)%rho*(wsed(n,i,j,k)-Wcfd(i,j,k)) 
-			W_km_sum=W_km_sum+ccc(n)*frac(n)%rho*(wsed(n,i,j,k)) !at bed Wcfd is zero
-		  enddo 
-		  W_km_sum=W_km_sum+(1.-ctot)*rho_b*sum_c_ws !sum_c_ws=fluid return velocity --> slipvelocity of fluid relative to mixture-velocity
-		  sumWkm(i,j,k)=W_km_sum !NEW 2-10-2018: contains sum of all fractions and fluid phase drift velocity for correct determination driftflux-force
-	    !ENDDO
-	  ENDDO
-	 ENDDO
-	ELSE ! hindered settling
-	 DO i=0,i1
-	  DO j=0,j1
-	    !DO k=k1b,k1e ! at k=0 wsed should be zero at kmax wsed is calculated
-		k=kbed(i,j)
-	      ctot=0.
-	      sum_c_ws=0.
-	      kp = MIN(k+1,k1)
-	      DO n=1,nfrac
-	        ccc(n) = csed2(n,i,j,k) !0.5*(csed2(n,i,j,k) + csed2(n,i,j,kp))
-			ctot=ccc(n)*frac(n)%dfloc/frac(n)%dpart*0.5*(rhocorr_air_z(n,k)+rhocorr_air_z(n,kp))+ctot
-		! for mud Cfloc must be used to calculate Ctot (Cfloc=Ctot*dfloc/dpart)
-		! ccc(n) is used in drift flux correction sum_c_ws which is calculated with mass concentration based on Ctot (not on Cfloc)
-	      ENDDO
-	      ctot=MIN(ctot,1.) ! limit on 1, see also Winterwerp 1999 p.46, because Cfloc can be >1
-	      DO n=1,nfrac
-	        ws(n)=ws_basis(n)*(1.-ctot)**(frac(n)%n)*wscorr_z(n,k) !frac(n)%n lowered with one already
-		! ws is positive downward, wsed is positive upward 
-		! Ri_Za is defined with volume concentration ctot
-  		sum_c_ws=sum_c_ws+ws(n)*ccc(n)*frac(n)%rho/rr2(i,j,k) !(0.5*(rr2(i,j,k)+rr2(i,j,kp)))
-!!		! According to drift velocity literature the drift flux is calculated using the mass-fraction in stead of volume-fraction,
-!!		! because sum_c_ws is slipvelocity relative to mixture velocity not relative to volumetric flux!
-		! therefore an extra frac(n)%rho/rho_mix is included
-	      ENDDO
-	      DO n=1,nfrac
-			!wsed(n,i,j,k)=Wcfd(i,j,k)+sum_c_ws-ws(n) ! wsed is positive upward 
-			wsed(n,i,j,k)=sum_c_ws-ws(n) ! wsed is positive upward at bed Wcfd must be zero
-	      ENDDO
-			 W_km_sum=0.
-		  	 do n=1,nfrac
-				!W_km_sum=W_km_sum+ccc(n)*frac(n)%rho*(wsed(n,i,j,k)-Wcfd(i,j,k)) 
-				W_km_sum=W_km_sum+ccc(n)*frac(n)%rho*(wsed(n,i,j,k)) !at bed Wcfd is zero
-			 enddo 
-			 W_km_sum=W_km_sum+(1.-ctot)*rho_b*sum_c_ws !sum_c_ws=fluid return velocity --> slipvelocity of fluid relative to mixture-velocity
-		     sumWkm(i,j,k)=W_km_sum !NEW 2-10-2018: contains sum of all fractions and fluid phase drift velocity for correct determination driftflux-force
-	    !ENDDO
-	  ENDDO
-	 ENDDO
-	ENDIF
-
-
-      END SUBROUTINE slipvelocity_bed
+	END SUBROUTINE slipvelocity_bed
 
  
 
@@ -428,7 +641,7 @@
 	   include 'mpif.h'
       integer ierr
 	real     wsed(nfrac,0:i1,0:j1,0:k1),erosion,deposition,uu,vv,absU,z0,ust,yplus,tau !local variables
-	integer n,tel,kplus,n1,k2,kk,n2
+	integer n,tel,kplus,n1,k2,kk,n2,nfr_silt_org
 	REAL     ccnew(nfrac,0:i1,0:j1,0:k1),cbotnew(nfrac,0:i1,0:j1)  ! output
 	REAL     ccfd(nfrac,0:i1,0:j1,0:k1),cbotcfd(nfrac,0:i1,0:j1)  ! input
 	REAL	 ddt,dz ! input
@@ -456,6 +669,8 @@
 	  REAL dzbed_dl2,dzbed_dl3,vwal_x,vwal_y,dzB,bwal,fluxA,fluxB,fluxC,fluxD,absUU,fcor_pres
 	  REAL zb_avg(0:i1,0:j1),dbedL,dbedR,Shields_cr_den,Shields_cr_num,Shields_cr_den_bl,Shields_cr_num_bl,i_curved
 	  REAL ppp_avg(0:i1,0:j1),ppp_avg2(0:i1,0:j1),absU_rks(1:kmax),pR1,pR2,pL1,pL2,qbx,qby,dz3
+	  REAL absU_ij(0:i1,0:j1),absUbl_ij(0:i1,0:j1),krange,krange1,krange2,krange3,dz_botlayer_silt
+	  INTEGER*8 k_ust_tau_2D(0:i1,0:j1)
 	
 	erosion=0.
 	deposition=0.
@@ -512,6 +727,27 @@
 	pL2=0. 
 	pR2=0.			  
 	IF (dpdx_ref_j(1)>0) THEN  !determine ambient background pressure gradient on left and right edge of CFD domain
+	 IF (k_dpdx_sed_range(2)>0) THEN 
+	  IF (rank.eq.0) THEN 
+		do j=dpdx_ref_j(1),dpdx_ref_j(2)
+		  krange=DBLE(MAX(1,MIN(kmax,kbed(1,j)+k_dpdx_sed_range(2))-MIN(kmax,kbed(1,j)+k_dpdx_sed_range(1))))
+		  pL1 = pL1+SUM(ppp(1,j,MIN(kmax,kbed(1,j)+k_dpdx_sed_range(1)):MIN(kmax,kbed(1,j)+k_dpdx_sed_range(2)) ))/krange  
+		  krange=DBLE(MAX(1,MIN(kmax,kbed(imax,j)+k_dpdx_sed_range(2))-MIN(kmax,kbed(imax,j)+k_dpdx_sed_range(1))))
+		  pR1 = pR1+SUM(ppp(imax,j,MIN(kmax,kbed(imax,j)+k_dpdx_sed_range(1)):MIN(kmax,kbed(imax,j)+k_dpdx_sed_range(2)) ))/krange
+		enddo 
+		pL1 = pL1 / DBLE(dpdx_ref_j(2)-dpdx_ref_j(1)+1)
+		pR1 = pR1 / DBLE(dpdx_ref_j(2)-dpdx_ref_j(1)+1)
+	  ELSEIF (rank.eq.px-1) THEN 
+		do j=dpdx_ref_j(1),dpdx_ref_j(2)
+		  krange=DBLE(MAX(1,MIN(kmax,kbed(1,j1-j)+k_dpdx_sed_range(2))-MIN(kmax,kbed(1,j1-j)+k_dpdx_sed_range(1))))
+		  pL1 = pL1+SUM(ppp(1,j1-j,MIN(kmax,kbed(1,j1-j)+k_dpdx_sed_range(1)):MIN(kmax,kbed(1,j1-j)+k_dpdx_sed_range(2)) ))/krange  
+		  krange=DBLE(MAX(1,MIN(kmax,kbed(imax,j1-j)+k_dpdx_sed_range(2))-MIN(kmax,kbed(imax,j1-j)+k_dpdx_sed_range(1))))
+		  pR1 = pR1+SUM(ppp(imax,j1-j,MIN(kmax,kbed(imax,j1-j)+k_dpdx_sed_range(1)):MIN(kmax,kbed(imax,j1-j)+k_dpdx_sed_range(2))))/krange		  
+		enddo 
+		pL2 = pL2 / DBLE(dpdx_ref_j(2)-dpdx_ref_j(1)+1)
+		pR2 = pR2 / DBLE(dpdx_ref_j(2)-dpdx_ref_j(1)+1)
+	  ENDIF	 
+	 ELSE
 	  IF (rank.eq.0) THEN 
 		do j=dpdx_ref_j(1),dpdx_ref_j(2)
 		  pL1 = pL1+ppp(1,j,MIN(k1,kbed(1,j)+k_ust_tau)) !correction is done with k_ust_tau and not k_ust_tau_temp (which is not known outside do loop, but for Fix_ref this difference is of minor importance)
@@ -527,27 +763,241 @@
 		pL2 = pL2 / DBLE(dpdx_ref_j(2)-dpdx_ref_j(1)+1)
 		pR2 = pR2 / DBLE(dpdx_ref_j(2)-dpdx_ref_j(1)+1)
 	  ENDIF
-	  call mpi_bcast(pL1,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-	  call mpi_bcast(pR1,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
-	  call mpi_bcast(pL2,1,MPI_REAL8,px-1,MPI_COMM_WORLD,ierr)
-	  call mpi_bcast(pR2,1,MPI_REAL8,px-1,MPI_COMM_WORLD,ierr)
-	ENDIF 			  
+	 ENDIF	
+	 call mpi_bcast(pL1,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+	 call mpi_bcast(pR1,1,MPI_REAL8,0,MPI_COMM_WORLD,ierr)
+	 call mpi_bcast(pL2,1,MPI_REAL8,px-1,MPI_COMM_WORLD,ierr)
+	 call mpi_bcast(pR2,1,MPI_REAL8,px-1,MPI_COMM_WORLD,ierr)
+	ENDIF 	
+     
 	Fix_ref = 0.5*((pR1+pR2)-(pL1+pL2))/(Rp(imax)-Rp(1))/rho_b
 
-!!!	IF(time_n.ge.tstart_morf) THEN 
-!!!	  IF (wallmodel_tau_sed.eq.3.or.wallmodel_tau_sed.eq.4.or.wallmodel_tau_sed.eq.8.or.wallmodel_tau_sed.eq.9) THEN 
-!!!!			DO i=1,imax
-!!!!				DO j=1,jmax
-!!!!					ppp_avg2(i,j)=0.25*ppp(i-1,j,kbedp(i-1,j))+0.5*ppp(i,j,kbedp(i,j))+0.25*ppp(i+1,j,kbedp(i+1,j))
-!!!!				ENDDO
-!!!!			ENDDO 
-!!!!			call bound_cbot(ppp_avg2) 
-!!!!			DO i=1,imax
-!!!!				DO j=1,jmax
-!!!!					ppp_avg(i,j)=0.25*ppp_avg2(i,j-1)+0.5*ppp_avg2(i,j)+0.25*ppp_avg2(i,j+1)
-!!!!				ENDDO
-!!!!			ENDDO 
-!!!!			call bound_cbot(ppp_avg) 	
+	IF(time_n.ge.tstart_morf) THEN 
+	  IF (wallmodel_tau_sed.eq.3.or.wallmodel_tau_sed.eq.4.or.wallmodel_tau_sed.eq.8.or.wallmodel_tau_sed.eq.9) THEN 
+	    IF (k_ust_tau_sed_range(1)>0) THEN 
+		  DO i=1,imax
+			DO j=1,jmax 
+			  absU_rks = 0.
+			  tel=k_ust_tau_sed_range(1) 
+			  DO k=k_ust_tau_sed_range(1),k_ust_tau_sed_range(2)
+				IF (IBMorder.eq.2) THEN
+					kppE=MIN(CEILING(0.5*(zbed(i,j)+zbed(i+1,j))/dz+k),k1) !between 0.5-1.5dz from bed for k=1 
+					kppW=MIN(CEILING(0.5*(zbed(i,j)+zbed(i-1,j))/dz+k),k1)
+					kppN=MIN(CEILING(0.5*(zbed(i,j)+zbed(i,j+1))/dz+k),k1)
+					kppS=MIN(CEILING(0.5*(zbed(i,j)+zbed(i,j-1))/dz+k),k1)
+				ELSE
+					kppE = MIN(MAX(kbed(i,j),kbed(i+1,j))+k,k1)
+					kppW = MIN(MAX(kbed(i,j),kbed(i-1,j))+k,k1)
+					kppS = MIN(MAX(kbed(i,j),kbed(i,j+1))+k,k1)
+					kppN = MIN(MAX(kbed(i,j),kbed(i,j-1))+k,k1)
+				ENDIF
+				uu=0.5*(ucfd(i,j,kppE)+ucfd(i-1,j,kppW))-Ubot_TSHD(j)
+				vv=0.5*(vcfd(i,j,kppN)+vcfd(i,j-1,kppS))-Vbot_TSHD(j)
+				absU_rks(tel)=sqrt(uu**2+vv**2) 
+				tel=tel+1
+			  ENDDO 
+			  k_ust_tau_temp = MAXLOC(absU_rks,DIM=1)
+			  k_ust_tau_2D(i,j)=MIN(k1,kbed(i,j)+k_ust_tau_temp)
+			ENDDO 
+		  ENDDO
+		ELSE 
+		  DO i=1,imax
+			DO j=1,jmax 		
+				k_ust_tau_2D(i,j)=MIN(k1,kbed(i,j)+k_ust_tau)
+			ENDDO 
+		  ENDDO				
+		ENDIF 
+		call bound_cbot_integer(k_ust_tau_2D) 
+		IF (dpdx_smoother.eq.1) THEN 
+			IF (k_dpdx_sed_range(2)>0) THEN
+				krange=DBLE(k_dpdx_sed_range(2)-k_dpdx_sed_range(1)) 
+				DO i=1,imax
+					DO j=1,jmax
+					    krange1=DBLE(MAX(1,MIN(kmax,kbed(i-1,j)+k_dpdx_sed_range(2))-MIN(kmax,kbed(i-1,j)+k_dpdx_sed_range(1))))
+						krange2=DBLE(MAX(1,MIN(kmax,kbed(i,j)+k_dpdx_sed_range(2))-MIN(kmax,kbed(i,j)+k_dpdx_sed_range(1))))
+						krange3=DBLE(MAX(1,MIN(kmax,kbed(i+1,j)+k_dpdx_sed_range(2))-MIN(kmax,kbed(i+1,j)+k_dpdx_sed_range(1))))						
+						ppp_avg2(i,j)=
+     &				0.25*SUM(ppp(i-1,j,MIN(kmax,kbed(i-1,j)+k_dpdx_sed_range(1)):MIN(kmax,kbed(i-1,j)+k_dpdx_sed_range(2))))/krange1+
+     &				0.5*SUM(ppp(i,j,MIN(kmax,kbed(i,j)+k_dpdx_sed_range(1)):MIN(kmax,kbed(i,j)+k_dpdx_sed_range(2))))/krange2+
+     &				0.25*SUM(ppp(i+1,j,MIN(kmax,kbed(i+1,j)+k_dpdx_sed_range(1)):MIN(kmax,kbed(i+1,j)+k_dpdx_sed_range(2))))/krange3
+					ENDDO
+				ENDDO 
+			ELSE 
+				DO i=1,imax
+					DO j=1,jmax
+						ppp_avg2(i,j)=0.25*ppp(i-1,j,k_ust_tau_2D(i-1,j))+0.5*ppp(i,j,k_ust_tau_2D(i,j))+0.25*ppp(i+1,j,k_ust_tau_2D(i+1,j))
+					ENDDO
+				ENDDO 
+			ENDIF 
+			call bound_cbot(ppp_avg2) 
+			DO i=1,imax
+				DO j=1,jmax
+					ppp_avg(i,j)=0.25*ppp_avg2(i,j-1)+0.5*ppp_avg2(i,j)+0.25*ppp_avg2(i,j+1)
+				ENDDO
+			ENDDO 
+			call bound_cbot(ppp_avg) 
+		ELSE
+			IF (k_dpdx_sed_range(2)>0) THEN 
+				DO i=1,imax
+					DO j=1,jmax
+					    krange=DBLE(MAX(1,MIN(kmax,kbed(i,j)+k_dpdx_sed_range(2))-MIN(kmax,kbed(i,j)+k_dpdx_sed_range(1))))
+						ppp_avg(i,j)=
+     &					SUM(ppp(i,j,MIN(kmax,kbed(i,j)+k_dpdx_sed_range(1)):MIN(kmax,kbed(i,j)+k_dpdx_sed_range(2))))/krange 
+					ENDDO
+				ENDDO 
+			ELSE 
+				DO i=1,imax
+					DO j=1,jmax
+						ppp_avg(i,j)=ppp(i,j,k_ust_tau_2D(i,j))
+					ENDDO
+				ENDDO 			
+			ENDIF 
+			call bound_cbot(ppp_avg) 
+		ENDIF
+	  ENDIF 
+		IF (uv_sed_smoother.eq.1) THEN
+		 DO i=1,imax
+		  DO j=1,jmax 	
+		    ! first determine k_ust_tau_temp again and kppE,kppW,kppN,kppS for correct determination absU 
+			IF (k_ust_tau_sed_range(1)>0) THEN 
+			  absU_rks = 0.
+			  tel=k_ust_tau_sed_range(1) 
+			  DO k=k_ust_tau_sed_range(1),k_ust_tau_sed_range(2)
+				IF (IBMorder.eq.2) THEN
+					kppE=MIN(CEILING(0.5*(zbed(i,j)+zbed(i+1,j))/dz+k),k1) !between 0.5-1.5dz from bed for k=1 
+					kppW=MIN(CEILING(0.5*(zbed(i,j)+zbed(i-1,j))/dz+k),k1)
+					kppN=MIN(CEILING(0.5*(zbed(i,j)+zbed(i,j+1))/dz+k),k1)
+					kppS=MIN(CEILING(0.5*(zbed(i,j)+zbed(i,j-1))/dz+k),k1)
+				ELSE
+					kppE = MIN(MAX(kbed(i,j),kbed(i+1,j))+k,k1)
+					kppW = MIN(MAX(kbed(i,j),kbed(i-1,j))+k,k1)
+					kppS = MIN(MAX(kbed(i,j),kbed(i,j+1))+k,k1)
+					kppN = MIN(MAX(kbed(i,j),kbed(i,j-1))+k,k1)
+				ENDIF
+				uu=0.5*(ucfd(i,j,kppE)+ucfd(i-1,j,kppW))-Ubot_TSHD(j)
+				vv=0.5*(vcfd(i,j,kppN)+vcfd(i,j-1,kppS))-Vbot_TSHD(j)
+				absU_rks(tel)=sqrt(uu**2+vv**2) 
+				tel=tel+1
+			  ENDDO 
+			  k_ust_tau_temp = MAXLOC(absU_rks,DIM=1)
+			ELSE 
+			  k_ust_tau_temp = k_ust_tau 
+			ENDIF		  
+			IF (IBMorder.eq.2) THEN
+				kppE=MIN(CEILING(0.5*(zbed(i,j)+zbed(i+1,j))/dz+k_ust_tau_temp),k1) !between 0.5-1.5dz from bed 
+				kppW=MIN(CEILING(0.5*(zbed(i,j)+zbed(i-1,j))/dz+k_ust_tau_temp),k1)
+				kppN=MIN(CEILING(0.5*(zbed(i,j)+zbed(i,j+1))/dz+k_ust_tau_temp),k1)
+				kppS=MIN(CEILING(0.5*(zbed(i,j)+zbed(i,j-1))/dz+k_ust_tau_temp),k1)
+				ddzzE=(REAL(kppE)-0.5)*dz-0.5*(zbed(i,j)+zbed(i+1,j))
+				ddzzW=(REAL(kppW)-0.5)*dz-0.5*(zbed(i,j)+zbed(i-1,j))
+				ddzzN=(REAL(kppN)-0.5)*dz-0.5*(zbed(i,j)+zbed(i,j+1))
+				ddzzS=(REAL(kppS)-0.5)*dz-0.5*(zbed(i,j)+zbed(i,j-1))
+				distance_to_bed=0.25*(ddzzE+ddzzW+ddzzN+ddzzS)
+			ELSE
+				kppE = MIN(MAX(kbed(i,j),kbed(i+1,j))+k_ust_tau_temp,k1)
+				kppW = MIN(MAX(kbed(i,j),kbed(i-1,j))+k_ust_tau_temp,k1)
+				kppS = MIN(MAX(kbed(i,j),kbed(i,j+1))+k_ust_tau_temp,k1)
+				kppN = MIN(MAX(kbed(i,j),kbed(i,j-1))+k_ust_tau_temp,k1)
+				distance_to_bed=(REAL(k_ust_tau_temp)-0.5)*dz
+			ENDIF		  
+			!! First Ubot_TSHD and Vbot_TSHD is subtracted to determine tau 
+			!! only over ambient velocities not over U_TSHD
+			uu=0.5*(ucfd(i,j,kppE)+ucfd(i-1,j,kppW))-Ubot_TSHD(j)
+			vv=0.5*(vcfd(i,j,kppN)+vcfd(i,j-1,kppS))-Vbot_TSHD(j)		
+			IF (pickup_bedslope_geo.eq.1) THEN
+				!bedload near bed velocity:
+				uuRrel = ucfd(i  ,j,kppE)-Ubot_TSHD(j)  
+				bed_slope = atan((zbed(i+1,j)-zbed(i,j))/(Rp(i+1)-Rp(i)))
+     &  *MIN(bednotfixed(i+1,j,kbed(i+1,j)),bednotfixed(i,j,kbed(i,j)))				
+				uuRrel = uuRrel*cos(bed_slope)+0.5*(wcfd(i,j,kbedp(i,j))+wcfd(i+1,j,kbedp(i+1,j)))*sin(bed_slope)
+				!no correction for pit because uuR from cell i always needs to be same as uuL from i+1 in bedload otherwise interuption and pit may never fill up
+				uuLrel = ucfd(i-1,j,kppW)-Ubot_TSHD(j)	
+				bed_slope = atan((zbed(i,j)-zbed(i-1,j))/(Rp(i)-Rp(i-1)))
+     &  *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed(i-1,j,kbed(i-1,j)))				
+				uuLrel = uuLrel*cos(bed_slope)+0.5*(wcfd(i,j,kbedp(i,j))+wcfd(i-1,j,kbedp(i-1,j)))*sin(bed_slope)				
+				vvRrel = vcfd(i,j  ,kppN)-Vbot_TSHD(j)
+				bed_slope = atan((zbed(i,j+1)-zbed(i,j))/(Rp(i)*(phip(j+1)-phip(j))))
+     &  *MIN(bednotfixed(i,j+1,kbed(i,j+1)),bednotfixed(i,j,kbed(i,j)))				
+				vvRrel = vvRrel*cos(bed_slope)+0.5*(wcfd(i,j,kbedp(i,j))+wcfd(i,j+1,kbedp(i,j+1)))*sin(bed_slope)
+				vvLrel = vcfd(i,j-1,kppS)-Vbot_TSHD(j)
+				bed_slope = atan((zbed(i,j)-zbed(i,j-1))/(Rp(i)*(phip(j)-phip(j-1))))
+     &  *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed(i,j-1,kbed(i,j-1)))				
+				vvLrel = vvLrel*cos(bed_slope)+0.5*(wcfd(i,j,kbedp(i,j))+wcfd(i,j-1,kbedp(i,j-1)))*sin(bed_slope)				
+				uuR_relax2(i,j)  = bl_relax*uuRrel+(1.-bl_relax)*uuR_relax2(i,j)  	!needed for bedload-fluxes
+				uuL_relax2(i,j)  = bl_relax*uuLrel+(1.-bl_relax)*uuL_relax2(i,j)
+				vvR_relax2(i,j)  = bl_relax*vvRrel+(1.-bl_relax)*vvR_relax2(i,j)
+				vvL_relax2(i,j)  = bl_relax*vvLrel+(1.-bl_relax)*vvL_relax2(i,j)
+				absUbl = MAX(sqrt((0.5*(uuR_relax2(i,j)+uuL_relax2(i,j)))**2+(0.5*(vvR_relax2(i,j)+vvL_relax2(i,j)))**2),1.e-6)
+!!!				uuRrel = uuR_relax(i,j)/absUbl
+!!!				uuLrel = uuL_relax(i,j)/absUbl
+!!!				vvRrel = vvR_relax(i,j)/absUbl
+!!!				vvLrel = vvL_relax(i,j)/absUbl			
+				!suspension load near bed velocity:
+				bed_slope = atan((zbed(i+1,j)-zbed(i-1,j))/(Rp(i+1)-Rp(i-1)))
+     &  *MIN(bednotfixed(i+1,j,kbed(i+1,j)),bednotfixed(i-1,j,kbed(i-1,j)))				
+				uu2 = uu*cos(bed_slope)+wcfd(i,j,kbedp(i,j))*sin(bed_slope)
+				facx = 1./cos(bed_slope)
+				bed_slope = atan((zbed(i,j+1)-zbed(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1))))
+     &  *MIN(bednotfixed(i,j+1,kbed(i,j+1)),bednotfixed(i,j-1,kbed(i,j-1)))				
+				vv2 = vv*cos(bed_slope)+wcfd(i,j,kbedp(i,j))*sin(bed_slope)
+				facy = 1./cos(bed_slope)
+				bs_geo = facx*facy ! increase in dx and dy (area) over which pickup and deposition take place
+				absU = sqrt((uu2)**2+(vv2)**2)	
+				absU_sed_relax2(i,j) = sl_relax*absU+(1.-sl_relax)*absU_sed_relax2(i,j)
+				absU = absU_sed_relax(i,j)				
+			ELSE 
+				uuRrel = ucfd(i  ,j,kppE)-Ubot_TSHD(j)  !no correction for pit because uuR from cell i always needs to be same as uuL from i+1 in bedload otherwise interuption and pit may never fill up
+				uuLrel = ucfd(i-1,j,kppW)-Ubot_TSHD(j)			
+				vvRrel = vcfd(i,j  ,kppN)-Vbot_TSHD(j)
+				vvLrel = vcfd(i,j-1,kppS)-Vbot_TSHD(j)				
+				uuR_relax2(i,j)  = bl_relax*uuRrel+(1.-bl_relax)*uuR_relax2(i,j)  	!needed for bedload-fluxes
+				uuL_relax2(i,j)  = bl_relax*uuLrel+(1.-bl_relax)*uuL_relax2(i,j)
+				vvR_relax2(i,j)  = bl_relax*vvRrel+(1.-bl_relax)*vvR_relax2(i,j)
+				vvL_relax2(i,j)  = bl_relax*vvLrel+(1.-bl_relax)*vvL_relax2(i,j)
+				absUbl = MAX(sqrt((0.5*(uuR_relax2(i,j)+uuL_relax2(i,j)))**2+(0.5*(vvR_relax2(i,j)+vvL_relax2(i,j)))**2),1.e-6)
+!!!				uuRrel = uuR_relax(i,j)/absUbl
+!!!				uuLrel = uuL_relax(i,j)/absUbl
+!!!				vvRrel = vvR_relax(i,j)/absUbl
+!!!				vvLrel = vvL_relax(i,j)/absUbl	
+				!suspension load near bed velocity:
+				absU=sqrt((uu)**2+(vv)**2)
+				absU_sed_relax2(i,j) = sl_relax*absU+(1.-sl_relax)*absU_sed_relax2(i,j)
+				absU = absU_sed_relax2(i,j)				
+				bs_geo = 1.
+			ENDIF
+			absU_ij(i,j)=absU
+			absUbl_ij(i,j)=absUbl
+		  ENDDO
+		 ENDDO 
+		 call bound_cbot(absU_ij) 
+		 call bound_cbot(absUbl_ij) 
+         DO i=1,imax
+         	DO j=1,jmax
+         		ppp_avg2(i,j)=0.25*absU_ij(i-1,j)+0.5*absU_ij(i,j)+0.25*absU_ij(i+1,j)
+         	ENDDO
+         ENDDO 
+         call bound_cbot(ppp_avg2) 
+         DO i=1,imax
+         	DO j=1,jmax
+         		absU_ij(i,j)=0.25*ppp_avg2(i,j-1)+0.5*ppp_avg2(i,j)+0.25*ppp_avg2(i,j+1)
+         	ENDDO
+         ENDDO 
+         call bound_cbot(absU_ij)
+         DO i=1,imax
+         	DO j=1,jmax
+         		ppp_avg2(i,j)=0.25*absUbl_ij(i-1,j)+0.5*absUbl_ij(i,j)+0.25*absUbl_ij(i+1,j)
+         	ENDDO
+         ENDDO 
+         call bound_cbot(ppp_avg2) 
+         DO i=1,imax
+         	DO j=1,jmax
+         		absUbl_ij(i,j)=0.25*ppp_avg2(i,j-1)+0.5*ppp_avg2(i,j)+0.25*ppp_avg2(i,j+1)
+         	ENDDO
+         ENDDO 
+         call bound_cbot(absUbl_ij)		 
+		ENDIF		  
+	ENDIF 
+			
 !!!		DO i=2,imax-1 !leave inflow and outflow dpdx zero 1,imax
 !!!		  DO j=1,jmax
 !!!!			Fix = (ppp(i+1,j,kbedp(i+1,j))-ppp(i-1,j,kbedp(i-1,j)))/(Rp(i+1)-Rp(i-1))/rcfd(i,j,kbedp(i,j))
@@ -584,18 +1034,11 @@
 					kppW=MIN(CEILING(0.5*(zbed(i,j)+zbed(i-1,j))/dz+k),k1)
 					kppN=MIN(CEILING(0.5*(zbed(i,j)+zbed(i,j+1))/dz+k),k1)
 					kppS=MIN(CEILING(0.5*(zbed(i,j)+zbed(i,j-1))/dz+k),k1)
-					ddzzE=(REAL(kppE)-0.5)*dz-0.5*(zbed(i,j)+zbed(i+1,j))
-					ddzzW=(REAL(kppW)-0.5)*dz-0.5*(zbed(i,j)+zbed(i-1,j))
-					ddzzN=(REAL(kppN)-0.5)*dz-0.5*(zbed(i,j)+zbed(i,j+1))
-					ddzzS=(REAL(kppS)-0.5)*dz-0.5*(zbed(i,j)+zbed(i,j-1))
-					!distance_to_bed=MAX(0.5*dz,0.25*(ddzzE+ddzzW+ddzzN+ddzzS))
-					distance_to_bed=0.25*(ddzzE+ddzzW+ddzzN+ddzzS)
 				ELSE
 					kppE = MIN(MAX(kbed(i,j),kbed(i+1,j))+k,k1)
 					kppW = MIN(MAX(kbed(i,j),kbed(i-1,j))+k,k1)
 					kppS = MIN(MAX(kbed(i,j),kbed(i,j+1))+k,k1)
 					kppN = MIN(MAX(kbed(i,j),kbed(i,j-1))+k,k1)
-					distance_to_bed=(REAL(k)-0.5)*dz
 				ENDIF
 				uu=0.5*(ucfd(i,j,kppE)+ucfd(i-1,j,kppW))-Ubot_TSHD(j)
 				vv=0.5*(vcfd(i,j,kppN)+vcfd(i,j-1,kppS))-Vbot_TSHD(j)
@@ -607,11 +1050,16 @@
 			  k_ust_tau_temp = k_ust_tau 
 			ENDIF 
 			IF (wallmodel_tau_sed.eq.3.or.wallmodel_tau_sed.eq.4.or.wallmodel_tau_sed.eq.8.or.wallmodel_tau_sed.eq.9) THEN 
-			  Fix = (ppp(i+1,j,MIN(k1,kbed(i+1,j)+k_ust_tau_temp))-ppp(i-1,j,MIN(k1,kbed(i-1,j)+k_ust_tau_temp)))
-     &			/sqrt((Rp(i+1)-Rp(i-1))**2+(zbed(i+1,j)-zbed(i-1,j))**2)/rcfd(i,j,MIN(k1,kbed(i,j)+k_ust_tau_temp))
+!			  Fix = (ppp(i+1,j,MIN(k1,kbed(i+1,j)+k_ust_tau_temp))-ppp(i-1,j,MIN(k1,kbed(i-1,j)+k_ust_tau_temp)))
+!     &			/sqrt((Rp(i+1)-Rp(i-1))**2+(zbed(i+1,j)-zbed(i-1,j))**2)/rcfd(i,j,MIN(k1,kbed(i,j)+k_ust_tau_temp))
+!			  Fix = Fix - Fix_ref 
+!			  Fiy = (ppp(i,j+1,MIN(k1,kbed(i,j+1)+k_ust_tau_temp))-ppp(i,j-1,MIN(k1,kbed(i,j-1)+k_ust_tau_temp)))
+!     &			/sqrt((Rp(i)*(phip(j+1)-phip(j-1)))**2+(zbed(i,j+1)-zbed(i,j-1))**2)/rcfd(i,j,MIN(k1,kbed(i,j)+k_ust_tau_temp))	
+			  Fix = (ppp_avg(i+1,j)-ppp_avg(i-1,j))
+     &		  /sqrt((Rp(i+1)-Rp(i-1))**2+(zbed(i+1,j)-zbed(i-1,j))**2)/rcfd(i,j,k_ust_tau_2D(i,j))
+			  Fiy = (ppp_avg(i,j+1)-ppp_avg(i,j-1))
+     &		  /sqrt((Rp(i)*(phip(j+1)-phip(j-1)))**2+(zbed(i,j+1)-zbed(i,j-1))**2)/rcfd(i,j,k_ust_tau_2D(i,j))	
 			  Fix = Fix - Fix_ref 
-			  Fiy = (ppp(i,j+1,MIN(k1,kbed(i,j+1)+k_ust_tau_temp))-ppp(i,j-1,MIN(k1,kbed(i,j-1)+k_ust_tau_temp)))
-     &			/sqrt((Rp(i)*(phip(j+1)-phip(j-1)))**2+(zbed(i,j+1)-zbed(i,j-1))**2)/rcfd(i,j,MIN(k1,kbed(i,j)+k_ust_tau_temp))			
 			  TBLEsl_dpdx(i,j)=TBLEsl_grad_relax*Fix+(1.-TBLEsl_grad_relax)*TBLEsl_dpdx(i,j)	
 			  TBLEsl_dpdy(i,j)=TBLEsl_grad_relax*Fiy+(1.-TBLEsl_grad_relax)*TBLEsl_dpdy(i,j)		
 			ENDIF			
@@ -669,6 +1117,10 @@
 				absU = absU_sed_relax(i,j)				
 				bs_geo = 1.
 			ENDIF
+			IF (uv_sed_smoother.eq.1) THEN !use absU and absUbl from loop early in subroutine where 2D Shapiro filter has been applied
+				absU = absU_ij(i,j)
+				absUbl = absUbl_ij(i,j)
+			ENDIF 
 			IF (ABS(z_tau_sed-0.5*dz)>1.e-6) THEN !only if z_tau_sed is user defined (so not 0.5*dz) then do correction below:	
 				ust=0.1*absU
 				do tel=1,10 ! 10 iter is more than enough
@@ -780,18 +1232,11 @@
 					kppW=MIN(CEILING(0.5*(zbed(i,j)+zbed(i-1,j))/dz+k),k1)
 					kppN=MIN(CEILING(0.5*(zbed(i,j)+zbed(i,j+1))/dz+k),k1)
 					kppS=MIN(CEILING(0.5*(zbed(i,j)+zbed(i,j-1))/dz+k),k1)
-					ddzzE=(REAL(kppE)-0.5)*dz-0.5*(zbed(i,j)+zbed(i+1,j))
-					ddzzW=(REAL(kppW)-0.5)*dz-0.5*(zbed(i,j)+zbed(i-1,j))
-					ddzzN=(REAL(kppN)-0.5)*dz-0.5*(zbed(i,j)+zbed(i,j+1))
-					ddzzS=(REAL(kppS)-0.5)*dz-0.5*(zbed(i,j)+zbed(i,j-1))
-					!distance_to_bed=MAX(0.5*dz,0.25*(ddzzE+ddzzW+ddzzN+ddzzS))
-					distance_to_bed=0.25*(ddzzE+ddzzW+ddzzN+ddzzS)
 				ELSE
 					kppE = MIN(MAX(kbed(i,j),kbed(i+1,j))+k,k1)
 					kppW = MIN(MAX(kbed(i,j),kbed(i-1,j))+k,k1)
 					kppS = MIN(MAX(kbed(i,j),kbed(i,j+1))+k,k1)
 					kppN = MIN(MAX(kbed(i,j),kbed(i,j-1))+k,k1)
-					distance_to_bed=(REAL(k)-0.5)*dz
 				ENDIF
 				uu=0.5*(ucfd(i,j,kppE)+ucfd(i-1,j,kppW))-Ubot_TSHD(j)
 				vv=0.5*(vcfd(i,j,kppN)+vcfd(i,j-1,kppS))-Vbot_TSHD(j)
@@ -803,11 +1248,16 @@
 			  k_ust_tau_temp = k_ust_tau 
 			ENDIF 
 			IF (wallmodel_tau_sed.eq.3.or.wallmodel_tau_sed.eq.4.or.wallmodel_tau_sed.eq.8.or.wallmodel_tau_sed.eq.9) THEN 
-			  Fix = (ppp(i+1,j,MIN(k1,kbed(i+1,j)+k_ust_tau_temp))-ppp(i-1,j,MIN(k1,kbed(i-1,j)+k_ust_tau_temp)))
-     &			/sqrt((Rp(i+1)-Rp(i-1))**2+(zbed(i+1,j)-zbed(i-1,j))**2)/rcfd(i,j,MIN(k1,kbed(i,j)+k_ust_tau_temp))
-			  Fix = Fix - Fix_ref 
-			  Fiy = (ppp(i,j+1,MIN(k1,kbed(i,j+1)+k_ust_tau_temp))-ppp(i,j-1,MIN(k1,kbed(i,j-1)+k_ust_tau_temp)))
-     &			/sqrt((Rp(i)*(phip(j+1)-phip(j-1)))**2+(zbed(i,j+1)-zbed(i,j-1))**2)/rcfd(i,j,MIN(k1,kbed(i,j)+k_ust_tau_temp))			
+!			  Fix = (ppp(i+1,j,MIN(k1,kbed(i+1,j)+k_ust_tau_temp))-ppp(i-1,j,MIN(k1,kbed(i-1,j)+k_ust_tau_temp)))
+!     &			/sqrt((Rp(i+1)-Rp(i-1))**2+(zbed(i+1,j)-zbed(i-1,j))**2)/rcfd(i,j,MIN(k1,kbed(i,j)+k_ust_tau_temp))
+!			  Fix = Fix - Fix_ref 
+!			  Fiy = (ppp(i,j+1,MIN(k1,kbed(i,j+1)+k_ust_tau_temp))-ppp(i,j-1,MIN(k1,kbed(i,j-1)+k_ust_tau_temp)))
+!     &			/sqrt((Rp(i)*(phip(j+1)-phip(j-1)))**2+(zbed(i,j+1)-zbed(i,j-1))**2)/rcfd(i,j,MIN(k1,kbed(i,j)+k_ust_tau_temp))			
+			  Fix = (ppp_avg(i+1,j)-ppp_avg(i-1,j))
+     &		  /sqrt((Rp(i+1)-Rp(i-1))**2+(zbed(i+1,j)-zbed(i-1,j))**2)/rcfd(i,j,k_ust_tau_2D(i,j))
+			  Fiy = (ppp_avg(i,j+1)-ppp_avg(i,j-1))
+     &		  /sqrt((Rp(i)*(phip(j+1)-phip(j-1)))**2+(zbed(i,j+1)-zbed(i,j-1))**2)/rcfd(i,j,k_ust_tau_2D(i,j))	
+			  Fix = Fix - Fix_ref 	 
 			  TBLEsl_dpdx(i,j)=TBLEsl_grad_relax*Fix+(1.-TBLEsl_grad_relax)*TBLEsl_dpdx(i,j)	
 			  TBLEsl_dpdy(i,j)=TBLEsl_grad_relax*Fiy+(1.-TBLEsl_grad_relax)*TBLEsl_dpdy(i,j)
 			  TBLEbl_dpdx(i,j)=TBLEbl_grad_relax*Fix+(1.-TBLEbl_grad_relax)*TBLEbl_dpdx(i,j)	
@@ -958,7 +1408,10 @@
 				absU = absU_sed_relax(i,j)				
 				bs_geo = 1.
 			ENDIF 
-			
+			IF (uv_sed_smoother.eq.1) THEN !use absU and absUbl from loop early in subroutine where 2D Shapiro filter has been applied
+				absU = absU_ij(i,j)
+				absUbl = absUbl_ij(i,j)
+			ENDIF 			
 			IF (wallmodel_tau_sed.eq.11) THEN !for 11 use uu and vv not scaled back to z_tau_sed
 				IF (mod(istep,ndtbed).eq.0) THEN 
 					sigtbed(telUVWbed)=dt 
@@ -1268,11 +1721,15 @@
 !					fcor_slope=MAX(fcor_slope,0.001) !fcor_slope may become negative for Shields_cr_num and Shields_cr_num_bl (adding pickup), for denumerator this is now allowed and fixed furtheron with MAX statement
 					! if used in combination with avalanche slope of 1.6 or less steep then no imaginary numbers occur in fcor_slope (tested in Matlab)
 					IF (bedslope_effect.eq.1) THEN  !Shields_cr and Shields_cr_bl adjusted for slope effect 
+						fcor_slope=MIN(fcor_slope,10.)
+						fcor_slope=MAX(fcor_slope,0.1) 
 						Shields_cr_num = Shields_cr_num*(fcor_slope+fcor_pres)
 						Shields_cr_den = Shields_cr_den*(fcor_slope+fcor_pres)
 						Shields_cr_num_bl=Shields_cr_num_bl*(fcor_slope+fcor_pres) 
 						Shields_cr_den_bl=Shields_cr_den_bl*(fcor_slope+fcor_pres)
 					ELSEIF(bedslope_effect.eq.2) THEN !only Shields_cr_bl adjusted for slope effect and Shields_cr for sus. pickup not adjusted for slope effect
+						fcor_slope=MIN(fcor_slope,10.)
+						fcor_slope=MAX(fcor_slope,0.1) 
 						Shields_cr_num = Shields_cr_num*(1.+fcor_pres)
 						Shields_cr_den = Shields_cr_den
 						Shields_cr_num_bl=Shields_cr_num_bl*(fcor_slope+fcor_pres)
@@ -1390,13 +1847,15 @@
 					TT = MAX(TT,0.) !TT must be positive
 					phipp = calibfac_sand_pickup*0.00033*Dstar**0.3*TT**1.5   ! general pickup function	
 					!Shields_eff = ust**2/(delta*gvector*d50) !there is a typo in VR2019 memo/paper missing rho_b; this line in the code is correct 
-					phipp = phipp/(MAX(Shields_eff,1.))**power_VR2019*(cfixedbed-cbed)/(cfixedbed) ! correction: reduced pickup for high speed erosion and reduction for cbed according to VanRhee and Talmon 2010
+					! correction: reduced pickup is done implicitly with using c^n+1 in bedupdate lines further down, for very high pickup this is more stable 
+					phipp = phipp/(MAX(Shields_eff,1.))**power_VR2019 !*(cfixedbed-cbed)/(cfixedbed) ! correction: reduced pickup for high speed erosion and reduction for cbed according to VanRhee and Talmon 2010
 				ELSEIF (pickup_formula.eq.'VR1984_Cbed') THEN
 					Shields_eff = ust**2/(delta*gvector*d50)
 					TT = (Shields_eff - Shields_cr_num)/Shields_cr_den
 					TT = MAX(TT,0.) !TT must be positive
 					phipp = calibfac_sand_pickup*0.00033*Dstar**0.3*TT**1.5   ! general pickup function	
-					phipp = phipp*(cfixedbed-cbed)/(cfixedbed) ! correction: reduced pickup for for cbed according to VanRhee and Talmon 2010					
+					! correction: reduced pickup is done implicitly with using c^n+1 in bedupdate lines further down, for very high pickup this is more stable 
+					!phipp = phipp*(cfixedbed-cbed)/(cfixedbed) ! correction: reduced pickup for for cbed according to VanRhee and Talmon 2010					
 				ELSE
 					TT=0.
 					phipp = 0.  ! general pickup function					
@@ -1643,20 +2102,34 @@
 						ero_factor=MAX(ccfd(n,i,j,kplus),0.)/cctot !needed to divide pickup over multiple layers, with k_layer_pickup=1 ero_factor=1.
 					ENDIF 
 
-					IF (depo_implicit.eq.1) THEN  !determine deposition as sink implicit
+					IF (depo_implicit.eq.0) THEN 
+					!determine deposition as sink explicit					
+					depositionf(n) = ccnew(n,i,j,kplus)*(MIN(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))-wsedbed)*ddt !ccfd
+     &     *MIN(bednotfixed_depo(i,j,kbed(i,j)),bednotfixed_depo(i,j,kplus))*morfac ! m --> dep is negative due to negative wsed
+					ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus)+(erosionf(n)*ero_factor+depositionf(n))/(dz) ! vol conc. [-]
+					cbotnew(n,i,j)=cbotnew(n,i,j)-b_update(i,j)*morfac2*(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-] !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+					cbotnewtot=cbotnewtot+cbotnew(n,i,j)
+					cbotnewtot_pos=cbotnewtot_pos+MAX(cbotnew(n,i,j),0.)
+					ctot_firstcel=ccnew(n,i,j,kplus)+ctot_firstcel					
+					ELSEIF (depo_implicit.eq.1.and.(pickup_formula.eq.'VR1984_Cbed'.or.pickup_formula.eq.'VR2019_Cbed')) THEN
+					!determine deposition as sink implicit and erosionf implicit with c^n+1
 					ccnew(n,i,j,kplus)=(ccnew(n,i,j,kplus)+erosionf(n)*ero_factor/dz)/ ! vol conc. [-]
-     &      		(1.-(MIN(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))-wsedbed)*ddt/dz
-     &	   *MIN(bednotfixed_depo(i,j,kbed(i,j)),bednotfixed_depo(i,j,kplus))*morfac)	!no deposition in case of present cell is non-depo or when above cell is non-depo				
+     &      		(1.-(MIN(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))-wsedbed)*ddt/dz 
+     &	   *MIN(bednotfixed_depo(i,j,kbed(i,j)),bednotfixed_depo(i,j,kplus))*morfac 	!no deposition in case of present cell is non-depo or when above cell is non-depo	
+     &      +erosionf(n)*ero_factor/(cfixedbed*dz))	 !also ero is made implicit with C^n+1; erosionf(n) already included ddt
 					depositionf(n) = ccnew(n,i,j,kplus)*(MIN(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))-wsedbed)*ddt !ccfd
      &     *MIN(bednotfixed_depo(i,j,kbed(i,j)),bednotfixed_depo(i,j,kplus))*morfac! m --> dep is negative due to negative wsed, !no deposition in case of present cell is non-depo or when above cell is non-depo									
 					cbotnew(n,i,j)=cbotnew(n,i,j)-b_update(i,j)*morfac2*(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-] !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
 					cbotnewtot=cbotnewtot+cbotnew(n,i,j)
 					cbotnewtot_pos=cbotnewtot_pos+MAX(cbotnew(n,i,j),0.)
-					ctot_firstcel=ccnew(n,i,j,kplus)+ctot_firstcel
+					ctot_firstcel=ccnew(n,i,j,kplus)+ctot_firstcel					
 					ELSE
+					!determine deposition as sink implicit
+					ccnew(n,i,j,kplus)=(ccnew(n,i,j,kplus)+erosionf(n)*ero_factor/dz)/ ! vol conc. [-]
+     &      		(1.-(MIN(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))-wsedbed)*ddt/dz
+     &	   *MIN(bednotfixed_depo(i,j,kbed(i,j)),bednotfixed_depo(i,j,kplus))*morfac)	!no deposition in case of present cell is non-depo or when above cell is non-depo				
 					depositionf(n) = ccnew(n,i,j,kplus)*(MIN(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))-wsedbed)*ddt !ccfd
-     &     *MIN(bednotfixed_depo(i,j,kbed(i,j)),bednotfixed_depo(i,j,kplus))*morfac ! m --> dep is negative due to negative wsed
-					ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus)+(erosionf(n)*ero_factor+depositionf(n))/(dz) ! vol conc. [-]
+     &     *MIN(bednotfixed_depo(i,j,kbed(i,j)),bednotfixed_depo(i,j,kplus))*morfac! m --> dep is negative due to negative wsed, !no deposition in case of present cell is non-depo or when above cell is non-depo									
 					cbotnew(n,i,j)=cbotnew(n,i,j)-b_update(i,j)*morfac2*(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-] !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
 					cbotnewtot=cbotnewtot+cbotnew(n,i,j)
 					cbotnewtot_pos=cbotnewtot_pos+MAX(cbotnew(n,i,j),0.)
@@ -1799,7 +2272,7 @@
 						IF (morfac2.gt.1.0000001) THEN
 						 cctot=0.
 						 DO k=kbed(i,j)+1,kmax 
-							cctot=cctot+MAX(ccfd(n,i,j,k),0.)
+							cctot=cctot+MAX(ccfd(n,i,j,k),0.)*fc_global(i,j+jmax*rank,k)
 						 ENDDO						
 						 IF (cctot<1e-9) THEN
 						  ccnew(n,i,j,kbed(i,j)+1)=ccnew(n,i,j,kbed(i,j)+1)+(morfac2-1.)/morfac2*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
@@ -1816,6 +2289,7 @@
 						  ENDIF 
 						  DO k=kbed(i,j)+1,kmax !redistribute morfac2 buried sediment over water column above 
 						   ccnew(n,i,j,k)=ccnew(n,i,j,k)+(morfac2-1.)/morfac2*MAX(ccfd(n,i,j,k),0.)/cctot*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+     &						*fc_global(i,j+jmax*rank,k)
 						   drdt(i,j,k) = drdt(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 						   rnew(i,j,k) = rnew(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 						   rold(i,j,k) = rold(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density	
@@ -1849,7 +2323,7 @@
 						IF (morfac2.gt.1.0000001) THEN
 						 cctot=0.
 						 DO k=kbed(i,j)+1,kmax 
-							cctot=cctot+MAX(ccfd(n,i,j,k),0.)
+							cctot=cctot+MAX(ccfd(n,i,j,k),0.)*fc_global(i,j+jmax*rank,k)
 						 ENDDO						
 						 IF (cctot<1e-9) THEN
 						  ccnew(n,i,j,kbed(i,j)+1)=ccnew(n,i,j,kbed(i,j)+1)+(morfac2-1.)/morfac2*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
@@ -1866,6 +2340,7 @@
 						  ENDIF
 						  DO k=kbed(i,j)+1,kmax !redistribute morfac2 buried sediment over water column above 
 						   ccnew(n,i,j,k)=ccnew(n,i,j,k)+(morfac2-1.)/morfac2*MAX(ccfd(n,i,j,k),0.)/cctot*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
+     &						*fc_global(i,j+jmax*rank,k)
 						   drdt(i,j,k) = drdt(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 						   rnew(i,j,k) = rnew(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 						   rold(i,j,k) = rold(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density	
@@ -2198,10 +2673,16 @@
 		have_avalanched=1  ! default do avalanche, during avalanche procedure this switch can be turned into 0 to stop avalanching
 		IF (avalanche_until_done.eq.1) THEN
 			n_av=MAX(NINT(morfac2),NINT(morfac),kmax*1000)
+			n_av=MIN(n_av,avalanche_max_x)
 		ELSE 
 			n_av=MAX(NINT(morfac2),NINT(morfac))
+			n_av=MIN(n_av,avalanche_max_x)
 		ENDIF		
 		IF (MAXVAL(av_slope).gt.0.) THEN
+		IF (avalanche_fines.eq.2) THEN !don't avalanche fines but leave them in bed of original i,j loc; otherwise every time a cell avalanches the silt remains in the bed of this cell and the end silt content in the bed under the avalanche slope gets too high
+			nfr_silt_org = nfr_silt 
+		ENDIF 
+						
 		 DO tel=1,n_av ! normally avalanche 1 time every timestep; with morfac more times avalanche every timestep
 		  IF (have_avalanched>0.1) then !.true.) then !have_avalanched>0.1) THEN
 		    kbed_new=kbed 
@@ -2345,9 +2826,23 @@
 							CYCLE 
 						ENDIF
 						dbed_allowed = dl/MAX(av_slope(i,j,kbed(i,j))*bednotfixed(i,j,kbed(i,j)),1.e-18)
+						dz_botlayer =SUM(cbotnew(1:nfrac,i,j))/cfixedbed*dz
+						dz_botlayer_silt = 0.
+						DO n1=1,nfr_silt
+							n=nfrac_silt(n1)
+							dz_botlayer_silt = cbotnew(n,i,j)/cfixedbed*dz 
+						ENDDO 
 						dbed_adjust = vol_Vp(itrgt,jtrgt)/(vol_Vp(i,j)+vol_Vp(itrgt,jtrgt))*(dbed - dbed_allowed)
      &						*MIN(b_update(i,j),b_update(itrgt,jtrgt))
-						dz_botlayer =SUM(cbotnew(1:nfrac,i,j))/cfixedbed*dz
+	 
+	 
+						IF (avalanche_fines.eq.1) THEN !don't avalanche fines but bring them in suspension in original i,j loc; otherwise every time a cell avalanches the silt remains in the bed of this cell and the end silt content in the bed under the avalanche slope gets too high
+							factor = 1./(2.+dz_botlayer_silt/MAX(1.e-9,dz_botlayer))
+							dbed_adjust=dbed_adjust+factor*(dz_botlayer_silt/MAX(1.e-9,dz_botlayer))*dbed_adjust !fines not avalanching to neighbour but put in suspension, so have to avalanche 0.5*silt content more 
+						ELSEIF (avalanche_fines.eq.2) THEN !don't avalanche fines but leave them in bed of original i,j loc; otherwise every time a cell avalanches the silt remains in the bed of this cell and the end silt content in the bed under the avalanche slope gets too high
+							dbed_adjust=dbed_adjust+(dz_botlayer_silt/MAX(1.e-9,dz_botlayer))*dbed_adjust
+							nfr_silt = 0 !skip nfr_silt below 
+						ENDIF 
       ! write(*,*),'rank,i,j:',rank,i,j,dbed,dbed_allowed,dbed_adjust,dz_botlayer,maxbedslope(i,j),av_slope(kbed(i,j))	
 						IF (dbed_adjust.le.dz_botlayer) THEN ! only cbotnew adjusted
 							DO n1=1,nfr_sand !avalanche sand fractions only, not silt/mud/clay
@@ -2362,20 +2857,24 @@
 								n=nfrac_silt(n1)
 								c_adjust = dbed_adjust/MAX(dz_botlayer,1.e-18)*cbotnew(n,i,j)
 								d_cbotnew(n,i,j)=d_cbotnew(n,i,j) - c_adjust
-								!ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus) + c_adjust !add silt to lowest fluid cell 
-								cctot=0.
-								DO k=kbed(i,j)+1,kmax 
-									cctot=cctot+MAX(ccfd(n,i,j,k),0.)
-								ENDDO	
-								IF (cctot>1.e-12) THEN 
-									DO k=kbed(i,j)+1,kmax 
-										ccnew(n,i,j,k) = ccnew(n,i,j,k) + MAX(ccfd(n,i,j,k),0.)/(cctot+1.e-12)*c_adjust !distribute silt concentration over full water column								
-									ENDDO
+								IF (avalanche_fines.eq.0) THEN !simply avalanche fines
+									d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt)+c_adjust*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt) ! dump all avalanche in cbotnew, next timestep it can be added to fixed bed in routine above
 								ELSE 
-									ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus) + c_adjust !add silt to lowest fluid cell 
-								ENDIF
+									!ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus) + c_adjust !add silt to lowest fluid cell 
+									cctot=0.
+									DO k=kbed(i,j)+1,kmax 
+										cctot=cctot+MAX(ccfd(n,i,j,k),0.)
+									ENDDO	
+									IF (cctot>1.e-12) THEN 
+										DO k=kbed(i,j)+1,kmax 
+											ccnew(n,i,j,k) = ccnew(n,i,j,k) + MAX(ccfd(n,i,j,k),0.)/(cctot+1.e-12)*c_adjust !distribute silt concentration over full water column								
+										ENDDO
+									ELSE 
+										ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus) + c_adjust !add silt to lowest fluid cell 
+									ENDIF
+								ENDIF 
 							ENDDO 
-						ELSE !avalanche full cbotnew
+						ELSE !avalanche full cbotnew+bit of Clivebed of underlying cell 
 							kplus = MIN(kbed(i,j)+1,k1)
 							dz1=SUM(Clivebed(1:nfrac,i,j,kbed(i,j)))/cfixedbed*dz !maximum possible bed change given how much is in Clivebed of this cell 
 							DO n1=1,nfr_sand !avalanche sand fractions only, not silt/mud/clay
@@ -2384,7 +2883,8 @@
 								c_adjust = cbotnew(n,i,j) !avalanche complete cbotnew 
 								d_cbotnew(n,i,j)=d_cbotnew(n,i,j) - c_adjust
 								d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt) + c_adjust*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt)
-								c_adjust = MIN(dz1,dbed_adjust-dz_botlayer)/dz1*Clivebed(n,i,j,kbed(i,j)) !never more than one dz layer is eroded by avalanche
+								!c_adjust = MIN(dz1,dbed_adjust-dz_botlayer)/dz1*Clivebed(n,i,j,kbed(i,j)) !never more than one dz layer is eroded by avalanche
+								c_adjust = MIN(dz1,dbed_adjust-dz_botlayer)/MAX(1.e-18,dz1)*Clivebed(n,i,j,kbed(i,j)) !never more than one dz layer is eroded by avalanche
 								d_cbotnew(n,i,j) = d_cbotnew(n,i,j) + Clivebed(n,i,j,kbed(i,j)) - c_adjust ! erosion one layer dz, after that avalanche
 								Clivebed(n,i,j,kbed(i,j))=0. ! not bed anymore but fluid --> old Clivebed is added tot cbotnew [sediment budget OK]
 								d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt) + c_adjust*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt) ! dump all avalanche in cbotnew, next timestep it can be added to fixed bed in routine above	
@@ -2412,26 +2912,38 @@
 								c_adjust1 = cbotnew(n,i,j) !avalanche complete cbotnew
 								d_cbotnew(n,i,j)=d_cbotnew(n,i,j) - c_adjust1
 								!ccnew(n,i,j,kbed(i,j))= c_adjust1 !add silt to lowest fluid cell initiated at 0 concentration 
-								c_adjust2 = MIN(dz1,dbed_adjust-dz_botlayer)/dz1*Clivebed(n,i,j,kbed(i,j)) !never more than one dz layer is eroded by avalanche
+								!c_adjust2 = MIN(dz1,dbed_adjust-dz_botlayer)/dz1*Clivebed(n,i,j,kbed(i,j)) !never more than one dz layer is eroded by avalanche
+								c_adjust2 = MIN(dz1,dbed_adjust-dz_botlayer)/MAX(1.e-18,dz1)*Clivebed(n,i,j,kbed(i,j)) !never more than one dz layer is eroded by avalanche
 								d_cbotnew(n,i,j) = d_cbotnew(n,i,j) + Clivebed(n,i,j,kbed(i,j)) - c_adjust2 ! erosion one layer dz, after that avalanche
 								Clivebed(n,i,j,kbed(i,j))=0. ! not bed anymore but fluid --> old Clivebed is added tot cbotnew [sediment budget OK]
-								!ccnew(n,i,j,kbed(i,j))=ccnew(n,i,j,kbed(i,j)) + c_adjust2 !add silt to lowest fluid cell
-
-								!giving new lowest fluid cell same concentration as old lowest fluid cell and taking away this sediment from cells above (11-10-2021)
-								cctot=0.
-								DO k=kbed(i,j)+1,kmax 
-									cctot=cctot+MAX(ccfd(n,i,j,k),0.)
-								ENDDO	
-								ccnew(n,i,j,kbed(i,j)) = ccnew(n,i,j,kplus) !new lowest fluid cell gets same concentration as old lowest fluid cell 
-								IF (cctot>1.e-12) THEN 
-									DO k=kbed(i,j)+1,kmax 
-										ccnew(n,i,j,k) = ccnew(n,i,j,k) - MAX(ccfd(n,i,j,k),0.)/(cctot+1.e-12)*(ccnew(n,i,j,kbed(i,j))
-     &								   -c_adjust1-c_adjust2) !remove same quantity from cells above in weighted avg manner + distribute silt released by avalanching in water column --> this gives same c in lowest fluid-cell as previous time step which does make sense as it was there as the dynamic equilibrium and should not change instantaneously from lowering 1dz in avalanching; in exceptional conditions where c_adjust1+c_adjust2 would be very large compared to c in lowest cell it could lead to higher c in cells located above the lowest cell; that doesn't seem to be likely
-									ENDDO 	
+								IF (avalanche_fines.eq.0) THEN !simply avalanche fines
+									d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt) + (c_adjust1+c_adjust2)*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt)
 								ELSE 
-									ccnew(n,i,j,kbed(i,j))= ccnew(n,i,j,kbed(i,j)) + c_adjust1 + c_adjust2 
+									!ccnew(n,i,j,kbed(i,j))=ccnew(n,i,j,kbed(i,j)) + c_adjust2 !add silt to lowest fluid cell
+
+									!giving new lowest fluid cell same concentration as old lowest fluid cell and taking away this sediment from cells above (11-10-2021)
+									cctot=0.
+									DO k=kbed(i,j)+1,kmax 
+										cctot=cctot+MAX(ccfd(n,i,j,k),0.)
+									ENDDO	
+									ccnew(n,i,j,kbed(i,j)) = ccnew(n,i,j,kplus) !new lowest fluid cell gets same concentration as old lowest fluid cell 
+									IF (cctot>1.e-12) THEN 
+										DO k=kbed(i,j)+1,kmax 
+											ccnew(n,i,j,k) = ccnew(n,i,j,k) - MAX(ccfd(n,i,j,k),0.)/(cctot+1.e-12)*(ccnew(n,i,j,kbed(i,j))
+     &								   -c_adjust1-c_adjust2) !remove same quantity from cells above in weighted avg manner + distribute silt released by avalanching in water column --> this gives same c in lowest fluid-cell as previous time step which does make sense as it was there as the dynamic equilibrium and should not change instantaneously from lowering 1dz in avalanching; in exceptional conditions where c_adjust1+c_adjust2 would be very large compared to c in lowest cell it could lead to higher c in cells located above the lowest cell; that doesn't seem to be likely
+										ENDDO 	
+									ELSE 
+										ccnew(n,i,j,kbed(i,j))= ccnew(n,i,j,kbed(i,j)) + c_adjust1 + c_adjust2 
+									ENDIF 
 								ENDIF 
 							ENDDO
+							IF (avalanche_fines.eq.2) THEN !don't avalanche fines but leave them in bed of original i,j loc; otherwise every time a cell avalanches the silt remains in the bed of this cell and the end silt content in the bed under the avalanche slope gets too high
+							    DO n1=1,nfr_silt !with avalanche_fines.eq.2 place all fines from Clivebed into bufferlayer d_cbotnew 
+								  n=nfrac_silt(n1) 	
+								  d_cbotnew(n,i,j) = d_cbotnew(n,i,j) + Clivebed(n,i,j,kbed(i,j))
+								  Clivebed(n,i,j,kbed(i,j))=0. 
+								ENDDO 
+							ENDIF							
 							DO k=kbed(i,j),kmax 
 								drdt(i,j,k)=rho_b 
 								rnew(i,j,k)=rho_b 
@@ -2446,7 +2958,10 @@
 							ENDDO 
 							kbed_new(i,j)=kbed_new(i,j)-1  !update bed level at end	
 							!have_avalanched=have_avalanched+1.	
-						ENDIF
+						ENDIF 
+						IF (avalanche_fines.eq.2) THEN !don't avalanche fines but leave them in bed of original i,j loc; otherwise every time a cell avalanches the silt remains in the bed of this cell and the end silt content in the bed under the avalanche slope gets too high
+							nfr_silt = nfr_silt_org
+						ENDIF						
 					ENDIF
 				ENDDO
 			ENDDO

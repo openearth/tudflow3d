@@ -575,6 +575,31 @@ c******************************************************************
 				IF (rank.eq.0) write(*,*),'restart time =',time_n
 				trestart=time_n
 			endif
+			status = nf90_inq_varid(ncid, "mortime",rhVarid)
+			if (status.eq.nf90_NoErr) then
+				call check( nf90_get_var(ncid,rhVarid,mortime))
+				IF (rank.eq.0) write(*,*),'restart mortime =',mortime
+			endif	
+			status = nf90_inq_varid(ncid, "t_output",rhVarid)
+			if (status.eq.nf90_NoErr) then
+				call check( nf90_get_var(ncid,rhVarid,t_output))
+			endif
+			status = nf90_inq_varid(ncid, "t_output_movie",rhVarid)
+			if (status.eq.nf90_NoErr) then
+				call check( nf90_get_var(ncid,rhVarid,t_output_movie))
+			endif
+			status = nf90_inq_varid(ncid, "istep_output",rhVarid)
+			if (status.eq.nf90_NoErr) then
+				call check( nf90_get_var(ncid,rhVarid,istep_output))
+			endif
+			status = nf90_inq_varid(ncid, "istep_output_movie",rhVarid)
+			if (status.eq.nf90_NoErr) then
+				call check( nf90_get_var(ncid,rhVarid,istep_output_movie))
+			endif	
+			status = nf90_inq_varid(ncid, "istep_output_bpmove",rhVarid)
+			if (status.eq.nf90_NoErr) then
+				call check( nf90_get_var(ncid,rhVarid,istep_output_bpmove))
+			endif				
 			call check( nf90_close(ncid) )
 		ENDIF
 		load_var=0
@@ -1454,9 +1479,9 @@ C ...  Locals
 				  fbx2 = 0. !only rotation
 			      !fbx2   = 3./4.*Ax
 			    if (n.eq.1) then
-				    fbphi = 1./4.*Ax*YYY*1.5   * (-rot_prop)/ABS(rot_prop)
+				    fbphi = -rot_prop*Ax*YYY*1.5    !1./4.*Ax*YYY*1.5   * (-rot_prop)/ABS(rot_prop)
 			    else
-				    fbphi =-1./4.*Ax*YYY*1.5   * (-rot_prop)/ABS(rot_prop)
+				    fbphi = rot_prop*Ax*YYY*1.5    !-1./4.*Ax*YYY*1.5   * (-rot_prop)/ABS(rot_prop)
 			    endif
 					!! right rotation positive 
 					!! correction 1.5 is for integral linear function YYY on circilar area
@@ -1507,9 +1532,9 @@ C ...  Locals
 			    fbx2   = 3./4.*Ax
 				
 			    if (n.eq.1) then
-				    fbphi = 1./4.*Ax*YYY*1.5   * (-rot_prop)/ABS(rot_prop)
+				    fbphi = -rot_prop*Ax*YYY*1.5    !1./4.*Ax*YYY*1.5   * (-rot_prop)/ABS(rot_prop)
 			    else
-				    fbphi =-1./4.*Ax*YYY*1.5   * (-rot_prop)/ABS(rot_prop)
+				    fbphi =  rot_prop*Ax*YYY*1.5    !-1./4.*Ax*YYY*1.5   * (-rot_prop)/ABS(rot_prop)
 			    endif
 					!! right rotation positive 
 					!! correction 1.5 is for integral linear function YYY on circilar area
@@ -1724,9 +1749,9 @@ C ...  Locals
      &                              /REAL(nprop)!*(uprop0+Ua)/uprop0
 			    fbx2   = 3./4.*Ax 
 			    if (n.eq.1) then
-				    fbphi = 1./4.*Ax*YYY*1.5   * (-rot_prop)/ABS(rot_prop)
+				    fbphi = -rot_prop*Ax*YYY*1.5    !1./4.*Ax*YYY*1.5   * (-rot_prop)/ABS(rot_prop)
 			    else
-				    fbphi =-1./4.*Ax*YYY*1.5   * (-rot_prop)/ABS(rot_prop)
+				    fbphi =  rot_prop*Ax*YYY*1.5    !-1./4.*Ax*YYY*1.5   * (-rot_prop)/ABS(rot_prop)
 			    endif
 					!! right rotation positive 
 					!! correction 1.5 is for integral linear function YYY on circilar area
@@ -3317,10 +3342,15 @@ C ...  Locals
 	endif
 	if (signU_b*signU_b_old<0.) then !U_b switched sign and re-initialization Pardiso matrix coefficients is needed
       IF (poissolver.eq.3) THEN
-        phase = -1 ! release internal memory ! Termination and release of memory PARDISO 
-        CALL pardiso (pt, maxfct, mnum, mtype, phase, n, ddum, idum, 
-     &  idum, idum, nrhs, iparm, msglvl, ddum, ddum, error)	    
+	    DO k=1,kmax/px
+          phase = -1 ! release internal memory ! Termination and release of memory PARDISO 
+          CALL pardiso (pt((k-1)*64+1:(k-1)*64+64), maxfct, mnum, mtype, phase, n, ddum, idum, 
+     &    idum, idum, nrhs, iparm, msglvl, ddum, ddum, error)	
+		ENDDO 
+		call mkl_free_buffers()
+		deallocate(pt)
 	    CALL SOLVEpois_vg_init_pardiso !re-initialize Pardiso matrix coefficients 
+		
 		pold=-p !forcing pold=0 in in predictor step in solve.f
       ENDIF	
 	endif 

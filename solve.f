@@ -709,9 +709,9 @@ c********************************************************************
 !	!   facAB3_3=0. !5./12.
 !	!   facAB3_4=0.
 		if (istep.lt.5) then !start with standard AB2
-		   facAB3_1=1.5 !23./12.
-		   facAB3_2=-0.5 !-4./3.
-		   facAB3_3=0. !5./12.
+		   facAB3_1=factorsABv3(1) !1.5 !23./12.
+		   facAB3_2=factorsABv3(2) !-0.5 !-4./3.
+		   facAB3_3=factorsABv3(3) !0. !5./12.
 		   facAB3_4=0.
 		else
 
@@ -726,10 +726,9 @@ c********************************************************************
 				fAB3_3=0.
 			endif
 
-			facAB3_1=1.5-fAB3_1*0.5 !23./12.-fAB3_1*4./3.
-			facAB3_2=-fAB3_2*0.5 !-fAB3_2*4./3.
-			facAB3_3=-fAB3_3*0.5 !-fAB3_3*4./3.
-
+			facAB3_1=factorsABv3(1)+fAB3_1*factorsABv3(2) !23./12.-fAB3_1*4./3.
+			facAB3_2=fAB3_2*factorsABv3(2)!-fAB3_2*4./3.
+			facAB3_3=fAB3_3*factorsABv3(2) !-fAB3_3*4./3.
 			facAB3_4=0.
 
 		endif
@@ -739,9 +738,9 @@ c********************************************************************
 	!	   facAB3_2=0.
 	!	   facAB3_3=0.
 	!	   facAB3_4=0.
-		   facAB3_1=23./12.
-		   facAB3_2=-4./3.
-		   facAB3_3=5./12.
+		   facAB3_1=factorsABv3(1) !23./12.
+		   facAB3_2=factorsABv3(2) !-4./3.
+		   facAB3_3=factorsABv3(3) !5./12.
 		   facAB3_4=0.
 		else
 
@@ -756,9 +755,9 @@ c********************************************************************
 				fAB3_3=0.
 			endif
 
-			facAB3_1=23./12.-fAB3_1*4./3.
-			facAB3_2=-fAB3_2*4./3.
-			facAB3_3=-fAB3_3*4./3.
+			facAB3_1=factorsABv3(1)+factorsABv3(2)*fAB3_1 !23./12.-fAB3_1*4./3.
+			facAB3_2=factorsABv3(2)*fAB3_2 !-fAB3_2*4./3.
+			facAB3_3=factorsABv3(2)*fAB3_3 !-fAB3_3*4./3.
 
 			dist=timeAB_desired(3)-timeAB_real(3)
 			if (dist.lt.0) then
@@ -771,9 +770,9 @@ c********************************************************************
 				fAB3_4=0.
 			endif
 
-			facAB3_2=facAB3_2+fAB3_2*5./12.
-			facAB3_3=facAB3_3+fAB3_3*5./12.
-			facAB3_4=fAB3_4*5./12.
+			facAB3_2=facAB3_2+fAB3_2*factorsABv3(3) !facAB3_2+fAB3_2*5./12.
+			facAB3_3=facAB3_3+fAB3_3*factorsABv3(3) !facAB3_3+fAB3_3*5./12.
+			facAB3_4=fAB3_4*factorsABv3(3) !fAB3_4*5./12.
 
 		endif	
 	ENDIF 
@@ -905,7 +904,7 @@ c********************************************************************
 			cnew(n,:,:,:)=cnew(n,:,:,:)/frac(n)%rho ! from (mass-fraction*rho_mix) back to volume fraction
 		endif
 		
-			IF (CNdiffz.eq.1.or.CNdiffz.eq.2.or.CNdiffz.eq.11.or.CNdiffz.eq.12) THEN !CN semi implicit treatment diff-z:
+			IF ((CNdiffz.eq.1.or.CNdiffz.eq.2.or.CNdiffz.eq.11.or.CNdiffz.eq.12).and.Sc<1.e18) THEN !CN semi implicit treatment diff-z:
 			 IF (CNdiffz.eq.1.or.CNdiffz.eq.11) THEN 
 				CNz=0.5
 			 ELSE 
@@ -1126,7 +1125,7 @@ c********************************************************************
 	    enddo
 	    call state(dcdt,drdt) ! determine drdt with intermediate dcdt
 
-	   if (applyVOF.eq.1) then ! VOF fraction, do not solve fully variable density NavierStokes but NS with constant density in advection and diffusion; only apply variable density in gravity term
+	   if (applyVOF.eq.1.or.applyVOF.eq.2) then ! VOF fraction, do not solve fully variable density NavierStokes but NS with constant density in advection and diffusion; only apply variable density in gravity term
 		 drdt=rho_b
 		 rhU=rho_b
 		 rhV=rho_b
@@ -1851,7 +1850,6 @@ c
 !	real     Diffcof(0:i1,0:j1,0:k1)
 	real	 invrho_b
 	real*8 pplus(imax,kmax),pplus2(imax,kmax)
-	real   t_output,dWdt_old(0:i1,0:j1,0:k1)
 !	real aaa(1:kmax),bbb(1:kmax),ccc(1:kmax),ekm_min,ekm_plus,rhss(1:kmax)
 	real aaa(0:k1),bbb(0:k1),ccc(0:k1),ekm_min,ekm_plus,rhss(0:k1)
 	real utr(0:i1,0:j1,0:k1),vtr(0:i1,0:j1,0:k1),wtr(0:i1,0:j1,0:k1)
@@ -3243,8 +3241,8 @@ c********************************************************************
 	    km=MAX(0,k-1)
 	    kp=MIN(k1,k+1)
 	    kpp=MIN(k1,k+2)
-	    ekm_min=ekm(i,j,k)*fc_global(i,j,k)
-	    ekm_plus=ekm(i,j,kp)*fc_global(i,j,kp)
+	    ekm_min=ekm(i,j,k)*fc_global(i,j+rank*jmax,k)
+	    ekm_plus=ekm(i,j,kp)*fc_global(i,j+rank*jmax,kp)
 	    aaa(k)=-0.5*ekm_min*dt/dz**2/(0.5*(drdt(i,j,km)+drdt(i+1,j,k)))
 	    bbb(k)=1.+0.5*(ekm_min+ekm_plus)*dt/dz**2/(0.5*(drdt(i,j,k)+drdt(i+1,j,kp)))
 	    ccc(k)=-0.5*ekm_plus*dt/dz**2/(0.5*(drdt(i,j,kp)+drdt(i+1,j,kpp)))
@@ -3464,7 +3462,7 @@ c********************************************************************
 
 		dcdt(n,:,:,:) =cnew(n,:,:,:) + dt*(dnewc(n,:,:,:)) !update in time with EE1 for TVD
 	   endif 
-           IF (CNdiffz.eq.1.or.CNdiffz.eq.2) THEN !CN semi implicit treatment diff-z:
+           IF ((CNdiffz.eq.1.or.CNdiffz.eq.2).and.Sc<1.e18) THEN !CN semi implicit treatment diff-z:
 			IF (CNdiffz.eq.1) THEN 
 				CNz=0.5 
 			ELSE 
@@ -3529,7 +3527,7 @@ c********************************************************************
 		call bound_c(dcdt(n,:,:,:),frac(n)%c,n,dt) ! bc after erosion_deposition EE1
 	    enddo
 	  call state(dcdt,drdt) ! determine drdt with intermediate dcdt
-	   if (applyVOF.eq.1) then ! VOF fraction, do not solve fully variable density NavierStokes but NS with constant density in advection and diffusion; only apply variable density in gravity term
+	   if (applyVOF.eq.1.or.applyVOF.eq.2) then ! VOF fraction, do not solve fully variable density NavierStokes but NS with constant density in advection and diffusion; only apply variable density in gravity term
 		 drdt=rho_b
 		 rhU=rho_b
 		 rhV=rho_b
@@ -5467,7 +5465,7 @@ c
 		p=p(1:imax,1:jmax,1:kmax)*rho_b2  !drdt(1:imax,1:jmax,1:kmax) !scale P back with rho_b not with drdt because in source pressure Poisson eq. already extra source-term 1/rho_b-1/drdt is included 
 		!p=(p(1:imax,1:jmax,1:kmax)+(1./drdt(1:imax,1:jmax,1:kmax)+1./rho_b)*dp(1:imax,1:jmax,1:kmax))*rho_b 
 		
-	  if (applyVOF.eq.1) then !make rhU,rhV,rhW 1 again 
+	  if (applyVOF.eq.1.or.applyVOF.eq.2) then !make rhU,rhV,rhW 1 again 
 		rhU=rho_b
 		rhV=rho_b
 		rhW=rho_b
@@ -5520,7 +5518,7 @@ c
         enddo
       enddo 	
 		p=p(1:imax,1:jmax,1:kmax)*rho_b2 !drdt(1:imax,1:jmax,1:kmax)  !scale P back with rho	  
-	  if (applyVOF.eq.1) then !make rhU,rhV,rhW 1 again 
+	  if (applyVOF.eq.1.or.applyVOF.eq.2) then !make rhU,rhV,rhW 1 again 
 		rhU=rho_b
 		rhV=rho_b
 		rhW=rho_b
@@ -5564,7 +5562,7 @@ c
 		Unew(1:imax,1:jmax,1:kmax)=dUdt(1:imax,1:jmax,1:kmax)/rhU(1:imax,1:jmax,1:kmax)
 		Vnew(1:imax,1:jmax,1:kmax)=dVdt(1:imax,1:jmax,1:kmax)/rhV(1:imax,1:jmax,1:kmax)
 		Wnew(1:imax,1:jmax,1:kmax)=dWdt(1:imax,1:jmax,1:kmax)/rhW(1:imax,1:jmax,1:kmax)  
-	  if (applyVOF.eq.1) then !make rhU,rhV,rhW 1 again 
+	  if (applyVOF.eq.1.or.applyVOF.eq.2) then !make rhU,rhV,rhW 1 again 
 		rhU=rho_b
 		rhV=rho_b
 		rhW=rho_b
@@ -6275,8 +6273,23 @@ C.. Fill all arrays containing matrix data.
 			nnz = imax*jmax*px*5-2*imax-2*jmax*px !imax*jmax*px*3-1*imax-1*jmax*px
 		endif
 
+!.. Initialize the internal solver memory pointer. This is only
+! necessary for the FIRST call of the PARDISO solver.
+!		ALLOCATE (pt(64))
+!		DO i = 1, 64
+!		   pt(i)%DUMMY =  0 
+!		END DO
+		if (.not. allocated(pt)) allocate(pt(64*kmax/px))
+!        ALLOCATE(pt(64*kmax/px))
+        DO i = 1, 64*kmax/px
+            pt(i) = 0
+        END DO
 	 
       CALL mkl_set_num_threads(1) 
+	  !CALL mkl_disable_fast_mm() !does not help with memory issues, but does make pardiso slower 
+	  DO k=1,kmax/px
+	    call pardisoinit (pt((k-1)*64+1:(k-1)*64+64), mtype, iparm)
+	  ENDDO 
 	 
 C..
 C.. Set up PARDISO control parameter
@@ -6302,17 +6315,7 @@ C..
         mtype = 11 !1 !11 !1=Real and structurally symmetric; 11=Real and nonsymmetric matrix both work; 1 uses 10% less memory and is 10% faster for large problems !3-9-2020 switch to 11 nonsymmetric for k_pzero>1
 
 		
-!.. Initialize the internal solver memory pointer. This is only
-! necessary for the FIRST call of the PARDISO solver.
-!		ALLOCATE (pt(64))
-!		DO i = 1, 64
-!		   pt(i)%DUMMY =  0 
-!		END DO
-		if (.not. allocated(pt)) allocate(pt(64*kmax/px))
-!        ALLOCATE(pt(64*kmax/px))
-        DO i = 1, 64*kmax/px
-            pt(i) = 0
-        END DO
+
 		
 		
         DO k=1,kmax/px

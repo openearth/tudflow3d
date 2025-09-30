@@ -360,7 +360,8 @@
 	   integer :: dimids4(NDIMS),varid20,varid21,varid22,varid12,varid13,varid14,varid15,varid16,varid23
 	   integer :: varid24,varid25,varid26,varid27,varid28,varid29
        integer :: varid30,varid31,varid32,varid33,varid34,varid35,varid36,varid37,varid38
-	   integer :: varid39
+	   integer :: varid39,varid40
+	   integer :: varid101,varid102,varid103,varid104,varid105
 
 	character(1024) :: gitversion
 	character(1024) :: url
@@ -555,6 +556,33 @@
        call check( nf90_put_att(ncid, varid8, 'units', 's') )
        call check( nf90_put_att(ncid, varid8, 'long_name', 'Time from start simulation') )
 
+	   call check( nf90_def_var(ncid, "mortime", NF90_REAL, dimids3, varid40) )
+       call check( nf90_put_att(ncid, varid40, 'units', 's') )
+       call check( nf90_put_att(ncid, varid40, 'long_name', 'Morphological time from start simulation (including morphological
+     &	   acceleration factors morfac and morfac2 and excluding periods of morphological inactivity (via tstart_morf2 
+     &	 or tmorf2_tseriesfile))') )
+	 
+       call check( nf90_def_var(ncid, "t_output", NF90_REAL, dimids3, varid101) )
+       call check( nf90_put_att(ncid, varid101, 'units', 's') )
+       call check( nf90_put_att(ncid, varid101, 'long_name', 't_output of last file (for correct output file  
+     &	   numbering after restart') )
+       call check( nf90_def_var(ncid, "t_output_movie", NF90_REAL, dimids3, varid102) )
+       call check( nf90_put_att(ncid, varid102, 'units', 's') )
+       call check( nf90_put_att(ncid, varid102, 'long_name', 't_output_movie of last file (for correct output file  
+     &	   numbering after restart') )
+	   call check( nf90_def_var(ncid, "istep_output", NF90_INT, dimids3, varid103) )
+       call check( nf90_put_att(ncid, varid103, 'units', '-') )
+       call check( nf90_put_att(ncid, varid103, 'long_name', 'istep_output counter of last file (for correct output file  
+     &	   numbering after restart') )
+	   call check( nf90_def_var(ncid, "istep_output_movie", NF90_INT, dimids3, varid104) )
+       call check( nf90_put_att(ncid, varid104, 'units', '-') )
+       call check( nf90_put_att(ncid, varid104, 'long_name', 'istep_output_movie counter of last file (for correct output file
+     &	   numbering after restart') )
+	   call check( nf90_def_var(ncid, "istep_output_bpmove", NF90_INT, dimids3, varid105) )
+       call check( nf90_put_att(ncid, varid105, 'units', '-') )
+       call check( nf90_put_att(ncid, varid105, 'long_name', 'istep_output_bpmove counter of last file (for correct output file
+     &	   numbering after restart') )	 
+
 	   obstacle=1.-fc_global(1:imax,1+rank*jmax:jmax+rank*jmax,1:kmax)  
        call check( nf90_def_var(ncid, "obstacle", NF90_REAL, dimids, varid23) )
        call check( nf90_put_att(ncid, varid23, 'units', '-') )
@@ -604,11 +632,6 @@
 		zzbed=sqrt((0.5*(tau_fl_Unew(1:imax,1:jmax)+tau_fl_Unew(0:imax-1,1:jmax)))**2
      &   +(0.5*(tau_fl_Vnew(1:imax,1:jmax)+tau_fl_Vnew(1:imax,0:jmax-1)))**2)
 		call check( nf90_put_var(ncid, varid25,zzbed  ))		
-       !call check( nf90_put_var(ncid, varid5, rnew(1:imax,1:jmax,1:kmax)) )
-       !call check( nf90_put_var(ncid, varid6, ekm(1:imax,1:jmax,1:kmax)) )
-       !call check( nf90_put_var(ncid, varid7, p(1:imax,1:jmax,1:kmax)+pold(1:imax,1:jmax,1:kmax)) )
-	   !!!call check( nf90_put_var(ncid, varid7, p(1:imax,1:jmax,1:kmax)) ) !! changed for exact solver output,
-	   
 	   if (slip_bot.eq.6.or.slip_bot.eq.7) then
 		call bound_cbot(tau_fl_Utop)
 		call bound_cbot(tau_fl_Vtop)
@@ -651,6 +674,13 @@
 	   uu=wf(1:imax,1:jmax,1:kmax)
 	   call check( nf90_put_var(ncid, varid10, uu(1:imax,1:jmax,1:kmax)) )
        call check( nf90_put_var(ncid, varid8, tt) )
+	   call check( nf90_put_var(ncid, varid40, mortime) )
+	   call check( nf90_put_var(ncid, varid101, t_output) )
+	   call check( nf90_put_var(ncid, varid102, t_output_movie) )
+	   call check( nf90_put_var(ncid, varid103, istep_output) )
+	   call check( nf90_put_var(ncid, varid104, istep_output_movie) )
+	   call check( nf90_put_var(ncid, varid105, istep_output_bpmove) )	   
+	   
 	   uu=obstacle(1:imax,1:jmax,1:kmax)
 	   call check( nf90_put_var(ncid, varid23, uu(1:imax,1:jmax,1:kmax)) )
     
@@ -701,6 +731,9 @@
 	   integer :: dimids5(NDIMS5),dimids4(NDIMS)	   
        integer :: varid11,varid12,varid13,varid14,varid15,varid16,varid17,varid18,varid19
 	   integer :: varid20,varid21,varid22,varid23,varid24,varid25,varid26,varid27
+	   integer :: varid30,varid31,varid32,varid33
+	   integer :: varid41,varid42,varid43,varid44,varid45,varid46,varid47,varid48,varid49 
+	   integer :: varid101,varid102,varid103,varid104,varid105
        integer :: x_dimid, y_dimid, z_dimid, nfrac_dimid, par_dimid
 		character(1024) :: gitversion
 		character(1024) :: url
@@ -748,9 +781,14 @@
 		call check( nf90_put_att(ncid, varid25, 'units', '-') )
 		call check( nf90_put_att(ncid, varid25, 'long_name', '2D index of highest bed cell') )				
        if (nfrac>0) then
+		   add_offset = MINVAL(Cnew(1:nfrac,1:imax,1:jmax,1:kmax))
+		   data_range = MAXVAL(Cnew(1:nfrac,1:imax,1:jmax,1:kmax))-MINVAL(Cnew(1:nfrac,1:imax,1:jmax,1:kmax))
+		   scale_factor = data_range/(2.**15-1.)	   
 		   call check( nf90_def_var(ncid, "C", NF90_SHORT, dimids2, varid4) )
 		   call check( nf90_put_att(ncid, varid4, 'units', '-') )
 		   call check( nf90_put_att(ncid, varid4, 'long_name', 'Volume concentration for each fraction') )
+		   call check( nf90_put_att(ncid, varid4, 'scale_factor', real(scale_factor)) )
+		   call check( nf90_put_att(ncid, varid4, 'add_offset', real(add_offset)) )		   
 		   call check( nf90_def_var(ncid, "scale_factor_c", NF90_REAL, dimids3, varid9) )
 		   call check( nf90_put_att(ncid, varid9, 'units', '-') )
 		   call check( nf90_put_att(ncid, varid9, 'long_name', 'unpacked_value = packed_value * scale_factor + add_offset') )
@@ -762,39 +800,95 @@
 		   call check( nf90_put_att(ncid, varid20, 'units', 'kg/m2') )
 		   call check( nf90_put_att(ncid, varid20, 'long_name', 'Mass per m2 sediment fractions in bed') )
 			if (interaction_bed.ge.4) then
+				add_offset = MINVAL(Clivebed(1:nfrac,1:imax,1:jmax,1:kmax))
+				data_range = MAXVAL(Clivebed(1:nfrac,1:imax,1:jmax,1:kmax))-MINVAL(Clivebed(1:nfrac,1:imax,1:jmax,1:kmax))
+				scale_factor = data_range/(2.**15-1.)			
 				call check( nf90_def_var(ncid, "Cbed", NF90_SHORT, dimids2, varid22) )
 				call check( nf90_put_att(ncid, varid22, 'units', '-') )
 				call check( nf90_put_att(ncid, varid22, 'long_name', 'Volume concentration for each fraction inside bed') )		
+				call check( nf90_put_att(ncid, varid22, 'scale_factor', real(scale_factor)) )
+				call check( nf90_put_att(ncid, varid22, 'add_offset', real(add_offset)) )					
 				call check( nf90_def_var(ncid, "scale_factor_cb", NF90_REAL, dimids3, varid26) )
 				call check( nf90_put_att(ncid, varid26, 'units', '-') )
 				call check( nf90_put_att(ncid, varid26, 'long_name', 'unpacked_value = packed_value * scale_factor + add_offset') )
 				call check( nf90_def_var(ncid, "add_offset_cb", NF90_REAL, dimids3, varid27) )
 				call check( nf90_put_att(ncid, varid27, 'units', '-') )
 				call check( nf90_put_att(ncid, varid27, 'long_name', 'unpacked_value = packed_value * scale_factor + add_offset') )
+			call check( nf90_def_var(ncid, "Sbedload_u", NF90_REAL, dimids4, varid47) )
+			call check( nf90_put_att(ncid, varid47, 'units', 'kg/m/s') )
+			call check( nf90_put_att(ncid, varid47, 'long_name', 'U-bedload flux for each fraction (multiplied by morfac)') )	
+			call check( nf90_def_var(ncid, "Sbedload_v", NF90_REAL, dimids4, varid48) )
+			call check( nf90_put_att(ncid, varid48, 'units', 'kg/m/s') )
+			call check( nf90_put_att(ncid, varid48, 'long_name', 'V-bedload flux for each fraction (multiplied by morfac)') )					
 			endif 
+	   	call check( nf90_def_var(ncid, "tau_mud", NF90_REAL, dimids5, varid41) )
+		call check( nf90_put_att(ncid, varid41, 'units', 'N/m2') )
+		call check( nf90_put_att(ncid, varid41, 'long_name', 'Mud bed shear stress') )	
+	   	call check( nf90_def_var(ncid, "tau_susload", NF90_REAL, dimids5, varid42) )
+		call check( nf90_put_att(ncid, varid42, 'units', 'N/m2') )
+		call check( nf90_put_att(ncid, varid42, 'long_name', 'Sand bed shear stress for suspension load pickup') )	
+	   	call check( nf90_def_var(ncid, "tau_bedload", NF90_REAL, dimids5, varid43) )
+		call check( nf90_put_att(ncid, varid43, 'units', 'N/m2') )
+		call check( nf90_put_att(ncid, varid43, 'long_name', 'Sand bed shear stress for bedload') )
+	   	call check( nf90_def_var(ncid, "tau_frac", NF90_REAL, dimids4, varid44) )
+		call check( nf90_put_att(ncid, varid44, 'units', 'N/m2') )
+		call check( nf90_put_att(ncid, varid44, 'long_name', 
+     &  'Sediment shear stress per fraction based on characteristics individual fractions') )			
 		endif
-
+		
+	   	call check( nf90_def_var(ncid, "tau_flow", NF90_REAL, dimids5, varid45) )
+		call check( nf90_put_att(ncid, varid45, 'units', 'N/m2') )
+		call check( nf90_put_att(ncid, varid45, 'long_name', 'Flow bed shear stress') )
+	   if (slip_bot.eq.6.or.slip_bot.eq.7) then
+	   	call check( nf90_def_var(ncid, "tau_flow_top_TBLE", NF90_REAL, dimids5, varid46) )
+		call check( nf90_put_att(ncid, varid46, 'units', 'N/m2') )
+		call check( nf90_put_att(ncid, varid46, 'long_name', 'Flow bed shear stress at top 2nd grid of TBLE between CFD grid and bed') )
+	   endif 		
+		
+        do k=1,kmax
+			do j=1,jmax
+				do i=1,imax
+					uu(i,j,k)=unew(i,j,k)*cos_u(j)-vnew(i,j,k)*sin_v(j) !unew(i,j,k)
+					vv(i,j,k)=vnew(i,j,k)*cos_v(j)+unew(i,j,k)*sin_u(j) !vnew(i,j,k)
+				enddo
+			enddo
+		enddo		
+		add_offset = MINVAL(uu(1:imax,1:jmax,1:kmax))
+		data_range = MAXVAL(uu(1:imax,1:jmax,1:kmax))-MINVAL(uu(1:imax,1:jmax,1:kmax))
+		scale_factor = data_range/(2.**15-1.)
        call check( nf90_def_var(ncid, "U", NF90_SHORT, dimids, varid11) )
        call check( nf90_put_att(ncid, varid11, 'units', 'm/s') )
        call check( nf90_put_att(ncid, varid11, 'long_name', 'U velocity') )
+	   call check( nf90_put_att(ncid, varid11, 'scale_factor', real(scale_factor)) )
+	   call check( nf90_put_att(ncid, varid11, 'add_offset', real(add_offset)) )		   
        call check( nf90_def_var(ncid, "scale_factor_u", NF90_REAL, dimids3, varid12) )
        call check( nf90_put_att(ncid, varid12, 'units', '-') )
        call check( nf90_put_att(ncid, varid12, 'long_name', 'unpacked_value = packed_value * scale_factor + add_offset') )
        call check( nf90_def_var(ncid, "add_offset_u", NF90_REAL, dimids3, varid13) )
        call check( nf90_put_att(ncid, varid13, 'units', '-') )
        call check( nf90_put_att(ncid, varid13, 'long_name', 'unpacked_value = packed_value * scale_factor + add_offset') )
+		add_offset = MINVAL(vv(1:imax,1:jmax,1:kmax))
+		data_range = MAXVAL(vv(1:imax,1:jmax,1:kmax))-MINVAL(vv(1:imax,1:jmax,1:kmax))
+		scale_factor = data_range/(2.**15-1.)	   
        call check( nf90_def_var(ncid, "V", NF90_SHORT, dimids, varid14) )
        call check( nf90_put_att(ncid, varid14, 'units', 'm/s') )
        call check( nf90_put_att(ncid, varid14, 'long_name', 'V velocity') )
+	   call check( nf90_put_att(ncid, varid14, 'scale_factor', real(scale_factor)) )
+	   call check( nf90_put_att(ncid, varid14, 'add_offset', real(add_offset)) )	   
        call check( nf90_def_var(ncid, "scale_factor_v", NF90_REAL, dimids3, varid15) )
        call check( nf90_put_att(ncid, varid15, 'units', '-') )
        call check( nf90_put_att(ncid, varid15, 'long_name', 'unpacked_value = packed_value * scale_factor + add_offset') )
        call check( nf90_def_var(ncid, "add_offset_v", NF90_REAL, dimids3, varid16) )
        call check( nf90_put_att(ncid, varid16, 'units', '-') )
        call check( nf90_put_att(ncid, varid16, 'long_name', 'unpacked_value = packed_value * scale_factor + add_offset') )
+		add_offset = MINVAL(wnew(1:imax,1:jmax,1:kmax))
+		data_range = MAXVAL(wnew(1:imax,1:jmax,1:kmax))-MINVAL(wnew(1:imax,1:jmax,1:kmax))
+		scale_factor = data_range/(2.**15-1.)	   
        call check( nf90_def_var(ncid, "W", NF90_SHORT, dimids, varid17) )
        call check( nf90_put_att(ncid, varid17, 'units', 'm/s') )
        call check( nf90_put_att(ncid, varid17, 'long_name', 'W velocity') )
+	   call check( nf90_put_att(ncid, varid17, 'scale_factor', real(scale_factor)) )
+	   call check( nf90_put_att(ncid, varid17, 'add_offset', real(add_offset)) )	   	   
        call check( nf90_def_var(ncid, "scale_factor_w", NF90_REAL, dimids3, varid18) )
        call check( nf90_put_att(ncid, varid18, 'units', '-') )
        call check( nf90_put_att(ncid, varid18, 'long_name', 'unpacked_value = packed_value * scale_factor + add_offset') )
@@ -802,9 +896,54 @@
        call check( nf90_put_att(ncid, varid19, 'units', '-') )
        call check( nf90_put_att(ncid, varid19, 'long_name', 'unpacked_value = packed_value * scale_factor + add_offset') )
 
+		uu=p(1:imax,1:jmax,1:kmax)+pold(1:imax,1:jmax,1:kmax)
+		add_offset = MINVAL(uu(1:imax,1:jmax,1:kmax))
+		data_range = MAXVAL(uu(1:imax,1:jmax,1:kmax))-MINVAL(uu(1:imax,1:jmax,1:kmax))
+		scale_factor = data_range/(2.**15-1.)	   
+       call check( nf90_def_var(ncid, "P", NF90_SHORT, dimids, varid30) )
+       call check( nf90_put_att(ncid, varid30, 'units', 'Pa') )
+       call check( nf90_put_att(ncid, varid30, 'long_name', 'Pressure') )
+	   call check( nf90_put_att(ncid, varid30, 'scale_factor', real(scale_factor)) )
+	   call check( nf90_put_att(ncid, varid30, 'add_offset', real(add_offset)) )	   	   
+       call check( nf90_def_var(ncid, "scale_factor_p", NF90_REAL, dimids3, varid31) )
+       call check( nf90_put_att(ncid, varid31, 'units', '-') )
+       call check( nf90_put_att(ncid, varid31, 'long_name', 'unpacked_value = packed_value * scale_factor + add_offset') )
+       call check( nf90_def_var(ncid, "add_offset_p", NF90_REAL, dimids3, varid32) )
+       call check( nf90_put_att(ncid, varid32, 'units', '-') )
+       call check( nf90_put_att(ncid, varid32, 'long_name', 'unpacked_value = packed_value * scale_factor + add_offset') )
+	   
+
        call check( nf90_def_var(ncid, "time", NF90_REAL, dimids3, varid8) )
        call check( nf90_put_att(ncid, varid8, 'units', 's') )
        call check( nf90_put_att(ncid, varid8, 'long_name', 'Time from start simulation') )
+	   
+	   call check( nf90_def_var(ncid, "mortime", NF90_REAL, dimids3, varid49) )
+       call check( nf90_put_att(ncid, varid49, 'units', 's') )
+       call check( nf90_put_att(ncid, varid49, 'long_name', 'Morphological time from start simulation (including morphological
+     &	   acceleration factors morfac and morfac2 and excluding periods of morphological inactivity (via tstart_morf2 
+     &	 or tmorf2_tseriesfile))') )
+
+       call check( nf90_def_var(ncid, "t_output", NF90_REAL, dimids3, varid101) )
+       call check( nf90_put_att(ncid, varid101, 'units', 's') )
+       call check( nf90_put_att(ncid, varid101, 'long_name', 't_output of last file (for correct output file  
+     &	   numbering after restart') )
+       call check( nf90_def_var(ncid, "t_output_movie", NF90_REAL, dimids3, varid102) )
+       call check( nf90_put_att(ncid, varid102, 'units', 's') )
+       call check( nf90_put_att(ncid, varid102, 'long_name', 't_output_movie of last file (for correct output file  
+     &	   numbering after restart') )
+	   call check( nf90_def_var(ncid, "istep_output", NF90_INT, dimids3, varid103) )
+       call check( nf90_put_att(ncid, varid103, 'units', '-') )
+       call check( nf90_put_att(ncid, varid103, 'long_name', 'istep_output counter of last file (for correct output file  
+     &	   numbering after restart') )
+	   call check( nf90_def_var(ncid, "istep_output_movie", NF90_INT, dimids3, varid104) )
+       call check( nf90_put_att(ncid, varid104, 'units', '-') )
+       call check( nf90_put_att(ncid, varid104, 'long_name', 'istep_output_movie counter of last file (for correct output file
+     &	   numbering after restart') )
+	   call check( nf90_def_var(ncid, "istep_output_bpmove", NF90_INT, dimids3, varid105) )
+       call check( nf90_put_att(ncid, varid105, 'units', '-') )
+       call check( nf90_put_att(ncid, varid105, 'long_name', 'istep_output_bpmove counter of last file (for correct output file
+     &	   numbering after restart') )	 
+	   
 
 	! also add svn info in output files:
        CALL check( nf90_put_att(ncid,nf90_global, "gitversion", trim(gitversion)))
@@ -819,6 +958,14 @@
        ! data in one operation.
 
        call check( nf90_put_var(ncid, varid8, tt) )
+	   call check( nf90_put_var(ncid, varid49, mortime) )
+	   call check( nf90_put_var(ncid, varid101, t_output) )
+	   call check( nf90_put_var(ncid, varid102, t_output_movie) )
+	   call check( nf90_put_var(ncid, varid103, istep_output) )
+	   call check( nf90_put_var(ncid, varid104, istep_output_movie) )
+	   call check( nf90_put_var(ncid, varid105, istep_output_bpmove) )
+
+	   
 		do i=1,imax
 		   do j=1,jmax
 				do n=1,nfrac
@@ -838,6 +985,23 @@
 		call check( nf90_put_var(ncid, varid21, zzbed(1:imax,1:jmax) ))
 		call check( nf90_put_var(ncid, varid24, zzbed2(1:imax,1:jmax) ))
 		call check( nf90_put_var(ncid, varid25, kbed(1:imax,1:jmax) ))		
+
+
+		call check( nf90_put_var(ncid, varid41,ust_mud_new(1:imax,1:jmax)*ust_mud_new(1:imax,1:jmax)*rho_b  ))
+		call check( nf90_put_var(ncid, varid42,ust_sl_new(1:imax,1:jmax)*ust_sl_new(1:imax,1:jmax)*rho_b  ))		
+		call check( nf90_put_var(ncid, varid43,ust_bl_new(1:imax,1:jmax)*ust_bl_new(1:imax,1:jmax)*rho_b  ))
+		call check( nf90_put_var(ncid, varid44,ust_frac_new(1:nfrac,1:imax,1:jmax)*ust_frac_new(1:nfrac,1:imax,1:jmax)*rho_b  ))		
+		zzbed=sqrt((0.5*(tau_fl_Unew(1:imax,1:jmax)+tau_fl_Unew(0:imax-1,1:jmax)))**2
+     &   +(0.5*(tau_fl_Vnew(1:imax,1:jmax)+tau_fl_Vnew(1:imax,0:jmax-1)))**2)
+		call check( nf90_put_var(ncid, varid45,zzbed  ))		
+	   if (slip_bot.eq.6.or.slip_bot.eq.7) then
+		call bound_cbot(tau_fl_Utop)
+		call bound_cbot(tau_fl_Vtop)
+		zzbed=sqrt((0.5*(tau_fl_Utop(1:imax,1:jmax)+tau_fl_Utop(0:imax-1,1:jmax)))**2
+     &   +(0.5*(tau_fl_Vtop(1:imax,1:jmax)+tau_fl_Vtop(1:imax,0:jmax-1)))**2)
+		call check( nf90_put_var(ncid, varid46,zzbed  ))
+	   endif 
+	   
 		
         do k=1,kmax
 			do j=1,jmax
@@ -853,14 +1017,10 @@
 		scale_factor = data_range/(2.**15-1.)
 		if (data_range > 0.) then
 			  call check( nf90_put_var(ncid, varid11, nint(MAX(uu(1:imax,1:jmax,1:kmax)-add_offset,0.)/scale_factor) ))
-!			  call check( nf90_put_att(ncid, varid11, "scale_factor", real(scale_factor)) )
-!			  call check( nf90_put_att(ncid, varid11, "add_offset", real(add_offset)) )					  
 			  call check( nf90_put_var(ncid, varid12, scale_factor) )
 			  call check( nf90_put_var(ncid, varid13, add_offset) )
 		else	  ! scale_factor is zero, prevent division by zero:
 			  call check( nf90_put_var(ncid, varid11, nint(0.*uu(1:imax,1:jmax,1:kmax)) ))
-!			  call check( nf90_put_att(ncid, varid11, "scale_factor", real(scale_factor)) )
-!			  call check( nf90_put_att(ncid, varid11, "add_offset", real(add_offset)) )					  			  
 			  call check( nf90_put_var(ncid, varid12, scale_factor) )
 			  call check( nf90_put_var(ncid, varid13, add_offset) )
 		endif
@@ -870,14 +1030,10 @@
 		scale_factor = data_range/(2.**15-1.)
 		if (data_range > 0.) then
 			  call check( nf90_put_var(ncid, varid14, nint(MAX(vv(1:imax,1:jmax,1:kmax)-add_offset,0.)/scale_factor) ))
-!			  call check( nf90_put_att(ncid, varid14, "scale_factor", real(scale_factor)) )
-!			  call check( nf90_put_att(ncid, varid14, "add_offset", real(add_offset)) )					  			  
 			  call check( nf90_put_var(ncid, varid15, scale_factor) )
 			  call check( nf90_put_var(ncid, varid16, add_offset) )
 		else
 			  call check( nf90_put_var(ncid, varid14, nint(0.*vv(1:imax,1:jmax,1:kmax)) ))
-!			  call check( nf90_put_att(ncid, varid14, "scale_factor", real(scale_factor)) )
-!			  call check( nf90_put_att(ncid, varid14, "add_offset", real(add_offset)) )				  
 			  call check( nf90_put_var(ncid, varid15, scale_factor) )
 			  call check( nf90_put_var(ncid, varid16, add_offset) )
 		endif
@@ -887,16 +1043,26 @@
 		scale_factor = data_range/(2.**15-1.)
 		if (data_range > 0.) then
 			  call check( nf90_put_var(ncid, varid17, nint(MAX(wnew(1:imax,1:jmax,1:kmax)-add_offset,0.)/scale_factor) ))
-!			  call check( nf90_put_att(ncid, varid17, "scale_factor", real(scale_factor)) )
-!			  call check( nf90_put_att(ncid, varid17, "add_offset", real(add_offset)) )				  
 			  call check( nf90_put_var(ncid, varid18, scale_factor) )
 			  call check( nf90_put_var(ncid, varid19, add_offset) )
 		else
 			  call check( nf90_put_var(ncid, varid17, nint(0.*wnew(1:imax,1:jmax,1:kmax)) ))
-!			  call check( nf90_put_att(ncid, varid17, "scale_factor", real(scale_factor)) )
-!			  call check( nf90_put_att(ncid, varid17, "add_offset", real(add_offset)) )				  
 			  call check( nf90_put_var(ncid, varid18, scale_factor) )
 			  call check( nf90_put_var(ncid, varid19, add_offset) )
+		endif
+		
+		uu=p(1:imax,1:jmax,1:kmax)+pold(1:imax,1:jmax,1:kmax)
+		add_offset = MINVAL(uu(1:imax,1:jmax,1:kmax))
+		data_range = MAXVAL(uu(1:imax,1:jmax,1:kmax))-MINVAL(uu(1:imax,1:jmax,1:kmax))
+		scale_factor = data_range/(2.**15-1.)		
+		if (data_range > 0.) then
+			  call check( nf90_put_var(ncid, varid30, nint(MAX(uu(1:imax,1:jmax,1:kmax)-add_offset,0.)/scale_factor) ))
+			  call check( nf90_put_var(ncid, varid31, scale_factor) )
+			  call check( nf90_put_var(ncid, varid32, add_offset) )
+		else	  ! scale_factor is zero, prevent division by zero:
+			  call check( nf90_put_var(ncid, varid30, nint(0.*uu(1:imax,1:jmax,1:kmax)) ))
+			  call check( nf90_put_var(ncid, varid31, scale_factor) )
+			  call check( nf90_put_var(ncid, varid32, add_offset) )
 		endif
 		
        if (nfrac>0) then
@@ -909,8 +1075,6 @@
           call check( nf90_put_var(ncid, varid4, write_var ))
 		  !idnint gives integer(2) inint gives integer(2) output for real(4) input 
 		  
-!		  call check( nf90_put_att(ncid, varid4, "scale_factor", real(scale_factor)) )
-!		  call check( nf90_put_att(ncid, varid4, "add_offset", real(add_offset)) )
           call check( nf90_put_var(ncid, varid9, scale_factor) )
           call check( nf90_put_var(ncid, varid10, add_offset) )
 		else
@@ -918,8 +1082,6 @@
 		write_var = nint(0.*Cnew(1:nfrac,1:imax,1:jmax,1:kmax))
 		  call check( nf90_put_var(ncid, varid4, write_var ))
 !		  call check( nf90_put_var(ncid, varid4, nint(MAX(0.*Cnew(1:nfrac,1:imax,1:jmax,1:kmax),0.)) ))
-!		  call check( nf90_put_att(ncid, varid4, "scale_factor", real(scale_factor)) )
-!		  call check( nf90_put_att(ncid, varid4, "add_offset", real(add_offset)) )		  
 		  call check( nf90_put_var(ncid, varid9, scale_factor) )
 		  call check( nf90_put_var(ncid, varid10, add_offset) )
         endif
@@ -930,18 +1092,16 @@
 			if (data_range > 0.) then	
 				  write_var = nint(MAX(Clivebed(1:nfrac,1:imax,1:jmax,1:kmax)-add_offset,0.)/scale_factor)
 				  call check( nf90_put_var(ncid, varid22,  write_var))
-!				  call check( nf90_put_att(ncid, varid22, "scale_factor", real(scale_factor)) )
-!				  call check( nf90_put_att(ncid, varid22, "add_offset", real(add_offset)) )				  
 				  call check( nf90_put_var(ncid, varid26, scale_factor) )
 				  call check( nf90_put_var(ncid, varid27, add_offset) )
 			else
 			      write_var = nint(0.*Clivebed(1:nfrac,1:imax,1:jmax,1:kmax))
 				  call check( nf90_put_var(ncid, varid22, write_var ))
-!				  call check( nf90_put_att(ncid, varid22, "scale_factor", real(scale_factor)) )
-!				  call check( nf90_put_att(ncid, varid22, "add_offset", real(add_offset)) )						  
 				  call check( nf90_put_var(ncid, varid26, scale_factor) )
 				  call check( nf90_put_var(ncid, varid27, add_offset) )
 			endif	
+		  call check( nf90_put_var(ncid, varid47, qbU(1:nfrac,1:imax,1:jmax) ))
+		  call check( nf90_put_var(ncid, varid48, qbV(1:nfrac,1:imax,1:jmax) ))			
 		endif 
        endif
 	
