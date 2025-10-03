@@ -661,7 +661,7 @@
 	REAL ccfdtot_firstcel,wsedbed,distance_to_bed,zb_W,gvector,ero_factor
 	REAL pickup_random(1:imax,1:jmax),vs,ve,Uhor(1:imax,1:jmax,1:kmax),cbed,uu2,vv2,bed_slope,facx,facy,bs_geo
 	REAL qb,MMM,MME,flux,ucr,qbf(1:nfrac),uuRrel,uuLrel,vvRrel,vvLrel,Shields,absUbl,ve_check,ustbl
-      integer clock,nnn,k_maxU,itrgt2,jtrgt2
+      integer clock,nnnn,iiii,k_maxU,itrgt2,jtrgt2
       INTEGER, DIMENSION(:), ALLOCATABLE :: seed	
 	  INTEGER kbedp(0:i1,0:j1),ibeg,iend,kppE,kppW,kppN,kppS,kbed_new(0:i1,0:j1),k_ust_tau_temp
 	  REAL dzbed_dx,dzbed_dy,dzbed_dn,dzbed_ds,bedslope_angle,bedslope_alpha,Shields_cr_bl,fnorm,dzbed_dl,fcor_slope
@@ -1192,13 +1192,14 @@
 		IF (pickup_fluctuations.eq.1) THEN
 			!1 add white noise to pickup
 		  CALL SYSTEM_CLOCK(COUNT=clock)
-		  CALL RANDOM_SEED(size = nnn)
-		  ALLOCATE(seed(nnn))
+		  CALL RANDOM_SEED(size = nnnn)
+		  ALLOCATE(seed(nnnn))
 		  CALL SYSTEM_CLOCK(COUNT=clock)
-		  seed = clock + 37 * (/ (i - 1, i = 1, nnn) /)
+		  seed = clock + 37 * (/ (iiii - 1, iiii = 1, nnnn) /)
 		  CALL RANDOM_SEED(PUT = seed)			
 		  call random_number(pickup_random) ! uniform distribution 0,1
  		  pickup_random=1.+2.*(pickup_random-0.5)*pickup_fluctuations_ampl
+		  DEALLOCATE(seed)
 		ENDIF	
 		IF (cbed_method.eq.2) THEN
 			Uhor(1:imax,1:jmax,1:kmax)=sqrt((0.5*(ucfd(0:imax-1,1:jmax,1:kmax)+ucfd(1:imax,1:jmax,1:kmax)))**2 + 
@@ -2226,7 +2227,7 @@
 						  !improved 2 lines above by giving new lowest fluid cell same concentration as old lowest fluid cell and taking away this sediment from cells above (11-10-2021)
 						  cctot=0.
 						  DO k=kplus,kmax 
-							cctot=cctot+MAX(ccfd(n,i,j,k),0.)*fc_global(i,j+jmax*rank,k)
+							cctot=cctot+MAX(ccfd(n,i,j,k),0.)*fc_local(i,j,k)
 						  ENDDO	
 						  IF (cctot>1.e-12) THEN 
 							  ccnew(n,i,j,kbed(i,j)) = ccnew(n,i,j,kplus) !new lowest fluid cell gets same concentration as old lowest fluid cell 
@@ -2237,7 +2238,7 @@
 							  ENDDO	
 							  DO k=kbed(i,j)+1,kmax 
 							   ccnew(n,i,j,k) = ccnew(n,i,j,k) - MAX(ccfd(n,i,j,k),0.)/(cctot+1.e-12)*ccnew(n,i,j,kbed(i,j))
-     &						   *fc_global(i,j+jmax*rank,k) !remove same quantity from cells above in weighted avg manner
+     &						   *fc_local(i,j,k) !remove same quantity from cells above in weighted avg manner
 							   drdt(i,j,k) = drdt(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 							   rnew(i,j,k) = rnew(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 							   rold(i,j,k) = rold(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density							
@@ -2272,7 +2273,7 @@
 						IF (morfac2.gt.1.0000001) THEN
 						 cctot=0.
 						 DO k=kbed(i,j)+1,kmax 
-							cctot=cctot+MAX(ccfd(n,i,j,k),0.)*fc_global(i,j+jmax*rank,k)
+							cctot=cctot+MAX(ccfd(n,i,j,k),0.)*fc_local(i,j,k)
 						 ENDDO						
 						 IF (cctot<1e-9) THEN
 						  ccnew(n,i,j,kbed(i,j)+1)=ccnew(n,i,j,kbed(i,j)+1)+(morfac2-1.)/morfac2*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
@@ -2289,7 +2290,7 @@
 						  ENDIF 
 						  DO k=kbed(i,j)+1,kmax !redistribute morfac2 buried sediment over water column above 
 						   ccnew(n,i,j,k)=ccnew(n,i,j,k)+(morfac2-1.)/morfac2*MAX(ccfd(n,i,j,k),0.)/cctot*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
-     &						*fc_global(i,j+jmax*rank,k)
+     &						*fc_local(i,j,k)
 						   drdt(i,j,k) = drdt(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 						   rnew(i,j,k) = rnew(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 						   rold(i,j,k) = rold(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density	
@@ -2323,7 +2324,7 @@
 						IF (morfac2.gt.1.0000001) THEN
 						 cctot=0.
 						 DO k=kbed(i,j)+1,kmax 
-							cctot=cctot+MAX(ccfd(n,i,j,k),0.)*fc_global(i,j+jmax*rank,k)
+							cctot=cctot+MAX(ccfd(n,i,j,k),0.)*fc_local(i,j,k)
 						 ENDDO						
 						 IF (cctot<1e-9) THEN
 						  ccnew(n,i,j,kbed(i,j)+1)=ccnew(n,i,j,kbed(i,j)+1)+(morfac2-1.)/morfac2*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
@@ -2340,7 +2341,7 @@
 						  ENDIF
 						  DO k=kbed(i,j)+1,kmax !redistribute morfac2 buried sediment over water column above 
 						   ccnew(n,i,j,k)=ccnew(n,i,j,k)+(morfac2-1.)/morfac2*MAX(ccfd(n,i,j,k),0.)/cctot*ccnew(n,i,j,kbed(i,j)) !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
-     &						*fc_global(i,j+jmax*rank,k)
+     &						*fc_local(i,j,k)
 						   drdt(i,j,k) = drdt(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 						   rnew(i,j,k) = rnew(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 						   rold(i,j,k) = rold(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density	
@@ -2894,13 +2895,13 @@
 									!giving new lowest fluid cell same concentration as old lowest fluid cell and taking away this sediment from cells above (11-10-2021)
 									cctot=0.
 									DO k=kbed(i,j)+1,kmax 
-										cctot=cctot+MAX(ccfd(n,i,j,k),0.)*fc_global(i,j+jmax*rank,k)
+										cctot=cctot+MAX(ccfd(n,i,j,k),0.)*fc_local(i,j,k)
 									ENDDO
 									IF (cctot>1.e-12) THEN 
 										ccnew(n,i,j,kbed(i,j)) = ccnew(n,i,j,kplus) !new lowest fluid cell gets same concentration as old lowest fluid cell 
 										DO k=kbed(i,j)+1,kmax 
 										   ccnew(n,i,j,k) = ccnew(n,i,j,k) - MAX(ccfd(n,i,j,k),0.)/(cctot+1.e-12)*ccnew(n,i,j,kbed(i,j)) !remove same quantity from cells above in weighted avg manner
-     &										   *fc_global(i,j+jmax*rank,k)
+     &										   *fc_local(i,j,k)
 										ENDDO 
 									ELSE 
 										ccnew(n,i,j,kbed(i,j))= 0. !start with fluid cell without sediment concentration
@@ -4686,7 +4687,7 @@
 					  DO n=1,nfrac 
 						cctot=0.
 						DO k2=k+1,kplus  
-							cctot=cctot+MAX(ccfd(n,i,j,k2),0.)*fc_global(i,j+jmax*rank,k2)
+							cctot=cctot+MAX(ccfd(n,i,j,k2),0.)*fc_local(i,j,k2)
 						ENDDO
 						!c_adjust=MAX(SUM(ccnew(n,i,j,kbed(i,j)+1:k)),0.) !add all suspension in between old and new bed-level to fluid above new bed
 						c_adjust=MAX(SUM(ccnew(n,i,j,1:k)),0.) 			 !to be sure add all suspension under new bed-level to fluid above new bed
@@ -4697,7 +4698,7 @@
 							rold(i,j,k+1) = rold(i,j,k+1)+ccnew(n,i,j,k+1)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density	
 						ELSE 
 							DO k2=k+1,kplus  
-							  ccnew(n,i,j,k2)=ccnew(n,i,j,k2)+c_adjust*MAX(ccfd(n,i,j,k2),0.)*fc_global(i,j+jmax*rank,k2)/cctot  ! add all suspended sediment of fluidcells now covered inside bed to k_layer_pickup fluid cells after bed-update
+							  ccnew(n,i,j,k2)=ccnew(n,i,j,k2)+c_adjust*MAX(ccfd(n,i,j,k2),0.)*fc_local(i,j,k2)/cctot  ! add all suspended sediment of fluidcells now covered inside bed to k_layer_pickup fluid cells after bed-update
 							  drdt(i,j,k2) = drdt(i,j,k2)+ccnew(n,i,j,k2)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 							  rnew(i,j,k2) = rnew(i,j,k2)+ccnew(n,i,j,k2)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 							  rold(i,j,k2) = rold(i,j,k2)+ccnew(n,i,j,k2)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density 
@@ -4831,7 +4832,7 @@
 						  !improved 2 lines above by giving new lowest fluid cell same concentration as old lowest fluid cell and taking away this sediment from cells above (11-10-2021)
 						  cctot=0.
 						  DO k=kplus,kmax 
-							cctot=cctot+MAX(ccfd(n,i,j,k),0.)*fc_global(i,j+jmax*rank,k)
+							cctot=cctot+MAX(ccfd(n,i,j,k),0.)*fc_local(i,j,k)
 						  ENDDO	
 						  IF (cctot>1.e-12) THEN 
 							  ccnew(n,i,j,kbed(i,j)) = ccnew(n,i,j,kplus) !new lowest fluid cell gets same concentration as old lowest fluid cell 
@@ -4842,7 +4843,7 @@
 							  ENDDO	
 							  DO k=kbed(i,j)+1,kmax 
 							   ccnew(n,i,j,k) = ccnew(n,i,j,k) - MAX(ccfd(n,i,j,k),0.)/(cctot+1.e-12)*ccnew(n,i,j,kbed(i,j)) !remove same quantity from cells above in weighted avg manner
-     &							   *fc_global(i,j+jmax*rank,k)
+     &							   *fc_local(i,j,k)
 							   drdt(i,j,k) = drdt(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 							   rnew(i,j,k) = rnew(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 							   rold(i,j,k) = rold(i,j,k)+ccnew(n,i,j,k)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density							

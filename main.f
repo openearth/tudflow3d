@@ -74,7 +74,7 @@
       call determine_indices_ship_in
       call inflow_profiles_front_sides(0.)
 	  call init_location_bedplume
-	  call update_fc_global
+	  call update_fc_local
 	  call fkdat
 	  call determine_kn_flow	  
 	  
@@ -342,7 +342,7 @@
 		endif
 		
 		if ((interaction_bed.eq.4.or.interaction_bed.eq.6).and.time_n.ge.tstart_morf2) then 
-			call update_fc_global
+			call update_fc_local
 		endif 		
 		if (kn_flow_d50_multiplier>0.) call determine_kn_flow
 		if (SEM.eq.1) then
@@ -570,12 +570,6 @@
 			do j=1,jmax
 			  do k=1,MIN(kmax,kbed(i,j))
 			    pold(i,j,k) = (dp(i-1,j,k)+dp(i+1,j,k)+dp(i,j-1,k)+dp(i,j+1,k)+dp(i,j,k)+dp(i,j,k-1)+dp(i,j,k+1))/7.-p(i,j,k) ! filter pold 
-!				pold(i,j,k) = 	((1.-fc_global(i-1,j+jmax*rank,k))*dp(i-1,j,k)+(1.-fc_global(i+1,j+jmax*rank,k))*dp(i+1,j,k)
-!     &				  +dp(i,j,k)+(1.-fc_global(i,j+jmax*rank-1,k))*dp(i,j-1,k)+(1.-fc_global(i,j+jmax*rank+1,k))*dp(i,j+1,k)
-!     &	 						+(1.-fc_global(i,j+jmax*rank,k-1))*dp(i,j,k-1)+(1.-fc_global(i,j+jmax*rank,k+1))*dp(i,j,k+1))
-!     &	 						/(7.-fc_global(i-1,j+jmax*rank,k)-fc_global(i+1,j+jmax*rank,k)
-!     &	 							-fc_global(i,j+jmax*rank-1,k)-fc_global(i,j+jmax*rank+1,k)
-!     &	 							-fc_global(i,j+jmax*rank,k-1)-fc_global(i,j+jmax*rank,k+1))-p(i,j,k) 
 			  enddo
 			enddo	
 		  enddo

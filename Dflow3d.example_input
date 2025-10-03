@@ -49,7 +49,13 @@ numdiff = 0.001953125				! Amount of extra 6th diffusion in case of 'CDS6','CDS4
 wiggle_detector = 0					! Use wiggle detector to adjust amount of numdiff for each individual grid cell (default 0-->numdiff applied for all cells; optional 1 with wiggle detector or 2 for high numdiff in all cells inside or neighbouring ibm obstacle or inside bed and numdiff2 elsewhere; >20 same as 2 but with 1 layer numdiff above bed for 21; 2 layers above bed for 22; 3 layers above bed for 23 and so on)
 numdiff2 = 0.001953125				! Amount of minimum 6th diffusion in case of wiggle_detector=1 (default 0.), must be < numdiff
 diffusion = 'CDS2'					! Numerical scheme for diffusion term.
-CNdiffz = 0							! 0 is explicit in z-dir (default 0); 1 is 2nd order CN treatment of diffusion in z-dir; 2 is implicit 1st order Euler backward in z-dir; 11 is 2nd order CN treatment of diffusion in x,y,z-dir via Douglass-Gun ADI; 11 is 2nd order CN treatment of diffusion in x,y,z-dir via Chang 1991 ADI method; 31 is 2nd order CN treatment of diffusion in x,y,z-dir via 3D-CG method; for 11,12,31 CNdiff_factor defines the implicit factor in Crank-Nicolson
+CNdiffz = 0							! 0 is explicit in z-dir (default 0); 1 is 2nd order CN treatment of diffusion in z-dir; 2 is implicit 1st order Euler backward in z-dir; 11 is 2nd order CN treatment of diffusion in x,y,z-dir via Douglass-Gun ADI; 12 is 2nd order CN treatment of diffusion in x,y,z-dir via Chang 1991 ADI method; 31 is 2nd order CN treatment of diffusion in x,y,z-dir via 3D-CG method; for 11,12,31 CNdiff_factor defines the implicit factor in Crank-Nicolson
+CNdiff_factor = 0.5					! Crank-Nicolson implicit factor theta used in CNdiffz=11,12,31 (0.5 is 2nd order CN, 1 is fully implicit 1st order)
+CNdiff_dtfactor = 1.e3				! factor used in CFL check on dt to account for diffusion, the higher CNdiff_dtfactor the less it is taken into account in limiting dt (theoretically it could be inf) 
+CNdiff_pc = 1 						!Choice in pre-conditioner of implicit CG 3D CN diffusion solver 31; 0 no preconditioner (default), 1 DIAG pc, 2 IC(0) pc
+CNdiff_ini = 2 						!1 (default) = starting condition predictor U* just before applying implicit diff; 2 = starting condition U from previous timestep
+!CNdiff_maxi = 1000000 				!Maximum number of iterations in implicit CG 3D diffusion solver, default 1000
+CNdiff_tol = 1.e-6 					!Tolerance in implicit CG 3D diffusion solver, default 1.e-12
 continuity_solver =36   			!default is 1 (drdt+drudx=0). Optional:  35 (dudx=0 U-mix), 36 (dudx=0 U-vol); 36 is best option for mixture flow 
 npresIBM = 0						! number of extra pres-correction steps to make IBM objects better impermeable (default 0)
 npresPRHO = 0						! number of extra pres-correction steps to get predicted P^n+1 as input in variable-density-Poisson-solver more accurate (default 0)

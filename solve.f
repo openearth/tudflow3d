@@ -123,7 +123,7 @@ c********************************************************************
      & periodicx,periodicy,wf,wd,numdiff2)
 	elseif(convection.eq.'HYB6') then
       call advecu_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2,fc_global,me)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2,fc_local,me)
 	elseif(convection.eq.'HYB4') then
       call advecu_HYB4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2)	 
@@ -172,7 +172,7 @@ c********************************************************************
      & periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecv_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global,me)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_local,me)
 	elseif(convection.eq.'HYB4') then
       call advecv_HYB4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -220,7 +220,7 @@ c********************************************************************
      &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecw_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global,me)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_local,me)
 	elseif(convection.eq.'HYB4') then
       call advecw_HYB4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -440,7 +440,7 @@ c********************************************************************
      & ,periodicx,periodicy,wf,wd,numdiff2)
 	elseif(convection.eq.'HYB6') then
       call advecu_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2,fc_global,me)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2,fc_local,me)
 	elseif(convection.eq.'HYB4') then
       call advecu_HYB4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2)	 
@@ -492,7 +492,7 @@ c********************************************************************
      & periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecv_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global,me)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_local,me)
 	elseif(convection.eq.'HYB4') then
       call advecv_HYB4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -540,7 +540,7 @@ c********************************************************************
      &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecw_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global,me)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_local,me)
 	elseif(convection.eq.'HYB4') then
       call advecw_HYB4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -674,11 +674,12 @@ c
 	real ans_T(1:i1,0:jmax*px+1,1:kmax/px+1),ekm_T(1:i1,0:jmax*px+1,1:kmax/px+1)!,ekm2(0:i1,0:j1,0:k1) 
 	real uu_T(1:imax,0:jmax*px+1,1:kmax/px),vv_T(1:imax,0:jmax*px+1,1:kmax/px),ww_T(1:imax,0:jmax*px+1,1:kmax/px)
 	real rhU_T(1:imax,0:jmax*px+1,1:kmax/px),rhV_T(1:imax,0:jmax*px+1,1:kmax/px),rhW_T(1:imax,0:jmax*px+1,1:kmax/px)
+	real fc_T(1:imax,0:jmax*px+1,1:kmax/px)
 	real interface_T(1:i1,0:jmax*px+1)
 	real utr(0:i1,0:j1,0:k1),vtr(0:i1,0:j1,0:k1),wtr(0:i1,0:j1,0:k1)	
 	real ws(0:i1,0:j1,0:k1),gvector,CNz,dir_order_real
 	integer ileng,ierr,itag,status(MPI_STATUS_SIZE),perx,pery,dir_order
-	integer clock
+	integer clock,nnnn,iiii
 	INTEGER, DIMENSION(:), ALLOCATABLE :: seed
 	!real rhU2(0:i1,0:j1,0:k1),rhV2(0:i1,0:j1,0:k1),rhW2(0:i1,0:j1,0:k1)
 !!!	real dUdt2(0:i1,0:j1,0:k1),dVdt2(0:i1,0:j1,0:k1),dWdt2(0:i1,0:j1,0:k1)
@@ -924,32 +925,54 @@ c********************************************************************
 				 pery=0 
 				 IF (periodicx.eq.1) perx=1
 				 IF (periodicy.eq.1) pery=1
-				 call t2np(Diffcof(1:imax,1:jmax,1:kmax),ekm_T(1:imax,1:jmax*px,1:kmax/px))
+				 IF (n.eq.1) THEN 
+					call t2np(Diffcof(1:imax,1:jmax,1:kmax),ekm_T(1:imax,1:jmax*px,1:kmax/px))
+					call t2np(fc_local(1:imax,1:jmax,1:kmax),fc_T(1:imax,1:jmax*px,1:kmax/px))
+				 ENDIF 
 				 call t2np(dcdt(n,1:imax,1:jmax,1:kmax),ans_T(1:imax,1:jmax*px,1:kmax/px))
 				 !! also pass over boundaries at j=0 :
 				 IF (rank.eq.0) THEN
 				  do i=1,px-1
-				  call mpi_send(Diffcof(1:imax,0,i*kmax/px+1:(i+1)*kmax/px),imax*kmax/px,MPI_REAL8,i,i,MPI_COMM_WORLD,status,ierr)
+				  IF (n.eq.1) THEN
+					call mpi_send(Diffcof(1:imax,0,i*kmax/px+1:(i+1)*kmax/px),imax*kmax/px,MPI_REAL8,i,i,MPI_COMM_WORLD,status,ierr)
+					call mpi_send(fc_local(1:imax,0,i*kmax/px+1:(i+1)*kmax/px),imax*kmax/px,MPI_REAL8,i,i+400000,MPI_COMM_WORLD,status,ierr)
+				  ENDIF
 				  call mpi_send(dcdt(n,1:imax,0,i*kmax/px+1:(i+1)*kmax/px),imax*kmax/px,MPI_REAL8,i,i+100000,MPI_COMM_WORLD,status,ierr)
 				  enddo
-				  ekm_T(1:imax,0,1:kmax/px)=Diffcof(1:imax,0,1:kmax/px)
+				  IF (n.eq.1) THEN
+					ekm_T(1:imax,0,1:kmax/px)=Diffcof(1:imax,0,1:kmax/px)
+					fc_T(1:imax,0,1:kmax/px)=fc_local(1:imax,0,1:kmax/px)
+				  ENDIF 
 				  ans_T(1:imax,0,1:kmax/px)=dcdt(n,1:imax,0,1:kmax/px)			
 				 ELSE
-					call mpi_recv(ekm_T(1:imax,0,1:kmax/px),imax*kmax/px,MPI_REAL8,0,rank,MPI_COMM_WORLD,status,ierr)
+				    IF (n.eq.1) THEN
+					  call mpi_recv(ekm_T(1:imax,0,1:kmax/px),imax*kmax/px,MPI_REAL8,0,rank,MPI_COMM_WORLD,status,ierr)
+					  call mpi_recv(fc_T(1:imax,0,1:kmax/px),imax*kmax/px,MPI_REAL8,0,rank+400000,MPI_COMM_WORLD,status,ierr)
+					ENDIF 
 					call mpi_recv(ans_T(1:imax,0,1:kmax/px),imax*kmax/px,MPI_REAL8,0,rank+100000,MPI_COMM_WORLD,status,ierr)
 				 ENDIF
 				 !! also pass over boundaries at j=jmax+1 :
 				 IF (rank.eq.px-1) THEN
 				  do i=0,px-2
-					call mpi_send(Diffcof(1:imax,jmax+1,i*kmax/px+1:(i+1)*kmax/px),imax*kmax/px,MPI_REAL8,i,i+200000,MPI_COMM_WORLD
+				    IF (n.eq.1) THEN
+					  call mpi_send(Diffcof(1:imax,jmax+1,i*kmax/px+1:(i+1)*kmax/px),imax*kmax/px,MPI_REAL8,i,i+200000,MPI_COMM_WORLD
      &					,status,ierr)
+					  call mpi_send(fc_local(1:imax,jmax+1,i*kmax/px+1:(i+1)*kmax/px),imax*kmax/px,MPI_REAL8,i,i+400000,MPI_COMM_WORLD
+     &					,status,ierr)	 
+					ENDIF 
 					call mpi_send(dcdt(n,1:imax,jmax+1,i*kmax/px+1:(i+1)*kmax/px),imax*kmax/px,MPI_REAL8,i,i+300000,MPI_COMM_WORLD
      &					,status,ierr)	 
 				  enddo
-				  ekm_T(1:imax,jmax*px+1,1:kmax/px)=Diffcof(1:imax,jmax+1,rank*kmax/px+1:(rank+1)*kmax/px)
+				  IF (n.eq.1) THEN
+				    ekm_T(1:imax,jmax*px+1,1:kmax/px)=Diffcof(1:imax,jmax+1,rank*kmax/px+1:(rank+1)*kmax/px)
+					fc_T(1:imax,jmax*px+1,1:kmax/px)=fc_local(1:imax,jmax+1,rank*kmax/px+1:(rank+1)*kmax/px)
+				  ENDIF 
 				  ans_T(1:imax,jmax*px+1,1:kmax/px)=dcdt(n,1:imax,jmax+1,rank*kmax/px+1:(rank+1)*kmax/px)
 				 ELSE
-				  call mpi_recv(ekm_T(1:imax,jmax*px+1,1:kmax/px),imax*kmax/px,MPI_REAL8,px-1,rank+200000,MPI_COMM_WORLD,status,ierr)
+				  IF (n.eq.1) THEN 
+				    call mpi_recv(ekm_T(1:imax,jmax*px+1,1:kmax/px),imax*kmax/px,MPI_REAL8,px-1,rank+200000,MPI_COMM_WORLD,status,ierr)
+					call mpi_recv(fc_T(1:imax,jmax*px+1,1:kmax/px),imax*kmax/px,MPI_REAL8,px-1,rank+400000,MPI_COMM_WORLD,status,ierr)
+				  ENDIF 
 				  call mpi_recv(ans_T(1:imax,jmax*px+1,1:kmax/px),imax*kmax/px,MPI_REAL8,px-1,rank+300000,MPI_COMM_WORLD,status,ierr)
 				 ENDIF
 
@@ -959,8 +982,8 @@ c********************************************************************
 					 do j=1,px*jmax !0,px*jmax+1 
 					   jm=j-1 !MAX(0,j-1)
 					   jp=j+1 !MIN(px*jmax+1,j+1)
-					   ekm_min=0.5* (ekm_T(i,jm,k)+ekm_T(i,j,k))*MIN(fc_global(i,jm,k+rank*kmax/px),fc_global(i,j,k+rank*kmax/px))
-					   ekm_plus=0.5*(ekm_T(i,jp,k)+ekm_T(i,j,k))*MIN(fc_global(i,jp,k+rank*kmax/px),fc_global(i,j,k+rank*kmax/px))
+					   ekm_min=0.5* (ekm_T(i,jm,k)+ekm_T(i,j,k))*MIN(fc_T(i,jm,k),fc_T(i,j,k))
+					   ekm_plus=0.5*(ekm_T(i,jp,k)+ekm_T(i,j,k))*MIN(fc_T(i,jp,k),fc_T(i,j,k))
 					   aaay(j)=-CNz*ekm_min*dt/((Rp(i)*(phipt(j)-phipt(jm)))*Rp(i)*dphi2t(j))
 					   cccy(j)=-CNz*ekm_plus*dt/((Rp(i)*(phipt(jp)-phipt(j)))*Rp(i)*dphi2t(j))
 					   bbby(j)=1.-aaay(j)-cccy(j) 				   
@@ -981,8 +1004,8 @@ c********************************************************************
 					 do j=1,px*jmax !0,px*jmax+1 
 					   jm=j-1 !MAX(0,j-1)
 					   jp=j+1 !MIN(px*jmax+1,j+1)
-					   ekm_min=0.5* (ekm_T(i,jm,k)+ekm_T(i,j,k))*MIN(fc_global(i,jm,k+rank*kmax/px),fc_global(i,j,k+rank*kmax/px))
-					   ekm_plus=0.5*(ekm_T(i,jp,k)+ekm_T(i,j,k))*MIN(fc_global(i,jp,k+rank*kmax/px),fc_global(i,j,k+rank*kmax/px))
+					   ekm_min=0.5* (ekm_T(i,jm,k)+ekm_T(i,j,k))*MIN(fc_T(i,jm,k),fc_T(i,j,k))
+					   ekm_plus=0.5*(ekm_T(i,jp,k)+ekm_T(i,j,k))*MIN(fc_T(i,jp,k),fc_T(i,j,k))
 					   aaay(j)=-CNz*ekm_min*dt/((Rp(i)*(phipt(j)-phipt(jm)))*Rp(i)*dphi2t(j))
 					   cccy(j)=-CNz*ekm_plus*dt/((Rp(i)*(phipt(jp)-phipt(j)))*Rp(i)*dphi2t(j))
 					   bbby(j)=1.-aaay(j)-cccy(j) 				   
@@ -998,8 +1021,8 @@ c********************************************************************
 					 do j=1,px*jmax !0,px*jmax+1 
 					   jm=j-1 !MAX(0,j-1)
 					   jp=j+1 !MIN(px*jmax+1,j+1)
-					   ekm_min=0.5* (ekm_T(i,jm,k)+ekm_T(i,j,k))*MIN(fc_global(i,jm,k+rank*kmax/px),fc_global(i,j,k+rank*kmax/px))
-					   ekm_plus=0.5*(ekm_T(i,jp,k)+ekm_T(i,j,k))*MIN(fc_global(i,jp,k+rank*kmax/px),fc_global(i,j,k+rank*kmax/px))
+					   ekm_min=0.5* (ekm_T(i,jm,k)+ekm_T(i,j,k))*MIN(fc_T(i,jm,k),fc_T(i,j,k))
+					   ekm_plus=0.5*(ekm_T(i,jp,k)+ekm_T(i,j,k))*MIN(fc_T(i,jp,k),fc_T(i,j,k))
 					   aaay(j)=-CNz*ekm_min*dt/((Rp(i)*(phipt(j)-phipt(jm)))*Rp(i)*dphi2t(j))
 					   cccy(j)=-CNz*ekm_plus*dt/((Rp(i)*(phipt(jp)-phipt(j)))*Rp(i)*dphi2t(j))
 					   bbby(j)=1.-aaay(j)-cccy(j) 				   
@@ -1022,8 +1045,8 @@ c********************************************************************
 					 do i=1,imax !0,i1
 					   im=i-1 !MAX(0,i-1)
 					   ip=i+1 !MIN(i1,i+1)
-					   ekm_min=0.5*(Diffcof(im,j,k)+Diffcof(i,j,k))*MIN(fc_global(i,j+rank*jmax,k),fc_global(im,j+rank*jmax,k))
-					   ekm_plus=0.5*(Diffcof(ip,j,k)+Diffcof(i,j,k))*MIN(fc_global(ip,j+rank*jmax,k),fc_global(i,j+rank*jmax,k))
+					   ekm_min=0.5*(Diffcof(im,j,k)+Diffcof(i,j,k))*MIN(fc_local(i,j,k),fc_local(im,j,k))
+					   ekm_plus=0.5*(Diffcof(ip,j,k)+Diffcof(i,j,k))*MIN(fc_local(ip,j,k),fc_local(i,j,k))
 					   aaax(i)=-CNz*ekm_min*Ru(im)*dt/((Rp(i)-Rp(im))*dr(i)*Rp(i))
 					   cccx(i)=-CNz*ekm_plus*Ru(i)*dt/((Rp(ip)-Rp(i))*dr(i)*Rp(i))
 					   bbbx(i)=1.-aaax(i)-cccx(i) 
@@ -1043,8 +1066,8 @@ c********************************************************************
 					 do i=1,imax !0,i1
 					   im=i-1 !MAX(0,i-1)
 					   ip=i+1 !MIN(i1,i+1)
-					   ekm_min=0.5*(Diffcof(im,j,k)+Diffcof(i,j,k))*MIN(fc_global(i,j+rank*jmax,k),fc_global(im,j+rank*jmax,k))
-					   ekm_plus=0.5*(Diffcof(ip,j,k)+Diffcof(i,j,k))*MIN(fc_global(ip,j+rank*jmax,k),fc_global(i,j+rank*jmax,k))
+					   ekm_min=0.5*(Diffcof(im,j,k)+Diffcof(i,j,k))*MIN(fc_local(i,j,k),fc_local(im,j,k))
+					   ekm_plus=0.5*(Diffcof(ip,j,k)+Diffcof(i,j,k))*MIN(fc_local(ip,j,k),fc_local(i,j,k))
 					   aaax(i)=-CNz*ekm_min*Ru(im)*dt/((Rp(i)-Rp(im))*dr(i)*Rp(i))
 					   cccx(i)=-CNz*ekm_plus*Ru(i)*dt/((Rp(ip)-Rp(i))*dr(i)*Rp(i))
 					   bbbx(i)=1.-aaax(i)-cccx(i) 
@@ -1063,8 +1086,8 @@ c********************************************************************
 					 do i=1,imax !0,i1
 					   im=i-1 !MAX(0,i-1)
 					   ip=i+1 !MIN(i1,i+1)
-					   ekm_min=0.5*(Diffcof(im,j,k)+Diffcof(i,j,k))*MIN(fc_global(i,j+rank*jmax,k),fc_global(im,j+rank*jmax,k))
-					   ekm_plus=0.5*(Diffcof(ip,j,k)+Diffcof(i,j,k))*MIN(fc_global(ip,j+rank*jmax,k),fc_global(i,j+rank*jmax,k))
+					   ekm_min=0.5*(Diffcof(im,j,k)+Diffcof(i,j,k))*MIN(fc_local(i,j,k),fc_local(im,j,k))
+					   ekm_plus=0.5*(Diffcof(ip,j,k)+Diffcof(i,j,k))*MIN(fc_local(ip,j,k),fc_local(i,j,k))
 					   aaax(i)=-CNz*ekm_min*Ru(im)*dt/((Rp(i)-Rp(im))*dr(i)*Rp(i))
 					   cccx(i)=-CNz*ekm_plus*Ru(i)*dt/((Rp(ip)-Rp(i))*dr(i)*Rp(i))
 					   bbbx(i)=1.-aaax(i)-cccx(i) 
@@ -1081,8 +1104,8 @@ c********************************************************************
                  do k=1,kmax !0,k1
 				   km=k-1 !MAX(0,k-1)
 				   kp=k+1 !MIN(k1,k+1)
-				   ekm_min=0.5*(Diffcof(i,j,km)+Diffcof(i,j,k))*MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,km))
-				   ekm_plus=0.5*(Diffcof(i,j,kp)+Diffcof(i,j,k))*MIN(fc_global(i,j+rank*jmax,kp),fc_global(i,j+rank*jmax,k))
+				   ekm_min=0.5*(Diffcof(i,j,km)+Diffcof(i,j,k))*MIN(fc_local(i,j,k),fc_local(i,j,km))
+				   ekm_plus=0.5*(Diffcof(i,j,kp)+Diffcof(i,j,k))*MIN(fc_local(i,j,kp),fc_local(i,j,k))
 				   aaa(k)=-CNz*ekm_min*dt/dz**2
 				   ccc(k)=-CNz*ekm_plus*dt/dz**2
 				   bbb(k)=1.-aaa(k)-ccc(k) 
@@ -1151,7 +1174,7 @@ c********************************************************************
      & ,periodicx,periodicy,wf,wd,numdiff2)
 	elseif(convection.eq.'HYB6') then
       call advecu_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2,fc_global,me)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2,fc_local,me)
 	elseif(convection.eq.'HYB4') then
       call advecu_HYB4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2)	 
@@ -1245,7 +1268,7 @@ c********************************************************************
      & ,periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecv_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global,me)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_local,me)
 	elseif(convection.eq.'HYB4') then
       call advecv_HYB4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -1338,7 +1361,7 @@ c********************************************************************
      &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecw_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global,me)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_local,me)
 	elseif(convection.eq.'HYB4') then
       call advecw_HYB4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -1531,14 +1554,15 @@ c********************************************************************
 		IF (CNdiffz.eq.11) THEN
 		  IF (rank.eq.0) THEN 
 			CALL SYSTEM_CLOCK(COUNT=clock)
-			CALL RANDOM_SEED(size = n)
-			ALLOCATE(seed(n))
+			CALL RANDOM_SEED(size = nnnn)
+			ALLOCATE(seed(nnnn))
 			CALL SYSTEM_CLOCK(COUNT=clock)
-			seed = clock + 37 * (/ (i - 1, i = 1, n) /)
+			seed = clock + 37 * (/ (iiii - 1, iiii = 1, nnnn) /)
 			CALL RANDOM_SEED(PUT = seed)		  
 			call random_number(dir_order_real) ! uniform distribution 0,1
 			dir_order_real=dir_order_real*6. ! uniform distribution 0,6
 			dir_order=CEILING(dir_order_real) ! either 1,2,3,4,5,6
+			DEALLOCATE(seed)
 		  ENDIF 
 		  call mpi_bcast(dir_order,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 
@@ -2031,8 +2055,8 @@ c********************************************************************
 	           km=MAX(0,k-1)
 	           kp=MIN(k1,k+1)
 	           kpp=MIN(k1,k+2)
-	           ekm_min=0.5*(Diffcof(i,j,km)+Diffcof(i,j,k))*MIN(fc_global(i,j+rank*jmax,km),fc_global(i,j+rank*jmax,k))
-	           ekm_plus=0.5*(Diffcof(i,j,kp)+Diffcof(i,j,k))*MIN(fc_global(i,j+rank*jmax,kp),fc_global(i,j+rank*jmax,k))
+	           ekm_min=0.5*(Diffcof(i,j,km)+Diffcof(i,j,k))*MIN(fc_local(i,j,km),fc_local(i,j,k))
+	           ekm_plus=0.5*(Diffcof(i,j,kp)+Diffcof(i,j,k))*MIN(fc_local(i,j,kp),fc_local(i,j,k))
 	           aaa(k)=-0.5*ekm_min*cn1*dt/dz**2
 	           bbb(k)=1.+0.5*(ekm_min+ekm_plus)*cn1*dt/dz**2
 	           ccc(k)=-0.5*ekm_plus*cn1*dt/dz**2
@@ -2093,7 +2117,7 @@ c********************************************************************
      & periodicx,periodicy,wf,wd,numdiff2)
 	elseif(convection.eq.'HYB6') then
       call advecu_HYB6(k1u,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2,fc_global,me)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2,fc_local,me)
 	elseif(convection.eq.'HYB4') then
       call advecu_HYB4(k1u,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2)	 
@@ -2122,7 +2146,7 @@ c********************************************************************
      & periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecv_HYB6(k1v,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global,me)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_local,me)
 	elseif(convection.eq.'HYB4') then
       call advecv_HYB4(k1v,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -2151,7 +2175,7 @@ c********************************************************************
      &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecw_HYB6(k1w,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global,me)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_local,me)
 	elseif(convection.eq.'HYB4') then
       call advecw_HYB4(k1w,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -2216,9 +2240,9 @@ c********************************************************************
 	    kp=MIN(k1,k+1)
 	    kpp=MIN(k1,k+2)
 	    ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i+1,j,k)+ekm(i+1,j,km))
-     & *MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,km),fc_global(i+1,j+rank*jmax,k),fc_global(i+1,j+rank*jmax,km))		
+     & *MIN(fc_local(i,j,k),fc_local(i,j,km),fc_local(i+1,j,k),fc_local(i+1,j,km))		
 	    ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i+1,j,k)+ekm(i+1,j,kp))
-     & *MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,kp),fc_global(i+1,j+rank*jmax,k),fc_global(i+1,j+rank*jmax,kp))		
+     & *MIN(fc_local(i,j,k),fc_local(i,j,kp),fc_local(i+1,j,k),fc_local(i+1,j,kp))		
 	    aaa(k)=-0.5*ekm_min*c2*dt/dz**2/(0.5*(rnew(i,j,km)+rnew(i+1,j,km)))
 	    bbb(k)=1.+0.5*(ekm_min+ekm_plus)*c2*dt/dz**2/(0.5*(rnew(i,j,k)+rnew(i+1,j,k)))
 	    ccc(k)=-0.5*ekm_plus*c2*dt/dz**2/(0.5*(rnew(i,j,kp)+rnew(i+1,j,kp)))
@@ -2240,9 +2264,9 @@ c********************************************************************
 	    kp=MIN(k1,k+1)
 	    kpp=MIN(k1,k+2)
 	    ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i,j+1,k)+ekm(i,j+1,km))
-     & *MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,km),fc_global(i,j+1+rank*jmax,k),fc_global(i,j+1+rank*jmax,km))		
+     & *MIN(fc_local(i,j,k),fc_local(i,j,km),fc_local(i,j+1,k),fc_local(i,j+1,km))		
 	    ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i,j+1,k)+ekm(i,j+1,kp))
-     & *MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,kp),fc_global(i,j+1+rank*jmax,k),fc_global(i,j+1+rank*jmax,kp))		
+     & *MIN(fc_local(i,j,k),fc_local(i,j,kp),fc_local(i,j+1,k),fc_local(i,j+1,kp))		
 	    aaa(k)=-0.5*ekm_min*c2*dt/dz**2/(0.5*(rnew(i,j,km)+rnew(i,j+1,km)))
 	    bbb(k)=1.+0.5*(ekm_min+ekm_plus)*c2*dt/dz**2/(0.5*(rnew(i,j,k)+rnew(i,j+1,k)))
 	    ccc(k)=-0.5*ekm_plus*c2*dt/dz**2/(0.5*(rnew(i,j,kp)+rnew(i,j+1,kp)))
@@ -2264,8 +2288,8 @@ c********************************************************************
 	    km=MAX(0,k-1)
 	    kp=MIN(k1,k+1)
 	    kpp=MIN(k1,k+2)
-	    ekm_min=ekm(i,j,k)*fc_global(i,j+rank*jmax,k)
-	    ekm_plus=ekm(i,j,kp)*fc_global(i,j+rank*jmax,kp)
+	    ekm_min=ekm(i,j,k)*fc_local(i,j,k)
+	    ekm_plus=ekm(i,j,kp)*fc_local(i,j,kp)
 	    aaa(k)=-0.5*ekm_min*c2*dt/dz**2/(0.5*(rnew(i,j,km)+rnew(i+1,j,k)))
 	    bbb(k)=1.+0.5*(ekm_min+ekm_plus)*c2*dt/dz**2/(0.5*(rnew(i,j,k)+rnew(i+1,j,kp)))
 	    ccc(k)=-0.5*ekm_plus*c2*dt/dz**2/(0.5*(rnew(i,j,kp)+rnew(i+1,j,kpp)))
@@ -2518,8 +2542,8 @@ c********************************************************************
 	           km=MAX(0,k-1)
 	           kp=MIN(k1,k+1)
 	           kpp=MIN(k1,k+2)
-	           ekm_min=0.5*(Diffcof(i,j,km)+Diffcof(i,j,k))*MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,km))
-	           ekm_plus=0.5*(Diffcof(i,j,kp)+Diffcof(i,j,k))*MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,kp))
+	           ekm_min=0.5*(Diffcof(i,j,km)+Diffcof(i,j,k))*MIN(fc_local(i,j,k),fc_local(i,j,km))
+	           ekm_plus=0.5*(Diffcof(i,j,kp)+Diffcof(i,j,k))*MIN(fc_local(i,j,k),fc_local(i,j,kp))
 	           aaa(k)=-0.5*ekm_min*cn2*dt/dz**2
 	           bbb(k)=1.+0.5*(ekm_min+ekm_plus)*cn2*dt/dz**2
 	           ccc(k)=-0.5*ekm_plus*cn2*dt/dz**2
@@ -2581,7 +2605,7 @@ c********************************************************************
      & periodicx,periodicy,wf,wd,numdiff2)
 	elseif(convection.eq.'HYB6') then
       call advecu_HYB6(k2u,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2,fc_global,me)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2,fc_local,me)
 	elseif(convection.eq.'HYB4') then
       call advecu_HYB4(k2u,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2)	 
@@ -2610,7 +2634,7 @@ c********************************************************************
      & periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecv_HYB6(k2v,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global,me)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_local,me)
 	elseif(convection.eq.'HYB4') then
       call advecv_HYB4(k2v,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -2639,7 +2663,7 @@ c********************************************************************
      &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecw_HYB6(k2w,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global,me)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_local,me)
 	elseif(convection.eq.'HYB4') then
       call advecw_HYB4(k2w,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -2705,9 +2729,9 @@ c********************************************************************
 	    kp=MIN(k1,k+1)
 	    kpp=MIN(k1,k+2)
 	    ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i+1,j,k)+ekm(i+1,j,km))
-     & *MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,km),fc_global(i+1,j+rank*jmax,k),fc_global(i+1,j+rank*jmax,km))		
+     & *MIN(fc_local(i,j,k),fc_local(i,j,km),fc_local(i+1,j,k),fc_local(i+1,j,km))		
 	    ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i+1,j,k)+ekm(i+1,j,kp))
-     & *MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,kp),fc_global(i+1,j+rank*jmax,k),fc_global(i+1,j+rank*jmax,kp))			
+     & *MIN(fc_local(i,j,k),fc_local(i,j,kp),fc_local(i+1,j,k),fc_local(i+1,j,kp))			
 	    aaa(k)=-0.5*ekm_min*c3*dt/dz**2/(0.5*(drdt(i,j,km)+drdt(i+1,j,km)))
 	    bbb(k)=1.+0.5*(ekm_min+ekm_plus)*c3*dt/dz**2/(0.5*(drdt(i,j,k)+drdt(i+1,j,k)))
 	    ccc(k)=-0.5*ekm_plus*c3*dt/dz**2/(0.5*(drdt(i,j,kp)+drdt(i+1,j,kp)))
@@ -2729,9 +2753,9 @@ c********************************************************************
 	    kp=MIN(k1,k+1)
 	    kpp=MIN(k1,k+2)
 	    ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i,j+1,k)+ekm(i,j+1,km))
-     & *MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,km),fc_global(i,j+1+rank*jmax,k),fc_global(i,j+1+rank*jmax,km))			
+     & *MIN(fc_local(i,j,k),fc_local(i,j,km),fc_local(i,j+1,k),fc_local(i,j+1,km))			
 	    ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i,j+1,k)+ekm(i,j+1,kp))
-     & *MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,kp),fc_global(i,j+1+rank*jmax,k),fc_global(i,j+1+rank*jmax,kp))			
+     & *MIN(fc_local(i,j,k),fc_local(i,j,kp),fc_local(i,j+1,k),fc_local(i,j+1,kp))			
 	    aaa(k)=-0.5*ekm_min*c3*dt/dz**2/(0.5*(drdt(i,j,km)+drdt(i,j+1,km)))
 	    bbb(k)=1.+0.5*(ekm_min+ekm_plus)*c3*dt/dz**2/(0.5*(drdt(i,j,k)+drdt(i,j+1,k)))
 	    ccc(k)=-0.5*ekm_plus*c3*dt/dz**2/(0.5*(drdt(i,j,kp)+drdt(i,j+1,kp)))
@@ -2753,8 +2777,8 @@ c********************************************************************
 	    km=MAX(0,k-1)
 	    kp=MIN(k1,k+1)
 	    kpp=MIN(k1,k+2)
-	    ekm_min=ekm(i,j,k)*fc_global(i,j+rank*jmax,k)
-	    ekm_plus=ekm(i,j,kp)*fc_global(i,j+rank*jmax,kp)
+	    ekm_min=ekm(i,j,k)*fc_local(i,j,k)
+	    ekm_plus=ekm(i,j,kp)*fc_local(i,j,kp)
 	    aaa(k)=-0.5*ekm_min*c3*dt/dz**2/(0.5*(drdt(i,j,km)+drdt(i+1,j,k)))
 	    bbb(k)=1.+0.5*(ekm_min+ekm_plus)*c3*dt/dz**2/(0.5*(drdt(i,j,k)+drdt(i+1,j,kp)))
 	    ccc(k)=-0.5*ekm_plus*c3*dt/dz**2/(0.5*(drdt(i,j,kp)+drdt(i+1,j,kpp)))
@@ -3007,8 +3031,8 @@ c********************************************************************
 	           km=MAX(0,k-1)
 	           kp=MIN(k1,k+1)
 	           kpp=MIN(k1,k+2)
-	           ekm_min=0.5*(Diffcof(i,j,km)+Diffcof(i,j,k))*MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,km))
-	           ekm_plus=0.5*(Diffcof(i,j,kp)+Diffcof(i,j,k))*MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,kp))
+	           ekm_min=0.5*(Diffcof(i,j,km)+Diffcof(i,j,k))*MIN(fc_local(i,j,k),fc_local(i,j,km))
+	           ekm_plus=0.5*(Diffcof(i,j,kp)+Diffcof(i,j,k))*MIN(fc_local(i,j,k),fc_local(i,j,kp))
 	           aaa(k)=-0.5*ekm_min*cn3*dt/dz**2
 	           bbb(k)=1.+0.5*(ekm_min+ekm_plus)*cn3*dt/dz**2
 	           ccc(k)=-0.5*ekm_plus*cn3*dt/dz**2
@@ -3071,7 +3095,7 @@ c********************************************************************
      & periodicx,periodicy,wf,wd,numdiff2)
 	elseif(convection.eq.'HYB6') then
       call advecu_HYB6(k3u,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2,fc_global,me)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2,fc_local,me)
 	elseif(convection.eq.'HYB4') then
       call advecu_HYB4(k3u,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2)	 
@@ -3101,7 +3125,7 @@ c********************************************************************
      & periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecv_HYB6(k3v,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global,me)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_local,me)
 	elseif(convection.eq.'HYB4') then
       call advecv_HYB4(k3v,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -3130,7 +3154,7 @@ c********************************************************************
      &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecw_HYB6(k3w,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global,me)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_local,me)
 	elseif(convection.eq.'HYB4') then
       call advecw_HYB4(k3w,dUdt,dVdt,dWdt,dRdt,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -3193,9 +3217,9 @@ c********************************************************************
 	    kp=MIN(k1,k+1)
 	    kpp=MIN(k1,k+2)
 	    ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i+1,j,k)+ekm(i+1,j,km))
-     & *MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,km),fc_global(i+1,j+rank*jmax,k),fc_global(i+1,j+rank*jmax,km))			
+     & *MIN(fc_local(i,j,k),fc_local(i,j,km),fc_local(i+1,j,k),fc_local(i+1,j,km))			
 	    ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i+1,j,k)+ekm(i+1,j,kp))
-     & *MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,kp),fc_global(i+1,j+rank*jmax,k),fc_global(i+1,j+rank*jmax,kp))		
+     & *MIN(fc_local(i,j,k),fc_local(i,j,kp),fc_local(i+1,j,k),fc_local(i+1,j,kp))		
 	    aaa(k)=-0.5*ekm_min*dt/dz**2/(0.5*(drdt(i,j,km)+drdt(i+1,j,km)))
 	    bbb(k)=1.+0.5*(ekm_min+ekm_plus)*dt/dz**2/(0.5*(drdt(i,j,k)+drdt(i+1,j,k)))
 	    ccc(k)=-0.5*ekm_plus*dt/dz**2/(0.5*(drdt(i,j,kp)+drdt(i+1,j,kp)))
@@ -3217,9 +3241,9 @@ c********************************************************************
 	    kp=MIN(k1,k+1)
 	    kpp=MIN(k1,k+2)
 	    ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i,j+1,k)+ekm(i,j+1,km))
-     & *MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,km),fc_global(i,j+1+rank*jmax,k),fc_global(i,j+1+rank*jmax,km))			
+     & *MIN(fc_local(i,j,k),fc_local(i,j,km),fc_local(i,j+1,k),fc_local(i,j+1,km))			
 	    ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i,j+1,k)+ekm(i,j+1,kp))
-     & *MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,kp),fc_global(i,j+1+rank*jmax,k),fc_global(i,j+1+rank*jmax,kp))			
+     & *MIN(fc_local(i,j,k),fc_local(i,j,kp),fc_local(i,j+1,k),fc_local(i,j+1,kp))			
 	    aaa(k)=-0.5*ekm_min*dt/dz**2/(0.5*(drdt(i,j,km)+drdt(i,j+1,km)))
 	    bbb(k)=1.+0.5*(ekm_min+ekm_plus)*dt/dz**2/(0.5*(drdt(i,j,k)+drdt(i,j+1,k)))
 	    ccc(k)=-0.5*ekm_plus*dt/dz**2/(0.5*(drdt(i,j,kp)+drdt(i,j+1,kp)))
@@ -3241,8 +3265,8 @@ c********************************************************************
 	    km=MAX(0,k-1)
 	    kp=MIN(k1,k+1)
 	    kpp=MIN(k1,k+2)
-	    ekm_min=ekm(i,j,k)*fc_global(i,j+rank*jmax,k)
-	    ekm_plus=ekm(i,j,kp)*fc_global(i,j+rank*jmax,kp)
+	    ekm_min=ekm(i,j,k)*fc_local(i,j,k)
+	    ekm_plus=ekm(i,j,kp)*fc_local(i,j,kp)
 	    aaa(k)=-0.5*ekm_min*dt/dz**2/(0.5*(drdt(i,j,km)+drdt(i+1,j,k)))
 	    bbb(k)=1.+0.5*(ekm_min+ekm_plus)*dt/dz**2/(0.5*(drdt(i,j,k)+drdt(i+1,j,kp)))
 	    ccc(k)=-0.5*ekm_plus*dt/dz**2/(0.5*(drdt(i,j,kp)+drdt(i+1,j,kpp)))
@@ -3482,8 +3506,8 @@ c********************************************************************
 	           km=MAX(0,k-1)
 	           kp=MIN(k1,k+1)
 	           kpp=MIN(k1,k+2)
-	           ekm_min=0.5*(Diffcof(i,j,km)+Diffcof(i,j,k))*MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,km))
-	           ekm_plus=0.5*(Diffcof(i,j,kp)+Diffcof(i,j,k))*MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,kp))
+	           ekm_min=0.5*(Diffcof(i,j,km)+Diffcof(i,j,k))*MIN(fc_local(i,j,k),fc_local(i,j,km))
+	           ekm_plus=0.5*(Diffcof(i,j,kp)+Diffcof(i,j,k))*MIN(fc_local(i,j,k),fc_local(i,j,kp))
 	           aaa(k)=-CNz*ekm_min*dt/dz**2
 	           bbb(k)=1.+CNz*(ekm_min+ekm_plus)*dt/dz**2
 	           ccc(k)=-CNz*ekm_plus*dt/dz**2
@@ -3554,7 +3578,7 @@ c********************************************************************
      & periodicx,periodicy,wf,wd,numdiff2)
 	elseif(convection.eq.'HYB6') then
       call advecu_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2,fc_global,me)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2,fc_local,me)
 	elseif(convection.eq.'HYB4') then
       call advecu_HYB4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd,numdiff2)	 
@@ -3600,7 +3624,7 @@ c********************************************************************
      &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecv_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,
-     & rank,px,numdiff,periodicx,periodicy,kbed,wf,wd,fc_global,me)
+     & rank,px,numdiff,periodicx,periodicy,kbed,wf,wd,fc_local,me)
 	elseif(convection.eq.'HYB4') then
       call advecv_HYB4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,
      & rank,px,numdiff,periodicx,periodicy,kbed,wf,wd)	 
@@ -3643,7 +3667,7 @@ c********************************************************************
      &  periodicx,periodicy,wf,wd)
 	elseif(convection.eq.'HYB6') then
       call advecw_HYB6(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
-     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_global,me)
+     & numdiff,periodicx,periodicy,kbed,wf,wd,fc_local,me)
 	elseif(convection.eq.'HYB4') then
       call advecw_HYB4(dnew,Unew,Vnew,Wnew,Rnew,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,
      & numdiff,periodicx,periodicy,kbed,wf,wd)
@@ -3707,9 +3731,9 @@ c********************************************************************
 	    kp=MIN(k1,k+1)
 	    kpp=MIN(k1,k+2)
 	    ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i+1,j,k)+ekm(i+1,j,km))
-     & *MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,km),fc_global(i+1,j+rank*jmax,k),fc_global(i+1,j+rank*jmax,km))		
+     & *MIN(fc_local(i,j,k),fc_local(i,j,km),fc_local(i+1,j,k),fc_local(i+1,j,km))		
 	    ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i+1,j,k)+ekm(i+1,j,kp))
-     & *MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,kp),fc_global(i+1,j+rank*jmax,k),fc_global(i+1,j+rank*jmax,kp))		
+     & *MIN(fc_local(i,j,k),fc_local(i,j,kp),fc_local(i+1,j,k),fc_local(i+1,j,kp))		
 	    aaa(k)=-CNz*ekm_min*dt/dz**2/(0.5*(drdt(i,j,km)+drdt(i+1,j,km)))
 	    bbb(k)=1.+CNz*(ekm_min+ekm_plus)*dt/dz**2/(0.5*(drdt(i,j,k)+drdt(i+1,j,k)))
 	    ccc(k)=-CNz*ekm_plus*dt/dz**2/(0.5*(drdt(i,j,kp)+drdt(i+1,j,kp)))
@@ -3731,9 +3755,9 @@ c********************************************************************
 	    kp=MIN(k1,k+1)
 	    kpp=MIN(k1,k+2)
 	    ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i,j+1,k)+ekm(i,j+1,km))
-     & *MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,km),fc_global(i,j+1+rank*jmax,k),fc_global(i,j+1+rank*jmax,km))		
+     & *MIN(fc_local(i,j,k),fc_local(i,j,km),fc_local(i,j+1,k),fc_local(i,j+1,km))		
 	    ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i,j+1,k)+ekm(i,j+1,kp))
-     & *MIN(fc_global(i,j+rank*jmax,k),fc_global(i,j+rank*jmax,kp),fc_global(i,j+1+rank*jmax,k),fc_global(i,j+1+rank*jmax,kp))			
+     & *MIN(fc_local(i,j,k),fc_local(i,j,kp),fc_local(i,j+1,k),fc_local(i,j+1,kp))			
 	    aaa(k)=-CNz*ekm_min*dt/dz**2/(0.5*(drdt(i,j,km)+drdt(i,j+1,km)))
 	    bbb(k)=1.+CNz*(ekm_min+ekm_plus)*dt/dz**2/(0.5*(drdt(i,j,k)+drdt(i,j+1,k)))
 	    ccc(k)=-CNz*ekm_plus*dt/dz**2/(0.5*(drdt(i,j,kp)+drdt(i,j+1,kp)))
@@ -3755,8 +3779,8 @@ c********************************************************************
 	    km=MAX(0,k-1)
 	    kp=MIN(k1,k+1)
 	    kpp=MIN(k1,k+2)
-	    ekm_min=ekm(i,j,k)*fc_global(i,j+rank*jmax,k)
-	    ekm_plus=ekm(i,j,kp)*fc_global(i,j+rank*jmax,kp)
+	    ekm_min=ekm(i,j,k)*fc_local(i,j,k)
+	    ekm_plus=ekm(i,j,kp)*fc_local(i,j,kp)
 	    aaa(k)=-CNz*ekm_min*dt/dz**2/(0.5*(drdt(i,j,km)+drdt(i+1,j,k)))
 	    bbb(k)=1.+CNz*(ekm_min+ekm_plus)*dt/dz**2/(0.5*(drdt(i,j,k)+drdt(i+1,j,kp)))
 	    ccc(k)=-CNz*ekm_plus*dt/dz**2/(0.5*(drdt(i,j,kp)+drdt(i+1,j,kpp)))
@@ -4108,7 +4132,7 @@ c
 !	  ENDIF
 	  if (inout.eq.1) then
 		!  if (continuity_solver.eq.33.or.continuity_solver.eq.34.or.continuity_solver.eq.35.or.continuity_solver.eq.36) THEN
-			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/dt  				  			! div(u)=0 --> total volume flux in 
+			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_local(i,j,k)/bp(n2)%volncells/dt  				  			! div(u)=0 --> total volume flux in 
 		!  else
 		!	p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/dt  				! div(u)=0 --> total volume flux in 
 		!  endif
@@ -4182,7 +4206,7 @@ c
 !	  ENDIF
 	  if (inout.eq.1) then
 		!  if (continuity_solver.eq.33.or.continuity_solver.eq.34.or.continuity_solver.eq.35.or.continuity_solver.eq.36) THEN
-			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/dt  				  			! div(u)=0 --> total volume flux in 
+			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_local(i,j,k)/bp(n2)%volncells/dt  				  			! div(u)=0 --> total volume flux in 
 		!  else
 		!	p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/dt  				! div(u)=0 --> total volume flux in 
 		!  endif
@@ -4365,7 +4389,7 @@ c
 !	  ENDIF
 	  if (inout.eq.1) then
 		!  if (continuity_solver.eq.33.or.continuity_solver.eq.34.or.continuity_solver.eq.35.or.continuity_solver.eq.36) THEN
-			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/dt  				  			! div(u)=0 --> total volume flux in 
+			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_local(i,j,k)/bp(n2)%volncells/dt  				  			! div(u)=0 --> total volume flux in 
 		!  else
 		!	p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/dt  				! div(u)=0 --> total volume flux in 
 		!  endif
@@ -4440,7 +4464,7 @@ c
 !	  ENDIF
 	  if (inout.eq.1) then
 		!  if (continuity_solver.eq.33.or.continuity_solver.eq.34.or.continuity_solver.eq.35.or.continuity_solver.eq.36) THEN
-			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/dt  				  			! div(u)=0 --> total volume flux in 
+			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_local(i,j,k)/bp(n2)%volncells/dt  				  			! div(u)=0 --> total volume flux in 
 		!  else
 		!	p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/dt  				! div(u)=0 --> total volume flux in 
 		!  endif
@@ -4591,7 +4615,7 @@ c
 		!  if (continuity_solver.eq.33.or.continuity_solver.eq.34.or.continuity_solver.eq.35.or.continuity_solver.eq.36) THEN
 		!	p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/dt  				  			! div(u)=0 --> total volume flux in 
 		!  else
-			p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/dt  				! div(u)=0 --> total volume flux in 
+			p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q*fc_local(i,j,k)/bp(n2)%volncells/dt  				! div(u)=0 --> total volume flux in 
 		!  endif
 	   endif
 	  enddo
@@ -4706,11 +4730,11 @@ c
 !			!when Q negative, remove sediment from cell as well   IMPLICIT 		  
 !		enddo	
 		  if (continuity_solver.eq.33.or.continuity_solver.eq.34) THEN
-			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/dt  				  			! div(u)=0 --> total volume flux in 
+			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_local(i,j,k)/bp(n2)%volncells/dt  				  			! div(u)=0 --> total volume flux in 
 		  elseif (continuity_solver.eq.35.or.continuity_solver.eq.36) THEN 
 			! bp%Q already added to p input in lines above 
 		  else
-			p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/dt  				! div(u)=0 --> total volume flux in 
+			p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q*fc_local(i,j,k)/bp(n2)%volncells/dt  				! div(u)=0 --> total volume flux in 
 		  endif
 !!			p(i,j,k)=p(i,j,k)-(s_in+(1.-MIN(cin,1.))*drdt(i,j,k)*bp(n2)%Q)/bp(n2)%volncells/dt  ! total mass flux in 
 !			p(i,j,k)=p(i,j,k)-((1.-MIN(cin,1.))*drdt(i,j,k)*bp(n2)%Q)/bp(n2)%volncells/dt  ! total mass flux in 
@@ -4916,7 +4940,7 @@ c
 !	  ENDIF
 	  if (inout.eq.1) then
 		!  if (continuity_solver.eq.33.or.continuity_solver.eq.34.or.continuity_solver.eq.35.or.continuity_solver.eq.36) THEN
-			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				  			! div(u)=0 --> total volume flux in 
+			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_local(i,j,k)/bp(n2)%volncells/ddtt  				  			! div(u)=0 --> total volume flux in 
 		!  else
 		!	p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				! div(u)=0 --> total volume flux in 
 		!  endif
@@ -4990,7 +5014,7 @@ c
 !	  ENDIF
 	  if (inout.eq.1) then
 		!  if (continuity_solver.eq.33.or.continuity_solver.eq.34.or.continuity_solver.eq.35.or.continuity_solver.eq.36) THEN
-			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				  			! div(u)=0 --> total volume flux in 
+			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_local(i,j,k)/bp(n2)%volncells/ddtt  				  			! div(u)=0 --> total volume flux in 
 		!  else
 		!	p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				! div(u)=0 --> total volume flux in 
 		!  endif
@@ -5100,7 +5124,7 @@ c
 !	  ENDIF
 	  if (inout.eq.1) then
 		!  if (continuity_solver.eq.33.or.continuity_solver.eq.34.or.continuity_solver.eq.35.or.continuity_solver.eq.36) THEN
-			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				  			! div(u)=0 --> total volume flux in 
+			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_local(i,j,k)/bp(n2)%volncells/ddtt  				  			! div(u)=0 --> total volume flux in 
 		!  else
 		!	p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				! div(u)=0 --> total volume flux in 
 		!  endif
@@ -5175,7 +5199,7 @@ c
 !	  ENDIF
 	  if (inout.eq.1) then
 		!  if (continuity_solver.eq.33.or.continuity_solver.eq.34.or.continuity_solver.eq.35.or.continuity_solver.eq.36) THEN
-			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				  			! div(u)=0 --> total volume flux in 
+			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_local(i,j,k)/bp(n2)%volncells/ddtt  				  			! div(u)=0 --> total volume flux in 
 		!  else
 		!	p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				! div(u)=0 --> total volume flux in 
 		!  endif
@@ -5253,11 +5277,11 @@ c
 !			!when Q negative, remove sediment from cell as well   IMPLICIT 		  
 !		enddo	
 		  if (continuity_solver.eq.33.or.continuity_solver.eq.34) THEN
-			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				  			! div(u)=0 --> total volume flux in 
+			p(i,j,k)=p(i,j,k)-bp(n2)%Q*fc_local(i,j,k)/bp(n2)%volncells/ddtt  				  			! div(u)=0 --> total volume flux in 
 		  elseif (continuity_solver.eq.35.or.continuity_solver.eq.36) THEN 
 			! bp%Q already added to p input in lines above 
 		  else
-			p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/ddtt  				! div(u)=0 --> total volume flux in 
+			p(i,j,k)=p(i,j,k)-drdt(i,j,k)*bp(n2)%Q*fc_local(i,j,k)/bp(n2)%volncells/ddtt  				! div(u)=0 --> total volume flux in 
 		  endif
 !!			p(i,j,k)=p(i,j,k)-(s_in+(1.-MIN(cin,1.))*drdt(i,j,k)*bp(n2)%Q)/bp(n2)%volncells/dt  ! total mass flux in 
 !			p(i,j,k)=p(i,j,k)-((1.-MIN(cin,1.))*drdt(i,j,k)*bp(n2)%Q)/bp(n2)%volncells/dt  ! total mass flux in 

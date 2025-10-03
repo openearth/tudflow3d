@@ -3857,8 +3857,8 @@ c*************************************************************
 	    if (bp(n2)%c(n)>1.e-12) then
 		  Cbound(i,j,k)=bp(n2)%c(n)
 		else
-		  Cbound(i,j,k)=(Cbound(i,j,k)+bp(n2)%sedflux(n)*ddtt*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells/frac(n)%rho)
-     &  /(1.-MIN(0.,bp(n2)%Q*bp(n2)%changesedsuction*fc_global(i,j+jmax*rank,k))*ddtt/bp(n2)%volncells) !when Q negative, remove sediment from cell as well   IMPLICIT 
+		  Cbound(i,j,k)=(Cbound(i,j,k)+bp(n2)%sedflux(n)*ddtt*fc_local(i,j,k)/bp(n2)%volncells/frac(n)%rho)
+     &  /(1.-MIN(0.,bp(n2)%Q*bp(n2)%changesedsuction*fc_local(i,j,k))*ddtt/bp(n2)%volncells) !when Q negative, remove sediment from cell as well   IMPLICIT 
 	 ! IMPLICIT: c^n+1-c^n=-Qout_cel/Vol_cel*dt*c^n+1 --> c^n+1 = c^n/(1+Qout_cel/Vol_cel*dt)
 		endif
 		! rho is calculated in state called after fkdat
@@ -5821,10 +5821,14 @@ c*************************************************************
 	
 	implicit none
 	
+	include 'mpif.h'
+	
 	real tt
-	integer n2,inout,n,tel
+	integer n2,inout,n,tel,ierr
 	real xTSHD(4),yTSHD(4),phi,interpseries,xx,yy
 	real fbx2,fbx,fby2,fby,fbz2
+	real*8 globalsum_Vol_V
+	
 !!!	real Propx_dummy(0:i1,0:px*jmax+1,1:kmax)
 !!!	real Propy_dummy(0:i1,0:px*jmax+1,1:kmax)
 !!!	real Propz_dummy(0:i1,0:px*jmax+1,1:kmax)
@@ -5943,9 +5947,9 @@ c*************************************************************
 		  bp(n2)%volncells=0.
 		  do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
 		   do i=1,imax 
-			 do j=1,jmax*px        
-		  xx=Rp(i)*cos_ut(j)-schuif_x !global xx over different processors
-		  yy=Rp(i)*sin_ut(j)          !global yy over different processors
+			 do j=1,jmax        
+		  xx=Rp(i)*cos_u(j)-schuif_x !global xx over different processors
+		  yy=Rp(i)*sin_u(j)          !global yy over different processors
 !		  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle: 
 			xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
 			yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
@@ -5961,16 +5965,20 @@ c*************************************************************
 !			inout=0
 !		  ENDIF
 		  if (inout.eq.1) then
-		   bp(n2)%volncells=bp(n2)%volncells+vol_V(i,j)*fc_global(i,j,k)
+		   bp(n2)%volncells=bp(n2)%volncells+vol_Vp(i,j)*fc_local(i,j,k)
 		   endif
 		  enddo
 		 enddo
 		enddo	  
+		ENDIF ! bedplume loop
+	ENDDO	
+	DO n2=1,nbedplume
+		call mpi_allreduce(bp(n2)%volncells,globalsum_Vol_V,1,mpi_double_precision,mpi_sum,mpi_comm_world,ierr)
+		bp(n2)%volncells=globalsum_Vol_V
 		 if (bp(n2)%volncells.le.0.and.tt<bp(n2)%t_end.and.inout.eq.1) then
 		   write(*,*),'WARNING, no cells found for bedplume, but it is defined inside domain. bp,rank:',n2,rank
 		   write(*,*),'In case a sedflux or Q has been defined the code will crash because of division by a zero volncells'
-		 endif
-		ENDIF ! bedplume loop
+		 endif		
 	ENDDO	
 	
 	end
@@ -6023,14 +6031,14 @@ c*************************************************************
 		  if (inout.eq.1) then
 		     DO n=1,nfrac
 				Chisbp(n,n2,bp(n2)%istep_bphis_output)=Chisbp(n,n2,bp(n2)%istep_bphis_output)+
-     &				vol_V(i,j+rank*jmax)*cnew(n,i,j,k)*fc_global(i,j+jmax*rank,k)		
+     &				vol_Vp(i,j)*cnew(n,i,j,k)*fc_local(i,j+jmax*rank,k)		
 		     ENDDO
 				Uhisbp(n2,bp(n2)%istep_bphis_output)=Uhisbp(n2,bp(n2)%istep_bphis_output)+
-     &				vol_V(i,j+rank*jmax)*Unew(i,j,k)*fc_global(i,j+jmax*rank,k)				 
+     &				vol_Vp(i,j)*Unew(i,j,k)*fc_local(i,j,k)				 
 				Vhisbp(n2,bp(n2)%istep_bphis_output)=Vhisbp(n2,bp(n2)%istep_bphis_output)+
-     &				vol_V(i,j+rank*jmax)*Vnew(i,j,k)*fc_global(i,j+jmax*rank,k)				 
+     &				vol_Vp(i,j)*Vnew(i,j,k)*fc_local(i,j,k)				 
 				Whisbp(n2,bp(n2)%istep_bphis_output)=Whisbp(n2,bp(n2)%istep_bphis_output)+
-     &				vol_V(i,j+rank*jmax)*Wnew(i,j,k)*fc_global(i,j+jmax*rank,k)		
+     &				vol_Vp(i,j)*Wnew(i,j,k)*fc_local(i,j,k)		
 		   endif
 		  enddo
 		 enddo
@@ -6159,8 +6167,8 @@ c*************************************************************
 				if (inout.eq.1) then
 					zb=MAX(REAL(kbed(i,j))*bednotfixed(i,j,kbed(i,j)),0.)*dz !use zb = kbed*dz as this corresponds with bed cells that are blocked in flow, buffer layer is not real bed but bookkeeping
 					! only count zb if top cell bed (kbed) is erodable				
-					zbed_mean=zbed_mean+zb*vol_V(i,j+rank*jmax)*bednotfixed(i,j,kbed(i,j)) 
-					Abed_bedplume=Abed_bedplume+vol_V(i,j+rank*jmax)*bednotfixed(i,j,kbed(i,j)) 
+					zbed_mean=zbed_mean+zb*vol_Vp(i,j)*bednotfixed(i,j,kbed(i,j)) 
+					Abed_bedplume=Abed_bedplume+vol_Vp(i,j)*bednotfixed(i,j,kbed(i,j)) 
 				endif
 			 enddo
 			enddo
@@ -6357,73 +6365,34 @@ c*************************************************************
 	
 	end	
 	
-	subroutine update_fc_global 
+	subroutine update_fc_local 
 	
 	USE nlist
 	
 	implicit none
 	include 'mpif.h'
 	
-	integer status4(MPI_STATUS_SIZE),t,r,j2,tel,ierr
-	real*8 fc_local(1:imax,1:jmax,1:kmax),fc_local_vec(imax*jmax*kmax),fc_global_vec(imax*jmax*px*kmax)
-
+	integer t
 
 
 	fc_local=1.
-	  do t=1,tmax_inPpuntTSHD
+	do t=1,tmax_inPpuntTSHD
  	    i=i_inPpuntTSHD(t)
  	    j=j_inPpuntTSHD(t)		
  	    k=k_inPpuntTSHD(t)		
 		IF (i.ge.1.and.i.le.imax.and.j.ge.1.and.j.le.jmax.and.k.ge.1.and.k.le.kmax) THEN
 			fc_local(i,j,k)=0.
 		ENDIF
-	  enddo
+	enddo
       
-		do j=1,jmax
-			do i=1,imax
-				do k=1,kbed(i,j)
-					fc_local(i,j,k)=0.
-				enddo
-			enddo
-		enddo	
-
+	do j=1,jmax
 		do i=1,imax
-			do j=1,jmax
-				do k=1,kmax	
-					tel=k+(j-1)*kmax+(i-1)*kmax*jmax
-					fc_local_vec(tel)=fc_local(i,j,k)
-				enddo 
+			do k=1,kbed(i,j)
+				fc_local(i,j,k)=0.
 			enddo
 		enddo
-					
-		call MPI_Allgather(fc_local_vec,imax*jmax*kmax,MPI_REAL8,fc_global_vec,imax*jmax*kmax,MPI_REAL8,MPI_COMM_WORLD,status4,ierr)
-		do r=1,px
-			do i=1,imax
-				do j=1,jmax
-					do k=1,kmax	
-						tel=k+(j-1)*kmax+(i-1)*kmax*jmax+(r-1)*(imax*jmax*kmax) 
-						j2=j+(r-1)*jmax
-						fc_global(i,j2,k)=fc_global_vec(tel)
-					enddo 
-				enddo
-			enddo	
-		enddo
-		if (periodicy.eq.1) then
-		  fc_global(1:imax,0,1:kmax)=fc_global(1:imax,jmax*px,1:kmax)
-		  fc_global(1:imax,jmax*px+1,1:kmax)=fc_global(1:imax,1,1:kmax)
-		else
-		  fc_global(1:imax,0,1:kmax)=fc_global(1:imax,1,1:kmax)
-		  fc_global(1:imax,jmax*px+1,1:kmax)=fc_global(1:imax,jmax*px,1:kmax)		
-		endif
-		if (periodicx.eq.1) then
-		  fc_global(0,0:jmax*px+1,1:kmax)=fc_global(imax,0:jmax*px+1,1:kmax)
-		  fc_global(i1,0:jmax*px+1,1:kmax)=fc_global(1,0:jmax*px+1,1:kmax)		
-		else
-		  fc_global(0,0:jmax*px+1,1:kmax)=fc_global(1,0:jmax*px+1,1:kmax)
-		  fc_global(i1,0:jmax*px+1,1:kmax)=fc_global(imax,0:jmax*px+1,1:kmax)
-		endif	
-		fc_global(0:i1,0:jmax*px+1,0)=fc_global(0:i1,0:jmax*px+1,1)
-		fc_global(0:i1,0:jmax*px+1,k1)=fc_global(0:i1,0:jmax*px+1,kmax)
+	enddo	
+	call bound_3D(fc_local)			
 	
 	
 	end	

@@ -354,6 +354,7 @@ c******************************************************************
 		REAL dummy_var(1:imax,1:px*jmax,1:kmax),dummy_var2(1:imax,1:px*jmax,1:kmax) 
 		CHARACTER(len=256) :: command,dummy,restart_file(1000)
 		INTEGER ressystem, io, nfound,jpx,size1,size2,size3,size4,load_Cbed
+		REAL*8 globalsum_Vol_V
 		
 		integer tel,ios,j2,r,ierr,t
 
@@ -505,9 +506,9 @@ c******************************************************************
 	  bp(n)%volncells=0.
       do k=1,kmax
        do i=1,imax 
-         do j=1,jmax*px       ! bedplume loop is only initial condition: do not bother to have U,V,W initial staggering perfect 
-	  xx=Rp(i)*cos_ut(j)-schuif_x !global xx over different processors
-	  yy=Rp(i)*sin_ut(j)          !global yy over different processors
+         do j=1,jmax       ! bedplume loop is only initial condition: do not bother to have U,V,W initial staggering perfect 
+	  xx=Rp(i)*cos_u(j)-schuif_x !global xx over different processors
+	  yy=Rp(i)*sin_u(j)          !global yy over different processors
 	  IF (k.le.FLOOR(bp(n)%height/dz).and.k.ge.CEILING(bp(n)%zbottom/dz)) THEN ! obstacle: 
 		xTSHD(1:4)=bp(n)%x*cos(phi)-bp(n)%y*sin(phi)
 		yTSHD(1:4)=bp(n)%x*sin(phi)+bp(n)%y*cos(phi)
@@ -523,16 +524,23 @@ c******************************************************************
 	 	inout=0
 	  ENDIF
 	  if (inout.eq.1) then
-	   bp(n)%volncells=bp(n)%volncells+vol_V(i,j)*fc_global(i,j,k)
+	   bp(n)%volncells=bp(n)%volncells+vol_Vp(i,j)*fc_local(i,j,k)
 	   endif
 	  enddo
 	 enddo
 	enddo	  
-	 if (bp(n)%volncells.le.0.) then
-	   write(*,*),'WARNING, no cells found for bedplume number: ',n,bp(n)%volncells,rank
-	   write(*,*),'In case a sedflux or Q has been defined the code will crash because of division by a zero volncells'
-	 endif
 	ENDDO ! bedplume loop	
+	
+	DO n=1,nbedplume
+		call mpi_allreduce(bp(n)%volncells,globalsum_Vol_V,1,mpi_double_precision,mpi_sum,mpi_comm_world,ierr)
+		bp(n)%volncells=globalsum_Vol_V
+		if (bp(n)%volncells.le.0.) then
+		   write(*,*),'WARNING, no cells found for bedplume number: ',n,bp(n)%volncells,rank
+		   write(*,*),'In case a sedflux or Q has been defined the code will crash because of division by a zero volncells'
+		endif		
+	ENDDO
+	
+	
 
 	ENDIF
 
@@ -3294,7 +3302,7 @@ C ...  Locals
 !					kbed(i,j)=k
 !					zbed(i,j)=MAX(zbed(i,j),kbed(i,j)*dz)
 !				  endif 
-				  !_inPpuntTSHD is hard 1/0 switch also when ibm1 for U,V,W is applied; its only use is for determination fc_global which prevents momentum/diffusion exchange between ibm-cells and fluid-cells
+				  !_inPpuntTSHD is hard 1/0 switch also when ibm1 for U,V,W is applied; its only use is for determination fc_local which prevents momentum/diffusion exchange between ibm-cells and fluid-cells
 				  tel1=tel1+1
 				  i_inPpuntTSHD(tel1)=i  
 				  j_inPpuntTSHD(tel1)=j

@@ -175,7 +175,7 @@
 	  REAL, DIMENSION(:,:),ALLOCATABLE :: thisbp,zhisbp
 	  REAL, DIMENSION(:,:,:),ALLOCATABLE :: Chisbp
 	  REAL, DIMENSION(:,:),ALLOCATABLE :: Uhisbp,Vhisbp,Whisbp
-	  REAL*8, DIMENSION(:,:,:),ALLOCATABLE :: fc_global
+	  REAL*8, DIMENSION(:,:,:),ALLOCATABLE :: fc_local
 	  REAL, DIMENSION(:,:),ALLOCATABLE :: uuR_relax,uuL_relax,vvR_relax,vvL_relax,tau2Vold,tau2Vnew,tau2Wold,tau2Wnew,qb_relax
 	  REAL, DIMENSION(:,:),ALLOCATABLE :: uuR_relax2,uuL_relax2,vvR_relax2,vvL_relax2,absU_sed_relax2
 	  REAL, DIMENSION(:,:),ALLOCATABLE :: tau_fl_Uold,tau_fl_Vold,tau_fl_Unew,tau_fl_Vnew,ust_sl_new,ust_sl_old,ust_bl_new,ust_bl_old
@@ -2019,7 +2019,7 @@
 	ALLOCATE(cU(nfrac,0:i1,0:j1,0:k1))
 	ALLOCATE(cV(nfrac,0:i1,0:j1,0:k1))
 	ALLOCATE(cW(nfrac,0:i1,0:j1,0:k1))
-	ALLOCATE(fc_global(0:i1,0:jmax*px+1,0:k1))
+	ALLOCATE(fc_local(0:i1,0:j1,0:k1))
 	ALLOCATE(obu(0:i1,0:j1,0:k1))  
 	ALLOCATE(obv(0:i1,0:j1,0:k1))  
 	ALLOCATE(obw(0:i1,0:j1,0:k1)) 

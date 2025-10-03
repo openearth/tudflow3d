@@ -39,7 +39,6 @@
 	character*3 varname
 	character*200 tline
 	logical(4) res
-	!real*8 fc_local(1:imax,1:jmax,1:kmax),fc_local_vec(imax*jmax*kmax),fc_global_vec(imax*jmax*px*kmax)
 !	integer(4) ps
 
        ! We are writing 3D data, a nx x ny x nz grid.
@@ -133,7 +132,7 @@
        call check( nf90_put_att(ncid, varid23, 'units', 'm') )
        call check( nf90_put_att(ncid, varid23, 'long_name', 'grid size dy C-grid') )
 	   
-	   obstacle=1.-fc_global(1:imax,1+rank*jmax:jmax+rank*jmax,1:kmax)
+	   obstacle=1.-fc_local(1:imax,1:jmax,1:kmax)
        call check( nf90_def_var(ncid, "obstacle", NF90_REAL, dimids, varid21) )
        call check( nf90_put_att(ncid, varid21, 'units', '-') )
        call check( nf90_put_att(ncid, varid21, 'long_name', 'If cell is in obstacle 1 else 0') )
@@ -583,7 +582,7 @@
        call check( nf90_put_att(ncid, varid105, 'long_name', 'istep_output_bpmove counter of last file (for correct output file
      &	   numbering after restart') )	 
 
-	   obstacle=1.-fc_global(1:imax,1+rank*jmax:jmax+rank*jmax,1:kmax)  
+	   obstacle=1.-fc_local(1:imax,1:jmax,1:kmax)  
        call check( nf90_def_var(ncid, "obstacle", NF90_REAL, dimids, varid23) )
        call check( nf90_put_att(ncid, varid23, 'units', '-') )
        call check( nf90_put_att(ncid, varid23, 'long_name', 'If cell is in obstacle 1 else 0') )

@@ -5333,7 +5333,7 @@ c*************************************************************
 !       include 'common.txt'
       include 'mpif.h'
 
-      integer m,n,ierr,clock,ii,t
+      integer m,n,ierr,clock,ii,t,nnnn,iiii
       INTEGER, DIMENSION(:), ALLOCATABLE :: seed
       real yy(nmax2),xx(nmax2),y,z,AAdummy(3,3)
       real z0,xxmin,xxmax,yymin,yymax,zzmin,zzmax,x0,y0,phi,fac,phi2
@@ -5341,10 +5341,10 @@ c*************************************************************
       real boxside_x,ttmin,ttmax,jetcorr,x,rr,rrmin,rrmax,dxx,dyy,ust!,ust3
 
 	CALL SYSTEM_CLOCK(COUNT=clock)
-	CALL RANDOM_SEED(size = n)
-	ALLOCATE(seed(n))
+	CALL RANDOM_SEED(size = nnnn)
+	ALLOCATE(seed(nnnn))
 	CALL SYSTEM_CLOCK(COUNT=clock)
-	seed = clock + 37 * (/ (i - 1, i = 1, n) /)
+	seed = clock + 37 * (/ (iiii - 1, iiii = 1, nnnn) /)
 	CALL RANDOM_SEED(PUT = seed)
 
 
@@ -5685,6 +5685,8 @@ c*************************************************************
 		enddo
 	  enddo
 	endif	
+	
+	DEALLOCATE(seed)
 
 	end
 
@@ -5696,7 +5698,7 @@ c*************************************************************
 !       include 'common.txt'
       include 'mpif.h'
 
-      integer n,clock,ierr
+      integer nnnn,iiii,clock,ierr
       INTEGER, DIMENSION(:), ALLOCATABLE :: seed
       real zz,eps(3),yy
       real z0,xxmin,xxmax,yymin,yymax,x0,y0,phi,ust,fac,phi2
@@ -5713,10 +5715,10 @@ c*************************************************************
       
 
       CALL SYSTEM_CLOCK(COUNT=clock)
-      CALL RANDOM_SEED(size = n)
-      ALLOCATE(seed(n))
+      CALL RANDOM_SEED(size = nnnn)
+      ALLOCATE(seed(nnnn))
       CALL SYSTEM_CLOCK(COUNT=clock)
-      seed = clock + 37 * (/ (i - 1, i = 1, n) /)
+      seed = clock + 37 * (/ (iiii - 1, iiii = 1, nnnn) /)
       CALL RANDOM_SEED(PUT = seed)
 
 
@@ -6151,6 +6153,7 @@ c*************************************************************
 !	enddo
       endif
 	  
+		DEALLOCATE(seed)
 	  
 !       if (rank.eq.1) then
 ! 	write(*,*)'rank,ind(3),ii',rank,ind(3),ii

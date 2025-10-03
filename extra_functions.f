@@ -320,8 +320,8 @@
         do k=1,ksurf_bc !kmax
           do j=1,jmax
              do i=1,imax	  
-		       localsum=localsum+Unew(i,j,k)*(Rp(i+1)-Rp(i))*(phiv(j)-phiv(j-1))*Ru(i)*dz*fc_global(i,j+jmax*rank,k)	
-			   localsum_Vol_V=localsum_Vol_V+Vol_V(i,j+rank*jmax)*fc_global(i,j+jmax*rank,k)
+		       localsum=localsum+Unew(i,j,k)*(Rp(i+1)-Rp(i))*(phiv(j)-phiv(j-1))*Ru(i)*dz*fc_local(i,j,k)	
+			   localsum_Vol_V=localsum_Vol_V+Vol_V(i,j+rank*jmax)*fc_local(i,j,k)
 			 enddo
 		  enddo
 	    enddo
@@ -346,7 +346,7 @@
 		do i=1,imax
 		  do j=1,jmax
 		    do k=1,ksurf_bc 
-			  Ppropx(i,j,k) = dpdx1*rhU(i,j,k)*fc_global(i,j+jmax*rank,k) !rnew !with variable density important to use rnew and not rho_b 
+			  Ppropx(i,j,k) = dpdx1*rhU(i,j,k)*fc_local(i,j,k) !rnew !with variable density important to use rnew and not rho_b 
 		    enddo
 		  enddo
 		enddo
@@ -362,8 +362,8 @@
         do k=ksurf_bc+1,kmax !kmax
           do j=1,jmax
              do i=1,imax	  
-		       localsum=localsum+Unew(i,j,k)*(Rp(i+1)-Rp(i))*(phiv(j)-phiv(j-1))*Ru(i)*dz*fc_global(i,j+jmax*rank,k)
-			   localsum_Vol_V=localsum_Vol_V+Vol_V(i,j+rank*jmax)*fc_global(i,j+jmax*rank,k)
+		       localsum=localsum+Unew(i,j,k)*(Rp(i+1)-Rp(i))*(phiv(j)-phiv(j-1))*Ru(i)*dz*fc_local(i,j,k)
+			   localsum_Vol_V=localsum_Vol_V+Vol_V(i,j+rank*jmax)*fc_local(i,j,k)
 			 enddo
 		  enddo
 	    enddo
@@ -388,7 +388,7 @@
 		do i=1,imax
 		  do j=1,jmax
 		    do k=ksurf_bc+1,kmax 
-			  Ppropx(i,j,k) = dpdx3*rhU(i,j,k)*fc_global(i,j+jmax*rank,k) !rnew !with variable density important to use rnew and not rho_b 
+			  Ppropx(i,j,k) = dpdx3*rhU(i,j,k)*fc_local(i,j,k) !rnew !with variable density important to use rnew and not rho_b 
 		    enddo
 		  enddo
 		enddo		
@@ -405,8 +405,8 @@
         do k=1,kmax
           do j=1,jmax
              do i=1,imax	  
-		       localsum=localsum+Unew(i,j,k)*(Rp(i+1)-Rp(i))*(phiv(j)-phiv(j-1))*Ru(i)*dz*fc_global(i,j+jmax*rank,k)
-			   localsum_Vol_V=localsum_Vol_V+Vol_V(i,j+rank*jmax)*fc_global(i,j+jmax*rank,k)
+		       localsum=localsum+Unew(i,j,k)*(Rp(i+1)-Rp(i))*(phiv(j)-phiv(j-1))*Ru(i)*dz*fc_local(i,j,k)
+			   localsum_Vol_V=localsum_Vol_V+Vol_V(i,j+rank*jmax)*fc_local(i,j,k)
 			 enddo
 		  enddo
 	    enddo
@@ -430,7 +430,7 @@
 		do i=1,imax
 		  do j=1,jmax
 		    do k=1,kmax 
-			  Ppropx(i,j,k) = dpdx1*rhU(i,j,k)*fc_global(i,j+jmax*rank,k) !rnew !with variable density important to use rnew and not rho_b 
+			  Ppropx(i,j,k) = dpdx1*rhU(i,j,k)*fc_local(i,j,k) !rnew !with variable density important to use rnew and not rho_b 
 		    enddo
 		  enddo
 		enddo		
@@ -452,8 +452,8 @@
         do k=1,ksurf_bc !kmax
           do j=1,jmax
              do i=1,imax	  
-		       localsum=localsum+Vnew(i,j,k)*(Ru(i)-Ru(i-1))*(phip(j+1)-phip(j))*Rp(i)*dz*fc_global(i,j+jmax*rank,k)
-			   localsum_Vol_V=localsum_Vol_V+Vol_V(i,j+rank*jmax)*fc_global(i,j+jmax*rank,k)
+		       localsum=localsum+Vnew(i,j,k)*(Ru(i)-Ru(i-1))*(phip(j+1)-phip(j))*Rp(i)*dz*fc_local(i,j,k)
+			   localsum_Vol_V=localsum_Vol_V+Vol_V(i,j+rank*jmax)*fc_local(i,j,k)
 			 enddo
 		  enddo
 	    enddo
@@ -477,7 +477,7 @@
 		do i=1,imax
 		  do j=1,jmax
 		    do k=1,ksurf_bc 
-			  Ppropy(i,j,k) = dpdy1*rhV(i,j,k)*fc_global(i,j+jmax*rank,k) !rnew !with variable density important to use rnew and not rho_b 
+			  Ppropy(i,j,k) = dpdy1*rhV(i,j,k)*fc_local(i,j,k) !rnew !with variable density important to use rnew and not rho_b 
 		    enddo
 		  enddo
 		enddo
@@ -493,8 +493,8 @@
         do k=ksurf_bc+1,kmax !kmax
           do j=1,jmax
              do i=1,imax	  
-		       localsum=localsum+Vnew(i,j,k)*(Ru(i)-Ru(i-1))*(phip(j+1)-phip(j))*Rp(i)*dz*fc_global(i,j+jmax*rank,k)
-			   localsum_Vol_V=localsum_Vol_V+Vol_V(i,j+rank*jmax)*fc_global(i,j+jmax*rank,k)
+		       localsum=localsum+Vnew(i,j,k)*(Ru(i)-Ru(i-1))*(phip(j+1)-phip(j))*Rp(i)*dz*fc_local(i,j,k)
+			   localsum_Vol_V=localsum_Vol_V+Vol_V(i,j+rank*jmax)*fc_local(i,j,k)
 			 enddo
 		  enddo
 	    enddo
@@ -518,7 +518,7 @@
 		do i=1,imax
 		  do j=1,jmax
 		    do k=ksurf_bc+1,kmax
-			  Ppropy(i,j,k) = dpdy3*rhV(i,j,k)*fc_global(i,j+jmax*rank,k) !rnew !with variable density important to use rnew and not rho_b 
+			  Ppropy(i,j,k) = dpdy3*rhV(i,j,k)*fc_local(i,j,k) !rnew !with variable density important to use rnew and not rho_b 
 		    enddo
 		  enddo
 		enddo
@@ -535,8 +535,8 @@
         do k=1,kmax
           do j=1,jmax
              do i=1,imax	  
-		       localsum=localsum+Vnew(i,j,k)*(Ru(i)-Ru(i-1))*(phip(j+1)-phip(j))*Rp(i)*dz*fc_global(i,j+jmax*rank,k)
-			   localsum_Vol_V=localsum_Vol_V+Vol_V(i,j+rank*jmax)*fc_global(i,j+jmax*rank,k)
+		       localsum=localsum+Vnew(i,j,k)*(Ru(i)-Ru(i-1))*(phip(j+1)-phip(j))*Rp(i)*dz*fc_local(i,j,k)
+			   localsum_Vol_V=localsum_Vol_V+Vol_V(i,j+rank*jmax)*fc_local(i,j,k)
 			 enddo
 		  enddo
 	    enddo
@@ -560,7 +560,7 @@
 		do i=1,imax
 		  do j=1,jmax
 		    do k=1,kmax 
-			  Ppropy(i,j,k) = dpdy1*rhV(i,j,k)*fc_global(i,j+jmax*rank,k) !rnew !with variable density important to use rnew and not rho_b 
+			  Ppropy(i,j,k) = dpdy1*rhV(i,j,k)*fc_local(i,j,k) !rnew !with variable density important to use rnew and not rho_b 
 		    enddo
 		  enddo
 		enddo		
@@ -685,8 +685,8 @@
 			inout=0
 		  ENDIF
 		  if (inout.eq.1) then
-			div2=div2-bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells
-			div3=div3-bp(n2)%Q*fc_global(i,j+jmax*rank,k)/bp(n2)%volncells
+			div2=div2-bp(n2)%Q*fc_local(i,j,k)/bp(n2)%volncells
+			div3=div3-bp(n2)%Q*fc_local(i,j,k)/bp(n2)%volncells
 		   endif
 		ENDIF
 	ENDDO ! bedplume loop

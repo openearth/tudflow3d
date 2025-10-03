@@ -18,7 +18,7 @@
 
 
       subroutine advecu_HYB6(putout,Uvel,Vvel,Wvel,RHO,rhu,rhv,rhw,Ru,Rp,dr,phiv,dz,
-     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy,kbed,wf,wd,nd2,fcg,me)
+     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy,kbed,wf,wd,nd2,fcl,me)
       implicit none
 c
 c********************************************************************
@@ -64,7 +64,7 @@ c********************************************************************
 	real rhU(0:i1,0:j1,0:k1),rhV(0:i1,0:j1,0:k1),rhW(0:i1,0:j1,0:k1)
 	real wwdd(1:3),wf(0:i1,0:j1,0:k1),numdif2,u4mag 
 	real Vvel2(-2:i1+2,-2:j1+2,-2:k1+2),Wvel2(-2:i1+2,-2:j1+2,-2:k1+2)
-	real fcg(0:i1,0:px*(j1-1)+1,0:k1),fcg_local
+	real fcl(0:i1,0:j1,0:k1),fcl_local
 	logical me2 
 	
 	Uvel2(0:i1,0:j1,0:k1)=Uvel
@@ -382,16 +382,15 @@ c********************************************************************
 		do i=ib,ie 
 		  do j=jb,je 
 			do k=kb,ke 
-			fcg_local=MIN(fcg(i,j+rank*jmax,k),fcg(i+1,j+rank*jmax,k),fcg(i-1,j+rank*jmax,k),
-     &			fcg(i,j+rank*jmax+1,k),fcg(i,j+rank*jmax-1,k),fcg(i,j+rank*jmax,k+1),fcg(i,j+rank*jmax,k-1))
-			  wf(i,j,k)=MAX((1.-fcg_local),nd2) !high diffusion cells direct neighbours of ibm and low diffusion otherwise
+			fcl_local=MIN(fcl(i,j,k),fcl(i+1,j,k),fcl(i-1,j,k),fcl(i,j+1,k),fcl(i,j-1,k),fcl(i,j,k+1),fcl(i,j,k-1))
+			  wf(i,j,k)=MAX((1.-fcl_local),nd2) !high diffusion cells direct neighbours of ibm and low diffusion otherwise
 			enddo 
 		  enddo 
 		enddo
 		do i=0,i1 
 		  do j=0,j1 
 			do k=0,k1 
-			  wf(i,j,k)=MAX((1.-fcg(i,j+rank*jmax,k)),nd2) !high diffusion all cells inside ibm and low diffusion outside ibm 
+			  wf(i,j,k)=MAX((1.-fcl(i,j,k)),nd2) !high diffusion all cells inside ibm and low diffusion outside ibm 
 			enddo 
 		    do k=0,MIN(k1,kbed(i,j)+klayer)
 			  wf(i,j,k)=1. !high diffusion inside bed and first cell above 
@@ -491,7 +490,7 @@ c********************************************************************
 
 
       subroutine advecv_HYB6(putout,Uvel,Vvel,Wvel,RHO,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,
-     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy,kbed,wf,wd,fcg,me)
+     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy,kbed,wf,wd,fcl,me)
       implicit none
 c
 c********************************************************************
@@ -537,7 +536,7 @@ c********************************************************************
 
 	real*8 ubb(0:i1,0:k1),ubf(0:i1,0:k1),Vvel2(-2:i1+2,-2:j1+2,-2:k1+2)
 	real rhU(0:i1,0:j1,0:k1),rhV(0:i1,0:j1,0:k1),rhW(0:i1,0:j1,0:k1),numdif2,wf(0:i1,0:j1,0:k1)
-	real fcg(0:i1,0:px*(j1-1)+1,0:k1)
+	real fcl(0:i1,0:j1,0:k1)
 	logical me2 
 	
 	jmax=j1-1 
@@ -727,7 +726,7 @@ c********************************************************************
       end
 
       subroutine advecw_HYB6(putout,Uvel,Vvel,Wvel,RHO,rhU,rhV,rhW,Ru,Rp,dr,phiv,dz,
-     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy,kbed,wf,wd,fcg,me)
+     +                  i1,j1,k1,ib,ie,jb,je,kb,ke,rank,px,numdif,periodicx,periodicy,kbed,wf,wd,fcl,me)
       implicit none
 c
 c********************************************************************
@@ -771,7 +770,7 @@ c********************************************************************
 	integer kpp,kppp,kmm,kmmm,jpp,jppp,jmm,jmmm,ipp,ippp,imm,immm,rank,px,periodicx,periodicy,wd,jmax
 	real*8 ubb(0:i1,0:k1),ubf(0:i1,0:k1),Wvel2(-2:i1+2,-2:j1+2,-2:k1+2)
 	real rhU(0:i1,0:j1,0:k1),rhV(0:i1,0:j1,0:k1),rhW(0:i1,0:j1,0:k1),numdif2,wf(0:i1,0:j1,0:k1)
-	real fcg(0:i1,0:px*(j1-1)+1,0:k1)
+	real fcl(0:i1,0:j1,0:k1)
 	
 	jmax=j1-1 
 
