@@ -70,6 +70,7 @@ Uoutflow=0 							! 0 (default) Neumann outflow dUdn=0 (for U,V,W); 2 means conv
 driftfluxforce_calfac = 1. 			! calibration factor for driftflux force (default 1.) 0. gives no force
 depo_implicit = 0					! 1=calculate deposition at the bed implicit; 0=explicit with old cfluid (default)
 IBMorder = 2 						! 0 (default) = normal staircase manner bed immersed boundary, 2 = 2nd order immersed boundary of bed, obstacles and TSHD higher in water are still staircase manner
+flowzero_gt_cfixedbed = 0 			! Default 0 not applied; 1 = cells with SUM(c(1:nfrac,i,j,k))>cfixedbed are forced to 0 flow with direct forcing IBM
 applyVOF = 0 						!Beta option, default 0 take variable rho fully in account in momentum eq.; 1 = only take variable density in account in gravity term, not in rest of momentum eq.; 2 = not take variable density in account in mom. eq. and continuity eq.
 k_ust_tau = 1 						! defines which k-layer from bed is used to determine ust/tau for sediment pickup and K-Eps bed-bc, default 1 (first cell from bed is used) and sometimes for IBM bed k_ust_tau=2 is recommended because 2nd cell is less influenced by nearby immersed bed grid cells with zero velocity 
 k_ust_tau_flow = 1 						! defines which k-layer from bed is used to determine ust/tau for the flow bed shear stress, default 1 (first cell from bed is used) and sometimes for IBM bed k_ust_tau_flow>1 could be used
@@ -93,6 +94,7 @@ V_bSEM =.5							! Ambient bc V velocity [m/s] used for SEM (if not defined then
 U_init = -1.						! Init U velocity [m/s] (if not defined then U_b is used)
 V_init = -1.						! Init V velocity [m/s] (if not defined then V_b is used)
 rho_b = 1025.						! Ambient density [kg/m3]
+rhomax = 2000.						! Optional define a maximum mixture density to be used in momentum and continuity equation for extra stability; above rhomax there is no relation between sediment concentration and mixture density anymore. Purpose is to gain stability without destroying sediment fractions.
 SEM = 0								! 1 = SEM to generate turbulent fluctuations on top of inflow bc, 0 = laminar bc 
 nmax2 = 5000						! Number of SEM eddies front inflow 
 nmax1 = 5000						! Number of SEM eddies sides inflow

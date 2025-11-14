@@ -1226,12 +1226,12 @@
 		
 		datumtemp = dd//'-'//mons(tmpmonth)//'-'//yyyy//' '//hh//':'//mm
 	
-		write(*,'(a,f10.4,a,f10.4,a,f8.2,a)') ' # Time: ',time_np,' s. of ',t_end,' s ',100.*time_np/t_end,' %   #'
-		WRITE(*,'(a,i10.0,a,f9.6,a)') ' # Timestep: ',istep, ' dt : ',dt,' s            #' 			
-		write(*,'(a,f6.3,a,f6.3,a,f5.2,a)'),' # CPU t=',NINT((cput10b-cput10a)*1000.)/1000.,'s, 1x pois=',
+		write(*,'(a,f14.4,a,f14.4,a,f8.2,a)') ' # Time: ',time_np,' s. of ',t_end,' s ',100.*time_np/t_end,' %   #'
+		WRITE(*,'(a,i12.0,a,f9.6,a)') ' # Timestep: ',istep, ' dt : ',dt,' s                  #' 			
+		write(*,'(a,f8.5,a,f8.5,a,f7.4,a)'),' # CPU t=',NINT((cput10b-cput10a)*1000.)/1000.,'s, 1x pois=',
      &   NINT((cput11b-cput11a)*1000.)/1000.,'s = ',NINT(10000.*(cput11b-cput11a)/(cput10b-cput10a))/100.,
-     &'%          #'	
-		WRITE(*,'(a,f6.1,a,a,a)') ' # Remaining CPU: ',NINT(hrrunt*10.)/10., ' hr, ETA: ',datumtemp,' #' 			
+     &'%            #'	
+		WRITE(*,'(a,f10.1,a,a,a)') ' # Remaining CPU: ',NINT(hrrunt*10.)/10., ' hr, ETA: ',datumtemp,'     #' 			
 		
 	 END SUBROUTINE
 			

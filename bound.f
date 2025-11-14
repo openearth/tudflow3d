@@ -740,7 +740,7 @@ c
 
       real  Ubound2(0:i1,0:j1,0:k1),Vbound2(0:i1,0:j1,0:k1),Wbound2(0:i1,0:j1,0:k1) 
 	  integer i_inflowU,i_inflowVW,i_outflowU,i_outflowVW,i_shift
-	  real outflow_factor
+	  real outflow_factor,cmax_rks(nfrac)
 
 ! 	pi   = 4.0 * atan(1.0)
 c
@@ -1553,7 +1553,26 @@ c 	influence of waves on lateral boundaries:
 			ENDIF 
 		ENDIF		
 	ENDIF 
-	
+	DO n=1,nfrac 
+	  cmax_rks(n)=frac(n)%cmax 
+	ENDDO 
+	IF (MINVAL(cmax_rks)<99.99.and.flowzero_gt_cfixedbed.eq.1) THEN 
+		DO i=0,i1
+			DO j=0,j1
+				DO k=1,kmax 
+				  IF (SUM(dcdt(1:nfrac,i,j,k))>cfixedbed) THEN 
+					Ubound(i,j,k)=Ubot_TSHD(j)
+					Vbound(i,j,k)=Vbot_TSHD(j)
+					im=MAX(i-1,0)
+					jm=MAX(j-1,0)
+					Ubound(im,j,k)=Ubot_TSHD(j)
+					Vbound(i,jm,k)=Vbot_TSHD(jm)					
+					Wbound(i,j,k)=0.
+				  ENDIF 
+				ENDDO 
+			ENDDO
+		ENDDO		
+	ENDIF 
 	! apply j-boundary conditions for U,V,W again for application tau and ibm2 on j=1:jmax and not 0:j1 + 	
 	! to fix small inconsistency in Vbound(:,j1,:) made in jet, jet2 and rudder
 	call shiftf(Vbound,vbf) 
@@ -1669,7 +1688,7 @@ c
 	  real uu1a,uu2a,vv1a,vv2a,dist_vel,uu0,vv0 
 	  integer i_inflowU,i_inflowVW,i_outflowU,i_outflowVW,i_shift,n2
 	  real outflow_factor,dudx,dudy,dvdx,dvdy
-	  real absUU,bedslope_angle,distance_to_bed,bwal,dbed,dpdx_temp,dpdy_temp,dL
+	  real absUU,bedslope_angle,distance_to_bed,bwal,dbed,dpdx_temp,dpdy_temp,dL,cmax_rks(nfrac)
 	  real Rp2(-1:i1),Ru2(-1:i1),pR1,pR2,pL1,pL2,Fix_ref,ppp_avg(0:i1,0:j1),ppp_avg2(0:i1,0:j1)
 	  
 c
@@ -3532,6 +3551,26 @@ c 	influence of waves on lateral boundaries:
 	 ENDIF	
 	ENDIF
 	
+	DO n=1,nfrac 
+	  cmax_rks(n)=frac(n)%cmax 
+	ENDDO 
+	IF (MINVAL(cmax_rks)<99.99.and.flowzero_gt_cfixedbed.eq.1) THEN 
+		DO i=0,i1
+			DO j=0,j1
+				DO k=1,kmax 
+				  IF (SUM(dcdt(1:nfrac,i,j,k))>cfixedbed) THEN 
+					Ubound(i,j,k)=Ubot_TSHD(j)*rhU(i,j,k) !*rho(i,j,k) !0.
+					Vbound(i,j,k)=Vbot_TSHD(j)*rhV(i,j,k) !*rho(i,j,k) !0.
+					im=MAX(i-1,0)
+					jm=MAX(j-1,0)
+					Ubound(im,j,k)=Ubot_TSHD(j)*rhU(im,j,k) !*rho(im,j,k) !0.
+					Vbound(i,jm,k)=Vbot_TSHD(jm)*rhV(i,jm,k) !*rho(i,jm,k) !0.					
+					Wbound(i,j,k)=0.
+				  ENDIF 
+				ENDDO 
+			ENDDO
+		ENDDO	
+	ENDIF 
 	DO n2=1,nbedplume
 	  IF (bp(n2)%kn_flow_wall_normaldir>0.and.bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end) THEN
 	   do tel=1,bp(n2)%tmax 
@@ -3860,6 +3899,7 @@ c*************************************************************
 		  Cbound(i,j,k)=(Cbound(i,j,k)+bp(n2)%sedflux(n)*ddtt*fc_local(i,j,k)/bp(n2)%volncells/frac(n)%rho)
      &  /(1.-MIN(0.,bp(n2)%Q*bp(n2)%changesedsuction*fc_local(i,j,k))*ddtt/bp(n2)%volncells) !when Q negative, remove sediment from cell as well   IMPLICIT 
 	 ! IMPLICIT: c^n+1-c^n=-Qout_cel/Vol_cel*dt*c^n+1 --> c^n+1 = c^n/(1+Qout_cel/Vol_cel*dt)
+	 
 		endif
 		! rho is calculated in state called after fkdat
 	   endif !endif k>kbed(i,j)
@@ -5948,37 +5988,37 @@ c*************************************************************
 		  do k=MAX(1,CEILING(bp(n2)%zbottom/dz)),MIN(kmax,FLOOR(bp(n2)%height/dz)) ! 1,kmax
 		   do i=1,imax 
 			 do j=1,jmax        
-		  xx=Rp(i)*cos_u(j)-schuif_x !global xx over different processors
-		  yy=Rp(i)*sin_u(j)          !global yy over different processors
-!		  IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle: 
-			xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
-			yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
-		    if (bp(n2)%radius.gt.0.) then
-			  inout=0
-		      IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n2)%radius)**2) THEN
-			    inout=1
-			  ENDIF
-			else 
-			  CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
-			endif 
-!		  ELSE 
-!			inout=0
-!		  ENDIF
-		  if (inout.eq.1) then
-		   bp(n2)%volncells=bp(n2)%volncells+vol_Vp(i,j)*fc_local(i,j,k)
-		   endif
-		  enddo
-		 enddo
-		enddo	  
+		       xx=Rp(i)*cos_u(j)-schuif_x !global xx over different processors
+		       yy=Rp(i)*sin_u(j)          !global yy over different processors
+!		       IF (k.le.FLOOR(bp(n2)%height/dz).and.k.ge.CEILING(bp(n2)%zbottom/dz)) THEN ! obstacle: 
+			   xTSHD(1:4)=bp(n2)%x*cos(phi)-bp(n2)%y*sin(phi)
+			   yTSHD(1:4)=bp(n2)%x*sin(phi)+bp(n2)%y*cos(phi)
+		       if (bp(n2)%radius.gt.0.) then
+			     inout=0
+		         IF (((xx-xTSHD(1))**2+(yy-yTSHD(1))**2).lt.(bp(n2)%radius)**2) THEN
+			       inout=1
+			     ENDIF
+			   else 
+			      CALL PNPOLY (xx,yy, xTSHD(1:4), yTSHD(1:4), 4, inout ) 
+			   endif 
+!		    ELSE 
+!			  inout=0
+!		    ENDIF
+		       if (inout.eq.1) then
+		         bp(n2)%volncells=bp(n2)%volncells+vol_Vp(i,j)*fc_local(i,j,k)
+		       endif
+		     enddo
+		   enddo
+		  enddo	
+
+		  globalsum_Vol_V=0.
+		  call mpi_allreduce(bp(n2)%volncells,globalsum_Vol_V,1,mpi_double_precision,mpi_sum,mpi_comm_world,ierr)
+		  bp(n2)%volncells=globalsum_Vol_V
+		  if (bp(n2)%volncells.le.0.and.tt<bp(n2)%t_end.and.inout.eq.1) then
+			   write(*,*),'WARNING, no cells found for bedplume, but it is defined inside domain. bp,rank:',n2,rank
+			   write(*,*),'In case a sedflux or Q has been defined the code will crash because of division by a zero volncells'
+		   endif		
 		ENDIF ! bedplume loop
-	ENDDO	
-	DO n2=1,nbedplume
-		call mpi_allreduce(bp(n2)%volncells,globalsum_Vol_V,1,mpi_double_precision,mpi_sum,mpi_comm_world,ierr)
-		bp(n2)%volncells=globalsum_Vol_V
-		 if (bp(n2)%volncells.le.0.and.tt<bp(n2)%t_end.and.inout.eq.1) then
-		   write(*,*),'WARNING, no cells found for bedplume, but it is defined inside domain. bp,rank:',n2,rank
-		   write(*,*),'In case a sedflux or Q has been defined the code will crash because of division by a zero volncells'
-		 endif		
 	ENDDO	
 	
 	end
@@ -6031,7 +6071,7 @@ c*************************************************************
 		  if (inout.eq.1) then
 		     DO n=1,nfrac
 				Chisbp(n,n2,bp(n2)%istep_bphis_output)=Chisbp(n,n2,bp(n2)%istep_bphis_output)+
-     &				vol_Vp(i,j)*cnew(n,i,j,k)*fc_local(i,j+jmax*rank,k)		
+     &				vol_Vp(i,j)*cnew(n,i,j,k)*fc_local(i,j,k)		
 		     ENDDO
 				Uhisbp(n2,bp(n2)%istep_bphis_output)=Uhisbp(n2,bp(n2)%istep_bphis_output)+
      &				vol_Vp(i,j)*Unew(i,j,k)*fc_local(i,j,k)				 

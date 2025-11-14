@@ -29,7 +29,7 @@
       REAL ekm_mol,nu_mol,pi,kappa,gx,gy,gz,Cs,Sc,calibfac_sand_pickup,calibfac_Shields_cr,morfac,morfac2,calibfac_sand_bedload
       REAL dt,time_nm,time_n,time_np,t_end,t0_output,dt_output,te_output,dt_max,tstart_rms,CFL,dt_ini,tstart_morf,trestart,dt_old
       REAL dt_output_movie,t0_output_movie,te_output_movie,te_rms,time_nm2,tstart_morf2,fcor,calibfac_Shields_cr_bl
-      REAL U_b,V_b,W_b,rho_b,W_j,Awjet,Aujet,Avjet,Strouhal,radius_j,kn,W_ox,U_bSEM,V_bSEM,U_w,V_w,U_init,V_init
+      REAL U_b,V_b,W_b,rho_b,W_j,Awjet,Aujet,Avjet,Strouhal,radius_j,kn,W_ox,U_bSEM,V_bSEM,U_w,V_w,U_init,V_init,rhomax
       REAL U_j2,Awjet2,Aujet2,Avjet2,Strouhal2,radius_j2,zjet2,rho_b2,ekm_sediment_pickup,nu_sediment_pickup
       REAL xj(4),yj(4),radius_inner_j,W_j_powerlaw,plume_z_outflow_belowsurf,mortime,t_output,t_output_movie
       REAL dy,dz,schuif_x,depth,lm_min,lm_min3,Rmin,bc_obst_h,factorsABv3(3)
@@ -66,7 +66,7 @@
 	  REAL dpdx1,dpdy1,Uavold,Vavold,U3avold,V3avold,dpdx3,dpdy3
       INTEGER periodicx,periodicy,wallup,dUVdn_IBMbed
       REAL U_b3,V_b3,surf_layer,reduction_sedimentation_shields,kn_mp,kn_sidewalls
-      INTEGER ksurf_bc,kmaxTSHD_ind,nair
+      INTEGER ksurf_bc,kmaxTSHD_ind,nair,flowzero_gt_cfixedbed
       INTEGER poissolver,nm1,istep_output_bpmove,avalanche_until_done,IBMorder,avalanche_max_x
       INTEGER iparm(64)
       CHARACTER*256 plumeQtseriesfile,plumectseriesfile,avfile,obstfile,kn_flow_file      
@@ -150,7 +150,7 @@
       REAL*8, DIMENSION(:),ALLOCATABLE :: lmxSEM1,lmySEM1,lmzSEM1
       REAL*8, DIMENSION(:),ALLOCATABLE :: xSEM2,ySEM2,zSEM2,uSEM2 
       REAL*8, DIMENSION(:,:),ALLOCATABLE :: epsSEM1,epsSEM2,epsSEM3,Lmix2,Lmix2hat,vol_V,vol_Vp,zbed_old,zbed_init
-      REAL*8, DIMENSION(:),ALLOCATABLE :: lmxSEM2,lmySEM2,lmzSEM2
+      REAL*8, DIMENSION(:),ALLOCATABLE :: lmxSEM2,lmySEM2,lmzSEM2,sedloss_global
 	  REAL*8, DIMENSION(:),ALLOCATABLE :: rSEM3,thetaSEM3,zSEM3,wSEM3,xSEM3,ySEM3
 	  REAL, DIMENSION(:,:,:,:),ALLOCATABLE :: AA1,AA2,AA3
       REAL*8, DIMENSION(:),ALLOCATABLE :: lmrSEM3,lmzSEM3
@@ -220,7 +220,7 @@
 	    REAL ::	x(4),y(4),height,zbottom,ero,depo
 	end type bed_obstacles
 	type bed_plumes
-	    REAL ::	x(4),y(4),height,u,v,w,c(30),t0,t_end,zbottom,Q,sedflux(30),volncells,changesedsuction !c(30) matches with size frac_init
+	    REAL ::	x(4),y(4),height,u,v,w,c(30),t0,t_end,zbottom,Q,sedflux(30),changesedsuction !c(30) matches with size frac_init
 		REAL :: move_zbed_criterium(100000),move_dx_series(100000),move_dy_series(100000),move_dz_series(100000)
 		INTEGER*2 :: move_zbed_type(100000)
 		REAL :: move_nx_series(100000),move_ny_series(100000),x2(4),y2(4),move_dx2_series(100000),move_dy2_series(100000)
@@ -230,9 +230,10 @@
 		CHARACTER*256 :: h_tseriesfile,zb_tseriesfile,Q_tseriesfile,S_tseriesfile,c_tseriesfile
 		CHARACTER*256 :: u_tseriesfile,v_tseriesfile,w_tseriesfile
 		REAL :: move_u,move_v,move_w,radius,radius2,kn_flow
+		REAL*8 :: volncells
 	end type bed_plumes
 	type bed_plumes2
-	    REAL ::	x(4),y(4),height,u,v,w,c(30),t0,t_end,zbottom,Q,sedflux(30),volncells,changesedsuction !c(30) matches with size frac_init
+	    REAL ::	x(4),y(4),height,u,v,w,c(30),t0,t_end,zbottom,Q,sedflux(30),changesedsuction !c(30) matches with size frac_init
 		REAL :: h_tseries(10000),h_series(10000),zb_tseries(10000),zb_series(10000)
 		REAL :: Q_tseries(10000),c_tseries(10000),S_tseries(10000),Q_series(10000),c_series(30,10000),S_series(30,10000)
 		REAL :: move_zbed_criterium(100000),move_dx_series(100000),move_dy_series(100000),move_dz_series(100000)
@@ -248,6 +249,7 @@
 !		INTEGER :: tmax_iP,tmax_iU,iP_inbp(10000),jP_inbp(10000),kP_inbp(10000),iU_inbp(10000),jU_inbp(10000),kU_inbp(10000)
 		REAL :: move_u,move_v,move_w,radius,radius2,kn_flow
 		INTEGER*2 :: i(100000),j(100000) 
+		REAL*8 :: volncells
 	end type bed_plumes2
 	
 	TYPE(fractions), DIMENSION(:), ALLOCATABLE :: frac
@@ -288,9 +290,9 @@
      & continuity_solver,transporteq_fracs,split_rho_cont,driftfluxforce_calfac,depo_implicit,IBMorder,npresPRHO,
      & pres_in_predictor_step,Poutflow,oPRHO,applyVOF,k_ust_tau,Uoutflow,dUVdn_IBMbed,k_pzero,numdiff2,CNdiff_factor,CNdiff_ho,
      & CNdiff_dtfactor,CNdiff_pc,CNdiff_maxi,CNdiff_tol,CNdiff_ini,initPhydrostatic,npresIBM_viscupdate,momentum_exchange_obstacles
-     & ,k_ust_tau_flow,nsmooth_bed,k_ust_tau_sed_range,fft_routines,k_dpdx_sed_range
+     & ,k_ust_tau_flow,nsmooth_bed,k_ust_tau_sed_range,fft_routines,k_dpdx_sed_range,flowzero_gt_cfixedbed
 	NAMELIST /ambient/U_b,V_b,W_b,bcfile,rho_b,SEM,nmax2,nmax1,nmax3,lm_min,lm_min3,slip_bot,taulayerTBLE,kn,interaction_bed,
-     & periodicx,periodicy,dpdx,dpdy,W_ox,Hs,Tp,nx_w,ny_w,obst,bc_obst_h,U_b3,V_b3,surf_layer,wallup,bedlevelfile,
+     & periodicx,periodicy,dpdx,dpdy,W_ox,Hs,Tp,nx_w,ny_w,obst,bc_obst_h,U_b3,V_b3,surf_layer,wallup,bedlevelfile,rhomax,
      & U_bSEM,V_bSEM,U_w,V_w,c_bed,cfixedbed,U_init,V_init,initconditionsfile,rho_b2,monopile,kn_mp,kn_sidewalls,obstfile,
      & istart_morf1,istart_morf2,i_periodicx,kn_flow_file,kn_flow_d50_multiplier,U_b_tseriesfile,V_b_tseriesfile,W_b_tseriesfile
      & ,cbc_perx_j,cbc_relax,obstfile_erodepo,TBLE_grad_relax,bedupdatefile,dpdx_ref_j,cbc_inflow_correction,dpdx_smoother
@@ -411,6 +413,7 @@
 	momentum_exchange_obstacles = 1 !default there is momentum exchange between flow and obstacles, optional 0 makes momenum terms zero in case the advective velocity is inside or at edge obstacle 
 	nsmooth_bed=2000000000 !default no smoothing bed, if defined every nsmooth_bed a 2nd order Shapiro low-pass filter is applied to 2D bed-level to redistribute sediment inside the bed in a mass-conserving manner to get rid of bed-wiggles 
 	fft_routines = 1 ! 1 (default) = good-old vfft.f Crayfishpack, 2 = Netlib vfftpack Clarke https://www.netlib.org/vfftpack/f90.tgz
+	flowzero_gt_cfixedbed = 0
 	!! ambient:
 	U_b = -999.
 	V_b = -999.
@@ -428,6 +431,7 @@
 	W_b_tseries=-99999.
 	W_b_series=-99999.		
 	rho_b = -999.  
+	rhomax = 1.e12 
 	rho_b2 = -999.  
 	SEM = -999
 	U_bSEM = -999.
@@ -1976,7 +1980,7 @@
 	ALLOCATE(uSEM2(nmax2))
 	ALLOCATE(lmxSEM2(nmax2))
 	ALLOCATE(lmySEM2(nmax2))
-	ALLOCATE(lmzSEM2(nmax2))
+	ALLOCATE(lmzSEM2(nmax2))	
 	IF (nmax3.gt.0) THEN
 !	  ALLOCATE(llist3(0:i1,0:j1,1:1000))
 	  ALLOCATE(llist3(0:i1,0:j1,1:MAX(1,nmax3/4)))
@@ -2026,6 +2030,8 @@
 	obu=0.
 	obv=0.
 	obw=0. 	
+	ALLOCATE(sedloss_global(nfrac))
+	sedloss_global=0.
 	if (transporteq_fracs.eq.'massfrac') then
 		ALLOCATE(rhoU(0:i1,0:j1,0:k1))  
 		ALLOCATE(rhoV(0:i1,0:j1,0:k1))  

@@ -149,7 +149,11 @@ c********************************************************************
 		Uvel2(i1+1,0:j1,0:k1)=Uvel(2,0:j1,0:k1)
 		Uvel2(i1+2,0:j1,0:k1)=Uvel(3,0:j1,0:k1)
 	endif
-
+		!	!22-12-2017: test bc bed Uvel=0 (if it works also at immersed boundary all is fine! and with U(i,j,-1)=U(i,j,0) wiggly time-avg u' and u'w' results for periodic turb channel MKM near bed.
+	! either making velocity zero or using k=-2 and k=1 equal to UV(k=1) both give same issue in time-avg MKM turb channel flow; with IBM2 boundary no wiggly u'w' or u' at boundary 
+	! when making all 3 layers 0 it also goes without wiggles at bed without IBM2 boundary; but near bed flow/shear is then affected a little and this is fundamentally not correct. 
+	! Adjusting stencil at k=1:3 and ke-3:end to CDS2 in vertical does help a little and makes wiggles in u' and u'w' smaller; [2025-10-4] for now that is the situation
+	!Uvel2(0:i1,0:j1,0)=0.
 	Uvel2(0:i1,0:j1,-2)=Uvel(0:i1,0:j1,0)
 	Uvel2(0:i1,0:j1,-1)=Uvel(0:i1,0:j1,0)
 	Uvel2(0:i1,0:j1,k1+1)=Uvel(0:i1,0:j1,ke)
@@ -240,9 +244,9 @@ c********************************************************************
 			Vvel2(i1+1,-2:j1+2,0:k1)=Vvel2(2,-2:j1+2,0:k1)
 			Vvel2(i1+2,-2:j1+2,0:k1)=Vvel2(3,-2:j1+2,0:k1)
 		endif
-	!	!22-12-2017: test bc bed Uvel=0 (if it works also at immersed boundary all is fine! and with U(i,j,-1)=U(i,j,0) wiggly time-avg results for periodic turb channel MKM near bed.
-		Vvel2(-2:i1+2,-2:j1+2,-1)=  Vvel2(-2:i1+2,-2:j1+2,0)
-		Vvel2(-2:i1+2,-2:j1+2,-2)=  Vvel2(-2:i1+2,-2:j1+2,0)
+		!Vvel2(0:i1,0:j1,0)=0.
+		Vvel2(-2:i1+2,-2:j1+2,-1)=Vvel2(-2:i1+2,-2:j1+2,0)
+		Vvel2(-2:i1+2,-2:j1+2,-2)=Vvel2(-2:i1+2,-2:j1+2,0)
 		Vvel2(-2:i1+2,-2:j1+2,k1+1)=Vvel2(-2:i1+2,-2:j1+2,k1)
 		Vvel2(-2:i1+2,-2:j1+2,k1+2)=Vvel2(-2:i1+2,-2:j1+2,k1)
 
@@ -328,6 +332,7 @@ c********************************************************************
 			Wvel2(i1+1,-2:j1+2,0:k1)=Wvel2(2,-2:j1+2,0:k1)
 			Wvel2(i1+2,-2:j1+2,0:k1)=Wvel2(3,-2:j1+2,0:k1)
 		endif
+
 		Wvel2(-2:i1+2,-2:j1+2,-1)=  Wvel2(-2:i1+2,-2:j1+2,0)
 		Wvel2(-2:i1+2,-2:j1+2,-2)=  Wvel2(-2:i1+2,-2:j1+2,0)
 		Wvel2(-2:i1+2,-2:j1+2,k1+1)=Wvel2(-2:i1+2,-2:j1+2,k1)
@@ -381,10 +386,10 @@ c********************************************************************
 		  By=-8.
 		  Cy=1.
 		  DDy=1./(Ay+By+Cy)
-		  Az=37.
-		  Bz=-8.
-		  Cz=1.
-		  DDz=1./(Az+Bz+Cz)
+!		  Az=37.
+!		  Bz=-8.
+!		  Cz=1.
+!		  DDz=1./(Az+Bz+Cz)
 	dzi=1./dz 
       do k=kb,ke
       kp=k+1
@@ -393,6 +398,15 @@ c********************************************************************
 		  kppp=k+3
 		  kmm=k-2
 		  kmmm=k-3
+		  Az=37.
+		  IF (k.ge.3.and.k.le.(ke-2)) THEN 
+			Bz=-8.
+			Cz=1.
+	      ELSE 
+			Bz=0.
+			Cz=0. 
+		  ENDIF 
+		  DDz=1./(Az+Bz+Cz)		  
         do j=jb,je
         jp=j+1
         jm=j-1
@@ -432,26 +446,26 @@ c********************************************************************
       putout(i,j,k) = - 0.25 * (
      1 (uuR    * DDx*(Ax*(Uvel2(i,j,k)+Uvel2(ip,j,k))+Bx*(Uvel2(im,j,k)+Uvel2(ipp,j,k))+Cx*(Uvel2(imm,j,k)+Uvel2(ippp,j,k)))-
      1 numdif2*
-     1 ABS(uuR)* Cx*(10.*(-Uvel2(i,j,k)+Uvel2(ip,j,k))-5.*(-Uvel2(im,j,k)+Uvel2(ipp,j,k))+(-Uvel2(imm,j,k)+Uvel2(ippp,j,k))) -
+     1 ABS(uuR)* (10.*(-Uvel2(i,j,k)+Uvel2(ip,j,k))-5.*(-Uvel2(im,j,k)+Uvel2(ipp,j,k))+(-Uvel2(imm,j,k)+Uvel2(ippp,j,k))) -
      1 (uuL    * DDx*(Ax*(Uvel2(im,j,k)+Uvel2(i,j,k))+Bx*(Uvel2(imm,j,k)+Uvel2(ip,j,k))+Cx*(Uvel2(immm,j,k)+Uvel2(ipp,j,k)))-
      1 numdif2*
-     1 ABS(uuL)* Cx*(10.*(-Uvel2(im,j,k)+Uvel2(i,j,k))-5.*(-Uvel2(imm,j,k)+Uvel2(ip,j,k))+(-Uvel2(immm,j,k)+Uvel2(ipp,j,k)))) )
+     1 ABS(uuL)* (10.*(-Uvel2(im,j,k)+Uvel2(i,j,k))-5.*(-Uvel2(imm,j,k)+Uvel2(ip,j,k))+(-Uvel2(immm,j,k)+Uvel2(ipp,j,k)))) )
      1  / ( Ru(i) * ( Rp(ip)-Rp(i) ) )
      +                         + 
      2 (vvR    * DDy*(Ay*(Uvel2(i,j,k)+Uvel2(i,jp,k))+By*(Uvel2(i,jm,k)+Uvel2(i,jpp,k))+Cy*(Uvel2(i,jmm,k)+Uvel2(i,jppp,k)))-
      2 numdif2*
-     2 ABS(vvR)* Cy*(10.*(-Uvel2(i,j,k)+Uvel2(i,jp,k))-5.*(-Uvel2(i,jm,k)+Uvel2(i,jpp,k))+(-Uvel2(i,jmm,k)+Uvel2(i,jppp,k))) -
+     2 ABS(vvR)* (10.*(-Uvel2(i,j,k)+Uvel2(i,jp,k))-5.*(-Uvel2(i,jm,k)+Uvel2(i,jpp,k))+(-Uvel2(i,jmm,k)+Uvel2(i,jppp,k))) -
      2 (vvL    * DDy*(Ay*(Uvel2(i,jm,k)+Uvel2(i,j,k))+By*(Uvel2(i,jmm,k)+Uvel2(i,jp,k))+Cy*(Uvel2(i,jmmm,k)+Uvel2(i,jpp,k)))-
      2 numdif2*
-     2 ABS(vvL)* Cy*(10.*(-Uvel2(i,jm,k)+Uvel2(i,j,k))-5.*(-Uvel2(i,jmm,k)+Uvel2(i,jp,k))+(-Uvel2(i,jmmm,k)+Uvel2(i,jpp,k)))) )
+     2 ABS(vvL)* (10.*(-Uvel2(i,jm,k)+Uvel2(i,j,k))-5.*(-Uvel2(i,jmm,k)+Uvel2(i,jp,k))+(-Uvel2(i,jmmm,k)+Uvel2(i,jpp,k)))) )
      2  / ( Ru(i) * (phiv(j)-phiv(jm)) )
      +                         +
      3 (wwR    * DDz*(Az*(Uvel2(i,j,k)+Uvel2(i,j,kp))+Bz*(Uvel2(i,j,km)+Uvel2(i,j,kpp))+Cz*(Uvel2(i,j,kmm)+Uvel2(i,j,kppp)))-
      3 numdif2*
-     3 ABS(wwR)* Cz*(10.*(-Uvel2(i,j,k)+Uvel2(i,j,kp))-5.*(-Uvel2(i,j,km)+Uvel2(i,j,kpp))+(-Uvel2(i,j,kmm)+Uvel2(i,j,kppp))) -
+     3 ABS(wwR)* (10.*(-Uvel2(i,j,k)+Uvel2(i,j,kp))-5.*(-Uvel2(i,j,km)+Uvel2(i,j,kpp))+(-Uvel2(i,j,kmm)+Uvel2(i,j,kppp))) -
      3 (wwL    * DDz*(Az*(Uvel2(i,j,km)+Uvel2(i,j,k))+Bz*(Uvel2(i,j,kmm)+Uvel2(i,j,kp))+Cz*(Uvel2(i,j,kmmm)+Uvel2(i,j,kpp)))-
      3 numdif2*
-     3 ABS(wwL)* Cz*(10.*(-Uvel2(i,j,km)+Uvel2(i,j,k))-5.*(-Uvel2(i,j,kmm)+Uvel2(i,j,kp))+(-Uvel2(i,j,kmmm)+Uvel2(i,j,kpp)))) )
+     3 ABS(wwL)* (10.*(-Uvel2(i,j,km)+Uvel2(i,j,k))-5.*(-Uvel2(i,j,kmm)+Uvel2(i,j,kp))+(-Uvel2(i,j,kmmm)+Uvel2(i,j,kpp)))) )
      3  *dzi
      +                         -
      4 0.5*(rho(i,j,k)+rho(ip,j,k))*( Vvel(i,j,k) + Vvel(ip,j,k) + Vvel(i,jm,k) + Vvel(ip,jm,k) )**2
@@ -598,7 +612,8 @@ c********************************************************************
 		Vvel2(i1+1,0:j1,0:k1)=Vvel(2,0:j1,0:k1)
 		Vvel2(i1+2,0:j1,0:k1)=Vvel(3,0:j1,0:k1)
 	endif
-
+	! make velocity zero for ghost cells at k=0 to prevent wiggly results MKM periodic channel flow near the bed when no IBM2 bed [2025-10-02]
+	!Vvel2(0:i1,0:j1,0)=0.
 	Vvel2(0:i1,0:j1,-2)=Vvel(0:i1,0:j1,0)
 	Vvel2(0:i1,0:j1,-1)=Vvel(0:i1,0:j1,0)
 	Vvel2(0:i1,0:j1,k1+1)=Vvel(0:i1,0:j1,ke)
@@ -624,6 +639,15 @@ c********************************************************************
 		  kppp=k+3
 		  kmm=k-2
 		  kmmm=k-3
+		  Az=37.
+		  IF (k.ge.3.and.k.le.(ke-2)) THEN 
+			Bz=-8.
+			Cz=1.
+	      ELSE 
+			Bz=0.
+			Cz=0. 
+		  ENDIF 
+		  DDz=1./(Az+Bz+Cz)			  
         do j=jb,je
         jp=j+1
         jm=j-1
@@ -664,26 +688,26 @@ c********************************************************************
 
      1 (uuR    * DDx*(Ax*(Vvel2(i,j,k)+Vvel2(ip,j,k))+Bx*(Vvel2(im,j,k)+Vvel2(ipp,j,k))+Cx*(Vvel2(imm,j,k)+Vvel2(ippp,j,k)))-
      1 numdif2*
-     1 ABS(uuR)* Cx*(10.*(-Vvel2(i,j,k)+Vvel2(ip,j,k))-5.*(-Vvel2(im,j,k)+Vvel2(ipp,j,k))+(-Vvel2(imm,j,k)+Vvel2(ippp,j,k))) -
+     1 ABS(uuR)* (10.*(-Vvel2(i,j,k)+Vvel2(ip,j,k))-5.*(-Vvel2(im,j,k)+Vvel2(ipp,j,k))+(-Vvel2(imm,j,k)+Vvel2(ippp,j,k))) -
      1 (uuL    * DDx*(Ax*(Vvel2(im,j,k)+Vvel2(i,j,k))+Bx*(Vvel2(imm,j,k)+Vvel2(ip,j,k))+Cx*(Vvel2(immm,j,k)+Vvel2(ipp,j,k)))-
      1 numdif2*
-     1 ABS(uuL)* Cx*(10.*(-Vvel2(im,j,k)+Vvel2(i,j,k))-5.*(-Vvel2(imm,j,k)+Vvel2(ip,j,k))+(-Vvel2(immm,j,k)+Vvel2(ipp,j,k)))) )
+     1 ABS(uuL)* (10.*(-Vvel2(im,j,k)+Vvel2(i,j,k))-5.*(-Vvel2(imm,j,k)+Vvel2(ip,j,k))+(-Vvel2(immm,j,k)+Vvel2(ipp,j,k)))) )
      1  / ( Rp(i)* dr(i) )   !/ ( Rp(i) * Rp(i)* dr(i) ) 
      +                         + 
      2 (vvR    * DDy*(Ay*(Vvel2(i,j,k)+Vvel2(i,jp,k))+By*(Vvel2(i,jm,k)+Vvel2(i,jpp,k))+Cy*(Vvel2(i,jmm,k)+Vvel2(i,jppp,k)))-
      2 numdif2*
-     2 ABS(vvR)* Cy*(10.*(-Vvel2(i,j,k)+Vvel2(i,jp,k))-5.*(-Vvel2(i,jm,k)+Vvel2(i,jpp,k))+(-Vvel2(i,jmm,k)+Vvel2(i,jppp,k))) -
+     2 ABS(vvR)* (10.*(-Vvel2(i,j,k)+Vvel2(i,jp,k))-5.*(-Vvel2(i,jm,k)+Vvel2(i,jpp,k))+(-Vvel2(i,jmm,k)+Vvel2(i,jppp,k))) -
      2 (vvL    * DDy*(Ay*(Vvel2(i,jm,k)+Vvel2(i,j,k))+By*(Vvel2(i,jmm,k)+Vvel2(i,jp,k))+Cy*(Vvel2(i,jmmm,k)+Vvel2(i,jpp,k)))-
      2 numdif2*
-     2 ABS(vvL)* Cy*(10.*(-Vvel2(i,jm,k)+Vvel2(i,j,k))-5.*(-Vvel2(i,jmm,k)+Vvel2(i,jp,k))+(-Vvel2(i,jmmm,k)+Vvel2(i,jpp,k)))) )
+     2 ABS(vvL)* (10.*(-Vvel2(i,jm,k)+Vvel2(i,j,k))-5.*(-Vvel2(i,jmm,k)+Vvel2(i,jp,k))+(-Vvel2(i,jmmm,k)+Vvel2(i,jpp,k)))) )
      2  / ( Rp(i) * (phiv(j)-phiv(jm)) )
      +                         +
      3 (wwR    * DDz*(Az*(Vvel2(i,j,k)+Vvel2(i,j,kp))+Bz*(Vvel2(i,j,km)+Vvel2(i,j,kpp))+Cz*(Vvel2(i,j,kmm)+Vvel2(i,j,kppp)))-
      3 numdif2*
-     3 ABS(wwR)* Cz*(10.*(-Vvel2(i,j,k)+Vvel2(i,j,kp))-5.*(-Vvel2(i,j,km)+Vvel2(i,j,kpp))+(-Vvel2(i,j,kmm)+Vvel2(i,j,kppp))) -
+     3 ABS(wwR)* (10.*(-Vvel2(i,j,k)+Vvel2(i,j,kp))-5.*(-Vvel2(i,j,km)+Vvel2(i,j,kpp))+(-Vvel2(i,j,kmm)+Vvel2(i,j,kppp))) -
      3 (wwL    * DDz*(Az*(Vvel2(i,j,km)+Vvel2(i,j,k))+Bz*(Vvel2(i,j,kmm)+Vvel2(i,j,kp))+Cz*(Vvel2(i,j,kmmm)+Vvel2(i,j,kpp)))-
      3 numdif2*
-     3 ABS(wwL)* Cz*(10.*(-Vvel2(i,j,km)+Vvel2(i,j,k))-5.*(-Vvel2(i,j,kmm)+Vvel2(i,j,kp))+(-Vvel2(i,j,kmmm)+Vvel2(i,j,kpp)))) )
+     3 ABS(wwL)* (10.*(-Vvel2(i,j,km)+Vvel2(i,j,k))-5.*(-Vvel2(i,j,kmm)+Vvel2(i,j,kp))+(-Vvel2(i,j,kmmm)+Vvel2(i,j,kpp)))) )
      3  *dzi
 
      +                         +
@@ -832,7 +856,8 @@ c********************************************************************
 		Wvel2(i1+1,0:j1,0:k1)=Wvel(2,0:j1,0:k1)
 		Wvel2(i1+2,0:j1,0:k1)=Wvel(3,0:j1,0:k1)
 	endif
-
+	! make velocity zero for ghost cells at k=0 to prevent wiggly results MKM periodic channel flow near the bed when no IBM2 bed [2025-10-02]
+	!Wvel2(0:i1,0:j1,0)=0.
 	Wvel2(0:i1,0:j1,-2)=Wvel(0:i1,0:j1,0)
 	Wvel2(0:i1,0:j1,-1)=Wvel(0:i1,0:j1,0)
 	Wvel2(0:i1,0:j1,k1)=Wvel(0:i1,0:j1,ke)
@@ -864,6 +889,15 @@ c********************************************************************
 		  kppp=k+3
 		  kmm=k-2
 		  kmmm=k-3
+		  Az=37.
+		  IF (k.ge.3.and.k.le.(ke-2)) THEN 
+			Bz=-8.
+			Cz=1.
+	      ELSE 
+			Bz=0.
+			Cz=0. 
+		  ENDIF 
+		  DDz=1./(Az+Bz+Cz)			  
         do j=jb,je
         jp=j+1
         jm=j-1
@@ -903,26 +937,26 @@ c********************************************************************
       putout(i,j,k) = - 0.25 * (
      1 (uuR    * DDx*(Ax*(Wvel2(i,j,k)+Wvel2(ip,j,k))+Bx*(Wvel2(im,j,k)+Wvel2(ipp,j,k))+Cx*(Wvel2(imm,j,k)+Wvel2(ippp,j,k)))-
      1 numdif2*
-     1 ABS(uuR)* Cx*(10.*(-Wvel2(i,j,k)+Wvel2(ip,j,k))-5.*(-Wvel2(im,j,k)+Wvel2(ipp,j,k))+(-Wvel2(imm,j,k)+Wvel2(ippp,j,k))) -
+     1 ABS(uuR)* (10.*(-Wvel2(i,j,k)+Wvel2(ip,j,k))-5.*(-Wvel2(im,j,k)+Wvel2(ipp,j,k))+(-Wvel2(imm,j,k)+Wvel2(ippp,j,k))) -
      1 (uuL    * DDx*(Ax*(Wvel2(im,j,k)+Wvel2(i,j,k))+Bx*(Wvel2(imm,j,k)+Wvel2(ip,j,k))+Cx*(Wvel2(immm,j,k)+Wvel2(ipp,j,k)))-
      1 numdif2*
-     1 ABS(uuL)* Cx*(10.*(-Wvel2(im,j,k)+Wvel2(i,j,k))-5.*(-Wvel2(imm,j,k)+Wvel2(ip,j,k))+(-Wvel2(immm,j,k)+Wvel2(ipp,j,k)))) )
+     1 ABS(uuL)* (10.*(-Wvel2(im,j,k)+Wvel2(i,j,k))-5.*(-Wvel2(imm,j,k)+Wvel2(ip,j,k))+(-Wvel2(immm,j,k)+Wvel2(ipp,j,k)))) )
      1  / ( Rp(i)* dr(i) ) 
      +                         + 
      2 (vvR    * DDy*(Ay*(Wvel2(i,j,k)+Wvel2(i,jp,k))+By*(Wvel2(i,jm,k)+Wvel2(i,jpp,k))+Cy*(Wvel2(i,jmm,k)+Wvel2(i,jppp,k)))-
      2 numdif2*
-     2 ABS(vvR)* Cy*(10.*(-Wvel2(i,j,k)+Wvel2(i,jp,k))-5.*(-Wvel2(i,jm,k)+Wvel2(i,jpp,k))+(-Wvel2(i,jmm,k)+Wvel2(i,jppp,k))) -
+     2 ABS(vvR)* (10.*(-Wvel2(i,j,k)+Wvel2(i,jp,k))-5.*(-Wvel2(i,jm,k)+Wvel2(i,jpp,k))+(-Wvel2(i,jmm,k)+Wvel2(i,jppp,k))) -
      2 (vvL    * DDy*(Ay*(Wvel2(i,jm,k)+Wvel2(i,j,k))+By*(Wvel2(i,jmm,k)+Wvel2(i,jp,k))+Cy*(Wvel2(i,jmmm,k)+Wvel2(i,jpp,k)))-
      2 numdif2*
-     2 ABS(vvL)* Cy*(10.*(-Wvel2(i,jm,k)+Wvel2(i,j,k))-5.*(-Wvel2(i,jmm,k)+Wvel2(i,jp,k))+(-Wvel2(i,jmmm,k)+Wvel2(i,jpp,k)))) )
+     2 ABS(vvL)* (10.*(-Wvel2(i,jm,k)+Wvel2(i,j,k))-5.*(-Wvel2(i,jmm,k)+Wvel2(i,jp,k))+(-Wvel2(i,jmmm,k)+Wvel2(i,jpp,k)))) )
      2  / ( Rp(i) * (phiv(j)-phiv(jm)) )
      +                         +
      3 (wwR    * DDz*(Az*(Wvel2(i,j,k)+Wvel2(i,j,kp))+Bz*(Wvel2(i,j,km)+Wvel2(i,j,kpp))+Cz*(Wvel2(i,j,kmm)+Wvel2(i,j,kppp)))-
      3 numdif2*
-     3 ABS(wwR)* Cz*(10.*(-Wvel2(i,j,k)+Wvel2(i,j,kp))-5.*(-Wvel2(i,j,km)+Wvel2(i,j,kpp))+(-Wvel2(i,j,kmm)+Wvel2(i,j,kppp))) -
+     3 ABS(wwR)* (10.*(-Wvel2(i,j,k)+Wvel2(i,j,kp))-5.*(-Wvel2(i,j,km)+Wvel2(i,j,kpp))+(-Wvel2(i,j,kmm)+Wvel2(i,j,kppp))) -
      3 (wwL    * DDz*(Az*(Wvel2(i,j,km)+Wvel2(i,j,k))+Bz*(Wvel2(i,j,kmm)+Wvel2(i,j,kp))+Cz*(Wvel2(i,j,kmmm)+Wvel2(i,j,kpp)))-
      3 numdif2*
-     3 ABS(wwL)* Cz*(10.*(-Wvel2(i,j,km)+Wvel2(i,j,k))-5.*(-Wvel2(i,j,kmm)+Wvel2(i,j,kp))+(-Wvel2(i,j,kmmm)+Wvel2(i,j,kpp)))) )
+     3 ABS(wwL)* (10.*(-Wvel2(i,j,km)+Wvel2(i,j,k))-5.*(-Wvel2(i,j,kmm)+Wvel2(i,j,kp))+(-Wvel2(i,j,kmmm)+Wvel2(i,j,kpp)))) )
      3  *dzi
      +                         )
            enddo

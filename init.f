@@ -507,8 +507,8 @@ c******************************************************************
       do k=1,kmax
        do i=1,imax 
          do j=1,jmax       ! bedplume loop is only initial condition: do not bother to have U,V,W initial staggering perfect 
-	  xx=Rp(i)*cos_u(j)-schuif_x !global xx over different processors
-	  yy=Rp(i)*sin_u(j)          !global yy over different processors
+	  xx=Rp(i)*cos_u(j)-schuif_x 
+	  yy=Rp(i)*sin_u(j)          
 	  IF (k.le.FLOOR(bp(n)%height/dz).and.k.ge.CEILING(bp(n)%zbottom/dz)) THEN ! obstacle: 
 		xTSHD(1:4)=bp(n)%x*cos(phi)-bp(n)%y*sin(phi)
 		yTSHD(1:4)=bp(n)%x*sin(phi)+bp(n)%y*cos(phi)
@@ -532,12 +532,13 @@ c******************************************************************
 	ENDDO ! bedplume loop	
 	
 	DO n=1,nbedplume
+	    globalsum_Vol_V=0.
 		call mpi_allreduce(bp(n)%volncells,globalsum_Vol_V,1,mpi_double_precision,mpi_sum,mpi_comm_world,ierr)
 		bp(n)%volncells=globalsum_Vol_V
 		if (bp(n)%volncells.le.0.) then
 		   write(*,*),'WARNING, no cells found for bedplume number: ',n,bp(n)%volncells,rank
 		   write(*,*),'In case a sedflux or Q has been defined the code will crash because of division by a zero volncells'
-		endif		
+		endif	
 	ENDDO
 	
 	

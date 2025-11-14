@@ -5303,12 +5303,14 @@ c
       subroutine correc
       USE nlist
       implicit none
-c
+		include 'mpif.h'
 !       include 'param.txt'
 !       include 'common.txt'
-      real*8 pplus(imax,kmax)
-	  real sum_c_ws,ctot,ws(nfrac)
+      real*8 pplus(imax,kmax), sedloss_local(nfrac),sedloss_global_temp(nfrac)
+	  real sum_c_ws,ctot,ws(nfrac),dcdt_org(nfrac,1:imax,1:jmax,1:kmax)
       integer t,n
+      
+      integer ierr	  
 
 
       call pshiftb(p,pplus) !,rank,imax,jmax,kmax,px)
@@ -5386,6 +5388,7 @@ c
 		! apply upper limit per fraction if defined:
 	  DO n=1,nfrac
 		IF (frac(n)%cmax<99.99) THEN 
+		    dcdt_org(n,1:imax,1:jmax,1:kmax)=dcdt(n,1:imax,1:jmax,1:kmax)
 			DO i=0,i1 
 			  DO j=0,j1 
 			    DO k=0,k1 
@@ -5395,6 +5398,26 @@ c
 			ENDDO 
 		ENDIF 
 	  ENDDO 
+		! apply upper limit per fraction if defined:
+		sedloss_global_temp(1:nfrac)=0.
+		sedloss_local(1:nfrac)=0.
+	  DO n=1,nfrac
+		IF (frac(n)%cmax<99.99) THEN 
+			DO i=1,imax 
+			  DO j=1,jmax 
+			    DO k=1,kmax 
+					sedloss_local(n)=sedloss_local(n)+(dcdt_org(n,i,j,k)-dcdt(n,i,j,k))*Vol_Vp(i,j)*frac(n)%rho !sedloss per partition [kg]
+				ENDDO 
+			  ENDDO 
+			ENDDO 
+			call mpi_allreduce(sedloss_local(n),sedloss_global_temp(n),1,mpi_double_precision,mpi_sum,mpi_comm_world,ierr)
+			sedloss_global(n)=sedloss_global(n)+sedloss_global_temp(n) 
+		ENDIF 
+	  ENDDO 
+	  if (MAXVAL(sedloss_global_temp(1:nfrac))>1.e-12.and.rank.eq.0) then 
+	     write(*,*) 'total cumulative sediment loss from applying cmax [kg per fraction]:'
+		 write(*,*) sedloss_global
+	  endif 
 	  
 	  
       do k=0,k1
@@ -7188,21 +7211,17 @@ c  J --> direction      (yrt)
 	real xTSHD(4),yTSHD(4),phi,xx,yy
       
       do k=0,k1
-	do j=0,j1
-	 do i=0,i1
-	   rho(i,j,k)=rho_b
-	   do n=1,nfrac
-
-!	     rho(i,j,k)=rho(i,j,k)-c(n,i,j,k)*rho_b+c(n,i,j,k)*frac(n)%rho
-	     rho(i,j,k)=rho(i,j,k)+c(n,i,j,k)*(frac(n)%rho-rho_b)
-
-!	    rho(i,j,k)=rho_b+(rho_j-rho_b)*c(i,j,k) !rho=(1-c)*rho_w+c*rho_b=rho_w+c*(rho_b-rho_w)
-	   enddo
-	   do n=1,nair !correction for compressible air fraction; compressible air fills different volume not occupied by water
-	     rho(i,j,k)=rho(i,j,k)-(rhocorr_air_z(nfrac_air(n),k)*c(nfrac_air(n),i,j,k)-c(nfrac_air(n),i,j,k))*rho_b
-	   enddo
-	 enddo
-        enddo
+		do j=0,j1
+			do i=0,i1
+				rho(i,j,k)=rho_b
+				do n=1,nfrac
+					rho(i,j,k)=MIN(rhomax,rho(i,j,k)+c(n,i,j,k)*(frac(n)%rho-rho_b))
+				enddo
+				do n=1,nair !correction for compressible air fraction; compressible air fills different volume not occupied by water
+					rho(i,j,k)=rho(i,j,k)-(rhocorr_air_z(nfrac_air(n),k)*c(nfrac_air(n),i,j,k)-c(nfrac_air(n),i,j,k))*rho_b
+				enddo
+			enddo
+		enddo
       enddo
 	  
 	DO n2=1,nbedplume
@@ -7261,7 +7280,7 @@ c  J --> direction      (yrt)
 				do i=0,i1
 					rho(i,j,k)=rho_b
 					do n=1,nfrac
-						rho(i,j,k)=rho(i,j,k)+c(n,i,j,k)*(frac(n)%rho-rho_b)
+						rho(i,j,k)=MIN(rhomax,rho(i,j,k)+c(n,i,j,k)*(frac(n)%rho-rho_b))
 					enddo
 					do n=1,nair !correction for compressible air fraction; compressible air fills different volume not occupied by water
 						rho(i,j,k)=rho(i,j,k)-(rhocorr_air_z(nfrac_air(n),k)*c(nfrac_air(n),i,j,k)-c(nfrac_air(n),i,j,k))*rho_b
@@ -7283,15 +7302,15 @@ c  J --> direction      (yrt)
 	real xTSHD(4),yTSHD(4),phi,xx,yy,summ
       
       do k=0,k1
-	do j=0,j1
-	 do i=0,i1
-	   rho(i,j,k)=rho_b
-	   summ=0.
-	   do n=1,nfrac
-		summ=summ+c(n,i,j,k)*(1.-rho_b/(frac(n)%rho/rhocorr_air_z(n,k)))
-	   enddo
-		rho(i,j,k)=rho_b/summ
-	 enddo
+		do j=0,j1
+			do i=0,i1
+				rho(i,j,k)=rho_b
+				summ=0.
+				do n=1,nfrac
+					summ=summ+c(n,i,j,k)*(1.-rho_b/(frac(n)%rho/rhocorr_air_z(n,k)))
+				enddo
+				rho(i,j,k)=MIN(rhomax,rho_b/summ)
+			enddo
         enddo
       enddo
 	  

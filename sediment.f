@@ -2353,6 +2353,23 @@
 						!rnew(i,j,kbed(i,j)) = rnew(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
 						!rold(i,j,kbed(i,j)) = rold(i,j,kbed(i,j))+ccnew(n,i,j,kbed(i,j))*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density							
 					ENDDO	
+					!!! the below elseif introduced 2025-11-6 for the Khalifa reclamation sims gave problems, hence switched off again 2025-11-7
+!!!				ELSEIF (ctot_firstcel.ge.cfixedbed.and.kbed(i,j)+1.le.kmax) THEN 
+!!!	 !				! apparently the above elseif did not apply to bring sediment from suspension to bed; then this is a catch to bring suspension into cbot
+!!!	 !				! bring excess sediment > cfixedbed into cbot and redistribute (morfac2-1)/morfac2*excess over water column because every m3 sediment in fluid corresponds to morfac2 m3 in bed
+!!!					c_adjustA = (ctot_firstcel-cfixedbed)/ctot_firstcel
+!!!					drdt(i,j,kplus)=rho_b
+!!!					rnew(i,j,kplus)=rho_b
+!!!					rold(i,j,kplus)=rho_b						
+!!!					DO n=1,nfrac 
+!!!						cbotnew(n,i,j)=cbotnew(n,i,j)+c_adjustA*ccnew(n,i,j,kplus)
+!!!						ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus)-c_adjustA*ccnew(n,i,j,kplus)/morfac2 
+!!!						!update ccnew divided by morfac2 because every m3 sediment in fluid corresponds to morfac2 m3 in bed
+!!!						!for this case cbotnew update is not multiplied by morfac2, but update ccnew is divided by morfac2 to prevent very large bedupdates in one timestep 
+!!!					    drdt(i,j,k) = drdt(i,j,k)+ccnew(n,i,j,kplus)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!!!					    rnew(i,j,k) = rnew(i,j,k)+ccnew(n,i,j,kplus)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density
+!!!					    rold(i,j,k) = rold(i,j,k)+ccnew(n,i,j,kplus)*(frac(n)%rho-rho_b) ! prevent large source in pres-corr by sudden increase in density						
+!!!					ENDDO						
 				ELSEIF (cbotnewtot_pos.ge.0.5*cfixedbed.and.kbed(i,j)+1.le.kmax) THEN
 				! Clivebed not completely full; therefore no bedupdate kbed+1, but only redistribution from cbotnew tot Clivebed 
 				! delay in this elseif is no longer needed as the potential flip-flop is with the first IF which is only a bookkeeping flip-flop; not changing kbed up and down unneeded			
