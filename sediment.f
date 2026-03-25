@@ -2845,35 +2845,58 @@
 						ENDIF
 						dbed_allowed = dl/MAX(av_slope(i,j,kbed(i,j))*bednotfixed(i,j,kbed(i,j)),1.e-18)
 						dz_botlayer =SUM(cbotnew(1:nfrac,i,j))/cfixedbed*dz
+						dz_botlayer = MAX(0.,dz_botlayer) 
 						dz_botlayer_silt = 0.
 						DO n1=1,nfr_silt
 							n=nfrac_silt(n1)
-							dz_botlayer_silt = cbotnew(n,i,j)/cfixedbed*dz 
+							dz_botlayer_silt = dz_botlayer_silt+cbotnew(n,i,j)/cfixedbed*dz 
 						ENDDO 
+						dz_botlayer_silt = MAX(0.,dz_botlayer_silt) 
 						dbed_adjust = vol_Vp(itrgt,jtrgt)/(vol_Vp(i,j)+vol_Vp(itrgt,jtrgt))*(dbed - dbed_allowed)
      &						*MIN(b_update(i,j),b_update(itrgt,jtrgt))
-	 
-	 
+						dbed_adjust = MAX(0.,dbed_adjust) 
 						IF (avalanche_fines.eq.1) THEN !don't avalanche fines but bring them in suspension in original i,j loc; otherwise every time a cell avalanches the silt remains in the bed of this cell and the end silt content in the bed under the avalanche slope gets too high
 							factor = 1./(2.+dz_botlayer_silt/MAX(1.e-9,dz_botlayer))
 							dbed_adjust=dbed_adjust+factor*(dz_botlayer_silt/MAX(1.e-9,dz_botlayer))*dbed_adjust !fines not avalanching to neighbour but put in suspension, so have to avalanche 0.5*silt content more 
+							! perhaps incorrect derivation above, see derivation below: 
+							! 2*dbsand_org + 2*dbfines_org = 2*dbsand_new+dbfines_new !(one contribution from fines is missing in avalanche)
+							! 2*dbsand_org + 2*dbfines_org = 2*fac*dbsand_org+fac*dbfines_org
+							! fac = [2*dbsand_org + 2*dbfines_org ] / [2*dbsand_org+dbfines_org]
+							! fac = [2*dbsand_org + 2*dbfines_org ] / [2*db_org-2*db_fines_org+dbfines_org]
+							! fac = [2*db_org] / [2*db_org-db_fines_org]
+
 						ELSEIF (avalanche_fines.eq.2) THEN !don't avalanche fines but leave them in bed of original i,j loc; otherwise every time a cell avalanches the silt remains in the bed of this cell and the end silt content in the bed under the avalanche slope gets too high
 							dbed_adjust=dbed_adjust+(dz_botlayer_silt/MAX(1.e-9,dz_botlayer))*dbed_adjust
+							! for avf2 fines don't avalanche and its relative contribution must be added to dbed_adjust to arrive at correct bed-slope
+							! 2*dbsand_org + 2*dbfines_org = 2*dbsand_new !(no contribution left+right from fines in avalanche)
+							! 2*dbsand_org + 2*dbfines_org = 2*fac*dbsand_org
+							! fac = [2*dbsand_org + 2*dbfines_org ] / [2*dbsand_org]
+							! fac = [2*dbsand_org + 2*dbfines_org ] / [2*db_org-2*db_fines_org]
+							! fac = [db_org] / [db_org-db_fines_org] --> this explodes when db_fines_org is equal to db_org 
+							! implemented is 'explicit' solution equivalent to the above 'implicit' solution which are equal for low db_fines_org 
 							nfr_silt = 0 !skip nfr_silt below 
 						ENDIF 
+						IF (avalanche_limit_buf.eq.1) THEN 
+							dbed_adjust=MIN(dbed_adjust,dz_botlayer,0.5*dz) !limit to updates only to bufferlayer 
+						ELSEIF (avalanche_limit_buf.eq.2) THEN 
+							dbed_adjust=MIN(dbed_adjust,0.5*dz)				
+						ELSEIF (avalanche_limit_buf.eq.3) THEN 
+							dbed_adjust=MIN(dbed_adjust,dz)  														
+						ENDIF
+						
       ! write(*,*),'rank,i,j:',rank,i,j,dbed,dbed_allowed,dbed_adjust,dz_botlayer,maxbedslope(i,j),av_slope(kbed(i,j))	
 						IF (dbed_adjust.le.dz_botlayer) THEN ! only cbotnew adjusted
 							DO n1=1,nfr_sand !avalanche sand fractions only, not silt/mud/clay
 								n=nfrac_sand(n1)
 							!DO n=1,nfrac !avalanche all fractions, sand and silt
-								c_adjust = dbed_adjust/MAX(dz_botlayer,1.e-18)*cbotnew(n,i,j)
+								c_adjust = dbed_adjust/MAX(dz_botlayer,1.e-18)*MAX(cbotnew(n,i,j),0.)
 								d_cbotnew(n,i,j)=d_cbotnew(n,i,j) - c_adjust
 								d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt)+c_adjust*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt) ! dump all avalanche in cbotnew, next timestep it can be added to fixed bed in routine above
 							ENDDO
 							kplus = MIN(kbed(i,j)+1,k1)
 							DO n1=1,nfr_silt !silt fractions are not avalanched but come back in suspension otherwise every time a cell avalanches the silt remains in the bed of this cell and the end silt content in the bed gets too high 
 								n=nfrac_silt(n1)
-								c_adjust = dbed_adjust/MAX(dz_botlayer,1.e-18)*cbotnew(n,i,j)
+								c_adjust = dbed_adjust/MAX(dz_botlayer,1.e-18)*MAX(cbotnew(n,i,j),0.)
 								d_cbotnew(n,i,j)=d_cbotnew(n,i,j) - c_adjust
 								IF (avalanche_fines.eq.0) THEN !simply avalanche fines
 									d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt)+c_adjust*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt) ! dump all avalanche in cbotnew, next timestep it can be added to fixed bed in routine above
@@ -2881,11 +2904,11 @@
 									!ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus) + c_adjust !add silt to lowest fluid cell 
 									cctot=0.
 									DO k=kbed(i,j)+1,kmax 
-										cctot=cctot+MAX(ccfd(n,i,j,k),0.)
+										cctot=cctot+MAX(ccfd(n,i,j,k),0.)*fc_local(i,j,k)
 									ENDDO	
 									IF (cctot>1.e-12) THEN 
 										DO k=kbed(i,j)+1,kmax 
-											ccnew(n,i,j,k) = ccnew(n,i,j,k) + MAX(ccfd(n,i,j,k),0.)/(cctot+1.e-12)*c_adjust !distribute silt concentration over full water column								
+											ccnew(n,i,j,k) = ccnew(n,i,j,k) + MAX(ccfd(n,i,j,k),0.)/(cctot+1.e-12)*c_adjust*fc_local(i,j,k) !distribute silt concentration over full water column								
 										ENDDO
 									ELSE 
 										ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus) + c_adjust !add silt to lowest fluid cell 
@@ -2895,10 +2918,11 @@
 						ELSE !avalanche full cbotnew+bit of Clivebed of underlying cell 
 							kplus = MIN(kbed(i,j)+1,k1)
 							dz1=SUM(Clivebed(1:nfrac,i,j,kbed(i,j)))/cfixedbed*dz !maximum possible bed change given how much is in Clivebed of this cell 
+							dz1=MAX(0.,dz1) 
 							DO n1=1,nfr_sand !avalanche sand fractions only, not silt/mud/clay
 								n=nfrac_sand(n1)
 							!DO n=1,nfrac !avalanche all fractions, sand and silt
-								c_adjust = cbotnew(n,i,j) !avalanche complete cbotnew 
+								c_adjust = MAX(cbotnew(n,i,j),0.) !avalanche complete cbotnew 
 								d_cbotnew(n,i,j)=d_cbotnew(n,i,j) - c_adjust
 								d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt) + c_adjust*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt)
 								!c_adjust = MIN(dz1,dbed_adjust-dz_botlayer)/dz1*Clivebed(n,i,j,kbed(i,j)) !never more than one dz layer is eroded by avalanche
@@ -2927,7 +2951,7 @@
 							ENDDO
 							DO n1=1,nfr_silt
 								n=nfrac_silt(n1) 
-								c_adjust1 = cbotnew(n,i,j) !avalanche complete cbotnew
+								c_adjust1 = MAX(cbotnew(n,i,j),0.) !avalanche complete cbotnew
 								d_cbotnew(n,i,j)=d_cbotnew(n,i,j) - c_adjust1
 								!ccnew(n,i,j,kbed(i,j))= c_adjust1 !add silt to lowest fluid cell initiated at 0 concentration 
 								!c_adjust2 = MIN(dz1,dbed_adjust-dz_botlayer)/dz1*Clivebed(n,i,j,kbed(i,j)) !never more than one dz layer is eroded by avalanche
@@ -2936,30 +2960,68 @@
 								Clivebed(n,i,j,kbed(i,j))=0. ! not bed anymore but fluid --> old Clivebed is added tot cbotnew [sediment budget OK]
 								IF (avalanche_fines.eq.0) THEN !simply avalanche fines
 									d_cbotnew(n,itrgt,jtrgt)=d_cbotnew(n,itrgt,jtrgt) + (c_adjust1+c_adjust2)*vol_Vp(i,j)/vol_Vp(itrgt,jtrgt)
-								ELSE 
-									!ccnew(n,i,j,kbed(i,j))=ccnew(n,i,j,kbed(i,j)) + c_adjust2 !add silt to lowest fluid cell
-
-									!giving new lowest fluid cell same concentration as old lowest fluid cell and taking away this sediment from cells above (11-10-2021)
-									cctot=0.
-									DO k=kbed(i,j)+1,kmax 
-										cctot=cctot+MAX(ccfd(n,i,j,k),0.)
-									ENDDO	
-									ccnew(n,i,j,kbed(i,j)) = ccnew(n,i,j,kplus) !new lowest fluid cell gets same concentration as old lowest fluid cell 
-									IF (cctot>1.e-12) THEN 
+									IF (erosion_cbed_start.eq.0) THEN 
+										ccnew(n,i,j,kbed(i,j))= 0. !start with fluid cell without sediment concentration
+									ELSE
+										!giving new lowest fluid cell same concentration as old lowest fluid cell and taking away this sediment from cells above (11-10-2021)
+										cctot=0.
 										DO k=kbed(i,j)+1,kmax 
-											ccnew(n,i,j,k) = ccnew(n,i,j,k) - MAX(ccfd(n,i,j,k),0.)/(cctot+1.e-12)*(ccnew(n,i,j,kbed(i,j))
-     &								   -c_adjust1-c_adjust2) !remove same quantity from cells above in weighted avg manner + distribute silt released by avalanching in water column --> this gives same c in lowest fluid-cell as previous time step which does make sense as it was there as the dynamic equilibrium and should not change instantaneously from lowering 1dz in avalanching; in exceptional conditions where c_adjust1+c_adjust2 would be very large compared to c in lowest cell it could lead to higher c in cells located above the lowest cell; that doesn't seem to be likely
-										ENDDO 	
-									ELSE 
-										ccnew(n,i,j,kbed(i,j))= ccnew(n,i,j,kbed(i,j)) + c_adjust1 + c_adjust2 
-									ENDIF 
+											cctot=cctot+MAX(ccfd(n,i,j,k),0.)*fc_local(i,j,k)
+										ENDDO
+										IF (cctot>1.e-12) THEN 
+											ccnew(n,i,j,kbed(i,j)) = ccnew(n,i,j,kplus) !new lowest fluid cell gets same concentration as old lowest fluid cell 
+											DO k=kbed(i,j)+1,kmax 
+											   ccnew(n,i,j,k) = ccnew(n,i,j,k) - MAX(ccfd(n,i,j,k),0.)/(cctot+1.e-12)*ccnew(n,i,j,kbed(i,j)) !remove same quantity from cells above in weighted avg manner
+     &										   *fc_local(i,j,k)
+											ENDDO 
+										ELSE 
+											ccnew(n,i,j,kbed(i,j))= 0. !start with fluid cell without sediment concentration
+										ENDIF 
+									ENDIF 									
+								ELSE 
+									IF (erosion_cbed_start.eq.0) THEN 
+										ccnew(n,i,j,kbed(i,j)) = c_adjust1 + c_adjust2  !start with fluid cell without sediment concentration from kplus 
+									ELSE								
+										!giving new lowest fluid cell same concentration as old lowest fluid cell and taking away this sediment from cells above (11-10-2021)
+										cctot=0.
+										DO k=kbed(i,j)+1,kmax 
+											cctot=cctot+MAX(ccfd(n,i,j,k),0.)*fc_local(i,j,k)
+										ENDDO	
+										IF (cctot>1.e-12) THEN 
+											ccnew(n,i,j,kbed(i,j)) = ccnew(n,i,j,kplus) !new lowest fluid cell gets same concentration as old lowest fluid cell 
+											DO k=kbed(i,j)+1,kmax 
+												ccnew(n,i,j,k) = ccnew(n,i,j,k) - MAX(ccfd(n,i,j,k),0.)/(cctot+1.e-12)*(ccnew(n,i,j,kbed(i,j))
+     &								   -c_adjust1-c_adjust2)*fc_local(i,j,k) !remove same quantity from cells above in weighted avg manner + distribute silt released by avalanching in water column --> this gives same c in lowest fluid-cell as previous time step which does make sense as it was there as the dynamic equilibrium and should not change instantaneously from lowering 1dz in avalanching; in exceptional conditions where c_adjust1+c_adjust2 would be very large compared to c in lowest cell it could lead to higher c in cells located above the lowest cell; that doesn't seem to be likely
+											ENDDO 	
+										ELSE 
+											ccnew(n,i,j,kbed(i,j))= ccnew(n,i,j,kbed(i,j)) + c_adjust1 + c_adjust2 
+										ENDIF 
+									ENDIF
 								ENDIF 
 							ENDDO
 							IF (avalanche_fines.eq.2) THEN !don't avalanche fines but leave them in bed of original i,j loc; otherwise every time a cell avalanches the silt remains in the bed of this cell and the end silt content in the bed under the avalanche slope gets too high
-							    DO n1=1,nfr_silt !with avalanche_fines.eq.2 place all fines from Clivebed into bufferlayer d_cbotnew 
+							    DO n1=1,nfr_silt_org !with avalanche_fines.eq.2 place all fines from Clivebed into bufferlayer d_cbotnew 
 								  n=nfrac_silt(n1) 	
 								  d_cbotnew(n,i,j) = d_cbotnew(n,i,j) + Clivebed(n,i,j,kbed(i,j))
 								  Clivebed(n,i,j,kbed(i,j))=0. 
+									IF (erosion_cbed_start.eq.0) THEN 
+										ccnew(n,i,j,kbed(i,j))= 0. !start with fluid cell without sediment concentration
+									ELSE
+										!giving new lowest fluid cell same concentration as old lowest fluid cell and taking away this sediment from cells above (11-10-2021)
+										cctot=0.
+										DO k=kbed(i,j)+1,kmax 
+											cctot=cctot+MAX(ccfd(n,i,j,k),0.)*fc_local(i,j,k)
+										ENDDO
+										IF (cctot>1.e-12) THEN 
+											ccnew(n,i,j,kbed(i,j)) = ccnew(n,i,j,kplus) !new lowest fluid cell gets same concentration as old lowest fluid cell 
+											DO k=kbed(i,j)+1,kmax 
+											   ccnew(n,i,j,k) = ccnew(n,i,j,k) - MAX(ccfd(n,i,j,k),0.)/(cctot+1.e-12)*ccnew(n,i,j,kbed(i,j)) !remove same quantity from cells above in weighted avg manner
+     &										   *fc_local(i,j,k)
+											ENDDO 
+										ELSE 
+											ccnew(n,i,j,kbed(i,j))= 0. !start with fluid cell without sediment concentration
+										ENDIF 
+									ENDIF 									  
 								ENDDO 
 							ENDIF							
 							DO k=kbed(i,j),kmax 

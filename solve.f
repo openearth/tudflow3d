@@ -693,14 +693,16 @@ c********************************************************************
 c     CALCULATE coefficients for AB3 interpolation with variable dt
 c********************************************************************
 
-	do i=4,1,-1
-		if (i.eq.1) then
-		  timeAB_real(i)=time_n
-		else
-		  timeAB_real(i)=timeAB_real(i-1)
-		endif
-		timeAB_desired(i)=time_n-(i-1)*dt
-	enddo
+	IF (predictorstep_tel.eq.1) THEN !prevent to mess up times when ABv is called more than 1 times within same timestep
+		do i=4,1,-1
+			if (i.eq.1) then
+			  timeAB_real(i)=time_n
+			else
+			  timeAB_real(i)=timeAB_real(i-1)
+			endif
+			timeAB_desired(i)=time_n-(i-1)*dt
+		enddo
+	ENDIF 
 	
 	!IF (CNdiffz.eq.11.or.CNdiffz.eq.12) THEN !switch to AB2 with variable time step:
 	IF (.false.) THEN !always use AB3 with variable time step
@@ -1447,7 +1449,8 @@ c********************************************************************
       enddo		
 	   endif
   
-	  pold=p+pold    !what is called p here was dp in reality, now p is 			--> P^n 
+	    IF (predictorstep_tel.eq.1) THEN
+	      pold=p+pold    !what is called p here was dp in reality, now p is 			--> P^n 
 
 		  !IF (continuity_solver.eq.35) THEN
 			!pold1=pold2 !-->P^n-2
@@ -1458,15 +1461,17 @@ c********************************************************************
 			pold2=pold3 !-->P^n-1
 			pold3=pold !--> P^n
 		  ENDIF 
-		  IF (pres_in_predictor_step.eq.0) THEN 
-		    pold=0.
-		  ENDIF
-		  IF (applyVOF.eq.1) THEN 
-			pold=rho_b*pold/rnew(1:imax,1:jmax,1:kmax)
-		  ENDIF 
+	    ENDIF		  
+		IF (pres_in_predictor_step.eq.0) THEN 
+		  pold=0.
+		ENDIF
+		IF (applyVOF.eq.1) THEN 
+		  pold=rho_b*pold/rnew(1:imax,1:jmax,1:kmax)
+		ENDIF 
 		!ENDIF 
 	  
-      call pshiftb(pold,pplus) !,rank,imax,jmax,kmax,px)
+        call pshiftb(pold,pplus) !,rank,imax,jmax,kmax,px)
+ 
 c********************************************************************
 c     CALCULATE pressure-gradient with old pressure:
 c********************************************************************
@@ -1803,6 +1808,123 @@ c********************************************************************
 		dWdt = dWdt*rhW
       ENDIF
 
+!!!!	IF (Non_Newtonian.eq.1.and.Rheo_strain_cor_steps.ge.1) THEN
+!!!!! Rheo_strain_cor_steps=0		! number of correction steps on Rheo_strain done at end of predictor step in ABv. Default 0 steps. Every correction step the app-visc and strain are re-evaluated using the latest predictor velocity and the incremental-viscosity is used to determine the extra viscous forces from the updated app-visc. Rheo_strain_cor_steps>0 should not be combined with Rheo_strain_pred_theta>0. 
+!!!!
+!!!!
+!!!!! apply diffusion on dUdt/rhU with ekm instead on dUdt with ekm/drdt which because of staggering is not the same and in explicit diff the former is done:
+!!!!		dUdt = dUdt/rhU 
+!!!!		dVdt = dVdt/rhV 
+!!!!		dWdt = dWdt/rhW 	
+!!!!		utr=Unew !backup of original Unew 
+!!!!		vtr=Vnew
+!!!!		wtr=Wnew	
+!!!!		ddd1=ekm
+!!!!		ddd2=muA 
+!!!!		DO n=1,Rheo_strain_cor_steps
+!!!!			Unew = (1.-Rheo_strain_pred_theta)*Unew+Rheo_strain_pred_theta*dUdt !dUdt/rhU !replace Unew with latest predictor and use this predictor in Bingham to calculate shear 
+!!!!			Vnew = (1.-Rheo_strain_pred_theta)*Vnew+Rheo_strain_pred_theta*dVdt  !dVdt/rhV
+!!!!			Wnew = (1.-Rheo_strain_pred_theta)*Wnew+Rheo_strain_pred_theta*dWdt  !dWdt/rhW		
+!!!!			!ws=ekm !store previous viscosity to be able to determine increment for every Rheo_strain_cor_step 
+!!!!			ws=muA !store previous muA to be able to determine increment for every Rheo_strain_cor_step 
+!!!!			if (PAPANASTASIOUS_m>0.) then 
+!!!!			  call Bingham_Papanastasiou
+!!!!			else
+!!!!			  call Bingham_Fluent_manner
+!!!!			endif 
+!!!!			ekm = MIN(muA-ws,0.) !replace ekm with increment to use in three subroutines below to calculate extra diffusion effect from change in ekm
+!!!!			!use explicit scheme to calculate influence of negative increment in muA:
+!!!!			call diffuvw_ydir_CDS2_CNexpl(dnew,dnew2,dold,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
+!!!!			dUdt = dUdt +dt*dnew/rhU  
+!!!!			dVdt = dVdt +dt*dnew2/rhV
+!!!!			dWdt = dWdt +dt*dold/rhW				
+!!!!			call diffuvw_zdir_CDS2_CNexpl(dnew,dnew2,dold,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
+!!!!			dUdt = dUdt +dt*dnew/rhU  
+!!!!			dVdt = dVdt +dt*dnew2/rhV
+!!!!			dWdt = dWdt +dt*dold/rhW
+!!!!			call diffuvw_xdir_CDS2_CNexpl(dnew,dnew2,dold,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke)
+!!!!			dUdt = dUdt +dt*dnew/rhU  
+!!!!			dVdt = dVdt +dt*dnew2/rhV
+!!!!			dWdt = dWdt +dt*dold/rhW				
+!!!!			!use previous velocity to calculate diffusion in explicit manner (using updated predictor Unew,Vnew,Wnew gave unstable results)
+!!!!			! in Bingham muA is added to ekm, therefore now 2 times old ekm is subtracted to get increment:
+!!!!			ekm = MAX(muA-ws,0.) !replace ekm with increment to use in three subroutines below to calculate extra diffusion effect from change in ekm
+!!!!			!use implicit scheme to calculate influence of positive increment in muA:
+!!!!			!ekm = muA ! use implicit scheme to add contribution of new updated ekm:
+!!!!!			IF (CNdiff_factor<1.) THEN 
+!!!!!				call diffuvw_ydir_CDS2_CNexpl(dnew,dnew2,dold,utr,vtr,wtr,ib,ie,jb,je,kb,ke)
+!!!!!				dUdt = dUdt + (1.-CNdiff_factor)*dt*dnew/rhU  
+!!!!!				dVdt = dVdt + (1.-CNdiff_factor)*dt*dnew2/rhV
+!!!!!				dWdt = dWdt + (1.-CNdiff_factor)*dt*dold/rhW				
+!!!!!				call diffuvw_zdir_CDS2_CNexpl(dnew,dnew2,dold,utr,vtr,wtr,ib,ie,jb,je,kb,ke)
+!!!!!				dUdt = dUdt + (1.-CNdiff_factor)*dt*dnew/rhU  
+!!!!!				dVdt = dVdt + (1.-CNdiff_factor)*dt*dnew2/rhV
+!!!!!				dWdt = dWdt + (1.-CNdiff_factor)*dt*dold/rhW
+!!!!!				call diffuvw_xdir_CDS2_CNexpl(dnew,dnew2,dold,utr,vtr,wtr,ib,ie,jb,je,kb,ke)
+!!!!!				dUdt = dUdt + (1.-CNdiff_factor)*dt*dnew/rhU  
+!!!!!				dVdt = dVdt + (1.-CNdiff_factor)*dt*dnew2/rhV
+!!!!!				dWdt = dWdt + (1.-CNdiff_factor)*dt*dold/rhW		
+!!!!!			ENDIF 
+!!!!
+!!!!			call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,
+!!!!     & 		Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
+!!!!			CALL diffuvw_CDS2_3DCNimpl 			
+!!!!			call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,
+!!!!     & 		Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)		
+!!!!
+!!!!!!!			call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,
+!!!!!!!     & 		Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
+!!!!!!!				! CNdiff_factor acts as theta in CN --> 0.5 gives 2nd order dt Douglas-Gunn ADI and 1 gives 1st order Douglass-Rachford; factor 0.5-1 gives blend
+!!!!!!!				! Douglas-Gunn and Douglass-Rachford ADI first take 100% explicit diffusion of 2 dirs not implicit
+!!!!!!!				call diffuvw_ydir_CDS2_CNexpl(dnew,dnew2,dold,utr,vtr,wtr,ib,ie,jb,je,kb,ke)
+!!!!!!!				dUdt = dUdt + (1.-CNdiff_factor)*dt*dnew/rhU  
+!!!!!!!				dVdt = dVdt + (1.-CNdiff_factor)*dt*dnew2/rhV
+!!!!!!!				dWdt = dWdt + (1.-CNdiff_factor)*dt*dold/rhW				
+!!!!!!!				call diffuvw_zdir_CDS2_CNexpl(dnew,dnew2,dold,utr,vtr,wtr,ib,ie,jb,je,kb,ke)
+!!!!!!!				dUdt = dUdt + dt*dnew/rhU  
+!!!!!!!				dVdt = dVdt + dt*dnew2/rhV
+!!!!!!!				dWdt = dWdt + dt*dold/rhW
+!!!!!!!				call diffuvw_xdir_CDS2_CNexpl(dnew,dnew2,dold,utr,vtr,wtr,ib,ie,jb,je,kb,ke)
+!!!!!!!				dUdt = dUdt + dt*dnew/rhU  
+!!!!!!!				dVdt = dVdt + dt*dnew2/rhV
+!!!!!!!				dWdt = dWdt + dt*dold/rhW				
+!!!!!!!				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,
+!!!!!!!     & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)	
+!!!!!!!				CALL diffuvw_ydir_CDS2_CNimpl
+!!!!!!!				
+!!!!!!!				! Douglas-Gunn ADI after each direction 50% implicit is finished subtract 50% explicit 
+!!!!!!!				! diffuvw_xdir_CDS2_CNexpl was executed as last direction; therefore dnew,dnew2,dold are already correct for xdir_expl:
+!!!!!!!				!call diffuvw_xdir_CDS2_CNexpl(dnew,dnew2,dold,Unew,Vnew,Wnew,ib,ie,jb,je,kb,ke) 
+!!!!!!!				dUdt = dUdt - CNdiff_factor*dt*dnew/rhU  
+!!!!!!!				dVdt = dVdt - CNdiff_factor*dt*dnew2/rhV
+!!!!!!!				dWdt = dWdt - CNdiff_factor*dt*dold/rhW
+!!!!!!!				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,
+!!!!!!!     & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)		 
+!!!!!!!				CALL diffuvw_xdir_CDS2_CNimpl 
+!!!!!!!				
+!!!!!!!				! Douglas-Gunn ADI after each direction 50% implicit is finished subtract 50% explicit 
+!!!!!!!				call diffuvw_zdir_CDS2_CNexpl(dnew,dnew2,dold,utr,vtr,wtr,ib,ie,jb,je,kb,ke)
+!!!!!!!				dUdt = dUdt - CNdiff_factor*dt*dnew/rhU  
+!!!!!!!				dVdt = dVdt - CNdiff_factor*dt*dnew2/rhV
+!!!!!!!				dWdt = dWdt - CNdiff_factor*dt*dold/rhW			
+!!!!!!!				call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,
+!!!!!!!     & 			Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)								
+!!!!!!!				CALL diffuvw_zdir_CDS2_CNimpl
+!!!!!!!
+!!!!!!!			call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),time_np,Ub1new,Vb1new,
+!!!!!!!     & 		Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
+!!!!		ENDDO 
+!!!!		ekm=ddd1+muA-ddd2 !new ekm is original ekm plus last muA minus original muA
+!!!!		Unew=utr !put back original Unew 
+!!!!		Vnew=vtr
+!!!!		Wnew=wtr
+!!!!		dUdt = dUdt*rhU 
+!!!!		dVdt = dVdt*rhV
+!!!!		dWdt = dWdt*rhW		
+!!!!	ENDIF
+	
+		call bound_rhoU(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
+     & 	Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
 
 		!IF (applyVOF.eq.1) THEN 
 		! IF (continuity_solver.eq.35) THEN
@@ -1810,6 +1932,7 @@ c********************************************************************
 		!  rnew=1.
 		! ENDIF
 		!ENDIF 
+		
 		IF (applyVOF.eq.1) THEN 
 			pold=pold/rho_b*rnew(1:imax,1:jmax,1:kmax)  
 			rnew=rho_b
@@ -3796,8 +3919,9 @@ c********************************************************************
          enddo
        enddo
        ENDIF
-		pold=p+pold    !what is called p here was dp in reality, now p is 			--> P^n 
-		!IF (applyVOF.eq.1) THEN 
+	    IF (predictorstep_tel.eq.1) THEN 
+		  pold=p+pold    !what is called p here was dp in reality, now p is 			--> P^n 
+		  !IF (applyVOF.eq.1) THEN 
 		  !IF (continuity_solver.eq.35) THEN
 		  !  CALL state(cnew,rnew)		  
 		  !  pold=pold/rnew(1:imax,1:jmax,1:kmax)
@@ -3806,12 +3930,14 @@ c********************************************************************
 			pold2=pold3 !-->P^n-1
 			pold3=pold !--> P^n
 		  ENDIF 
-		  IF (pres_in_predictor_step.eq.0) THEN 
-		    pold=0.
-		  ENDIF		  
+		ENDIF
+		IF (pres_in_predictor_step.eq.0) THEN 
+		  pold=0.
+		ENDIF		  
 		!ENDIF 
 		
-      call pshiftb(pold,pplus) !,rank,imax,jmax,kmax,px)
+        call pshiftb(pold,pplus) !,rank,imax,jmax,kmax,px)
+	    
 c********************************************************************
 c     CALCULATE pressure-gradient with old pressure:
 c********************************************************************
@@ -5716,7 +5842,7 @@ c
 				ws(n)=-frac(n)%ws !ws defined positive downwards
 				sum_c_ws=sum_c_ws+ws(n)*(cW(n,i,j,k)*frac(n)%rho/rhW(i,j,k)-cW(n,i,j,k))
 			enddo
-			dWdt(i,j,k)=dWdt(i,j,k)+sum_c_ws  !go from velocity of volume centre to mixture velocity (centre of mass velocity)
+			ww(i,j,k)=ww(i,j,k)+sum_c_ws  !go from velocity of volume centre to mixture velocity (centre of mass velocity)
           enddo
         enddo
       enddo
@@ -5734,7 +5860,7 @@ c
 				ws(n)=-frac(n)%ws*(1.-ctot)**(frac(n)%n) !ws defined positive downwards
 				sum_c_ws=sum_c_ws+ws(n)*(cW(n,i,j,k)*frac(n)%rho/rhW(i,j,k)-cW(n,i,j,k))
 			enddo
-			dWdt(i,j,k)=dWdt(i,j,k)+sum_c_ws  !go from velocity of volume centre to mixture velocity (centre of mass velocity)
+			ww(i,j,k)=ww(i,j,k)+sum_c_ws  !go from velocity of volume centre to mixture velocity (centre of mass velocity)
           enddo
         enddo
       enddo
@@ -5744,23 +5870,24 @@ c
       do k=1,kmax
         do j=1,jmax
           do i=1,imax
-		   dUdt(i,j,k)=dUdt(i,j,k)-dt*(1./rhU(i,j,k)-1./rho_b2)*(dp(i+1,j,k)-dp(i,j,k))/(Rp(i+1)-Rp(i))
-		   dVdt(i,j,k)=dVdt(i,j,k)-dt*(1./rhV(i,j,k)-1./rho_b2)*(dp(i,j+1,k)-dp(i,j,k))/(Rp(i)*(phip(j+1)-phip(j)) ) 
-		   dWdt(i,j,k)=dWdt(i,j,k)-dt*(1./rhW(i,j,k)-1./rho_b2)*(dp(i,j,k+1)-dp(i,j,k))/ dz		
-		   dUdt(i,j,k)=dUdt(i,j,k)*rhU(i,j,k)
-		   dVdt(i,j,k)=dVdt(i,j,k)*rhV(i,j,k)
-		   dWdt(i,j,k)=dWdt(i,j,k)*rhW(i,j,k)
+		   uu(i,j,k)=uu(i,j,k)-ddtt*(1./rhU(i,j,k)-1./rho_b2)*(dp(i+1,j,k)-dp(i,j,k))/(Rp(i+1)-Rp(i))
+		   vv(i,j,k)=vv(i,j,k)-ddtt*(1./rhV(i,j,k)-1./rho_b2)*(dp(i,j+1,k)-dp(i,j,k))/(Rp(i)*(phip(j+1)-phip(j)) ) 
+		   ww(i,j,k)=ww(i,j,k)-ddtt*(1./rhW(i,j,k)-1./rho_b2)*(dp(i,j,k+1)-dp(i,j,k))/ dz		
+		   uu(i,j,k)=uu(i,j,k)*rhU(i,j,k)
+		   vv(i,j,k)=vv(i,j,k)*rhV(i,j,k)
+		   ww(i,j,k)=ww(i,j,k)*rhW(i,j,k)
           enddo
         enddo
       enddo	 
+	  p=p*rho_b2 !drdt(1:imax,1:jmax,1:kmax)  !scale P back with rho
 	 ENDIF 
 	 IF (continuity_solver.eq.33.or.continuity_solver.eq.34) THEN 
       do k=1,kmax
         do j=1,jmax
           do i=1,imax
-		   dUdt(i,j,k)=dUdt(i,j,k)*rhU(i,j,k)
-		   dVdt(i,j,k)=dVdt(i,j,k)*rhV(i,j,k)
-		   dWdt(i,j,k)=dWdt(i,j,k)*rhW(i,j,k)
+		   uu(i,j,k)=uu(i,j,k)*rhU(i,j,k)
+		   vv(i,j,k)=vv(i,j,k)*rhV(i,j,k)
+		   ww(i,j,k)=ww(i,j,k)*rhW(i,j,k)
           enddo
         enddo
       enddo	 

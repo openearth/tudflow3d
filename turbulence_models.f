@@ -5337,7 +5337,7 @@ c*************************************************************
       INTEGER, DIMENSION(:), ALLOCATABLE :: seed
       real yy(nmax2),xx(nmax2),y,z,AAdummy(3,3)
       real z0,xxmin,xxmax,yymin,yymax,zzmin,zzmax,x0,y0,phi,fac,phi2
-      character*60 fmatname
+      character*80 fmatname
       real boxside_x,ttmin,ttmax,jetcorr,x,rr,rrmin,rrmax,dxx,dyy,ust!,ust3
 
 	CALL SYSTEM_CLOCK(COUNT=clock)
@@ -5703,7 +5703,7 @@ c*************************************************************
       real zz,eps(3),yy
       real z0,xxmin,xxmax,yymin,yymax,x0,y0,phi,ust,fac,phi2
       integer move
-      character*60 fmatname
+      character*80 fmatname
       integer jminSEM,jmaxSEM,kminSEM,kmaxSEM,iii,tel,ii
       real phiSEM,dphiSEM,y,z,zzmin,zzmax,lmSEM2old(1:nmax2),ySEM2old(1:nmax2),zSEM2old(1:nmax2),xSEM2old(1:nmax2)
       real lmxSEM2old(1:nmax2),lmySEM2old(1:nmax2),lmzSEM2old(1:nmax2)

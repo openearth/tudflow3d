@@ -28,7 +28,7 @@
 	
 	lambda_advec(:,:,:)=0.
 	kbed_dummy(:,:)=0
-
+ 
 	call advecc_VLE(lambda_advec(:,:,:),lambda_old(:,:,:),Unew,Vnew,Wnew,rnew,Ru,Rp,dr,phiv,phipt,dz,
      +                  i1,j1,k1,ib,ie,jb,je,kb,ke,dt,rank,px,periodicx,periodicy,'volufrac',kbed_dummy) !advection of lambda
 
@@ -722,7 +722,15 @@
 	integer im,ip,jm,jp,km,kp,n
 
 	if (Rheological_model.ne.'WINTER') then
-		call strain_magnitude(Unew,Vnew,Wnew)				!determine the magnite of the strain rate
+		IF (Rheo_strain_pred_theta>0.) THEN !use predictor for strain te determine apparent viscosity 
+		  call strain_magnitude(Uold,Vold,Wold)
+		  muA=strain  !to reduce memory use muA to store strain^n-1 
+		  call strain_magnitude(Unew,Vnew,Wnew)	
+		  strain = (1.+Rheo_strain_pred_theta)*strain - Rheo_strain_pred_theta*muA !make predictor for strain^n+1=(1+theta)*strain^n-theta*strain^n-1
+		  !strain^n+1 = strain^n + dt^n*(strain^n-strain^n-1)/dt^n-1 --> neglect change in dt to arrive at : strain^n+1 = 2*strain^n -strain^n-1 --> this is for theta=1, but any value for theta=0-1 can be used as blend 
+		ELSE !default strain is calculated with Unew,Vnew,Wnew 	
+		  call strain_magnitude(Unew,Vnew,Wnew)				!determine the magnite of the strain rate
+		ENDIF 
 	endif
 
 
@@ -798,8 +806,8 @@
 	  ENDDO 
 	ENDIF 
 	
-	
-	if (Apvisc_force_eq.eq.2) then 
+	uyz=0
+	if (Apvisc_force_eq.eq.2.or.Apvisc_force_eq.eq.3) then 
 	    pppp(1:imax,1:jmax,1:kmax)=Pold+p !now full pold not just dp
 		call bound_3D(pppp) 	
 		do i=1,imax						!start loop, in r-direction
@@ -811,6 +819,7 @@
 				  ! assume very wide cells in laterally uniform situation: dy>>> then check #2 and #6 give yield
 				  ! or assume very wide cells in x-dir for uniform situation in x-dir with dx>>> then check #1 and #4 give yield
 				  ! or assume very high cells dz>>> then check #3 and #5 give yield 
+				  ! all these three consequences are logical and correct
 				  ! each force-dir needs to be taken up by either one of the edges where BYS can counteract the pressure gradient, doesn't need to be able to counteract on both edges for each dir 
 				  dpdz_hydr = (rho_b-rnew(i,j,k))*gz !negative when rnew>rho_b
 				  driving_shearstressz = ABS((pppp(i,j,k+1)-pppp(i,j,k-1))/(2.*dz)-dpdz_hydr)*dr(i)
@@ -824,6 +833,7 @@
 				  driving_shearstress = MAX(driving_shearstressx,driving_shearstressy,driving_shearstressz) 
 				  if (driving_shearstress<tauY(i,j,k)) then !unyielded zone with maximum appararent viscosity 
 				    muA(i,j,k)= muB(i,j,k)+(tauY(i,j,k)-tau_app(i,j,k))*PAPANASTASIOUS_m
+					uyz(i,j,k)=1 !only when Apvisc_force_eq.eq.3 uyz is used in bound.f to force flow zero 
 				  elseif (strain(i,j,k)>1.e-8) then 
 					muA(i,j,k)= muB(i,j,k)+MAX(0.,tauY(i,j,k)-tau_app(i,j,k))/(max(1.e-12,strain(i,j,k)-shear0limit))*
      &				(1.-exp(-PAPANASTASIOUS_m*(max(1.e-12,strain(i,j,k)-shear0limit))))
@@ -833,6 +843,41 @@
 				enddo
 			enddo
 		enddo
+		!call bound_3Di2(uyz) 
+	elseif (Apvisc_force_eq.eq.12.or.Apvisc_force_eq.eq.13) then !only check horizontal x,y 
+	    pppp(1:imax,1:jmax,1:kmax)=Pold+p !now full pold not just dp
+		call bound_3D(pppp) 	
+		do i=1,imax						!start loop, in r-direction
+			do j=1,jmax						!start loop, in phi-direction
+				do k=1,kmax					!start loop, in z-direction
+				  ! unyielded when: delta_Pz*dx*dy < BYS*dz*dy  or delta_Pz*dx*dy < BYS*dz*dx & 
+				  !                 delta_Py*dz*dx < BYS*dy*dx  or delta_Py*dz*dx < BYS*dy*dz  
+				  !	                delta_Px*dz*dy < BYS*dx*dy  or delta_Px*dz*dy < BYS*dx*dz & 		
+				  ! assume very wide cells in laterally uniform situation: dy>>> then check #2 and #6 give yield
+				  ! or assume very wide cells in x-dir for uniform situation in x-dir with dx>>> then check #1 and #4 give yield
+				  ! or assume very high cells dz>>> then check #3 and #5 give yield 
+				  ! all these three consequences are logical and correct
+				  ! each force-dir needs to be taken up by either one of the edges where BYS can counteract the pressure gradient, doesn't need to be able to counteract on both edges for each dir 
+		  
+				  driving_shearstressy = ABS(pppp(i,j+1,k)-pppp(i,j-1,k))*dr(i)/(2.*Rp(i)*dphi2(j))
+				  driving_shearstressy = MIN(driving_shearstressy,ABS(pppp(i,j+1,k)-pppp(i,j-1,k))*dz/(2.*Rp(i)*dphi2(j)))
+				  
+				  driving_shearstressx = ABS(pppp(i+1,j,k)-pppp(i-1,j,k))*dz/(2.*dr(i))
+				  driving_shearstressx = MIN(driving_shearstressx,ABS(pppp(i+1,j,k)-pppp(i-1,j,k))*Rp(i)*dphi2(j)/(2.*dr(i)))
+				  driving_shearstress = MAX(driving_shearstressx,driving_shearstressy) 
+				  if (driving_shearstress<tauY(i,j,k)) then !unyielded zone with maximum appararent viscosity 
+				    muA(i,j,k)= muB(i,j,k)+(tauY(i,j,k)-tau_app(i,j,k))*PAPANASTASIOUS_m
+					uyz(i,j,k)=1 !only when Apvisc_force_eq.eq.3 uyz is used in bound.f to force flow zero 
+				  elseif (strain(i,j,k)>1.e-8) then 
+					muA(i,j,k)= muB(i,j,k)+MAX(0.,tauY(i,j,k)-tau_app(i,j,k))/(max(1.e-12,strain(i,j,k)-shear0limit))*
+     &				(1.-exp(-PAPANASTASIOUS_m*(max(1.e-12,strain(i,j,k)-shear0limit))))
+				  else 
+					muA(i,j,k)= muB(i,j,k)+(tauY(i,j,k)-tau_app(i,j,k))*PAPANASTASIOUS_m
+				  endif 
+				enddo
+			enddo
+		enddo	
+		!call bound_3Di2(uyz) 
 	else 
 		do i=1,imax						!start loop, in r-direction
 			do j=1,jmax						!start loop, in phi-direction
@@ -894,7 +939,15 @@
 	integer im,ip,jm,jp,km,kp,n
 
 	if (Rheological_model.ne.'WINTER') then
-		call strain_magnitude(Unew,Vnew,Wnew)				!determine the magnite of the strain rate
+		IF (Rheo_strain_pred_theta>0.) THEN !use predictor for strain te determine apparent viscosity 
+		  call strain_magnitude(Uold,Vold,Wold)
+		  muA=strain  !to reduce memory use muA to store strain^n-1 
+		  call strain_magnitude(Unew,Vnew,Wnew)	
+		  strain = (1.+Rheo_strain_pred_theta)*strain - Rheo_strain_pred_theta*muA !make predictor for strain^n+1=(1+theta)*strain^n-theta*strain^n-1
+		  !strain^n+1 = strain^n + dt^n*(strain^n-strain^n-1)/dt^n-1 --> neglect change in dt to arrive at : strain^n+1 = 2*strain^n -strain^n-1 --> this is for theta=1, but any value for theta=0-1 can be used as blend 
+		ELSE !default strain is calculated with Unew,Vnew,Wnew 	
+		  call strain_magnitude(Unew,Vnew,Wnew)				!determine the magnite of the strain rate
+		ENDIF 
 	endif
 
 
@@ -967,8 +1020,8 @@
 	  ENDDO 
 	ENDIF 
 	
-	
-	if (Apvisc_force_eq.eq.2) then 
+	uyz=0 
+	if (Apvisc_force_eq.eq.2.or.Apvisc_force_eq.eq.3) then 
 	    pppp(1:imax,1:jmax,1:kmax)=Pold+p !now full pold not just dp
 		call bound_3D(pppp) 	
 		do i=1,imax						!start loop, in r-direction
@@ -980,6 +1033,7 @@
 				  ! assume very wide cells in laterally uniform situation: dy>>> then check #2 and #6 give yield
 				  ! or assume very wide cells in x-dir for uniform situation in x-dir with dx>>> then check #1 and #4 give yield
 				  ! or assume very high cells dz>>> then check #3 and #5 give yield 
+				  ! all these three consequences are logical and correct
 				  ! each force-dir needs to be taken up by either one of the edges where BYS can counteract the pressure gradient, doesn't need to be able to counteract on both edges for each dir 
 				  dpdz_hydr = (rho_b-rnew(i,j,k))*gz !negative when rnew>rho_b
 				  driving_shearstressz = ABS((pppp(i,j,k+1)-pppp(i,j,k-1))/(2.*dz)-dpdz_hydr)*dr(i)
@@ -992,7 +1046,8 @@
 				  driving_shearstressx = MIN(driving_shearstressx,ABS(pppp(i+1,j,k)-pppp(i-1,j,k))*Rp(i)*dphi2(j)/(2.*dr(i)))
 				  driving_shearstress = MAX(driving_shearstressx,driving_shearstressy,driving_shearstressz) 
 				  if (driving_shearstress<tauY(i,j,k)) then !unyielded zone with maximum appararent viscosity 
-					muA(i,j,k)= muB(i,j,k)+2.*MAX(0.,tauY(i,j,k)-tau_app(i,j,k))/shear0limit					
+					muA(i,j,k)= muB(i,j,k)+2.*MAX(0.,tauY(i,j,k)-tau_app(i,j,k))/shear0limit	
+					uyz(i,j,k)=1 !only when Apvisc_force_eq.eq.3 uyz is used in bound.f to force flow zero 
 				  elseif (strain(i,j,k)>shear0limit) then 
 				    muA(i,j,k)= muB(i,j,k)+MAX(0.,tauY(i,j,k)-tau_app(i,j,k))/strain(i,j,k)
 				  else 
@@ -1001,6 +1056,40 @@
 				enddo
 			enddo
 		enddo
+		!call bound_3Di2(uyz) 
+	elseif (Apvisc_force_eq.eq.12.or.Apvisc_force_eq.eq.13) then !only check horizontal x,y 
+	    pppp(1:imax,1:jmax,1:kmax)=Pold+p !now full pold not just dp
+		call bound_3D(pppp) 	
+		do i=1,imax						!start loop, in r-direction
+			do j=1,jmax						!start loop, in phi-direction
+				do k=1,kmax					!start loop, in z-direction
+				  ! unyielded when: delta_Pz*dx*dy < BYS*dz*dy  or delta_Pz*dx*dy < BYS*dz*dx & 
+				  !                 delta_Py*dz*dx < BYS*dy*dx  or delta_Py*dz*dx < BYS*dy*dz  
+				  !	                delta_Px*dz*dy < BYS*dx*dy  or delta_Px*dz*dy < BYS*dx*dz & 		
+				  ! assume very wide cells in laterally uniform situation: dy>>> then check #2 and #6 give yield
+				  ! or assume very wide cells in x-dir for uniform situation in x-dir with dx>>> then check #1 and #4 give yield
+				  ! or assume very high cells dz>>> then check #3 and #5 give yield 
+				  ! all these three consequences are logical and correct
+				  ! each force-dir needs to be taken up by either one of the edges where BYS can counteract the pressure gradient, doesn't need to be able to counteract on both edges for each dir 
+		  
+				  driving_shearstressy = ABS(pppp(i,j+1,k)-pppp(i,j-1,k))*dr(i)/(2.*Rp(i)*dphi2(j))
+				  driving_shearstressy = MIN(driving_shearstressy,ABS(pppp(i,j+1,k)-pppp(i,j-1,k))*dz/(2.*Rp(i)*dphi2(j)))
+				  
+				  driving_shearstressx = ABS(pppp(i+1,j,k)-pppp(i-1,j,k))*dz/(2.*dr(i))
+				  driving_shearstressx = MIN(driving_shearstressx,ABS(pppp(i+1,j,k)-pppp(i-1,j,k))*Rp(i)*dphi2(j)/(2.*dr(i)))
+				  driving_shearstress = MAX(driving_shearstressx,driving_shearstressy) 
+				  if (driving_shearstress<tauY(i,j,k)) then !unyielded zone with maximum appararent viscosity 
+					muA(i,j,k)= muB(i,j,k)+2.*MAX(0.,tauY(i,j,k)-tau_app(i,j,k))/shear0limit	
+					uyz(i,j,k)=1 !only when Apvisc_force_eq.eq.13 uyz is used in bound.f to force flow zero 
+				  elseif (strain(i,j,k)>shear0limit) then 
+				    muA(i,j,k)= muB(i,j,k)+MAX(0.,tauY(i,j,k)-tau_app(i,j,k))/strain(i,j,k)
+				  else 
+					muA(i,j,k)= muB(i,j,k)+(2.-strain(i,j,k)/shear0limit)*MAX(0.,tauY(i,j,k)-tau_app(i,j,k))/shear0limit
+				  endif 
+				enddo
+			enddo
+		enddo	
+		!call bound_3Di2(uyz) 
 	else 
 		do i=1,imax						!start loop, in r-direction
 			do j=1,jmax						!start loop, in phi-direction
@@ -1015,7 +1104,7 @@
 		enddo
 	endif 
 
-	ekm= ekm + muA - ekm_mol !in muB (part of muA) ekm_mol is included  
+	ekm= ekm + muA - ekm_mol !in muB (part of muA) ekm_mol is included
 	call stress_magnitude !calculate the stress magnitude
 	call bound_3D(ekm)
 	call bound_3D(muA) 

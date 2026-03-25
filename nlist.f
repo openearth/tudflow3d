@@ -34,7 +34,7 @@
       REAL xj(4),yj(4),radius_inner_j,W_j_powerlaw,plume_z_outflow_belowsurf,mortime,t_output,t_output_movie
       REAL dy,dz,schuif_x,depth,lm_min,lm_min3,Rmin,bc_obst_h,factorsABv3(3)
       REAL dr_grid(1:100),dy_grid(1:100),fac_y_grid(1:100),lim_y_grid(1:100),fac_r_grid(1:100),lim_r_grid(1:100)
-      INTEGER imax_grid(1:100),jmax_grid(1:100),sym_grid_y
+      INTEGER imax_grid(1:100),jmax_grid(1:100),sym_grid_y,avalanche_limit_buf
       INTEGER tmax_inPpunt,tmax_inUpunt,tmax_inVpunt,tmax_inPpuntrand
       INTEGER tmax_inPpuntTSHD,tmax_inUpuntTSHD,tmax_inVpuntTSHD,tmax_inWpuntTSHD
       INTEGER tmax_inUpunt_tauTSHD,tmax_inVpunt_tauTSHD,tmax_inVpunt_rudder
@@ -61,7 +61,7 @@
 	  REAL morfac_series(1:10000),morfac2_series(1:10000),morfac_tseries(1:10000),morfac2_tseries(1:10000)
       INTEGER plumeseriesloc,plumeseriesloc2,plumeQseriesloc,plumecseriesloc
 	  INTEGER U_b_seriesloc,V_b_seriesloc,W_b_seriesloc,tmorf_seriesloc,tmorf2_seriesloc,morfac_seriesloc,morfac2_seriesloc
-      INTEGER nr_HPfilter,depo_implicit,depo_cbed_option,monopile
+      INTEGER nr_HPfilter,depo_implicit,depo_cbed_option,monopile,predictorstep_tel
       REAL timeAB_real(1:4),dpdx,dpdy,kn_d50_multiplier,avalanche_slope(100),av_slope_z(100)
 	  REAL dpdx1,dpdy1,Uavold,Vavold,U3avold,V3avold,dpdx3,dpdy3
       INTEGER periodicx,periodicy,wallup,dUVdn_IBMbed
@@ -89,19 +89,20 @@
 	  
 	  
 	  !variables rheology
-	  INTEGER Non_Newtonian, Apvisc_interp,shear_settling
+	  INTEGER Non_Newtonian, Apvisc_interp,shear_settling,Rheo_strain_cor_steps
 	  REAL SIMPLE_tauy,SIMPLE_muB,SIMPLE_climit(30) 
 	  REAL JACOBS_Ky,JACOBS_Kmu,JACOBS_Aclay,JACOBS_By,JACOBS_Bmu,JACOBS_muw
 	  REAL WINTER_Ay,WINTER_Amu,WINTER_nf,WINTER_af,WINTER_muw
 	  REAL THOMAS_Cy,THOMAS_Cmu,THOMAS_ky,THOMAS_kmu,THOMAS_Py,THOMAS_Pmu,THOMAS_phi_sand_max
 	  REAL BAGNOLD_beta,BAGNOLD_phi_max,PAPANASTASIOUS_m,shear0limit
 	  REAL Lambda_init,Kin_eq_a,Kin_eq_b,Kin_eq_lambda_0
-	  REAL HOUSKA_n,HOUSKA_eta_0,HOUSKA_eta_inf,HOUSKA_tauy_0,HOUSKA_tauy_inf,MAX_tauy,MAX_mu
+	  REAL HOUSKA_n,HOUSKA_eta_0,HOUSKA_eta_inf,HOUSKA_tauy_0,HOUSKA_tauy_inf,MAX_tauy,MAX_mu,Rheo_strain_pred_theta
 	  
 
 	  REAL, DIMENSION(:,:,:),ALLOCATABLE :: tauY,muB
 	  REAL, DIMENSION(:,:,:),ALLOCATABLE :: stress,strain,muA
 	  REAL, DIMENSION(:,:,:),ALLOCATABLE :: lambda_old,lambda_new
+	  INTEGER*2, DIMENSION(:,:,:),ALLOCATABLE :: uyz 
 	  CHARACTER*6 Rheological_model	  
 	  
 	  
@@ -189,7 +190,7 @@
 !       REAL, DIMENSION(:,:,:),ALLOCATABLE :: Uavg,Vavg,Wavg,Cavg,Ravg
 !       REAL, DIMENSION(:,:,:),ALLOCATABLE :: Urms,Vrms,Wrms,Crms,Rrms
 !       REAL, DIMENSION(:,:,:),ALLOCATABLE :: sigU2,sigV2,sigW2,sigC2,sigR2
-      REAL, DIMENSION(:,:,:),ALLOCATABLE :: p,pold,dp,pold1,pold2,pold3,Csgrid,phdt,phnew,viscf
+      REAL, DIMENSION(:,:,:),ALLOCATABLE :: p,pold,dp,pold1,pold2,pold3,Csgrid,viscf,muA_old !phdt,phnew
       
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: wx,wy,wz,wxold,wyold,wzold,Ppropx,Ppropy,Ppropz
       REAL, DIMENSION(:,:,:),ALLOCATABLE :: wxolder,wyolder,wzolder
@@ -308,7 +309,7 @@
      & ,fcor,wbed_correction,bedslope_effect,bedslope_mu_s,alfabs_bl,alfabn_bl,phi_sediment,wallmodel_tau_sed,nrmsbed,ndtbed,
      & erosion_cbed_start,movebed_absorb_cfluid,power_VR2019,ekm_sediment_pickup,dz_sidewall,pickup_formula_swe
      & ,vel_start_after_ero,dpbed_zone,sl_relax,TBLEsl_grad_relax,TBLEbl_grad_relax,TBLEsed_grad_relax,correction_sl_with_bl
-     & ,uv_sed_smoother,morfac_tseriesfile,morfac2_tseriesfile,avalanche_max_x,avalanche_fines
+     & ,uv_sed_smoother,morfac_tseriesfile,morfac2_tseriesfile,avalanche_max_x,avalanche_fines,avalanche_limit_buf
 	NAMELIST /fractions_in_plume/fract
 	NAMELIST /ship/U_TSHD,LOA,Lfront,Breadth,Draught,Lback,Hback,xfront,yfront,kn_TSHD,nprop,Dprop,xprop,yprop,zprop,
      &   Pprop,rudder,rot_prop,draghead,Dsp,xdh,perc_dh_suction,softnose,Hfront,cutter
@@ -317,7 +318,8 @@
      & WINTER_Ay,WINTER_Amu,WINTER_nf,WINTER_af,WINTER_muw,
      & THOMAS_Cy,THOMAS_Cmu,THOMAS_ky,THOMAS_kmu,THOMAS_Py,THOMAS_Pmu,THOMAS_phi_sand_max,
      & Lambda_init,Kin_eq_a,Kin_eq_b,Kin_eq_lambda_0,HOUSKA_n,HOUSKA_eta_0,HOUSKA_eta_inf,HOUSKA_tauy_0,HOUSKA_tauy_inf,
-     & BAGNOLD_beta,BAGNOLD_phi_max,rheo_shear_method,Apvisc_shear_relax,Apvisc_force_eq,shear_settling
+     & BAGNOLD_beta,BAGNOLD_phi_max,rheo_shear_method,Apvisc_shear_relax,Apvisc_force_eq,shear_settling,Rheo_strain_pred_theta,
+     & Rheo_strain_cor_steps	 
 
 
 	!! initialise:
@@ -681,6 +683,7 @@
 	avalanche_until_done=0
 	avalanche_max_x=1000000000
 	avalanche_fines = 1
+	avalanche_limit_buf = 0
 	pickup_correction='nonenonenonenonenone'
 	vwal=-999.
 	wbed_correction = 0
@@ -758,6 +761,8 @@
 	rheo_shear_method = 1
 	Apvisc_shear_relax=1. !default no relaxation 
 	Apvisc_force_eq = 0 !default no additional direct force terms from rheology 
+	Rheo_strain_pred_theta = -1. !default strain^n is used, optional to define theta =0-1 to use predictor for strain^n+1=(1+theta)*strain^n-theta*strain^n-1
+	Rheo_strain_cor_steps = 0
 	shear_settling = 0
 	MAX_tauy = 1.e9
 	MAX_mu = 1.e9
@@ -793,6 +798,10 @@
 	HOUSKA_tauy_inf=20.
 	BAGNOLD_beta=0.275
 	BAGNOLD_phi_max=0.6			!Usually 0.6	
+	
+	
+	
+	predictorstep_tel = 1 !default update interpolation times and do not update pold within predictor step of EE1 ABv 
 
 	CALL GETARG(1,inpfile)
 	OPEN(1,FILE=inpfile,IOSTAT=ios,ACTION='read')
@@ -2144,8 +2153,8 @@
 	ALLOCATE(pold1(1:imax,1:jmax,1:kmax))
 	ALLOCATE(pold2(1:imax,1:jmax,1:kmax))
 	ALLOCATE(pold3(1:imax,1:jmax,1:kmax))
-	ALLOCATE(phnew(1:imax,1:jmax,1:kmax))
-	ALLOCATE(phdt(1:imax,1:jmax,1:kmax))
+!	ALLOCATE(phnew(1:imax,1:jmax,1:kmax))
+!	ALLOCATE(phdt(1:imax,1:jmax,1:kmax))
 	ALLOCATE(dp(0:i1,0:j1,0:k1))
 	ALLOCATE(viscf(0:i1,0:j1,0:k1))
 
@@ -2158,8 +2167,8 @@
 	pold1=0.
 	pold2=0.
 	pold3=0.
-	phdt=0.
-	phnew=0.
+!	phdt=0.
+!	phnew=0.
 	dp=0. 
 	IF (time_int.eq.'AB2'.or.time_int.eq.'AB3'.or.time_int.eq.'ABv') THEN
 		ALLOCATE(wx(0:i1,0:j1,0:k1))  
@@ -2316,7 +2325,11 @@
 		ALLOCATE(strain(0:i1,0:j1,0:k1))
 	ENDIF
 	ALLOCATE(muA(0:i1,0:j1,0:k1)) !for shear settling muA is required in sediment.f also when Non_Newtonian is not 1 or 2
+	ALLOCATE(muA_old(1:imax,1:jmax,1:kmax))
 	muA = 0. 
+	muA_old = 0. 
+	ALLOCATE(uyz(0:i1,0:j1,0:k1)) !in bound.f uyz is needed also without rheology 
+	uyz = 0 
 	IF (Non_Newtonian.eq.2) THEN
 		ALLOCATE(lambda_old(0:i1,0:j1,0:k1))
 		ALLOCATE(lambda_new(0:i1,0:j1,0:k1))

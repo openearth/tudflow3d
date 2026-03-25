@@ -1464,7 +1464,13 @@ c*****************************************************************
 		real ekm_min,ekm_plus,rho_min,rho_plus
 		real aaax(0:i1),bbbx(0:i1),cccx(0:i1),rhssx(0:i1)
 		integer perx,pery 
+	    real fcl2(0:i1,0:j1,0:k1)
 
+	    if (momentum_exchange_obstacles.eq.100.or.momentum_exchange_obstacles.eq.110) then 
+		  fcl2=fc_local
+	    else 
+		  fcl2=1. !all momentum interactions are active
+	    endif	  
 
 		IF (CNdiffz.eq.1) THEN 
 			CNz=0.5 !0.55
@@ -1500,8 +1506,8 @@ c*****************************************************************
             do i=1,imax-1 
 				!im=MAX(0,i-1)
 				ip=i+1 !MIN(i1,i+1)
-				ekm_min=ekm(i,j,k)!*fc_global(i,j+rank*jmax,k)
-				ekm_plus=ekm(ip,j,k)!*fc_global(ip,j+rank*jmax,k)
+				ekm_min=ekm(i,j,k)*fcl2(i,j,k)
+				ekm_plus=ekm(ip,j,k)*fcl2(ip,j,k)
 				aaax(i)=-CNz*ekm_min*Rp(i)*dt/(dr(i)*(Rp(ip)-Rp(i))*Ru(i))/rhU(i,j,k) !/drdt(i,j,k)
 				cccx(i)=-CNz*ekm_plus*Rp(ip)*dt/(dr(ip)*(Rp(ip)-Rp(i))*Ru(i))/rhU(i,j,k) !/drdt(ip,j,k)
 				bbbx(i)=1.-aaax(i)-cccx(i) 
@@ -1521,10 +1527,10 @@ c*****************************************************************
             do i=1,imax !0,i1
 				im=i-1 !MAX(0,i-1)
 				ip=i+1 !MIN(i1,i+1)
-				ekm_min=0.25*(ekm(i,j,k)+ekm(im,j,k)+ekm(i,j+1,k)+ekm(im,j+1,k))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(im,j+rank*jmax,k),fc_global(i,j+1+rank*jmax,k),fc_global(im,j+1+rank*jmax,k))		
-				ekm_plus=0.25*(ekm(i,j,k)+ekm(ip,j,k)+ekm(i,j+1,k)+ekm(ip,j+1,k))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(ip,j+rank*jmax,k),fc_global(i,j+1+rank*jmax,k),fc_global(ip,j+1+rank*jmax,k))	
+				ekm_min=0.25*(ekm(i,j,k)+ekm(im,j,k)+ekm(i,j+1,k)+ekm(im,j+1,k))*MIN(fcl2(i,j,k),
+     & 			fcl2(im,j,k),fcl2(i,j+1,k),fcl2(im,j+1,k))		
+				ekm_plus=0.25*(ekm(i,j,k)+ekm(ip,j,k)+ekm(i,j+1,k)+ekm(ip,j+1,k))*MIN(fcl2(i,j,k),
+     & 			fcl2(ip,j,k),fcl2(i,j+1,k),fcl2(ip,j+1,k))	
 				rho_min=0.25*(drdt(i,j,k)+drdt(im,j,k)+drdt(i,j+1,k)+drdt(im,j+1,k))
 				rho_plus=0.25*(drdt(i,j,k)+drdt(ip,j,k)+drdt(i,j+1,k)+drdt(ip,j+1,k))
 				aaax(i)=-CNz*ekm_min*dt*Ru(im)/((Rp(i)-Rp(im))*dr(i)*Rp(i))/rhV(i,j,k) !/rho_min
@@ -1547,10 +1553,10 @@ c*****************************************************************
             do i=1,imax !0,i1
 				im=i-1 !MAX(0,i-1)
 				ip=i+1 !MIN(i1,i+1)
-				ekm_min=0.25*(ekm(i,j,k)+ekm(im,j,k)+ekm(i,j,k+1)+ekm(im,j,k+1))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(im,j+rank*jmax,k),fc_global(i,j+rank*jmax,k+1),fc_global(im,j+rank*jmax,k+1))		
-				ekm_plus=0.25*(ekm(i,j,k)+ekm(ip,j,k)+ekm(i,j,k+1)+ekm(ip,j,k+1))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(ip,j+rank*jmax,k),fc_global(i,j+rank*jmax,k+1),fc_global(ip,j+rank*jmax,k+1))	
+				ekm_min=0.25*(ekm(i,j,k)+ekm(im,j,k)+ekm(i,j,k+1)+ekm(im,j,k+1))*MIN(fcl2(i,j,k),
+     & 			fcl2(im,j,k),fcl2(i,j,k+1),fcl2(im,j,k+1))		
+				ekm_plus=0.25*(ekm(i,j,k)+ekm(ip,j,k)+ekm(i,j,k+1)+ekm(ip,j,k+1))*MIN(fcl2(i,j,k),
+     & 			fcl2(ip,j,k),fcl2(i,j,k+1),fcl2(ip,j,k+1))	
 				rho_min=0.25*(drdt(i,j,k)+drdt(im,j,k)+drdt(i,j,k+1)+drdt(im,j,k+1))
 				rho_plus=0.25*(drdt(i,j,k)+drdt(ip,j,k)+drdt(i,j,k+1)+drdt(ip,j,k+1))
 				aaax(i)=-CNz*ekm_min*dt*Ru(im)/((Rp(i)-Rp(im))*dr(i)*Rp(i))/rhW(i,j,k) !/rho_min
@@ -1574,8 +1580,8 @@ c*****************************************************************
             do i=1,imax 
 				!im=MAX(0,i-1)
 				ip=i+1 !MIN(i1,i+1)
-				ekm_min=ekm(i,j,k)!*fc_global(i,j+rank*jmax,k)
-				ekm_plus=ekm(ip,j,k)!*fc_global(ip,j+rank*jmax,k)
+				ekm_min=ekm(i,j,k)*fcl2(i,j,k)
+				ekm_plus=ekm(ip,j,k)*fcl2(ip,j,k)
 				aaax(i)=-CNz*ekm_min*Rp(i)*dt/(dr(i)*(Rp(ip)-Rp(i))*Ru(i))/rhU(i,j,k) !/drdt(i,j,k)
 				cccx(i)=-CNz*ekm_plus*Rp(ip)*dt/(dr(ip)*(Rp(ip)-Rp(i))*Ru(i))/rhU(i,j,k) !/drdt(ip,j,k)
 				bbbx(i)=1.-aaax(i)-cccx(i) 
@@ -1591,10 +1597,10 @@ c*****************************************************************
             do i=1,imax !0,i1
 				im=i-1 !MAX(0,i-1)
 				ip=i+1 !MIN(i1,i+1)
-				ekm_min=0.25*(ekm(i,j,k)+ekm(im,j,k)+ekm(i,j+1,k)+ekm(im,j+1,k))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(im,j+rank*jmax,k),fc_global(i,j+1+rank*jmax,k),fc_global(im,j+1+rank*jmax,k))		
-				ekm_plus=0.25*(ekm(i,j,k)+ekm(ip,j,k)+ekm(i,j+1,k)+ekm(ip,j+1,k))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(ip,j+rank*jmax,k),fc_global(i,j+1+rank*jmax,k),fc_global(ip,j+1+rank*jmax,k))	
+				ekm_min=0.25*(ekm(i,j,k)+ekm(im,j,k)+ekm(i,j+1,k)+ekm(im,j+1,k))*MIN(fcl2(i,j,k),
+     & 			fcl2(im,j,k),fcl2(i,j+1,k),fcl2(im,j+1,k))		
+				ekm_plus=0.25*(ekm(i,j,k)+ekm(ip,j,k)+ekm(i,j+1,k)+ekm(ip,j+1,k))*MIN(fcl2(i,j,k),
+     & 			fcl2(ip,j,k),fcl2(i,j+1,k),fcl2(ip,j+1,k))	
 				rho_min=0.25*(drdt(i,j,k)+drdt(im,j,k)+drdt(i,j+1,k)+drdt(im,j+1,k))
 				rho_plus=0.25*(drdt(i,j,k)+drdt(ip,j,k)+drdt(i,j+1,k)+drdt(ip,j+1,k))
 				aaax(i)=-CNz*ekm_min*dt*Ru(im)/((Rp(i)-Rp(im))*dr(i)*Rp(i))/rhV(i,j,k) !/rho_min
@@ -1612,10 +1618,10 @@ c*****************************************************************
             do i=1,imax !0,i1
 				im=i-1 !MAX(0,i-1)
 				ip=i+1 !MIN(i1,i+1)
-				ekm_min=0.25*(ekm(i,j,k)+ekm(im,j,k)+ekm(i,j,k+1)+ekm(im,j,k+1))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(im,j+rank*jmax,k),fc_global(i,j+rank*jmax,k+1),fc_global(im,j+rank*jmax,k+1))		
-				ekm_plus=0.25*(ekm(i,j,k)+ekm(ip,j,k)+ekm(i,j,k+1)+ekm(ip,j,k+1))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(ip,j+rank*jmax,k),fc_global(i,j+rank*jmax,k+1),fc_global(ip,j+rank*jmax,k+1))	
+				ekm_min=0.25*(ekm(i,j,k)+ekm(im,j,k)+ekm(i,j,k+1)+ekm(im,j,k+1))*MIN(fcl2(i,j,k),
+     & 			fcl2(im,j,k),fcl2(i,j,k+1),fcl2(im,j,k+1))		
+				ekm_plus=0.25*(ekm(i,j,k)+ekm(ip,j,k)+ekm(i,j,k+1)+ekm(ip,j,k+1))*MIN(fcl2(i,j,k),
+     & 			fcl2(ip,j,k),fcl2(i,j,k+1),fcl2(ip,j,k+1))	
 				rho_min=0.25*(drdt(i,j,k)+drdt(im,j,k)+drdt(i,j,k+1)+drdt(im,j,k+1))
 				rho_plus=0.25*(drdt(i,j,k)+drdt(ip,j,k)+drdt(i,j,k+1)+drdt(ip,j,k+1))
 				aaax(i)=-CNz*ekm_min*dt*Ru(im)/((Rp(i)-Rp(im))*dr(i)*Rp(i))/rhW(i,j,k) !/rho_min
@@ -1634,8 +1640,8 @@ c*****************************************************************
             do i=1,imax-1 
 				!im=MAX(0,i-1)
 				ip=i+1 !MIN(i1,i+1)
-				ekm_min=ekm(i,j,k)!*fc_global(i,j+rank*jmax,k)
-				ekm_plus=ekm(ip,j,k)!*fc_global(ip,j+rank*jmax,k)
+				ekm_min=ekm(i,j,k)*fcl2(i,j,k)
+				ekm_plus=ekm(ip,j,k)*fcl2(ip,j,k)
 				aaax(i)=-CNz*ekm_min*Rp(i)*dt/(dr(i)*(Rp(ip)-Rp(i))*Ru(i))/rhU(i,j,k) !/drdt(i,j,k)
 				cccx(i)=-CNz*ekm_plus*Rp(ip)*dt/(dr(ip)*(Rp(ip)-Rp(i))*Ru(i))/rhU(i,j,k) !/drdt(ip,j,k)
 				bbbx(i)=1.-aaax(i)-cccx(i) 
@@ -1659,10 +1665,10 @@ c*****************************************************************
             do i=1,imax !0,i1
 				im=i-1 !MAX(0,i-1)
 				ip=i+1 !MIN(i1,i+1)
-				ekm_min=0.25*(ekm(i,j,k)+ekm(im,j,k)+ekm(i,j+1,k)+ekm(im,j+1,k))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(im,j+rank*jmax,k),fc_global(i,j+1+rank*jmax,k),fc_global(im,j+1+rank*jmax,k))		
-				ekm_plus=0.25*(ekm(i,j,k)+ekm(ip,j,k)+ekm(i,j+1,k)+ekm(ip,j+1,k))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(ip,j+rank*jmax,k),fc_global(i,j+1+rank*jmax,k),fc_global(ip,j+1+rank*jmax,k))	
+				ekm_min=0.25*(ekm(i,j,k)+ekm(im,j,k)+ekm(i,j+1,k)+ekm(im,j+1,k))*MIN(fcl2(i,j,k),
+     & 			fcl2(im,j,k),fcl2(i,j+1,k),fcl2(im,j+1,k))		
+				ekm_plus=0.25*(ekm(i,j,k)+ekm(ip,j,k)+ekm(i,j+1,k)+ekm(ip,j+1,k))*MIN(fcl2(i,j,k),
+     & 			fcl2(ip,j,k),fcl2(i,j+1,k),fcl2(ip,j+1,k))	
 				rho_min=0.25*(drdt(i,j,k)+drdt(im,j,k)+drdt(i,j+1,k)+drdt(im,j+1,k))
 				rho_plus=0.25*(drdt(i,j,k)+drdt(ip,j,k)+drdt(i,j+1,k)+drdt(ip,j+1,k))
 				aaax(i)=-CNz*ekm_min*dt*Ru(im)/((Rp(i)-Rp(im))*dr(i)*Rp(i))/rhV(i,j,k) !/rho_min
@@ -1684,10 +1690,10 @@ c*****************************************************************
             do i=1,imax !0,i1
 				im=i-1 !MAX(0,i-1)
 				ip=i+1 !MIN(i1,i+1)
-				ekm_min=0.25*(ekm(i,j,k)+ekm(im,j,k)+ekm(i,j,k+1)+ekm(im,j,k+1))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(im,j+rank*jmax,k),fc_global(i,j+rank*jmax,k+1),fc_global(im,j+rank*jmax,k+1))		
-				ekm_plus=0.25*(ekm(i,j,k)+ekm(ip,j,k)+ekm(i,j,k+1)+ekm(ip,j,k+1))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(ip,j+rank*jmax,k),fc_global(i,j+rank*jmax,k+1),fc_global(ip,j+rank*jmax,k+1))	
+				ekm_min=0.25*(ekm(i,j,k)+ekm(im,j,k)+ekm(i,j,k+1)+ekm(im,j,k+1))*MIN(fcl2(i,j,k),
+     & 			fcl2(im,j,k),fcl2(i,j,k+1),fcl2(im,j,k+1))		
+				ekm_plus=0.25*(ekm(i,j,k)+ekm(ip,j,k)+ekm(i,j,k+1)+ekm(ip,j,k+1))*MIN(fcl2(i,j,k),
+     & 			fcl2(ip,j,k),fcl2(i,j,k+1),fcl2(ip,j,k+1))	
 				rho_min=0.25*(drdt(i,j,k)+drdt(im,j,k)+drdt(i,j,k+1)+drdt(im,j,k+1))
 				rho_plus=0.25*(drdt(i,j,k)+drdt(ip,j,k)+drdt(i,j,k+1)+drdt(ip,j,k+1))
 				aaax(i)=-CNz*ekm_min*dt*Ru(im)/((Rp(i)-Rp(im))*dr(i)*Rp(i))/rhW(i,j,k) !/rho_min
@@ -1725,12 +1731,18 @@ c*****************************************************************
         real CNz,CNx,CNy,dzi 
 		real ekm_min,ekm_plus,rho_min,rho_plus
 		real aaay(0:jmax*px+1),bbby(0:jmax*px+1),cccy(0:jmax*px+1),rhssy(0:jmax*px+1)
-		real ans_T(1:i1,0:jmax*px+1,1:kmax/px+1),ekm_T(1:i1,0:jmax*px+1,1:kmax/px+1)!,ekm2(0:i1,0:j1,0:k1) 
+		real ans_T(1:i1,0:jmax*px+1,1:kmax/px+1),fc_T(1:i1,0:jmax*px+1,1:kmax/px+1)!,ekm2(0:i1,0:j1,0:k1) 
 		real uu_T(1:imax,0:jmax*px+1,1:kmax/px),vv_T(1:imax,0:jmax*px+1,1:kmax/px),ww_T(1:imax,0:jmax*px+1,1:kmax/px)
 		real rhU_T(1:imax,0:jmax*px+1,1:kmax/px),rhV_T(1:imax,0:jmax*px+1,1:kmax/px),rhW_T(1:imax,0:jmax*px+1,1:kmax/px)
 		real interface_T(1:i1,0:jmax*px+1)
 		integer ileng,ierr,itag,status(MPI_STATUS_SIZE),perx,pery 
+	    real fcl2(0:i1,0:j1,0:k1)
 
+	    if (momentum_exchange_obstacles.eq.100.or.momentum_exchange_obstacles.eq.110) then 
+		  fcl2=fc_local
+	    else 
+		  fcl2=1. !all momentum interactions are active
+	    endif
 
 		IF (CNdiffz.eq.1) THEN 
 			CNz=0.5 !0.55
@@ -1756,7 +1768,7 @@ c*****************************************************************
 !			dWdt = dWdt + dt*dold	
 !		endif 		
 		!ekm2=ekm/drdt   
-		!call t2np_i1(ekm(1:i1,1:jmax,1:kmax),ekm_T(1:i1,1:jmax*px,1:kmax/px))
+		call t2np_i1(fcl2(1:i1,1:jmax,1:kmax),fc_T(1:i1,1:jmax*px,1:kmax/px))
 		!call t2np_i1(drdt(1:i1,1:jmax,1:kmax),ans_T(1:i1,1:jmax*px,1:kmax/px))
 		call t2np_i1(ekm(1:i1,1:jmax,1:kmax),ans_T(1:i1,1:jmax*px,1:kmax/px))
 		call t2np(dUdt(1:imax,1:jmax,1:kmax),uu_T(1:imax,1:jmax*px,1:kmax/px))
@@ -1768,7 +1780,7 @@ c*****************************************************************
 		!! also pass over boundaries at j=0 :
 		IF (rank.eq.0) THEN
 			do i=1,px-1
-			  !call mpi_send(ekm(1:i1,0,i*kmax/px+1:(i+1)*kmax/px),i1*kmax/px,MPI_REAL8,i,i+1000,MPI_COMM_WORLD,status,ierr)
+			  call mpi_send(fcl2(1:i1,0,i*kmax/px+1:(i+1)*kmax/px),i1*kmax/px,MPI_REAL8,i,i+1000,MPI_COMM_WORLD,status,ierr)
 			  call mpi_send(dUdt(1:imax,0,i*kmax/px+1:(i+1)*kmax/px),imax*kmax/px,MPI_REAL8,i,i+2000,MPI_COMM_WORLD,status,ierr)
 			  call mpi_send(dVdt(1:imax,0,i*kmax/px+1:(i+1)*kmax/px),imax*kmax/px,MPI_REAL8,i,i+3000,MPI_COMM_WORLD,status,ierr)
 			  call mpi_send(dWdt(1:imax,0,i*kmax/px+1:(i+1)*kmax/px),imax*kmax/px,MPI_REAL8,i,i+4000,MPI_COMM_WORLD,status,ierr)
@@ -1777,7 +1789,7 @@ c*****************************************************************
 !			  call mpi_send(rhV(1:imax,0,i*kmax/px+1:(i+1)*kmax/px),imax*kmax/px,MPI_REAL8,i,i+7000,MPI_COMM_WORLD,status,ierr)
 !			  call mpi_send(rhW(1:imax,0,i*kmax/px+1:(i+1)*kmax/px),imax*kmax/px,MPI_REAL8,i,i+8000,MPI_COMM_WORLD,status,ierr)			  
 			enddo
-			!ekm_T(1:i1,0,1:kmax/px)=ekm2(1:i1,0,1:kmax/px)
+			fc_T(1:i1,0,1:kmax/px)=fcl2(1:i1,0,1:kmax/px)
 			uu_T(1:imax,0,1:kmax/px)=dUdt(1:imax,0,1:kmax/px)			
 			vv_T(1:imax,0,1:kmax/px)=dVdt(1:imax,0,1:kmax/px)			
 			ww_T(1:imax,0,1:kmax/px)=dWdt(1:imax,0,1:kmax/px)			
@@ -1786,7 +1798,7 @@ c*****************************************************************
 !			rhV_T(1:imax,0,1:kmax/px)=rhV(1:imax,0,1:kmax/px)			
 !			rhW_T(1:imax,0,1:kmax/px)=rhW(1:imax,0,1:kmax/px)				
 		ELSE
-			!call mpi_recv(ekm_T(1:i1,0,1:kmax/px),i1*kmax/px,MPI_REAL8,0,rank+1000,MPI_COMM_WORLD,status,ierr)
+			call mpi_recv(fc_T(1:i1,0,1:kmax/px),i1*kmax/px,MPI_REAL8,0,rank+1000,MPI_COMM_WORLD,status,ierr)
 			call mpi_recv(uu_T(1:imax,0,1:kmax/px),imax*kmax/px,MPI_REAL8,0,rank+2000,MPI_COMM_WORLD,status,ierr)
 			call mpi_recv(vv_T(1:imax,0,1:kmax/px),imax*kmax/px,MPI_REAL8,0,rank+3000,MPI_COMM_WORLD,status,ierr)
 			call mpi_recv(ww_T(1:imax,0,1:kmax/px),imax*kmax/px,MPI_REAL8,0,rank+4000,MPI_COMM_WORLD,status,ierr)
@@ -1798,7 +1810,7 @@ c*****************************************************************
 		!! also pass over boundaries at j=jmax+1 :
 		IF (rank.eq.px-1) THEN
 		    do i=0,px-2
-			 !call mpi_send(ekm (1:i1,jmax+1,i*kmax/px+1:(i+1)*kmax/px),i1*kmax/px,MPI_REAL8,i,i+1000,MPI_COMM_WORLD,status,ierr)
+			 call mpi_send(fcl2(1:i1,jmax+1,i*kmax/px+1:(i+1)*kmax/px),i1*kmax/px,MPI_REAL8,i,i+1000,MPI_COMM_WORLD,status,ierr)
 			 call mpi_send(dUdt(1:imax,jmax+1,i*kmax/px+1:(i+1)*kmax/px),imax*kmax/px,MPI_REAL8,i,i+2000,MPI_COMM_WORLD,status,ierr)	 
 			 call mpi_send(dVdt(1:imax,jmax+1,i*kmax/px+1:(i+1)*kmax/px),imax*kmax/px,MPI_REAL8,i,i+3000,MPI_COMM_WORLD,status,ierr)
 			 call mpi_send(dWdt(1:imax,jmax+1,i*kmax/px+1:(i+1)*kmax/px),imax*kmax/px,MPI_REAL8,i,i+4000,MPI_COMM_WORLD,status,ierr)
@@ -1807,7 +1819,7 @@ c*****************************************************************
 	!		 call mpi_send(rhV(1:imax,jmax+1,i*kmax/px+1:(i+1)*kmax/px),imax*kmax/px,MPI_REAL8,i,i+7000,MPI_COMM_WORLD,status,ierr)
 	!		 call mpi_send(rhW(1:imax,jmax+1,i*kmax/px+1:(i+1)*kmax/px),imax*kmax/px,MPI_REAL8,i,i+8000,MPI_COMM_WORLD,status,ierr)		 
 			enddo
-			  !ekm_T(1:i1,jmax*px+1,1:kmax/px)=ekm(1:i1,jmax+1,rank*kmax/px+1:(rank+1)*kmax/px)
+			  fc_T(1:i1,jmax*px+1,1:kmax/px)=fcl2(1:i1,jmax+1,rank*kmax/px+1:(rank+1)*kmax/px)
 			  uu_T(1:imax,jmax*px+1,1:kmax/px)=dUdt(1:imax,jmax+1,rank*kmax/px+1:(rank+1)*kmax/px)
 			  vv_T(1:imax,jmax*px+1,1:kmax/px)=dVdt(1:imax,jmax+1,rank*kmax/px+1:(rank+1)*kmax/px)
 			  ww_T(1:imax,jmax*px+1,1:kmax/px)=dWdt(1:imax,jmax+1,rank*kmax/px+1:(rank+1)*kmax/px)
@@ -1816,7 +1828,7 @@ c*****************************************************************
 !			  rhV_T(1:imax,jmax*px+1,1:kmax/px)=rhV(1:imax,jmax+1,rank*kmax/px+1:(rank+1)*kmax/px)
 !			  rhW_T(1:imax,jmax*px+1,1:kmax/px)=rhW(1:imax,jmax+1,rank*kmax/px+1:(rank+1)*kmax/px)			  
 		ELSE
-		    !call mpi_recv(ekm_T(1:i1,jmax*px+1,1:kmax/px),i1*kmax/px,MPI_REAL8,px-1,rank+1000,MPI_COMM_WORLD,status,ierr)
+		    call mpi_recv(fc_T(1:i1,jmax*px+1,1:kmax/px),i1*kmax/px,MPI_REAL8,px-1,rank+1000,MPI_COMM_WORLD,status,ierr)
 		    call mpi_recv(uu_T(1:imax,jmax*px+1,1:kmax/px),imax*kmax/px,MPI_REAL8,px-1,rank+2000,MPI_COMM_WORLD,status,ierr)
 			call mpi_recv(vv_T(1:imax,jmax*px+1,1:kmax/px),imax*kmax/px,MPI_REAL8,px-1,rank+3000,MPI_COMM_WORLD,status,ierr)
 			call mpi_recv(ww_T(1:imax,jmax*px+1,1:kmax/px),imax*kmax/px,MPI_REAL8,px-1,rank+4000,MPI_COMM_WORLD,status,ierr)
@@ -1826,12 +1838,12 @@ c*****************************************************************
 !			call mpi_recv(rhW_T(1:imax,jmax*px+1,1:kmax/px),imax*kmax/px,MPI_REAL8,px-1,rank+8000,MPI_COMM_WORLD,status,ierr)			
 		ENDIF
 		!! also pass over boundaries at k=kmax/px+1:
-		!call shiftb_T(ekm_T,interface_T)
-		!if (rank.eq.px-1) then 
-		!ekm_T(1:i1,0:jmax*px+1,kmax/px+1)=ekm_T(1:i1,0:jmax*px+1,kmax/px)
-		!else 
-		!  ekm_T(1:i1,0:jmax*px+1,kmax/px+1)=interface_T(1:i1,0:jmax*px+1)
-		!endif 
+		call shiftb_T(fc_T,interface_T)
+		if (rank.eq.px-1) then 
+		  fc_T(1:i1,0:jmax*px+1,kmax/px+1)=fc_T(1:i1,0:jmax*px+1,kmax/px)
+		else 
+		  fc_T(1:i1,0:jmax*px+1,kmax/px+1)=interface_T(1:i1,0:jmax*px+1)
+		endif 
 		call shiftb_T(ans_T,interface_T)
 		if (rank.eq.px-1) then 
 			ans_T(1:i1,0:jmax*px+1,kmax/px+1)=ans_T(1:i1,0:jmax*px+1,kmax/px)
@@ -1845,7 +1857,9 @@ c*****************************************************************
 				jm=j-1 !MAX(0,j-1)
 				jp=j+1 !MIN(px*jmax+1,j+1)
 				ekm_min= 0.25*(ans_T(i,j,k)+ans_T(i,jm,k)+ans_T(i+1,j,k)+ans_T(i+1,jm,k))
+     &			*MIN(fc_T(i,j,k),fc_T(i,jm,k),fc_T(i+1,j,k),fc_T(i+1,jm,k))				
 				ekm_plus=0.25*(ans_T(i,j,k)+ans_T(i,jp,k)+ans_T(i+1,j,k)+ans_T(i+1,jp,k))
+     &			*MIN(fc_T(i,j,k),fc_T(i,jp,k),fc_T(i+1,j,k),fc_T(i+1,jp,k))				
 				aaay(j)=-CNz*ekm_min*dt/(Ru(i)*(phipt(j)-phipt(jm))*Ru(i)*dphi2t(j))/rhU_T(i,j,k)
 				cccy(j)=-CNz*ekm_plus*dt/(Ru(i)*(phipt(jp)-phipt(j))*Ru(i)*dphi2t(j))/rhU_T(i,j,k)				
 				bbby(j)=1.-aaay(j)-cccy(j) 
@@ -1865,8 +1879,8 @@ c*****************************************************************
             do j=1,px*jmax-1 !0,px*jmax+1
 				jm=j-1 !MAX(0,j-1)
 				jp=j+1 !MIN(px*jmax+1,j+1)
-				ekm_min= ans_T(i,j,k)
-				ekm_plus=ans_T(i,jp,k)
+				ekm_min= ans_T(i,j,k)*fc_T(i,j,k)
+				ekm_plus=ans_T(i,jp,k)*fc_T(i,jp,k)
 				aaay(j)=-CNz*ekm_min*dt/(Rp(i)*dphi2t(j)*Rp(i)*(phipt(jp)-phipt(j)))/rhV_T(i,j,k)
 				cccy(j)=-CNz*ekm_plus*dt/(Rp(i)*dphi2t(jp)*Rp(i)*(phipt(jp)-phipt(j)))/rhV_T(i,j,k)				
 				bbby(j)=1.-aaay(j)-cccy(j) 
@@ -1888,7 +1902,9 @@ c*****************************************************************
 				jm=j-1 !MAX(0,j-1)
 				jp=j+1 !MIN(px*jmax+1,j+1)
 				ekm_min= 0.25*(ans_T(i,j,k)+ans_T(i,jm,k)+ans_T(i,j,k+1)+ans_T(i,jm,k+1))
+     &			*MIN(fc_T(i,j,k),fc_T(i,jm,k),fc_T(i,j,k+1),fc_T(i,jm,k+1))				
 				ekm_plus=0.25*(ans_T(i,j,k)+ans_T(i,jp,k)+ans_T(i,j,k+1)+ans_T(i,jp,k+1))				
+     &			*MIN(fc_T(i,j,k),fc_T(i,jp,k),fc_T(i,j,k+1),fc_T(i,jp,k+1))								
 				aaay(j)=-CNz*ekm_min*dt/(Rp(i)*(phipt(j)-phipt(jm))*Rp(i)*dphi2t(j))/rhW_T(i,j,k)
 				cccy(j)=-CNz*ekm_plus*dt/(Rp(i)*(phipt(jp)-phipt(j))*Rp(i)*dphi2t(j))/rhW_T(i,j,k)
 				bbby(j)=1.-aaay(j)-cccy(j) 				
@@ -1910,7 +1926,9 @@ c*****************************************************************
 				jm=j-1 !MAX(0,j-1)
 				jp=j+1 !MIN(px*jmax+1,j+1)
 				ekm_min= 0.25*(ans_T(i,j,k)+ans_T(i,jm,k)+ans_T(i+1,j,k)+ans_T(i+1,jm,k))
+     &			*MIN(fc_T(i,j,k),fc_T(i,jm,k),fc_T(i+1,j,k),fc_T(i+1,jm,k))								
 				ekm_plus=0.25*(ans_T(i,j,k)+ans_T(i,jp,k)+ans_T(i+1,j,k)+ans_T(i+1,jp,k))
+     &			*MIN(fc_T(i,j,k),fc_T(i,jp,k),fc_T(i+1,j,k),fc_T(i+1,jp,k))										
 				aaay(j)=-CNz*ekm_min*dt/(Ru(i)*(phipt(j)-phipt(jm))*Ru(i)*dphi2t(j))/rhU_T(i,j,k)
 				cccy(j)=-CNz*ekm_plus*dt/(Ru(i)*(phipt(jp)-phipt(j))*Ru(i)*dphi2t(j))/rhU_T(i,j,k)		
 				bbby(j)=1.-aaay(j)-cccy(j) 
@@ -1925,8 +1943,8 @@ c*****************************************************************
             do j=1,px*jmax !0,px*jmax+1
 				jm=j-1 !MAX(0,j-1)
 				jp=j+1 !MIN(px*jmax+1,j+1)
-				ekm_min= ans_T(i,j,k)
-				ekm_plus=ans_T(i,jp,k)
+				ekm_min= ans_T(i,j,k)*fc_T(i,j,k)
+				ekm_plus=ans_T(i,jp,k)*fc_T(i,jp,k)
 				aaay(j)=-CNz*ekm_min*dt/(Rp(i)*dphi2t(j)*Rp(i)*(phipt(jp)-phipt(j)))/rhV_T(i,j,k)
 				cccy(j)=-CNz*ekm_plus*dt/(Rp(i)*dphi2t(jp)*Rp(i)*(phipt(jp)-phipt(j)))/rhV_T(i,j,k)
 				bbby(j)=1.-aaay(j)-cccy(j) 
@@ -1942,7 +1960,9 @@ c*****************************************************************
 				jm=j-1 !MAX(0,j-1)
 				jp=j+1 !MIN(px*jmax+1,j+1)
 				ekm_min= 0.25*(ans_T(i,j,k)+ans_T(i,jm,k)+ans_T(i,j,k+1)+ans_T(i,jm,k+1))
+     &			*MIN(fc_T(i,j,k),fc_T(i,jm,k),fc_T(i,j,k+1),fc_T(i,jm,k+1))										
 				ekm_plus=0.25*(ans_T(i,j,k)+ans_T(i,jp,k)+ans_T(i,j,k+1)+ans_T(i,jp,k+1))
+     &			*MIN(fc_T(i,j,k),fc_T(i,jp,k),fc_T(i,j,k+1),fc_T(i,jp,k+1))					
 				aaay(j)=-CNz*ekm_min*dt/(Rp(i)*(phipt(j)-phipt(jm))*Rp(i)*dphi2t(j))/rhW_T(i,j,k)
 				cccy(j)=-CNz*ekm_plus*dt/(Rp(i)*(phipt(jp)-phipt(j))*Rp(i)*dphi2t(j))/rhW_T(i,j,k)				
 				bbby(j)=1.-aaay(j)-cccy(j) 	
@@ -1959,7 +1979,9 @@ c*****************************************************************
 				jm=j-1 !MAX(0,j-1)
 				jp=j+1 !MIN(px*jmax+1,j+1)
 				ekm_min= 0.25*(ans_T(i,j,k)+ans_T(i,jm,k)+ans_T(i+1,j,k)+ans_T(i+1,jm,k))
+     &			*MIN(fc_T(i,j,k),fc_T(i,jm,k),fc_T(i+1,j,k),fc_T(i+1,jm,k))					
 				ekm_plus=0.25*(ans_T(i,j,k)+ans_T(i,jp,k)+ans_T(i+1,j,k)+ans_T(i+1,jp,k))
+     &			*MIN(fc_T(i,j,k),fc_T(i,jp,k),fc_T(i+1,j,k),fc_T(i+1,jp,k))					
 				aaay(j)=-CNz*ekm_min*dt/(Ru(i)*(phipt(j)-phipt(jm))*Ru(i)*dphi2t(j))/rhU_T(i,j,k)
 				cccy(j)=-CNz*ekm_plus*dt/(Ru(i)*(phipt(jp)-phipt(j))*Ru(i)*dphi2t(j))/rhU_T(i,j,k)	
 				bbby(j)=1.-aaay(j)-cccy(j) 
@@ -1978,8 +2000,8 @@ c*****************************************************************
             do j=1,px*jmax-1 !0,px*jmax+1
 				jm=j-1 !MAX(0,j-1)
 				jp=j+1 !MIN(px*jmax+1,j+1)
-				ekm_min= ans_T(i,j,k)
-				ekm_plus=ans_T(i,jp,k)
+				ekm_min= ans_T(i,j,k)*fc_T(i,j,k)
+				ekm_plus=ans_T(i,jp,k)*fc_T(i,jp,k)
 				aaay(j)=-CNz*ekm_min*dt/(Rp(i)*dphi2t(j)*Rp(i)*(phipt(jp)-phipt(j)))/rhV_T(i,j,k)
 				cccy(j)=-CNz*ekm_plus*dt/(Rp(i)*dphi2t(jp)*Rp(i)*(phipt(jp)-phipt(j)))/rhV_T(i,j,k)	
 				bbby(j)=1.-aaay(j)-cccy(j) 
@@ -2003,7 +2025,9 @@ c*****************************************************************
 				jm=j-1 !MAX(0,j-1)
 				jp=j+1 !MIN(px*jmax+1,j+1)
 				ekm_min= 0.25*(ans_T(i,j,k)+ans_T(i,jm,k)+ans_T(i,j,k+1)+ans_T(i,jm,k+1))
+     &			*MIN(fc_T(i,j,k),fc_T(i,jm,k),fc_T(i,j,k+1),fc_T(i,jm,k+1))				
 				ekm_plus=0.25*(ans_T(i,j,k)+ans_T(i,jp,k)+ans_T(i,j,k+1)+ans_T(i,jp,k+1))
+     &			*MIN(fc_T(i,j,k),fc_T(i,jp,k),fc_T(i,j,k+1),fc_T(i,jp,k+1))				
 				aaay(j)=-CNz*ekm_min*dt/(Rp(i)*(phipt(j)-phipt(jm))*Rp(i)*dphi2t(j))/rhW_T(i,j,k)
 				cccy(j)=-CNz*ekm_plus*dt/(Rp(i)*(phipt(jp)-phipt(j))*Rp(i)*dphi2t(j))/rhW_T(i,j,k)
 				bbby(j)=1.-aaay(j)-cccy(j) 				
@@ -2037,7 +2061,23 @@ c*****************************************************************
         real CNz,CNx,CNy,dzi 
 		real aaa(0:k1),bbb(0:k1),ccc(0:k1),ekm_min,ekm_plus,rhss(0:k1),rho_min,rho_plus
 		integer perx,pery 
+	    real fcl2(0:i1,0:j1,0:k1)
+	    logical me2
+		real rr1,uu1,vv1,rr1a,uu1a,vv1a,vv0,uu0
+		real rr2,uu2,vv2,rr2a,uu2a,vv2a
+		real zb_U,zb_V,distance_to_bed_kp,distance_to_bed_kpp,tau,dist_vel,visc
+		integer kb,kpp 
 
+	    if (momentum_exchange_obstacles.eq.100.or.momentum_exchange_obstacles.eq.110) then 
+		  fcl2=fc_local
+	    else 
+		  fcl2=1. !all momentum interactions are active
+	    endif	  
+	    if (momentum_exchange_obstacles.eq.111) then 
+		  me2=.true. !	!111 means dUVdn = 0 for cells directly above bed
+	    else 
+		  me2=.false.
+	    endif 
 
 		IF (CNdiffz.eq.1) THEN 
 			CNz=0.5 !0.55
@@ -2062,17 +2102,18 @@ c*****************************************************************
 !			dWdt(1:imax,1:jmax,1:kmax) = dWdt(1:imax,1:jmax,1:kmax) + dt*dold (1:imax,1:jmax,1:kmax)/rhW(1:imax,1:jmax,1:kmax)
 !			call bound_incljet(dUdt,dVdt,dWdt,dRdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,
 !     & 	Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)	
-!		 endif 		
+!		 endif 	
 	   IF (slip_bot.eq.-1) THEN !no slip bottom, free slip Neumann UV top 
 		do j=1,jmax
          do i=1,imax
             do k=1,kmax !0,k1
 				km=k-1 !MAX(0,k-1)
 				kp=k+1 !MIN(k1,k+1)
-				ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i+1,j,k)+ekm(i+1,j,km))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(i,j+rank*jmax,km),fc_global(i+1,j+rank*jmax,k),fc_global(i+1,j+rank*jmax,km))
-				ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i+1,j,k)+ekm(i+1,j,kp))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(i,j+rank*jmax,kp),fc_global(i+1,j+rank*jmax,k),fc_global(i+1,j+rank*jmax,kp))
+				ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i+1,j,k)+ekm(i+1,j,km))*MIN(fcl2(i,j,k),
+     & 			fcl2(i,j,km),fcl2(i+1,j,k),fcl2(i+1,j,km))
+				ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i+1,j,k)+ekm(i+1,j,kp))*MIN(fcl2(i,j,k),
+     & 			fcl2(i,j,kp),fcl2(i+1,j,k),fcl2(i+1,j,kp))
+				if (kbed(i,j).eq.km.and.me2) ekm_min=0. !dUVdn=0	 
 				rho_min=0.25*(drdt(i,j,k)+drdt(i,j,km)+drdt(i+1,j,k)+drdt(i+1,j,km))
 				rho_plus=0.25*(drdt(i,j,k)+drdt(i,j,kp)+drdt(i+1,j,k)+drdt(i+1,j,kp))
 				aaa(k)=-CNz*ekm_min*dt/dz**2/rhU(i,j,k) !/rho_min
@@ -2093,10 +2134,11 @@ c*****************************************************************
             do k=1,kmax !0,k1
 				km=k-1 !MAX(0,k-1)
 				kp=k+1 !MIN(k1,k+1)
-				ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i,j+1,k)+ekm(i,j+1,km))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(i,j+rank*jmax,km),fc_global(i,j+1+rank*jmax,k),fc_global(i,j+1+rank*jmax,km))		
-				ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i,j+1,k)+ekm(i,j+1,kp))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(i,j+rank*jmax,kp),fc_global(i,j+1+rank*jmax,k),fc_global(i,j+1+rank*jmax,kp))		
+				ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i,j+1,k)+ekm(i,j+1,km))*MIN(fcl2(i,j,k),
+     & 			fcl2(i,j,km),fcl2(i,j+1,k),fcl2(i,j+1,km))		
+				ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i,j+1,k)+ekm(i,j+1,kp))*MIN(fcl2(i,j,k),
+     & 			fcl2(i,j,kp),fcl2(i,j+1,k),fcl2(i,j+1,kp))		
+				if (kbed(i,j).eq.km.and.me2) ekm_min=0. !dUVdn=0	 
 				rho_min=0.25*(drdt(i,j,k)+drdt(i,j,km)+drdt(i,j+1,k)+drdt(i,j+1,km))
 				rho_plus=0.25*(drdt(i,j,k)+drdt(i,j,kp)+drdt(i,j+1,k)+drdt(i,j+1,kp))
 				aaa(k)=-CNz*ekm_min*dt/dz**2/rhV(i,j,k) !/rho_min
@@ -2117,8 +2159,8 @@ c*****************************************************************
             do k=1,kmax-1 !0,k1
 				!km=k-1 !MAX(0,k-1)
 				kp=k+1 !MIN(k1,k+1)
-				ekm_min=ekm(i,j,k)!*fc_global(i,j+rank*jmax,k)
-				ekm_plus=ekm(i,j,kp)!*fc_global(i,j+rank*jmax,kp)
+				ekm_min=ekm(i,j,k)*fcl2(i,j,k)
+				ekm_plus=ekm(i,j,kp)*fcl2(i,j,kp)
 				aaa(k)=-CNz*ekm_min*dt/dz**2/rhW(i,j,k) !/drdt(i,j,k)
 				ccc(k)=-CNz*ekm_plus*dt/dz**2/rhW(i,j,k) !/drdt(i,j,kp)
 				bbb(k)=1.-aaa(k)-ccc(k) 
@@ -2140,10 +2182,11 @@ c*****************************************************************
             do k=1,kmax !0,k1
 				km=k-1 !MAX(0,k-1)
 				kp=k+1 !MIN(k1,k+1)
-				ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i+1,j,k)+ekm(i+1,j,km))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(i,j+rank*jmax,km),fc_global(i+1,j+rank*jmax,k),fc_global(i+1,j+rank*jmax,km))
-				ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i+1,j,k)+ekm(i+1,j,kp))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(i,j+rank*jmax,kp),fc_global(i+1,j+rank*jmax,k),fc_global(i+1,j+rank*jmax,kp))
+				ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i+1,j,k)+ekm(i+1,j,km))*MIN(fcl2(i,j,k),
+     & 			fcl2(i,j,km),fcl2(i+1,j,k),fcl2(i+1,j,km))
+				ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i+1,j,k)+ekm(i+1,j,kp))*MIN(fcl2(i,j,k),
+     & 			fcl2(i,j,kp),fcl2(i+1,j,k),fcl2(i+1,j,kp))
+				if (kbed(i,j).eq.km.and.me2) ekm_min=0. !dUVdn=0	 
 				rho_min=0.25*(drdt(i,j,k)+drdt(i,j,km)+drdt(i+1,j,k)+drdt(i+1,j,km))
 				rho_plus=0.25*(drdt(i,j,k)+drdt(i,j,kp)+drdt(i+1,j,k)+drdt(i+1,j,kp))
 				aaa(k)=-CNz*ekm_min*dt/dz**2/rhU(i,j,k) !/rho_min
@@ -2164,10 +2207,11 @@ c*****************************************************************
             do k=1,kmax !0,k1
 				km=k-1 !MAX(0,k-1)
 				kp=k+1 !MIN(k1,k+1)
-				ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i,j+1,k)+ekm(i,j+1,km))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(i,j+rank*jmax,km),fc_global(i,j+1+rank*jmax,k),fc_global(i,j+1+rank*jmax,km))		
-				ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i,j+1,k)+ekm(i,j+1,kp))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(i,j+rank*jmax,kp),fc_global(i,j+1+rank*jmax,k),fc_global(i,j+1+rank*jmax,kp))		
+				ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i,j+1,k)+ekm(i,j+1,km))*MIN(fcl2(i,j,k),
+     & 			fcl2(i,j,km),fcl2(i,j+1,k),fcl2(i,j+1,km))		
+				ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i,j+1,k)+ekm(i,j+1,kp))*MIN(fcl2(i,j,k),
+     & 			fcl2(i,j,kp),fcl2(i,j+1,k),fcl2(i,j+1,kp))	
+	 			if (kbed(i,j).eq.km.and.me2) ekm_min=0. !dUVdn=0
 				rho_min=0.25*(drdt(i,j,k)+drdt(i,j,km)+drdt(i,j+1,k)+drdt(i,j+1,km))
 				rho_plus=0.25*(drdt(i,j,k)+drdt(i,j,kp)+drdt(i,j+1,k)+drdt(i,j+1,kp))
 				aaa(k)=-CNz*ekm_min*dt/dz**2/rhV(i,j,k) !/rho_min
@@ -2188,8 +2232,8 @@ c*****************************************************************
             do k=1,kmax-1 !0,k1
 				!km=k-1 !MAX(0,k-1)
 				kp=k+1 !MIN(k1,k+1)
-				ekm_min=ekm(i,j,k)!*fc_global(i,j+rank*jmax,k)
-				ekm_plus=ekm(i,j,kp)!*fc_global(i,j+rank*jmax,kp)
+				ekm_min=ekm(i,j,k)*fcl2(i,j,k)
+				ekm_plus=ekm(i,j,kp)*fcl2(i,j,kp)
 				aaa(k)=-CNz*ekm_min*dt/dz**2/rhW(i,j,k) !/drdt(i,j,k)
 				ccc(k)=-CNz*ekm_plus*dt/dz**2/rhW(i,j,k) !/drdt(i,j,kp)
 				bbb(k)=1.-aaa(k)-ccc(k) 
@@ -2205,18 +2249,248 @@ c*****************************************************************
 			CALL solve_tridiag(dWdt(i,j,0:kmax),aaa(0:kmax),bbb(0:kmax),ccc(0:kmax),rhss(0:kmax),k1) 
          enddo
 		enddo	  
+	  ELSEIF (slip_bot.ge.1.and.IBMorder.ne.2.and.Non_Newtonian.ge.1) THEN !Neuman UV top and bottom with IBM0 and rheology wall model
+		do j=1,jmax
+         do i=1,imax
+            do k=1,kmax !0,k1
+				km=k-1 !MAX(0,k-1)
+				kp=k+1 !MIN(k1,k+1)
+				ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i+1,j,k)+ekm(i+1,j,km))*MIN(fcl2(i,j,k),
+     & 			fcl2(i,j,km),fcl2(i+1,j,k),fcl2(i+1,j,km))
+				ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i+1,j,k)+ekm(i+1,j,kp))*MIN(fcl2(i,j,k),
+     & 			fcl2(i,j,kp),fcl2(i+1,j,k),fcl2(i+1,j,kp))
+				rho_min=0.25*(drdt(i,j,k)+drdt(i,j,km)+drdt(i+1,j,k)+drdt(i+1,j,km))
+				rho_plus=0.25*(drdt(i,j,k)+drdt(i,j,kp)+drdt(i+1,j,k)+drdt(i+1,j,kp))
+				if (kbed(i,j).eq.km.and.me2) ekm_min=0. !dUVdn=0
+				aaa(k)=-CNz*ekm_min*dt/dz**2/rhU(i,j,k) !/rho_min
+				ccc(k)=-CNz*ekm_plus*dt/dz**2/rhU(i,j,k) !/rho_plus
+				bbb(k)=1.-aaa(k)-ccc(k) 				
+            enddo
+			bbb(1)=bbb(1)+aaa(1) 
+			aaa(1)=0.
+			bbb(kmax)=bbb(kmax)+ccc(kmax)
+			ccc(kmax)=0. 
+!!!			rhss(1:kmax)=dUdt2(i,j,1:kmax)
+			rhss(1:kmax)=dUdt(i,j,1:kmax)
+			
+			rr1=rhU(i,j,kbedt(i,j)+k_ust_tau_flow) 					 												!at U-gridpoint
+			uu1=dUdt(i,j,kbedt(i,j)+k_ust_tau_flow)-Ubot_TSHD(j)
+			vv1=0.25*(dVdt(i,j,kbedt(i,j)+k_ust_tau_flow)+dVdt(i+1,j,kbedt(i,j)+k_ust_tau_flow)
+     &          +dVdt(i,j-1,kbedt(i,j)+k_ust_tau_flow)+dVdt(i+1,j-1,kbedt(i,j)+k_ust_tau_flow))-Vbot_TSHD(j)
+			rr1a=rhU(i,j,kbedt(i,j)+1) 					 												!at U-gridpoint
+			uu1a=dUdt(i,j,kbedt(i,j)+1)-Ubot_TSHD(j)
+			vv1a=0.25*(dVdt(i,j,kbedt(i,j)+1)+dVdt(i+1,j,kbedt(i,j)+1)+dVdt(i,j-1,kbedt(i,j)+1)
+     &                      +dVdt(i+1,j-1,kbedt(i,j)+1))-Vbot_TSHD(j)
+			dist_vel=(k_ust_tau_flow-0.5)*dz
+			visc=0.5*(muA(i,j,kbedt(i,j)+k_ust_tau_flow)+muA(i+1,j,kbedt(i+1,j)+k_ust_tau_flow)) !don't divide by rho because uu here is m/s and wall_fun_rho_rheo assumes it is fed with rho*U
+			call wall_fun_rho_rheo(uu1a,vv1a,uu1,vv1,dz,dist_vel,dt,visc,tau)
+			bbb(kbedt(i,j)+1)=bbb(kbedt(i,j)+1)+CNdiff_factor*ABS(tau)*dt/(rr1a*dz*MAX(1.e-12,ABS(dUdt(i,j,kbedt(i,j)+1))))
+			aaa(kbedt(i,j)+1)=0.
+
+			CALL solve_tridiag(dUdt(i,j,1:kmax),aaa(1:kmax),bbb(1:kmax),ccc(1:kmax),rhss(1:kmax),kmax) 
+         enddo
+		enddo
+		do j=1,jmax
+         do i=1,imax
+            do k=1,kmax !0,k1
+				km=k-1 !MAX(0,k-1)
+				kp=k+1 !MIN(k1,k+1)
+				ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i,j+1,k)+ekm(i,j+1,km))*MIN(fcl2(i,j,k),
+     & 			fcl2(i,j,km),fcl2(i,j+1,k),fcl2(i,j+1,km))		
+				ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i,j+1,k)+ekm(i,j+1,kp))*MIN(fcl2(i,j,k),
+     & 			fcl2(i,j,kp),fcl2(i,j+1,k),fcl2(i,j+1,kp))		
+				rho_min=0.25*(drdt(i,j,k)+drdt(i,j,km)+drdt(i,j+1,k)+drdt(i,j+1,km))
+				rho_plus=0.25*(drdt(i,j,k)+drdt(i,j,kp)+drdt(i,j+1,k)+drdt(i,j+1,kp))
+				if (kbed(i,j).eq.km.and.me2) ekm_min=0. !dUVdn=0				
+				aaa(k)=-CNz*ekm_min*dt/dz**2/rhV(i,j,k) !/rho_min
+				ccc(k)=-CNz*ekm_plus*dt/dz**2/rhV(i,j,k) !/rho_plus
+				bbb(k)=1.-aaa(k)-ccc(k) 				
+			enddo
+			bbb(1)=bbb(1)+aaa(1) 
+			aaa(1)=0.
+			bbb(kmax)=bbb(kmax)+ccc(kmax)
+			ccc(kmax)=0. 
+!!!			rhss(1:kmax)=dVdt2(i,j,1:kmax)
+			rhss(1:kmax)=dVdt(i,j,1:kmax)
+			
+			rr2=rhV(i,j,kbedt(i,j)+k_ust_tau_flow) 																	!at V-gridpoint
+			uu2=0.25*(dUdt(i,j,kbedt(i,j)+k_ust_tau_flow)+dUdt(i,j+1,kbedt(i,j)+k_ust_tau_flow)
+     &          +dUdt(i-1,j,kbedt(i,j)+k_ust_tau_flow)+dUdt(i-1,j+1,kbedt(i,j)+k_ust_tau_flow))-Ubot_TSHD(j)
+			vv2=dVdt(i,j,kbedt(i,j)+k_ust_tau_flow)-Vbot_TSHD(j)
+			rr2a=rhV(i,j,kbedt(i,j)+1) 			
+			uu2a=0.25*(dUdt(i,j,kbedt(i,j)+1)+dUdt(i,j+1,kbedt(i,j)+1)+dUdt(i-1,j,kbedt(i,j)+1)
+     &                      +dUdt(i-1,j+1,kbedt(i,j)+1))-Ubot_TSHD(j)
+			vv2a=dVdt(i,j,kbedt(i,j)+1)-Vbot_TSHD(j)			
+			dist_vel=(k_ust_tau_flow-0.5)*dz
+			visc=0.5*(muA(i,j,kbedt(i,j)+k_ust_tau_flow)+muA(i,j+1,kbedt(i,j+1)+k_ust_tau_flow)) !don't divide by rho because uu here is m/s and wall_fun_rho_rheo assumes it is fed with rho*U
+			call wall_fun_rho_rheo(vv2a,uu2a,vv2,uu2,dz,dist_vel,dt,visc,tau)		
+			bbb(kbedt(i,j)+1)=bbb(kbedt(i,j)+1)+CNdiff_factor*ABS(tau)*dt/(rr2a*dz*MAX(1.e-12,ABS(dVdt(i,j,kbedt(i,j)+1))))
+			aaa(kbedt(i,j)+1)=0.
+			
+			CALL solve_tridiag(dVdt(i,j,1:kmax),aaa(1:kmax),bbb(1:kmax),ccc(1:kmax),rhss(1:kmax),kmax)
+         enddo
+		enddo
+		do j=1,jmax
+         do i=1,imax
+            do k=1,kmax-1 !0,k1
+				!km=k-1 !MAX(0,k-1)
+				kp=k+1 !MIN(k1,k+1)
+				ekm_min=ekm(i,j,k)*fcl2(i,j,k)
+				ekm_plus=ekm(i,j,kp)*fcl2(i,j,kp)
+				aaa(k)=-CNz*ekm_min*dt/dz**2/rhW(i,j,k) !/drdt(i,j,k)
+				ccc(k)=-CNz*ekm_plus*dt/dz**2/rhW(i,j,k) !/drdt(i,j,kp)
+				bbb(k)=1.-aaa(k)-ccc(k) 
+            enddo
+			aaa(0)=0.
+			ccc(0)=0.
+			bbb(0)=1.
+			aaa(kmax)=0. !bc dWdt in k-dir is on kmax 
+			bbb(kmax)=1.
+			ccc(kmax)=0.
+!!!			rhss(0:kmax)=dWdt2(i,j,0:kmax)
+			rhss(0:kmax)=dWdt(i,j,0:kmax)
+			CALL solve_tridiag(dWdt(i,j,0:kmax),aaa(0:kmax),bbb(0:kmax),ccc(0:kmax),rhss(0:kmax),k1) 
+         enddo
+		enddo	
+	  ELSEIF (slip_bot.ge.1.and.IBMorder.eq.2.and.Non_Newtonian.ge.1.and.(interaction_bed.ge.4.or.bedlevelfile.ne.''.or.nobst>0)) THEN !Neuman UV top and bottom with IBM2 and rheology wall model
+		do j=1,jmax
+         do i=1,imax
+            do k=1,kmax !0,k1
+				km=k-1 !MAX(0,k-1)
+				kp=k+1 !MIN(k1,k+1)
+				ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i+1,j,k)+ekm(i+1,j,km))*MIN(fcl2(i,j,k),
+     & 			fcl2(i,j,km),fcl2(i+1,j,k),fcl2(i+1,j,km))
+				ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i+1,j,k)+ekm(i+1,j,kp))*MIN(fcl2(i,j,k),
+     & 			fcl2(i,j,kp),fcl2(i+1,j,k),fcl2(i+1,j,kp))
+				rho_min=0.25*(drdt(i,j,k)+drdt(i,j,km)+drdt(i+1,j,k)+drdt(i+1,j,km))
+				rho_plus=0.25*(drdt(i,j,k)+drdt(i,j,kp)+drdt(i+1,j,k)+drdt(i+1,j,kp))
+				if (kbed(i,j).eq.km.and.me2) ekm_min=0. !dUVdn=0
+				aaa(k)=-CNz*ekm_min*dt/dz**2/rhU(i,j,k) !/rho_min
+				ccc(k)=-CNz*ekm_plus*dt/dz**2/rhU(i,j,k) !/rho_plus
+				bbb(k)=1.-aaa(k)-ccc(k) 				
+            enddo
+			bbb(1)=bbb(1)+aaa(1) 
+			aaa(1)=0.
+			bbb(kmax)=bbb(kmax)+ccc(kmax)
+			ccc(kmax)=0. 
+!!!			rhss(1:kmax)=dUdt2(i,j,1:kmax)
+			rhss(1:kmax)=dUdt(i,j,1:kmax)
+			
+			zb_U=0.5*(zbed(i,j)+zbed(i+1,j))
+			kb=FLOOR(zb_U/dz+0.5)						!location vel=0 for 2nd order IBM because below 2nd-order zbed
+			kp=MIN(CEILING(zb_U/dz+0.5),kmax)			!location velocity which must be adjusted 2nd order IBM -->(0-1)*dz distance from bed
+			!kpp=MIN(CEILING(zb_U/dz+0.5)+1,kmax+1)		!location one cell above to determine 2nd order ibm velocity -->(1-2)*dz distance from bed
+			distance_to_bed_kp=(REAL(kp)-0.5)*dz-zb_U
+			IF (distance_to_bed_kp>0.1*dz) THEN !apply tau on first cell (0.1-1)*dz distance from bed based on velocity of that cell
+				kpp=MIN(kp+k_ust_tau_flow-1,k1)
+				distance_to_bed_kpp=(REAL(kpp)-0.5)*dz-zb_U
+			ELSE !apply tau on second cell (1-1.1)*dz distance from bed based on velocity of that cell, do nothing for cell below: (0-0.1)dz from bed 
+				kp=MIN(kp+1,k1)
+				distance_to_bed_kp=(REAL(kp)-0.5)*dz-zb_U
+				kpp=MIN(kp+k_ust_tau_flow-1,k1)
+				distance_to_bed_kpp=(REAL(kpp)-0.5)*dz-zb_U
+!				  ELSE !apply tau on first cell (0-0.5)*dz distance from bed based on ustar of second cell (kpp) (1-1.5)*dz distance from bed 
+			ENDIF			
+			rr1=rhU(i,j,kpp) 																				!at U-gridpoint
+			uu1=dUdt(i,j,kpp)-Ubot_TSHD(j)
+			vv1=0.25*(dVdt(i,j,kpp)+dVdt(i+1,j,kpp)+dVdt(i,j-1,kpp)+dVdt(i+1,j-1,kpp))-Vbot_TSHD(j)	
+			uu0=dUdt(i,j,kp)-Ubot_TSHD(j)
+			vv0=0.25*(dVdt(i,j,kp)+dVdt(i+1,j,kp)+dVdt(i,j-1,kp)+dVdt(i+1,j-1,kp))-Vbot_TSHD(j)
+			visc=0.5*(muA(i,j,kpp)+muA(i+1,j,kpp)) !don't divide by rho because uu here is m/s and wall_fun_rho_rheo assumes it is fed with rho*U
+			call wall_fun_rho_rheo(uu0,vv0,uu1,vv1,dz,distance_to_bed_kpp,dt,visc,tau)	
+			bbb(kp)=bbb(kp)+CNdiff_factor*ABS(tau)*dt/(rhU(i,j,kp)*dz*MAX(1.e-12,ABS(dUdt(i,j,kp))))
+			aaa(kp)=0.
+
+			CALL solve_tridiag(dUdt(i,j,1:kmax),aaa(1:kmax),bbb(1:kmax),ccc(1:kmax),rhss(1:kmax),kmax) 
+         enddo
+		enddo
+		do j=1,jmax
+         do i=1,imax
+            do k=1,kmax !0,k1
+				km=k-1 !MAX(0,k-1)
+				kp=k+1 !MIN(k1,k+1)
+				ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i,j+1,k)+ekm(i,j+1,km))*MIN(fcl2(i,j,k),
+     & 			fcl2(i,j,km),fcl2(i,j+1,k),fcl2(i,j+1,km))		
+				ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i,j+1,k)+ekm(i,j+1,kp))*MIN(fcl2(i,j,k),
+     & 			fcl2(i,j,kp),fcl2(i,j+1,k),fcl2(i,j+1,kp))		
+				rho_min=0.25*(drdt(i,j,k)+drdt(i,j,km)+drdt(i,j+1,k)+drdt(i,j+1,km))
+				rho_plus=0.25*(drdt(i,j,k)+drdt(i,j,kp)+drdt(i,j+1,k)+drdt(i,j+1,kp))
+				if (kbed(i,j).eq.km.and.me2) ekm_min=0. !dUVdn=0				
+				aaa(k)=-CNz*ekm_min*dt/dz**2/rhV(i,j,k) !/rho_min
+				ccc(k)=-CNz*ekm_plus*dt/dz**2/rhV(i,j,k) !/rho_plus
+				bbb(k)=1.-aaa(k)-ccc(k) 				
+			enddo
+			bbb(1)=bbb(1)+aaa(1) 
+			aaa(1)=0.
+			bbb(kmax)=bbb(kmax)+ccc(kmax)
+			ccc(kmax)=0. 
+!!!			rhss(1:kmax)=dVdt2(i,j,1:kmax)
+			rhss(1:kmax)=dVdt(i,j,1:kmax)
+			
+			zb_V=0.5*(zbed(i,j)+zbed(i,j+1))
+			
+			kb=FLOOR(zb_V/dz+0.5)						!location vel=0 for 2nd order IBM because below 2nd-order zbed
+			kp=MIN(CEILING(zb_V/dz+0.5),kmax)			!location velocity which must be adjusted 2nd order IBM
+			!kpp=MIN(CEILING(zb_V/dz+0.5)+1,kmax+1)		!location one cell above to determine 2nd order ibm velocity
+			distance_to_bed_kp=(REAL(kp)-0.5)*dz-zb_V
+			IF (distance_to_bed_kp>0.1*dz) THEN !apply tau on first cell (0.1-1)*dz distance from bed based on velocity of that cell
+				kpp=MIN(kp+k_ust_tau_flow-1,k1)
+				distance_to_bed_kpp=(REAL(kpp)-0.5)*dz-zb_V
+			ELSE !apply tau on second cell (1-1.1)*dz distance from bed based on velocity of that cell, do nothing for cell below: (0-0.1)dz from bed 
+				kp=MIN(kp+1,k1)
+				distance_to_bed_kp=(REAL(kp)-0.5)*dz-zb_V
+				kpp=MIN(kp+k_ust_tau_flow-1,k1)
+				distance_to_bed_kpp=(REAL(kpp)-0.5)*dz-zb_V
+			ENDIF
+				
+			rr2=rhV(i,j,kpp) 																				!at V-gridpoint																	!at V-gridpoint
+			uu2=0.25*(dUdt(i,j,kpp)+dUdt(i,j+1,kpp)+dUdt(i-1,j,kpp)+dUdt(i-1,j+1,kpp))-Ubot_TSHD(j)
+			vv2=dVdt(i,j,kpp)-Vbot_TSHD(j)
+			uu0=0.25*(dUdt(i,j,kp)+dUdt(i,j+1,kp)+dUdt(i-1,j,kp)+dUdt(i-1,j+1,kp))-Ubot_TSHD(j)
+			vv0=dVdt(i,j,kp)-Vbot_TSHD(j)
+			visc=0.5*(muA(i,j,kpp)+muA(i,j+1,kpp)) !don't divide by rho because uu here is m/s and wall_fun_rho_rheo assumes it is fed with rho*U
+			call wall_fun_rho_rheo(vv0,uu0,vv2,uu2,dz,distance_to_bed_kpp,dt,visc,tau)		
+			bbb(kp)=bbb(kp)+CNdiff_factor*ABS(tau)*dt/(rhV(i,j,kp)*dz*MAX(1.e-12,ABS(dVdt(i,j,kp))))
+			aaa(kp)=0.
+			
+			CALL solve_tridiag(dVdt(i,j,1:kmax),aaa(1:kmax),bbb(1:kmax),ccc(1:kmax),rhss(1:kmax),kmax)
+         enddo
+		enddo
+		do j=1,jmax
+         do i=1,imax
+            do k=1,kmax-1 !0,k1
+				!km=k-1 !MAX(0,k-1)
+				kp=k+1 !MIN(k1,k+1)
+				ekm_min=ekm(i,j,k)*fcl2(i,j,k)
+				ekm_plus=ekm(i,j,kp)*fcl2(i,j,kp)
+				aaa(k)=-CNz*ekm_min*dt/dz**2/rhW(i,j,k) !/drdt(i,j,k)
+				ccc(k)=-CNz*ekm_plus*dt/dz**2/rhW(i,j,k) !/drdt(i,j,kp)
+				bbb(k)=1.-aaa(k)-ccc(k) 
+            enddo
+			aaa(0)=0.
+			ccc(0)=0.
+			bbb(0)=1.
+			aaa(kmax)=0. !bc dWdt in k-dir is on kmax 
+			bbb(kmax)=1.
+			ccc(kmax)=0.
+!!!			rhss(0:kmax)=dWdt2(i,j,0:kmax)
+			rhss(0:kmax)=dWdt(i,j,0:kmax)
+			CALL solve_tridiag(dWdt(i,j,0:kmax),aaa(0:kmax),bbb(0:kmax),ccc(0:kmax),rhss(0:kmax),k1) 
+         enddo
+		enddo			
 	  ELSE !Neuman UV top and bottom
 		do j=1,jmax
          do i=1,imax
             do k=1,kmax !0,k1
 				km=k-1 !MAX(0,k-1)
 				kp=k+1 !MIN(k1,k+1)
-				ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i+1,j,k)+ekm(i+1,j,km))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(i,j+rank*jmax,km),fc_global(i+1,j+rank*jmax,k),fc_global(i+1,j+rank*jmax,km))
-				ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i+1,j,k)+ekm(i+1,j,kp))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(i,j+rank*jmax,kp),fc_global(i+1,j+rank*jmax,k),fc_global(i+1,j+rank*jmax,kp))
+				ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i+1,j,k)+ekm(i+1,j,km))*MIN(fcl2(i,j,k),
+     & 			fcl2(i,j,km),fcl2(i+1,j,k),fcl2(i+1,j,km))
+				ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i+1,j,k)+ekm(i+1,j,kp))*MIN(fcl2(i,j,k),
+     & 			fcl2(i,j,kp),fcl2(i+1,j,k),fcl2(i+1,j,kp))
 				rho_min=0.25*(drdt(i,j,k)+drdt(i,j,km)+drdt(i+1,j,k)+drdt(i+1,j,km))
 				rho_plus=0.25*(drdt(i,j,k)+drdt(i,j,kp)+drdt(i+1,j,k)+drdt(i+1,j,kp))
+				if (kbed(i,j).eq.km.and.me2) ekm_min=0. !dUVdn=0
 				aaa(k)=-CNz*ekm_min*dt/dz**2/rhU(i,j,k) !/rho_min
 				ccc(k)=-CNz*ekm_plus*dt/dz**2/rhU(i,j,k) !/rho_plus
 				bbb(k)=1.-aaa(k)-ccc(k) 				
@@ -2235,12 +2509,13 @@ c*****************************************************************
             do k=1,kmax !0,k1
 				km=k-1 !MAX(0,k-1)
 				kp=k+1 !MIN(k1,k+1)
-				ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i,j+1,k)+ekm(i,j+1,km))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(i,j+rank*jmax,km),fc_global(i,j+1+rank*jmax,k),fc_global(i,j+1+rank*jmax,km))		
-				ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i,j+1,k)+ekm(i,j+1,kp))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(i,j+rank*jmax,kp),fc_global(i,j+1+rank*jmax,k),fc_global(i,j+1+rank*jmax,kp))		
+				ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i,j+1,k)+ekm(i,j+1,km))*MIN(fcl2(i,j,k),
+     & 			fcl2(i,j,km),fcl2(i,j+1,k),fcl2(i,j+1,km))		
+				ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i,j+1,k)+ekm(i,j+1,kp))*MIN(fcl2(i,j,k),
+     & 			fcl2(i,j,kp),fcl2(i,j+1,k),fcl2(i,j+1,kp))		
 				rho_min=0.25*(drdt(i,j,k)+drdt(i,j,km)+drdt(i,j+1,k)+drdt(i,j+1,km))
 				rho_plus=0.25*(drdt(i,j,k)+drdt(i,j,kp)+drdt(i,j+1,k)+drdt(i,j+1,kp))
+				if (kbed(i,j).eq.km.and.me2) ekm_min=0. !dUVdn=0				
 				aaa(k)=-CNz*ekm_min*dt/dz**2/rhV(i,j,k) !/rho_min
 				ccc(k)=-CNz*ekm_plus*dt/dz**2/rhV(i,j,k) !/rho_plus
 				bbb(k)=1.-aaa(k)-ccc(k) 				
@@ -2259,8 +2534,8 @@ c*****************************************************************
             do k=1,kmax-1 !0,k1
 				!km=k-1 !MAX(0,k-1)
 				kp=k+1 !MIN(k1,k+1)
-				ekm_min=ekm(i,j,k)!*fc_global(i,j+rank*jmax,k)
-				ekm_plus=ekm(i,j,kp)!*fc_global(i,j+rank*jmax,kp)
+				ekm_min=ekm(i,j,k)*fcl2(i,j,k)
+				ekm_plus=ekm(i,j,kp)*fcl2(i,j,kp)
 				aaa(k)=-CNz*ekm_min*dt/dz**2/rhW(i,j,k) !/drdt(i,j,k)
 				ccc(k)=-CNz*ekm_plus*dt/dz**2/rhW(i,j,k) !/drdt(i,j,kp)
 				bbb(k)=1.-aaa(k)-ccc(k) 
@@ -2299,6 +2574,23 @@ c*****************************************************************
 		real Cx3D(0:i1,0:j1,0:k1),Cy3D(0:i1,0:j1,0:k1),Cz3D(0:i1,0:j1,0:k1)
 		real DD3D(0:i1,0:j1,0:k1),RHS3D(0:i1,0:j1,0:k1)
 		real u0(0:i1,0:j1,0:k1),v0(0:i1,0:j1,0:k1),w0(0:i1,0:j1,0:k1)
+	    real fcl2(0:i1,0:j1,0:k1)
+	    logical me2
+		real rr1,uu1,vv1,rr1a,uu1a,vv1a,vv0,uu0
+		real rr2,uu2,vv2,rr2a,uu2a,vv2a
+		real zb_U,zb_V,distance_to_bed_kp,distance_to_bed_kpp,tau,dist_vel,visc
+		integer kpp 		
+
+	    if (momentum_exchange_obstacles.eq.100.or.momentum_exchange_obstacles.eq.110) then 
+		  fcl2=fc_local
+	    else 
+		  fcl2=1. !all momentum interactions are active
+	    endif	  
+	    if (momentum_exchange_obstacles.eq.111) then 
+		  me2=.true. !	!111 means dUVdn = 0 for cells directly above bed
+	    else 
+		  me2=.false.
+	    endif 
 		
 		CNz = CNdiff_factor
 		! determine start condition iteration:
@@ -2421,8 +2713,8 @@ c*****************************************************************
             do i=1,imax 
 				!im=MAX(0,i-1)
 				ip=i+1 !MIN(i1,i+1)
-				ekm_min=ekm(i,j,k)!*fc_global(i,j+rank*jmax,k)
-				ekm_plus=ekm(ip,j,k)!*fc_global(ip,j+rank*jmax,k)
+				ekm_min=ekm(i,j,k)*fcl2(i,j,k)
+				ekm_plus=ekm(ip,j,k)*fcl2(ip,j,k)
 				aaax(i)=-CNz*ekm_min*Rp(i)*dt/(dr(i)*(Rp(ip)-Rp(i))*Ru(i))/rhU(i,j,k) !/drdt(i,j,k)
 				cccx(i)=-CNz*ekm_plus*Rp(ip)*dt/(dr(ip)*(Rp(ip)-Rp(i))*Ru(i))/rhU(i,j,k) !/drdt(ip,j,k)
 				bbbx(i)=1.-aaax(i)-cccx(i) 
@@ -2438,7 +2730,9 @@ c*****************************************************************
 				jm=j-1 !MAX(0,j-1)
 				jp=j+1 !MIN(px*jmax+1,j+1)
 				ekm_min= 0.25*(ekm(i,j,k)+ekm(i,jm,k)+ekm(i+1,j,k)+ekm(i+1,jm,k))
+     &			*MIN(fcl2(i,j,k),fcl2(i,jm,k),fcl2(i+1,j,k),fcl2(i+1,jm,k))				
 				ekm_plus=0.25*(ekm(i,j,k)+ekm(i,jp,k)+ekm(i+1,j,k)+ekm(i+1,jp,k))
+     &			*MIN(fcl2(i,j,k),fcl2(i,jp,k),fcl2(i+1,j,k),fcl2(i+1,jp,k))				
 				aaay(j)=-CNz*ekm_min*dt/(Ru(i)*(phip(j)-phip(jm))*Ru(i)*dphi2(j))/rhU(i,j,k)
 				cccy(j)=-CNz*ekm_plus*dt/(Ru(i)*(phip(jp)-phip(j))*Ru(i)*dphi2(j))/rhU(i,j,k)				
 				bbby(j)=1.-aaay(j)-cccy(j) 
@@ -2453,10 +2747,11 @@ c*****************************************************************
             do k=1,kmax !0,k1
 				km=k-1 !MAX(0,k-1)
 				kp=k+1 !MIN(k1,k+1)
-				ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i+1,j,k)+ekm(i+1,j,km))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(i,j+rank*jmax,km),fc_global(i+1,j+rank*jmax,k),fc_global(i+1,j+rank*jmax,km))
-				ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i+1,j,k)+ekm(i+1,j,kp))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(i,j+rank*jmax,kp),fc_global(i+1,j+rank*jmax,k),fc_global(i+1,j+rank*jmax,kp))
+				ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i+1,j,k)+ekm(i+1,j,km))*MIN(fcl2(i,j,k),
+     & 			fcl2(i,j,km),fcl2(i+1,j,k),fcl2(i+1,j,km))
+				ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i+1,j,k)+ekm(i+1,j,kp))*MIN(fcl2(i,j,k),
+     & 			fcl2(i,j,kp),fcl2(i+1,j,k),fcl2(i+1,j,kp))
+				if (kbed(i,j).eq.km.and.me2) ekm_min=0. !dUVdn=0	 
 				aaa(k)=-CNz*ekm_min*dt/dz**2/rhU(i,j,k) !/rho_min
 				ccc(k)=-CNz*ekm_plus*dt/dz**2/rhU(i,j,k) !/rho_plus
 				bbb(k)=1.-aaa(k)-ccc(k) 				
@@ -2483,8 +2778,8 @@ c*****************************************************************
             do i=1,imax 
 				!im=MAX(0,i-1)
 				ip=i+1 !MIN(i1,i+1)
-				ekm_min=ekm(i,j,k) + muA(i,j,k) !*fc_global(i,j+rank*jmax,k)
-				ekm_plus=ekm(ip,j,k) + muA(ip,j,k) !*fc_global(ip,j+rank*jmax,k)
+				ekm_min=(ekm(i,j,k) + muA(i,j,k)) *fcl2(i,j,k)
+				ekm_plus=(ekm(ip,j,k) + muA(ip,j,k)) *fcl2(ip,j,k)
 				aaax(i)=-CNz*ekm_min*Rp(i)*dt/(dr(i)*(Rp(ip)-Rp(i))*Ru(i))/rhU(i,j,k) !/drdt(i,j,k)
 				cccx(i)=-CNz*ekm_plus*Rp(ip)*dt/(dr(ip)*(Rp(ip)-Rp(i))*Ru(i))/rhU(i,j,k) !/drdt(ip,j,k)
 				bbbx(i)=1.-aaax(i)-cccx(i) 
@@ -2499,10 +2794,12 @@ c*****************************************************************
             do j=1,jmax 
 				jm=j-1 !MAX(0,j-1)
 				jp=j+1 !MIN(px*jmax+1,j+1)
-				ekm_min= 0.25*(ekm(i,j,k)+ekm(i,jm,k)+ekm(i+1,j,k)+ekm(i+1,jm,k))
-     & 			+ MAX(muA(i,j,k),muA(i,jm,k),muA(i+1,j,k),muA(i+1,jm,k))				
-				ekm_plus=0.25*(ekm(i,j,k)+ekm(i,jp,k)+ekm(i+1,j,k)+ekm(i+1,jp,k))
-     &			+ MAX(muA(i,j,k),muA(i,jp,k),muA(i+1,j,k),muA(i+1,jp,k))				
+				ekm_min= (0.25*(ekm(i,j,k)+ekm(i,jm,k)+ekm(i+1,j,k)+ekm(i+1,jm,k))
+     & 			+ MAX(muA(i,j,k),muA(i,jm,k),muA(i+1,j,k),muA(i+1,jm,k))
+     & 			)*MIN(fcl2(i,j,k),fcl2(i,jm,k),fcl2(i+1,j,k),fcl2(i+1,jm,k))	 
+				ekm_plus=(0.25*(ekm(i,j,k)+ekm(i,jp,k)+ekm(i+1,j,k)+ekm(i+1,jp,k))
+     &			+ MAX(muA(i,j,k),muA(i,jp,k),muA(i+1,j,k),muA(i+1,jp,k))	
+     & 			)*MIN(fcl2(i,j,k),fcl2(i,jp,k),fcl2(i+1,j,k),fcl2(i+1,jp,k))	 	 
 				aaay(j)=-CNz*ekm_min*dt/(Ru(i)*(phip(j)-phip(jm))*Ru(i)*dphi2(j))/rhU(i,j,k)
 				cccy(j)=-CNz*ekm_plus*dt/(Ru(i)*(phip(jp)-phip(j))*Ru(i)*dphi2(j))/rhU(i,j,k)				
 				bbby(j)=1.-aaay(j)-cccy(j) 
@@ -2517,12 +2814,13 @@ c*****************************************************************
             do k=1,kmax !0,k1
 				km=k-1 !MAX(0,k-1)
 				kp=k+1 !MIN(k1,k+1)
-				ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i+1,j,k)+ekm(i+1,j,km))!*MIN(fc_global(i,j+rank*jmax,k),
+				ekm_min=(0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i+1,j,k)+ekm(i+1,j,km))
      &			+ MAX(muA(i,j,k),muA(i,j,km),muA(i+1,j,k),muA(i+1,j,km))				
-!     & 			fc_global(i,j+rank*jmax,km),fc_global(i+1,j+rank*jmax,k),fc_global(i+1,j+rank*jmax,km))
-				ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i+1,j,k)+ekm(i+1,j,kp))!*MIN(fc_global(i,j+rank*jmax,k),
+     & 			)*MIN(fcl2(i,j,k),fcl2(i,j,km),fcl2(i+1,j,k),fcl2(i+1,j,km))	 
+				ekm_plus=(0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i+1,j,k)+ekm(i+1,j,kp))
      &			+ MAX(muA(i,j,k),muA(i,j,kp),muA(i+1,j,k),muA(i+1,j,kp))				
-!     & 			fc_global(i,j+rank*jmax,kp),fc_global(i+1,j+rank*jmax,k),fc_global(i+1,j+rank*jmax,kp))
+     & 			)*MIN(fcl2(i,j,k),fcl2(i,j,kp),fcl2(i+1,j,k),fcl2(i+1,j,kp))
+				if (kbed(i,j).eq.km.and.me2) ekm_min=0. !dUVdn=0	 
 				aaa(k)=-CNz*ekm_min*dt/dz**2/rhU(i,j,k) !/rho_min
 				ccc(k)=-CNz*ekm_plus*dt/dz**2/rhU(i,j,k) !/rho_plus
 				bbb(k)=1.-aaa(k)-ccc(k) 				
@@ -2681,6 +2979,55 @@ c*****************************************************************
 			ie=imax		
 		ENDIF	
 		
+		IF (slip_bot.ge.1.and.IBMorder.ne.2.and.Non_Newtonian.ge.1) THEN !Neuman UV top and bottom with IBM0 and rheology wall model
+		 do j=1,jmax
+          do i=1,imax
+			rr1=rhU(i,j,kbedt(i,j)+k_ust_tau_flow) 					 												!at U-gridpoint
+			uu1=dUdt(i,j,kbedt(i,j)+k_ust_tau_flow)-Ubot_TSHD(j)
+			vv1=0.25*(dVdt(i,j,kbedt(i,j)+k_ust_tau_flow)+dVdt(i+1,j,kbedt(i,j)+k_ust_tau_flow)
+     &          +dVdt(i,j-1,kbedt(i,j)+k_ust_tau_flow)+dVdt(i+1,j-1,kbedt(i,j)+k_ust_tau_flow))-Vbot_TSHD(j)
+			rr1a=rhU(i,j,kbedt(i,j)+1) 					 												!at U-gridpoint
+			uu1a=dUdt(i,j,kbedt(i,j)+1)-Ubot_TSHD(j)
+			vv1a=0.25*(dVdt(i,j,kbedt(i,j)+1)+dVdt(i+1,j,kbedt(i,j)+1)+dVdt(i,j-1,kbedt(i,j)+1)
+     &                      +dVdt(i+1,j-1,kbedt(i,j)+1))-Vbot_TSHD(j)
+			dist_vel=(k_ust_tau_flow-0.5)*dz
+			visc=0.5*(muA(i,j,kbedt(i,j)+k_ust_tau_flow)+muA(i+1,j,kbedt(i+1,j)+k_ust_tau_flow)) !don't divide by rho because uu here is m/s and wall_fun_rho_rheo assumes it is fed with rho*U
+			call wall_fun_rho_rheo(uu1a,vv1a,uu1,vv1,dz,dist_vel,dt,visc,tau)
+			DD3D(i,j,kbedt(i,j)+1)=DD3D(i,j,kbedt(i,j)+1)+CNdiff_factor*ABS(tau)*dt/(rr1a*dz*MAX(1.e-12,ABS(dUdt(i,j,kbedt(i,j)+1))))
+			Az3D(i,j,kbedt(i,j)+1)=0.
+          enddo
+		 enddo
+		ELSEIF (slip_bot.ge.1.and.IBMorder.eq.2.and.Non_Newtonian.ge.1.and.(interaction_bed.ge.4.or.bedlevelfile.ne.''.or.nobst>0)) THEN !Neuman UV top and bottom with IBM2 and rheology wall model
+		 do j=1,jmax
+          do i=1,imax
+			zb_U=0.5*(zbed(i,j)+zbed(i+1,j))
+			kb=FLOOR(zb_U/dz+0.5)						!location vel=0 for 2nd order IBM because below 2nd-order zbed
+			kp=MIN(CEILING(zb_U/dz+0.5),kmax)			!location velocity which must be adjusted 2nd order IBM -->(0-1)*dz distance from bed
+			!kpp=MIN(CEILING(zb_U/dz+0.5)+1,kmax+1)		!location one cell above to determine 2nd order ibm velocity -->(1-2)*dz distance from bed
+			distance_to_bed_kp=(REAL(kp)-0.5)*dz-zb_U
+			IF (distance_to_bed_kp>0.1*dz) THEN !apply tau on first cell (0.1-1)*dz distance from bed based on velocity of that cell
+				kpp=MIN(kp+k_ust_tau_flow-1,k1)
+				distance_to_bed_kpp=(REAL(kpp)-0.5)*dz-zb_U
+			ELSE !apply tau on second cell (1-1.1)*dz distance from bed based on velocity of that cell, do nothing for cell below: (0-0.1)dz from bed 
+				kp=MIN(kp+1,k1)
+				distance_to_bed_kp=(REAL(kp)-0.5)*dz-zb_U
+				kpp=MIN(kp+k_ust_tau_flow-1,k1)
+				distance_to_bed_kpp=(REAL(kpp)-0.5)*dz-zb_U
+!				  ELSE !apply tau on first cell (0-0.5)*dz distance from bed based on ustar of second cell (kpp) (1-1.5)*dz distance from bed 
+			ENDIF			
+			rr1=rhU(i,j,kpp) 																				!at U-gridpoint
+			uu1=dUdt(i,j,kpp)-Ubot_TSHD(j)
+			vv1=0.25*(dVdt(i,j,kpp)+dVdt(i+1,j,kpp)+dVdt(i,j-1,kpp)+dVdt(i+1,j-1,kpp))-Vbot_TSHD(j)	
+			uu0=dUdt(i,j,kp)-Ubot_TSHD(j)
+			vv0=0.25*(dVdt(i,j,kp)+dVdt(i+1,j,kp)+dVdt(i,j-1,kp)+dVdt(i+1,j-1,kp))-Vbot_TSHD(j)
+			visc=0.5*(muA(i,j,kpp)+muA(i+1,j,kpp)) !don't divide by rho because uu here is m/s and wall_fun_rho_rheo assumes it is fed with rho*U
+			call wall_fun_rho_rheo(uu0,vv0,uu1,vv1,dz,distance_to_bed_kpp,dt,visc,tau)	
+			DD3D(i,j,kp)=DD3D(i,j,kp)+CNdiff_factor*ABS(tau)*dt/(rhU(i,j,kp)*dz*MAX(1.e-12,ABS(dUdt(i,j,kp))))
+			Az3D(i,j,kp)=0.
+          enddo
+		 enddo
+		ENDIF
+		
 		IF (CNdiff_pc.eq.0) THEN !no pre-conditioner
 			call CN3Dcg(dUdt,u0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,i1,j1,k1,ib,ie,jb,je,kb,ke,CNdiff_maxi,CNdiff_tol,rank) 
 			!call CN3Dcg2(dUdt,u0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,ib,ie,jb,je,kb,ke,CNdiff_maxi,CNdiff_tol)
@@ -2714,10 +3061,10 @@ c*****************************************************************
             do i=1,imax !0,i1
 				im=i-1 !MAX(0,i-1)
 				ip=i+1 !MIN(i1,i+1)
-				ekm_min=0.25*(ekm(i,j,k)+ekm(im,j,k)+ekm(i,j+1,k)+ekm(im,j+1,k))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(im,j+rank*jmax,k),fc_global(i,j+1+rank*jmax,k),fc_global(im,j+1+rank*jmax,k))		
-				ekm_plus=0.25*(ekm(i,j,k)+ekm(ip,j,k)+ekm(i,j+1,k)+ekm(ip,j+1,k))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(ip,j+rank*jmax,k),fc_global(i,j+1+rank*jmax,k),fc_global(ip,j+1+rank*jmax,k))	
+				ekm_min=0.25*(ekm(i,j,k)+ekm(im,j,k)+ekm(i,j+1,k)+ekm(im,j+1,k))*MIN(fcl2(i,j,k),
+     & 			fcl2(im,j,k),fcl2(i,j+1,k),fcl2(im,j+1,k))		
+				ekm_plus=0.25*(ekm(i,j,k)+ekm(ip,j,k)+ekm(i,j+1,k)+ekm(ip,j+1,k))*MIN(fcl2(i,j,k),
+     & 			fcl2(ip,j,k),fcl2(i,j+1,k),fcl2(ip,j+1,k))	
 				aaax(i)=-CNz*ekm_min*dt*Ru(im)/((Rp(i)-Rp(im))*dr(i)*Rp(i))/rhV(i,j,k) !/rho_min
 				cccx(i)=-CNz*ekm_plus*dt*Ru(i)/((Rp(ip)-Rp(i))*dr(i)*Rp(i))/rhV(i,j,k) !/rho_plus
 				bbbx(i)=1.-aaax(i)-cccx(i)
@@ -2732,8 +3079,8 @@ c*****************************************************************
             do j=1,jmax
 				jm=j-1 !MAX(0,j-1)
 				jp=j+1 !MIN(px*jmax+1,j+1)
-				ekm_min= ekm(i,j,k)
-				ekm_plus=ekm(i,jp,k)
+				ekm_min= ekm(i,j,k)*fcl2(i,j,k)
+				ekm_plus=ekm(i,jp,k)*fcl2(i,jp,k)
 				aaay(j)=-CNz*ekm_min*dt/(Rp(i)*dphi2(j)*Rp(i)*(phip(jp)-phip(j)))/rhV(i,j,k)
 				cccy(j)=-CNz*ekm_plus*dt/(Rp(i)*dphi2(jp)*Rp(i)*(phip(jp)-phip(j)))/rhV(i,j,k)
 				bbby(j)=1.-aaay(j)-cccy(j) 
@@ -2748,10 +3095,11 @@ c*****************************************************************
             do k=1,kmax !0,k1
 				km=k-1 !MAX(0,k-1)
 				kp=k+1 !MIN(k1,k+1)
-				ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i,j+1,k)+ekm(i,j+1,km))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(i,j+rank*jmax,km),fc_global(i,j+1+rank*jmax,k),fc_global(i,j+1+rank*jmax,km))		
-				ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i,j+1,k)+ekm(i,j+1,kp))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(i,j+rank*jmax,kp),fc_global(i,j+1+rank*jmax,k),fc_global(i,j+1+rank*jmax,kp))		
+				ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i,j+1,k)+ekm(i,j+1,km))*MIN(fcl2(i,j,k),
+     & 			fcl2(i,j,km),fcl2(i,j+1,k),fcl2(i,j+1,km))		
+				ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i,j+1,k)+ekm(i,j+1,kp))*MIN(fcl2(i,j,k),
+     & 			fcl2(i,j,kp),fcl2(i,j+1,k),fcl2(i,j+1,kp))		
+				if (kbed(i,j).eq.km.and.me2) ekm_min=0. !dUVdn=0	 
 				aaa(k)=-CNz*ekm_min*dt/dz**2/rhV(i,j,k) !/rho_min
 				ccc(k)=-CNz*ekm_plus*dt/dz**2/rhV(i,j,k) !/rho_plus
 				bbb(k)=1.-aaa(k)-ccc(k) 				
@@ -2767,12 +3115,12 @@ c*****************************************************************
             do i=1,imax !0,i1
 				im=i-1 !MAX(0,i-1)
 				ip=i+1 !MIN(i1,i+1)
-				ekm_min=0.25*(ekm(i,j,k)+ekm(im,j,k)+ekm(i,j+1,k)+ekm(im,j+1,k))!*MIN(fc_global(i,j+rank*jmax,k),
-     & 			+ MAX(muA(i,j,k),muA(im,j,k),muA(i,j+1,k),muA(im,j+1,k))				
-!     & 			fc_global(im,j+rank*jmax,k),fc_global(i,j+1+rank*jmax,k),fc_global(im,j+1+rank*jmax,k))		
-				ekm_plus=0.25*(ekm(i,j,k)+ekm(ip,j,k)+ekm(i,j+1,k)+ekm(ip,j+1,k))!*MIN(fc_global(i,j+rank*jmax,k),
+				ekm_min=(0.25*(ekm(i,j,k)+ekm(im,j,k)+ekm(i,j+1,k)+ekm(im,j+1,k))
+     & 			+ MAX(muA(i,j,k),muA(im,j,k),muA(i,j+1,k),muA(im,j+1,k))
+     & 			)*MIN(fcl2(i,j,k),fcl2(im,j,k),fcl2(i,j+1,k),fcl2(im,j+1,k))	 
+				ekm_plus=(0.25*(ekm(i,j,k)+ekm(ip,j,k)+ekm(i,j+1,k)+ekm(ip,j+1,k))
      &			+ MAX(muA(i,j,k),muA(ip,j,k),muA(i,j+1,k),muA(ip,j+1,k))				
-!     & 			fc_global(ip,j+rank*jmax,k),fc_global(i,j+1+rank*jmax,k),fc_global(ip,j+1+rank*jmax,k))	
+     & 			)*MIN(fcl2(i,j,k),fcl2(ip,j,k),fcl2(i,j+1,k),fcl2(ip,j+1,k))	 
 				aaax(i)=-CNz*ekm_min*dt*Ru(im)/((Rp(i)-Rp(im))*dr(i)*Rp(i))/rhV(i,j,k) !/rho_min
 				cccx(i)=-CNz*ekm_plus*dt*Ru(i)/((Rp(ip)-Rp(i))*dr(i)*Rp(i))/rhV(i,j,k) !/rho_plus
 				bbbx(i)=1.-aaax(i)-cccx(i)
@@ -2787,8 +3135,8 @@ c*****************************************************************
             do j=1,jmax
 				jm=j-1 !MAX(0,j-1)
 				jp=j+1 !MIN(px*jmax+1,j+1)
-				ekm_min= ekm(i,j,k)+muA(i,j,k)
-				ekm_plus=ekm(i,jp,k)+muA(i,jp,k)
+				ekm_min= (ekm(i,j,k)+muA(i,j,k))*fcl2(i,j,k)
+				ekm_plus=(ekm(i,jp,k)+muA(i,jp,k))*fcl2(i,jp,k)
 				aaay(j)=-CNz*ekm_min*dt/(Rp(i)*dphi2(j)*Rp(i)*(phip(jp)-phip(j)))/rhV(i,j,k)
 				cccy(j)=-CNz*ekm_plus*dt/(Rp(i)*dphi2(jp)*Rp(i)*(phip(jp)-phip(j)))/rhV(i,j,k)
 				bbby(j)=1.-aaay(j)-cccy(j) 
@@ -2803,12 +3151,13 @@ c*****************************************************************
             do k=1,kmax !0,k1
 				km=k-1 !MAX(0,k-1)
 				kp=k+1 !MIN(k1,k+1)
-				ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i,j+1,k)+ekm(i,j+1,km))!*MIN(fc_global(i,j+rank*jmax,k),
+				ekm_min=(0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i,j+1,k)+ekm(i,j+1,km))
      &			+ MAX(muA(i,j,k),muA(i,j,km),muA(i,j+1,k),muA(i,j+1,km))				
-!     & 			fc_global(i,j+rank*jmax,km),fc_global(i,j+1+rank*jmax,k),fc_global(i,j+1+rank*jmax,km))		
-				ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i,j+1,k)+ekm(i,j+1,kp))!*MIN(fc_global(i,j+rank*jmax,k),
+     & 			)*MIN(fcl2(i,j,k),fcl2(i,j,km),fcl2(i,j+1,k),fcl2(i,j+1,km))	 	
+				ekm_plus=(0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i,j+1,k)+ekm(i,j+1,kp))
      &			+ MAX(muA(i,j,k),muA(i,j,kp),muA(i,j+1,k),muA(i,j+1,kp))				
-!     & 			fc_global(i,j+rank*jmax,kp),fc_global(i,j+1+rank*jmax,k),fc_global(i,j+1+rank*jmax,kp))		
+     & 			)*MIN(fcl2(i,j,k),fcl2(i,j,kp),fcl2(i,j+1,k),fcl2(i,j+1,kp))	
+				if (kbed(i,j).eq.km.and.me2) ekm_min=0. !dUVdn=0	 
 				aaa(k)=-CNz*ekm_min*dt/dz**2/rhV(i,j,k) !/rho_min
 				ccc(k)=-CNz*ekm_plus*dt/dz**2/rhV(i,j,k) !/rho_plus
 				bbb(k)=1.-aaa(k)-ccc(k) 				
@@ -2945,6 +3294,57 @@ c*****************************************************************
 			ie=imax			
 		ENDIF
 		
+		IF (slip_bot.ge.1.and.IBMorder.ne.2.and.Non_Newtonian.ge.1) THEN !Neuman UV top and bottom with IBM0 and rheology wall model
+		 do j=1,jmax
+          do i=1,imax
+			rr2=rhV(i,j,kbedt(i,j)+k_ust_tau_flow) 																	!at V-gridpoint
+			uu2=0.25*(dUdt(i,j,kbedt(i,j)+k_ust_tau_flow)+dUdt(i,j+1,kbedt(i,j)+k_ust_tau_flow)
+     &          +dUdt(i-1,j,kbedt(i,j)+k_ust_tau_flow)+dUdt(i-1,j+1,kbedt(i,j)+k_ust_tau_flow))-Ubot_TSHD(j)
+			vv2=dVdt(i,j,kbedt(i,j)+k_ust_tau_flow)-Vbot_TSHD(j)
+			rr2a=rhV(i,j,kbedt(i,j)+1) 			
+			uu2a=0.25*(dUdt(i,j,kbedt(i,j)+1)+dUdt(i,j+1,kbedt(i,j)+1)+dUdt(i-1,j,kbedt(i,j)+1)
+     &                      +dUdt(i-1,j+1,kbedt(i,j)+1))-Ubot_TSHD(j)
+			vv2a=dVdt(i,j,kbedt(i,j)+1)-Vbot_TSHD(j)			
+			dist_vel=(k_ust_tau_flow-0.5)*dz
+			visc=0.5*(muA(i,j,kbedt(i,j)+k_ust_tau_flow)+muA(i,j+1,kbedt(i,j+1)+k_ust_tau_flow)) !don't divide by rho because uu here is m/s and wall_fun_rho_rheo assumes it is fed with rho*U
+			call wall_fun_rho_rheo(vv2a,uu2a,vv2,uu2,dz,dist_vel,dt,visc,tau)		
+			DD3D(i,j,kbedt(i,j)+1)=DD3D(i,j,kbedt(i,j)+1)+CNdiff_factor*ABS(tau)*dt/(rr2a*dz*MAX(1.e-12,ABS(dVdt(i,j,kbedt(i,j)+1))))
+			Az3D(i,j,kbedt(i,j)+1)=0.
+          enddo
+		 enddo	
+		ELSEIF (slip_bot.ge.1.and.IBMorder.eq.2.and.Non_Newtonian.ge.1.and.(interaction_bed.ge.4.or.bedlevelfile.ne.''.or.nobst>0)) THEN !Neuman UV top and bottom with IBM2 and rheology wall model
+		 do j=1,jmax
+          do i=1,imax
+			zb_V=0.5*(zbed(i,j)+zbed(i,j+1))
+			
+			kb=FLOOR(zb_V/dz+0.5)						!location vel=0 for 2nd order IBM because below 2nd-order zbed
+			kp=MIN(CEILING(zb_V/dz+0.5),kmax)			!location velocity which must be adjusted 2nd order IBM
+			!kpp=MIN(CEILING(zb_V/dz+0.5)+1,kmax+1)		!location one cell above to determine 2nd order ibm velocity
+			distance_to_bed_kp=(REAL(kp)-0.5)*dz-zb_V
+			IF (distance_to_bed_kp>0.1*dz) THEN !apply tau on first cell (0.1-1)*dz distance from bed based on velocity of that cell
+				kpp=MIN(kp+k_ust_tau_flow-1,k1)
+				distance_to_bed_kpp=(REAL(kpp)-0.5)*dz-zb_V
+			ELSE !apply tau on second cell (1-1.1)*dz distance from bed based on velocity of that cell, do nothing for cell below: (0-0.1)dz from bed 
+				kp=MIN(kp+1,k1)
+				distance_to_bed_kp=(REAL(kp)-0.5)*dz-zb_V
+				kpp=MIN(kp+k_ust_tau_flow-1,k1)
+				distance_to_bed_kpp=(REAL(kpp)-0.5)*dz-zb_V
+			ENDIF
+				
+			rr2=rhV(i,j,kpp) 																				!at V-gridpoint																	!at V-gridpoint
+			uu2=0.25*(dUdt(i,j,kpp)+dUdt(i,j+1,kpp)+dUdt(i-1,j,kpp)+dUdt(i-1,j+1,kpp))-Ubot_TSHD(j)
+			vv2=dVdt(i,j,kpp)-Vbot_TSHD(j)
+			uu0=0.25*(dUdt(i,j,kp)+dUdt(i,j+1,kp)+dUdt(i-1,j,kp)+dUdt(i-1,j+1,kp))-Ubot_TSHD(j)
+			vv0=dVdt(i,j,kp)-Vbot_TSHD(j)
+			visc=0.5*(muA(i,j,kpp)+muA(i,j+1,kpp)) !don't divide by rho because uu here is m/s and wall_fun_rho_rheo assumes it is fed with rho*U
+			call wall_fun_rho_rheo(vv0,uu0,vv2,uu2,dz,distance_to_bed_kpp,dt,visc,tau)		
+			DD3D(i,j,kp)=DD3D(i,j,kp)+CNdiff_factor*ABS(tau)*dt/(rhV(i,j,kp)*dz*MAX(1.e-12,ABS(dVdt(i,j,kp))))
+			Az3D(i,j,kp)=0.
+          enddo
+		 enddo
+		ENDIF 
+		
+		
 		IF (CNdiff_pc.eq.0) THEN !no pre-conditioner
 			call CN3Dcg(dVdt,v0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,i1,j1,k1,ib,ie,jb,je,kb,ke,CNdiff_maxi,CNdiff_tol,rank) 
 			!call CN3Dcg2(dVdt,v0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,ib,ie,jb,je,kb,ke,CNdiff_maxi,CNdiff_tol)
@@ -2961,8 +3361,6 @@ c*****************************************************************
 		ELSEIF (CNdiff_pc.eq.41) THEN !Pol pc without diagional scaling 
 			call CN3Dpcg_pol2(dVdt,v0,DD3D,Ax3D,Cx3D,Ay3D,Cy3D,Az3D,Cz3D,RHS3D,i1,j1,k1,ib,ie,jb,je,kb,ke,CNdiff_maxi,CNdiff_tol,rank)			
 		ENDIF 
-	  
-	  
 
 		!! Fill off-diags and diagonal forming matrix A and RHS3D to solve implicit CN diffusion terms of the form A*velocity=RHS3D 
 		!! W-velocity:
@@ -2981,10 +3379,10 @@ c*****************************************************************
             do i=1,imax !0,i1
 				im=i-1 !MAX(0,i-1)
 				ip=i+1 !MIN(i1,i+1)
-				ekm_min=0.25*(ekm(i,j,k)+ekm(im,j,k)+ekm(i,j,k+1)+ekm(im,j,k+1))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(im,j+rank*jmax,k),fc_global(i,j+rank*jmax,k+1),fc_global(im,j+rank*jmax,k+1))		
-				ekm_plus=0.25*(ekm(i,j,k)+ekm(ip,j,k)+ekm(i,j,k+1)+ekm(ip,j,k+1))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(ip,j+rank*jmax,k),fc_global(i,j+rank*jmax,k+1),fc_global(ip,j+rank*jmax,k+1))	
+				ekm_min=0.25*(ekm(i,j,k)+ekm(im,j,k)+ekm(i,j,k+1)+ekm(im,j,k+1))*MIN(fcl2(i,j,k),
+     & 			fcl2(im,j,k),fcl2(i,j,k+1),fcl2(im,j,k+1))		
+				ekm_plus=0.25*(ekm(i,j,k)+ekm(ip,j,k)+ekm(i,j,k+1)+ekm(ip,j,k+1))*MIN(fcl2(i,j,k),
+     & 			fcl2(ip,j,k),fcl2(i,j,k+1),fcl2(ip,j,k+1))	
 				aaax(i)=-CNz*ekm_min*dt*Ru(im)/((Rp(i)-Rp(im))*dr(i)*Rp(i))/rhW(i,j,k) !/rho_min
 				cccx(i)=-CNz*ekm_plus*dt*Ru(i)/((Rp(ip)-Rp(i))*dr(i)*Rp(i))/rhW(i,j,k) !/rho_plus
 				bbbx(i)=1.-aaax(i)-cccx(i)				
@@ -3000,7 +3398,9 @@ c*****************************************************************
 				jm=j-1 !MAX(0,j-1)
 				jp=j+1 !MIN(px*jmax+1,j+1)
 				ekm_min= 0.25*(ekm(i,j,k)+ekm(i,jm,k)+ekm(i,j,k+1)+ekm(i,jm,k+1))
+     & 			*MIN(fcl2(i,j,k),fcl2(i,jm,k),fcl2(i,j,k+1),fcl2(i,jm,k+1))	 					
 				ekm_plus=0.25*(ekm(i,j,k)+ekm(i,jp,k)+ekm(i,j,k+1)+ekm(i,jp,k+1))
+     & 			*MIN(fcl2(i,j,k),fcl2(i,jp,k),fcl2(i,j,k+1),fcl2(i,jp,k+1))	 									
 				aaay(j)=-CNz*ekm_min*dt/(Rp(i)*(phip(j)-phip(jm))*Rp(i)*dphi2(j))/rhW(i,j,k)
 				cccy(j)=-CNz*ekm_plus*dt/(Rp(i)*(phip(jp)-phip(j))*Rp(i)*dphi2(j))/rhW(i,j,k)				
 				bbby(j)=1.-aaay(j)-cccy(j) 	
@@ -3016,8 +3416,8 @@ c*****************************************************************
             do k=1,kmax!-1 !0,k1
 				!km=k-1 !MAX(0,k-1)
 				kp=k+1 !MIN(k1,k+1)
-				ekm_min=ekm(i,j,k)!*fc_global(i,j+rank*jmax,k)
-				ekm_plus=ekm(i,j,kp)!*fc_global(i,j+rank*jmax,kp)
+				ekm_min=ekm(i,j,k)*fcl2(i,j,k)
+				ekm_plus=ekm(i,j,kp)*fcl2(i,j,kp)
 				aaa(k)=-CNz*ekm_min*dt/dz**2/rhW(i,j,k) !/drdt(i,j,k)
 				ccc(k)=-CNz*ekm_plus*dt/dz**2/rhW(i,j,k) !/drdt(i,j,kp)
 				bbb(k)=1.-aaa(k)-ccc(k) 
@@ -3033,12 +3433,12 @@ c*****************************************************************
             do i=1,imax !0,i1
 				im=i-1 !MAX(0,i-1)
 				ip=i+1 !MIN(i1,i+1)
-				ekm_min=0.25*(ekm(i,j,k)+ekm(im,j,k)+ekm(i,j,k+1)+ekm(im,j,k+1))!*MIN(fc_global(i,j+rank*jmax,k),
+				ekm_min=(0.25*(ekm(i,j,k)+ekm(im,j,k)+ekm(i,j,k+1)+ekm(im,j,k+1))
      & 			+ MAX(muA(i,j,k),muA(im,j,k),muA(i,j,k+1),muA(im,j,k+1))				
-!     & 			fc_global(im,j+rank*jmax,k),fc_global(i,j+rank*jmax,k+1),fc_global(im,j+rank*jmax,k+1))		
-				ekm_plus=0.25*(ekm(i,j,k)+ekm(ip,j,k)+ekm(i,j,k+1)+ekm(ip,j,k+1))!*MIN(fc_global(i,j+rank*jmax,k),
+     & 			)*MIN(fcl2(i,j,k),fcl2(im,j,k),fcl2(i,j,k+1),fcl2(im,j,k+1))	 						
+				ekm_plus=(0.25*(ekm(i,j,k)+ekm(ip,j,k)+ekm(i,j,k+1)+ekm(ip,j,k+1))
      &			+ MAX(muA(i,j,k),muA(ip,j,k),muA(i,j,k+1),muA(ip,j,k+1))				
-!     & 			fc_global(ip,j+rank*jmax,k),fc_global(i,j+rank*jmax,k+1),fc_global(ip,j+rank*jmax,k+1))	
+     & 			)*MIN(fcl2(i,j,k),fcl2(ip,j,k),fcl2(i,j,k+1),fcl2(ip,j,k+1))	 						
 				aaax(i)=-CNz*ekm_min*dt*Ru(im)/((Rp(i)-Rp(im))*dr(i)*Rp(i))/rhW(i,j,k) !/rho_min
 				cccx(i)=-CNz*ekm_plus*dt*Ru(i)/((Rp(ip)-Rp(i))*dr(i)*Rp(i))/rhW(i,j,k) !/rho_plus
 				bbbx(i)=1.-aaax(i)-cccx(i)				
@@ -3053,10 +3453,12 @@ c*****************************************************************
             do j=1,jmax 
 				jm=j-1 !MAX(0,j-1)
 				jp=j+1 !MIN(px*jmax+1,j+1)
-				ekm_min= 0.25*(ekm(i,j,k)+ekm(i,jm,k)+ekm(i,j,k+1)+ekm(i,jm,k+1))
-     &			+ MAX(muA(i,j,k),muA(i,jm,k),muA(i,j,k+1),muA(i,jm,k+1))				
-				ekm_plus=0.25*(ekm(i,j,k)+ekm(i,jp,k)+ekm(i,j,k+1)+ekm(i,jp,k+1))
+				ekm_min= (0.25*(ekm(i,j,k)+ekm(i,jm,k)+ekm(i,j,k+1)+ekm(i,jm,k+1))
+     &			+ MAX(muA(i,j,k),muA(i,jm,k),muA(i,j,k+1),muA(i,jm,k+1))
+     & 			)*MIN(fcl2(i,j,k),fcl2(i,jm,k),fcl2(i,j,k+1),fcl2(i,jm,k+1))	 							 
+				ekm_plus=(0.25*(ekm(i,j,k)+ekm(i,jp,k)+ekm(i,j,k+1)+ekm(i,jp,k+1))
      &			+ MAX(muA(i,j,k),muA(i,jp,k),muA(i,j,k+1),muA(i,jp,k+1))				
+     & 			)*MIN(fcl2(i,j,k),fcl2(i,jp,k),fcl2(i,j,k+1),fcl2(i,jp,k+1))	 							 	 
 				aaay(j)=-CNz*ekm_min*dt/(Rp(i)*(phip(j)-phip(jm))*Rp(i)*dphi2(j))/rhW(i,j,k)
 				cccy(j)=-CNz*ekm_plus*dt/(Rp(i)*(phip(jp)-phip(j))*Rp(i)*dphi2(j))/rhW(i,j,k)				
 				bbby(j)=1.-aaay(j)-cccy(j) 	
@@ -3072,8 +3474,8 @@ c*****************************************************************
             do k=1,kmax!-1 !0,k1
 				!km=k-1 !MAX(0,k-1)
 				kp=k+1 !MIN(k1,k+1)
-				ekm_min=ekm(i,j,k)+muA(i,j,k) !*fc_global(i,j+rank*jmax,k)
-				ekm_plus=ekm(i,j,kp)+muA(i,j,kp) !*fc_global(i,j+rank*jmax,kp)
+				ekm_min=(ekm(i,j,k)+muA(i,j,k))*fcl2(i,j,k)
+				ekm_plus=(ekm(i,j,kp)+muA(i,j,kp))*fcl2(i,j,kp)
 				aaa(k)=-CNz*ekm_min*dt/dz**2/rhW(i,j,k) !/drdt(i,j,k)
 				ccc(k)=-CNz*ekm_plus*dt/dz**2/rhW(i,j,k) !/drdt(i,j,kp)
 				bbb(k)=1.-aaa(k)-ccc(k) 
@@ -3277,6 +3679,14 @@ c*****************************************************************
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
      +         aaax,bbbx,cccx,ekm_min,ekm_plus
       real CNz,CNx,CNy,dzi 
+	  real fcl2(0:i1,0:j1,0:k1)
+
+	  if (momentum_exchange_obstacles.eq.100.or.momentum_exchange_obstacles.eq.110) then 
+		fcl2=fc_local
+	  else 
+		fcl2=1. !all momentum interactions are active
+	  endif	  
+	  
 
 	IF (CNdiffz.eq.1) THEN !CN diff in z-dir is half old, half new timestep (this is half old timestep)
 	  CNz=0.5
@@ -3313,26 +3723,26 @@ c*****************************************************************
 			km=k-1
 			! not *dt because this is done in solve.f 
 			! d^2udx^2 
-			ekm_min=ekm(i,j,k)!*fc_global(i,j+rank*jmax,k)
-			ekm_plus=ekm(ip,j,k)!*fc_global(ip,j+rank*jmax,k)
+			ekm_min=ekm(i,j,k)*fcl2(i,j,k)
+			ekm_plus=ekm(ip,j,k)*fcl2(ip,j,k)
 			aaax=CNx*ekm_min*Rp(i)/(dr(i)*(Rp(ip)-Rp(i))*Ru(i))
 			cccx=CNx*ekm_plus*Rp(ip)/(dr(ip)*(Rp(ip)-Rp(i))*Ru(i))
 			bbbx=-aaax-cccx
 			putoutu(i,j,k) = aaax*Uvel(im,j,k) + bbbx*Uvel(i,j,k) + cccx*Uvel(ip,j,k)
 			! d^2vdx^2 
-			ekm_min=0.25*(ekm(i,j,k)+ekm(im,j,k)+ekm(i,j+1,k)+ekm(im,j+1,k))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(im,j+rank*jmax,k),fc_global(i,j+1+rank*jmax,k),fc_global(im,j+1+rank*jmax,k))		
-			ekm_plus=0.25*(ekm(i,j,k)+ekm(ip,j,k)+ekm(i,j+1,k)+ekm(ip,j+1,k))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(ip,j+rank*jmax,k),fc_global(i,j+1+rank*jmax,k),fc_global(ip,j+1+rank*jmax,k))	
+			ekm_min=0.25*(ekm(i,j,k)+ekm(im,j,k)+ekm(i,jp,k)+ekm(im,jp,k))
+     & 		*MIN(fcl2(i,j,k),fcl2(im,j,k),fcl2(i,jp,k),fcl2(im,jp,k))		
+			ekm_plus=0.25*(ekm(i,j,k)+ekm(ip,j,k)+ekm(i,jp,k)+ekm(ip,jp,k))
+     & 		*MIN(fcl2(i,j,k),fcl2(ip,j,k),fcl2(i,jp,k),fcl2(ip,jp,k))	
 			aaax=CNx*ekm_min*Ru(im)/((Rp(i)-Rp(im))*dr(i)*Rp(i))
 			cccx=CNx*ekm_plus*Ru(i)/((Rp(ip)-Rp(i))*dr(i)*Rp(i))
 			bbbx=-aaax-cccx
 			putoutv(i,j,k) = aaax*Vvel(im,j,k) + bbbx*Vvel(i,j,k) + cccx*Vvel(ip,j,k)
 			! d^2wdx^2 
-			ekm_min=0.25*(ekm(i,j,k)+ekm(im,j,k)+ekm(i,j,k+1)+ekm(im,j,k+1))!*MIN(fc_global(i,j+rank*jmax,k),
-	!     & 			fc_global(im,j+rank*jmax,k),fc_global(i,j+rank*jmax,k+1),fc_global(im,j+rank*jmax,k+1))		
-			ekm_plus=0.25*(ekm(i,j,k)+ekm(ip,j,k)+ekm(i,j,k+1)+ekm(ip,j,k+1))!*MIN(fc_global(i,j+rank*jmax,k),
-	!     & 			fc_global(ip,j+rank*jmax,k),fc_global(i,j+rank*jmax,k+1),fc_global(ip,j+rank*jmax,k+1))	
+			ekm_min=0.25*(ekm(i,j,k)+ekm(im,j,k)+ekm(i,j,kp)+ekm(im,j,kp))
+     & 		*MIN(fcl2(i,j,k),fcl2(im,j,k),fcl2(i,j,kp),fcl2(im,j,kp))		
+			ekm_plus=0.25*(ekm(i,j,k)+ekm(ip,j,k)+ekm(i,j,kp)+ekm(ip,j,kp))
+     & 		*MIN(fcl2(i,j,k),fcl2(ip,j,k),fcl2(i,j,kp),fcl2(ip,j,kp))	
 			aaax=CNx*ekm_min*Ru(im)/((Rp(i)-Rp(im))*dr(i)*Rp(i))
 			cccx=CNx*ekm_plus*Ru(i)/((Rp(ip)-Rp(i))*dr(i)*Rp(i))
 			bbbx=-aaax-cccx
@@ -3383,6 +3793,14 @@ c*****************************************************************
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
      +         aaay,bbby,cccy,ekm_min,ekm_plus
       real CNz,CNx,CNy,dzi 
+	  real fcl2(0:i1,0:j1,0:k1)
+
+	  if (momentum_exchange_obstacles.eq.100.or.momentum_exchange_obstacles.eq.110) then 
+		fcl2=fc_local
+	  else 
+		fcl2=1. !all momentum interactions are active
+	  endif	  
+
 
 	IF (CNdiffz.eq.1) THEN !CN diff in z-dir is half old, half new timestep (this is half old timestep)
 	  CNz=0.5
@@ -3419,22 +3837,26 @@ c*****************************************************************
 			km=k-1
 			! not *dt because this is done in solve.f 
 			! d^2udy^2
-			ekm_min= 0.25*(ekm(i,j,k)+ekm(i,jm,k)+ekm(i+1,j,k)+ekm(i+1,jm,k))
-			ekm_plus=0.25*(ekm(i,j,k)+ekm(i,jp,k)+ekm(i+1,j,k)+ekm(i+1,jp,k))
+			ekm_min= 0.25*(ekm(i,j,k)+ekm(i,jm,k)+ekm(ip,j,k)+ekm(ip,jm,k))
+     & 		*MIN(fcl2(i,j,k),fcl2(i,jm,k),fcl2(ip,j,k),fcl2(ip,jm,k))	
+			ekm_plus=0.25*(ekm(i,j,k)+ekm(i,jp,k)+ekm(ip,j,k)+ekm(ip,jp,k))
+     & 		*MIN(fcl2(i,j,k),fcl2(i,jp,k),fcl2(ip,j,k),fcl2(ip,jp,k))			
 			aaay=CNy*ekm_min/(Ru(i)*(phip(j)-phip(jm))*Ru(i)*dphi2(j))
 			cccy=CNy*ekm_plus/(Ru(i)*(phip(jp)-phip(j))*Ru(i)*dphi2(j))
 			bbby=-aaay-cccy	
 			putoutu(i,j,k) = aaay*Uvel(i,jm,k) + bbby*Uvel(i,j,k) + cccy*Uvel(i,jp,k)
 			! d^2vdy^2
-			ekm_min= ekm(i,j,k)
-			ekm_plus=ekm(i,jp,k)
+			ekm_min= ekm(i,j,k)*fcl2(i,j,k)
+			ekm_plus=ekm(i,jp,k)*fcl2(i,jp,k)
 			aaay=CNy*ekm_min/(Rp(i)*dphi2(j)*Rp(i)*(phip(jp)-phip(j)))
 			cccy=CNy*ekm_plus/(Rp(i)*dphi2(jp)*Rp(i)*(phip(jp)-phip(j)))
 			bbby=-aaay-cccy	
 			putoutv(i,j,k) = aaay*Vvel(i,jm,k) + bbby*Vvel(i,j,k) + cccy*Vvel(i,jp,k)
 			! d^2wdy^2
-			ekm_min= 0.25*(ekm(i,j,k)+ekm(i,jm,k)+ekm(i,j,k+1)+ekm(i,jm,k+1))
-			ekm_plus=0.25*(ekm(i,j,k)+ekm(i,jp,k)+ekm(i,j,k+1)+ekm(i,jp,k+1))
+			ekm_min= 0.25*(ekm(i,j,k)+ekm(i,jm,k)+ekm(i,j,kp)+ekm(i,jm,kp))
+     & 		*MIN(fcl2(i,j,k),fcl2(i,jm,k),fcl2(i,j,kp),fcl2(i,jm,kp))			
+			ekm_plus=0.25*(ekm(i,j,k)+ekm(i,jp,k)+ekm(i,j,kp)+ekm(i,jp,kp))
+     & 		*MIN(fcl2(i,j,k),fcl2(i,jp,k),fcl2(i,j,kp),fcl2(i,jp,kp))						
 			aaay=CNy*ekm_min/(Rp(i)*(phip(j)-phip(jm))*Rp(i)*dphi2(j))
 			cccy=CNy*ekm_plus/(Rp(i)*(phip(jp)-phip(j))*Rp(i)*dphi2(j))
 			bbby=-aaay-cccy	
@@ -3481,11 +3903,25 @@ c          putoutu,v,w       : diffusion part in z direction on u,v,w
 c          other parameters  : all unchanged
 c
 c*****************************************************************
-      integer  im,ip,jm,jp,km,kp,ib,ie,jb,je,kb,ke
+      integer  im,ip,jm,jp,km,kp,ib,ie,jb,je,kb,ke,km2
       real     putoutu(0:i1,0:j1,0:k1),putoutv(0:i1,0:j1,0:k1),putoutw(0:i1,0:j1,0:k1),Uvel(0:i1,0:j1,0:k1),
      +         Vvel(0:i1,0:j1,0:k1),Wvel(0:i1,0:j1,0:k1),
      +         aaaz,bbbz,cccz,ekm_min,ekm_plus
       real CNz,CNx,CNy,dzi 
+	  real fcl2(0:i1,0:j1,0:k1)
+	  logical me2
+
+	  if (momentum_exchange_obstacles.eq.100.or.momentum_exchange_obstacles.eq.110) then 
+		fcl2=fc_local
+	  else 
+		fcl2=1. !all momentum interactions are active
+	  endif	  
+	  if (momentum_exchange_obstacles.eq.111) then 
+		me2=.true. !	!111 means dUVdn = 0 for cells directly above bed
+	  else 
+		me2=.false.
+	  endif 
+	  
 
 	IF (CNdiffz.eq.1) THEN !CN diff in z-dir is half old, half new timestep (this is half old timestep)
 	  CNz=0.5
@@ -3520,28 +3956,30 @@ c*****************************************************************
 		do k=kb,ke !k=MAX(kb,kbed(i,k)),ke !kb,ke
 			kp=k+1
 			km=k-1
+			km2=km
+			if (kbed(i,j).eq.km2.and.me2) km2=k !	--> dUVdn = 0 (like ordinary boundary)
 			! not *dt because this is done in solve.f 
 			! d^2udz^2 
-			ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i+1,j,k)+ekm(i+1,j,km))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(i,j+rank*jmax,km),fc_global(i+1,j+rank*jmax,k),fc_global(i+1,j+rank*jmax,km))
-			ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i+1,j,k)+ekm(i+1,j,kp))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(i,j+rank*jmax,kp),fc_global(i+1,j+rank*jmax,k),fc_global(i+1,j+rank*jmax,kp))
+			ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(ip,j,k)+ekm(ip,j,km))
+     & 		*MIN(fcl2(i,j,k),fcl2(i,j,km),fcl2(ip,j,k),fcl2(ip,j,km))	
+			ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(ip,j,k)+ekm(ip,j,kp))
+     & 		*MIN(fcl2(i,j,k),fcl2(i,j,kp),fcl2(ip,j,k),fcl2(ip,j,kp))	
 			aaaz=CNz*ekm_min/dz**2
 			cccz=CNz*ekm_plus/dz**2
 			bbbz=-aaaz-cccz
-			putoutu(i,j,k) = aaaz*Uvel(i,j,km) + bbbz*Uvel(i,j,k) + cccz*Uvel(i,j,kp)
+			putoutu(i,j,k) = aaaz*Uvel(i,j,km2) + bbbz*Uvel(i,j,k) + cccz*Uvel(i,j,kp)
 			! d^2vdz^2 
-			ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i,j+1,k)+ekm(i,j+1,km))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(i,j+rank*jmax,km),fc_global(i,j+1+rank*jmax,k),fc_global(i,j+1+rank*jmax,km))		
-			ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i,j+1,k)+ekm(i,j+1,kp))!*MIN(fc_global(i,j+rank*jmax,k),
-!     & 			fc_global(i,j+rank*jmax,kp),fc_global(i,j+1+rank*jmax,k),fc_global(i,j+1+rank*jmax,kp))		
+			ekm_min=0.25*(ekm(i,j,k)+ekm(i,j,km)+ekm(i,jp,k)+ekm(i,jp,km))
+     & 		*MIN(fcl2(i,j,k),fcl2(i,j,km),fcl2(i,jp,k),fcl2(i,jp,km))			
+			ekm_plus=0.25*(ekm(i,j,k)+ekm(i,j,kp)+ekm(i,jp,k)+ekm(i,jp,kp))
+     & 		*MIN(fcl2(i,j,k),fcl2(i,j,kp),fcl2(i,jp,k),fcl2(i,jp,kp))
 			aaaz=CNz*ekm_min/dz**2
 			cccz=CNz*ekm_plus/dz**2
 			bbbz=-aaaz-cccz
-			putoutv(i,j,k) = aaaz*Vvel(i,j,km) + bbbz*Vvel(i,j,k) + cccz*Vvel(i,j,kp)
+			putoutv(i,j,k) = aaaz*Vvel(i,j,km2) + bbbz*Vvel(i,j,k) + cccz*Vvel(i,j,kp)
 			! d^2wdz^2 
-			ekm_min=ekm(i,j,k)!*fc_global(i,j+rank*jmax,k)
-			ekm_plus=ekm(i,j,kp)!*fc_global(i,j+rank*jmax,kp)
+			ekm_min=ekm(i,j,k)*fcl2(i,j,k)
+			ekm_plus=ekm(i,j,kp)*fcl2(i,j,kp)
 			aaaz=CNz*ekm_min/dz**2
 			cccz=CNz*ekm_plus/dz**2
 			bbbz=-aaaz-cccz 

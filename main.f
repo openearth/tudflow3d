@@ -149,8 +149,8 @@
 	pold1=pold 
 	pold2=pold 
 	pold3=pold
-	phdt=pold
-	phnew=pold 
+!	phdt=pold
+!	phnew=pold 
 	kbedold=kbed
 
 	if (Cs>0.or.sgs_model.eq.'MixLe'.or.sgs_model.eq.'ReaKE'.or.sgs_model.eq.'DSmag') then
@@ -361,6 +361,64 @@
 		elseif (time_int.eq.'RK3') then
 			call RK3(ib,ie,jb,je,kb,ke)
 		endif
+		if (Non_Newtonian.eq.1) then
+		  DO t=1,Rheo_strain_cor_steps
+			!make predictor dudt divergence free 
+			call fillps2(dudt,dvdt,dwdt,drdt,time_np,dt)
+			IF (poissolver.eq.3) THEN
+			   CALL SOLVEpois_vg_pardiso(p)	   
+			ELSE
+			   CALL SOLVEpois(p) !,Ru,Rp,DPHI,dz,rank,imax,jmax,kmax,px)
+			ENDIF
+			call correc2(dudt,dvdt,dwdt,dt)
+			call bound_rhoU(dUdt,dVdt,dWdt,drdt,MIN(0,slip_bot),monopile,time_np,
+     & 		Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new) !bound_rhoU on rhou^* without wall shear stress, which in ABv is done as first step 
+	 
+			Uold = Unew !backup of original Unew 
+			Vold = Vnew
+			Wold = Wnew
+			coldbot = dcdtbot
+			Unew = dUdt/rhU 
+			Vnew = dVdt/rhV 
+			Wnew = dWdt/rhW 
+			ekm = ekm - muA + ekm_mol !remove old muA to make ekm equal to turbulent viscosity 	
+			muA_old = muA 
+			! calculate strain and app-visc with predictor velocities:
+			! in case Rheo_strain_pred_theta>0 is used then strain is predictor based on dUdt/rhU (==u*) and using Uold(==Unew==u^n) to determine derivative dudt --> that is correct  
+			! in other parts Uold is not used before correc is applied and Uold is updated at end of time step
+			if (PAPANASTASIOUS_m>0.) then 
+			  call Bingham_Papanastasiou
+			else
+			  call Bingham_Fluent_manner
+			endif 	
+			! then redo predictor step ADV+DIFF+P+BODYFORCE with updated app-visc and all other inputs back to original:
+			Unew = Uold 
+			Vnew = Vold 
+			Wnew = Wold
+			dcdtbot = coldbot 
+			pold=p+pold ! redo predictor step with updated pressure so that upred is closer to divergence free 
+			Uold = muA !backup updated muA
+			muA = muA_old !muA is only used in wall_fun_rho_rheo; better to use old muA there because olso old Unew is used to calculate tau_flow 
+			! concentration parameters do not need to be reset before going into predictor step again 
+			! don't think other parameters need to be updated before going into predictor step again
+			if (time_int.eq.'AB2') then
+				call adamsb2(ib,ie,jb,je,kb,ke)
+			elseif (time_int.eq.'AB3') then
+				call adamsb3(ib,ie,jb,je,kb,ke)
+			elseif (time_int.eq.'ABv') then
+				predictorstep_tel = 1+t !prevent messing up interpolation times and update pold within ABv
+				call adamsbv(ib,ie,jb,je,kb,ke)
+				predictorstep_tel = 1 !back to default in which interpolation times and pold are updated within ABv 
+			elseif (time_int.eq.'EE1') then
+				predictorstep_tel = 1+t !prevent update pold within EE1
+				call euler_expl(ib,ie,jb,je,kb,ke)
+				predictorstep_tel = 1 !back to default in which pold is updated within EE1 
+			elseif (time_int.eq.'RK3') then
+				call RK3(ib,ie,jb,je,kb,ke)
+			endif	
+			muA = Uold !go back to updated muA to save updated muA in flow file outputs	
+		  ENDDO 
+		endif		
 		IF (vel_start_after_ero.eq.1) THEN 
 		do i=1,imax 
 			do j=1,jmax 
@@ -401,8 +459,7 @@
 			call bound_rhoU(dUdt,dVdt,dWdt,drdt,MIN(0,slip_bot),0,time_np,Ub1new,Vb1new,Wb1new,Ub2new,Vb2new,Wb2new,Ub3new,Vb3new,Wb3new)
 		  endif
 		endif
-		
-		
+	
 		!IF (Hs>0.and.time_int.eq.'RK3') THEN
 		 DO n=1,npresIBM
 			! extra pres-corr loops with IBM boundary for better impermeable IBM objects 

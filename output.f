@@ -34,8 +34,8 @@
 	real mass_bed(1:nfrac,1:imax,1:jmax)
 	real tt,ddxx(1:imax,1:jmax),ddyy(1:imax,1:jmax)
 	integer tel,n,ios,j2,r,status(MPI_STATUS_SIZE),ierr
-	character*60 FILE_NAME
-	character*60 strng
+	character*80 FILE_NAME
+	character*80 strng
 	character*3 varname
 	character*200 tline
 	logical(4) res
@@ -337,8 +337,8 @@
 	real mass_bed(1:nfrac,1:imax,1:jmax)
 	real tt
 	integer tel,istap,n
-	character*60 FILE_NAME
-	character*60 strng
+	character*80 FILE_NAME
+	character*80 strng
 	character*3 varname
 	character*7 fname_basis
 	logical(4) res
@@ -707,8 +707,8 @@
       include 'mpif.h'
 	real tt,add_offset,scale_factor,data_range
 	integer tel,istap,n
-	character*60 FILE_NAME
-	character*60 strng
+	character*80 FILE_NAME
+	character*80 strng
 	character*3 varname
 	logical(4) res
 	real uu(1:imax,1:jmax,1:kmax)
@@ -985,11 +985,12 @@
 		call check( nf90_put_var(ncid, varid24, zzbed2(1:imax,1:jmax) ))
 		call check( nf90_put_var(ncid, varid25, kbed(1:imax,1:jmax) ))		
 
-
-		call check( nf90_put_var(ncid, varid41,ust_mud_new(1:imax,1:jmax)*ust_mud_new(1:imax,1:jmax)*rho_b  ))
-		call check( nf90_put_var(ncid, varid42,ust_sl_new(1:imax,1:jmax)*ust_sl_new(1:imax,1:jmax)*rho_b  ))		
-		call check( nf90_put_var(ncid, varid43,ust_bl_new(1:imax,1:jmax)*ust_bl_new(1:imax,1:jmax)*rho_b  ))
-		call check( nf90_put_var(ncid, varid44,ust_frac_new(1:nfrac,1:imax,1:jmax)*ust_frac_new(1:nfrac,1:imax,1:jmax)*rho_b  ))		
+		if (nfrac>0) then
+		  call check( nf90_put_var(ncid, varid41,ust_mud_new(1:imax,1:jmax)*ust_mud_new(1:imax,1:jmax)*rho_b  ))
+		  call check( nf90_put_var(ncid, varid42,ust_sl_new(1:imax,1:jmax)*ust_sl_new(1:imax,1:jmax)*rho_b  ))		
+		  call check( nf90_put_var(ncid, varid43,ust_bl_new(1:imax,1:jmax)*ust_bl_new(1:imax,1:jmax)*rho_b  ))
+		  call check( nf90_put_var(ncid, varid44,ust_frac_new(1:nfrac,1:imax,1:jmax)*ust_frac_new(1:nfrac,1:imax,1:jmax)*rho_b  ))		
+		endif 
 		zzbed=sqrt((0.5*(tau_fl_Unew(1:imax,1:jmax)+tau_fl_Unew(0:imax-1,1:jmax)))**2
      &   +(0.5*(tau_fl_Vnew(1:imax,1:jmax)+tau_fl_Vnew(1:imax,0:jmax-1)))**2)
 		call check( nf90_put_var(ncid, varid45,zzbed  ))		
@@ -1138,8 +1139,8 @@
 	real uc_rms(nfrac,1:imax,1:jmax,1:kmax),vc_rms(nfrac,1:imax,1:jmax,1:kmax),wc_rms(nfrac,1:imax,1:jmax,1:kmax)
 	real tt
 	integer tel,istap,n
-	character*60 FILE_NAME
-	character*60 strng
+	character*80 FILE_NAME
+	character*80 strng
 	character*3 varname
 	logical(4) res
 !	integer(4) ps

@@ -725,7 +725,7 @@ c
       real cbf(0:i1,0:k1)
       real cbb(0:i1,0:k1)
 	real ust_U_b,ust_V_b,Chezy,fluc,f,tt,z0_U,z0_V,phi
-	integer botstress,n,jp
+	integer botstress,n,jp,km
       real Ub1(0:i1,0:k1),Vb1(0:i1,0:k1),Wb1(0:i1,0:k1),Ub2(0:j1,0:k1),Vb2(0:j1+1,0:k1),Wb2(0:j1,0:k1)
       real,intent(in):: Ub1in(0:i1,0:k1),Vb1in(0:i1,0:k1),Wb1in(0:i1,0:k1),Ub2in(0:j1,0:k1),Vb2in(0:j1+1,0:k1),Wb2in(0:j1,0:k1)
 	  real,intent(in) :: Ub3in(0:i1,0:j1),Vb3in(0:i1,0:j1),Wb3in(0:i1,0:j1)
@@ -1573,6 +1573,41 @@ c 	influence of waves on lateral boundaries:
 			ENDDO
 		ENDDO		
 	ENDIF 
+	IF (Apvisc_force_eq.eq.3) THEN ! for unyielded zone force flow to zero 
+		DO i=1,imax
+			DO j=1,jmax !not 0 j1 as below Ubound,Vbound,Wbound are exchanged at boundaries
+				DO k=1,kmax 
+					IF (uyz(i,j,k).eq.1) THEN !check for unyielded zone uyz 
+						Ubound(i,j,k)=Ubot_TSHD(j)
+						Vbound(i,j,k)=Vbot_TSHD(j) 
+						Wbound(i,j,k)=0.
+						im=MAX(i-1,0)
+						jm=MAX(j-1,0)
+						km=MAX(k-1,0)
+						Ubound(im,j,k)=Ubot_TSHD(j)
+						Vbound(i,jm,k)=Vbot_TSHD(jm)					
+						Wbound(i,j,km)=0.
+					ENDIF 
+				ENDDO 
+			ENDDO
+		ENDDO
+	ENDIF 
+	IF (Apvisc_force_eq.eq.13) THEN ! for unyielded zone force flow to zero U,V only  
+		DO i=1,imax
+			DO j=1,jmax !not 0 j1 as below Ubound,Vbound,Wbound are exchanged at boundaries
+				DO k=1,kmax 
+					IF (uyz(i,j,k).eq.1) THEN !check for unyielded zone uyz 
+						Ubound(i,j,k)=Ubot_TSHD(j)
+						Vbound(i,j,k)=Vbot_TSHD(j) 
+						im=MAX(i-1,0)
+						jm=MAX(j-1,0)
+						Ubound(im,j,k)=Ubot_TSHD(j)
+						Vbound(i,jm,k)=Vbot_TSHD(jm)					
+					ENDIF 
+				ENDDO 
+			ENDDO
+		ENDDO
+	ENDIF 	
 	! apply j-boundary conditions for U,V,W again for application tau and ibm2 on j=1:jmax and not 0:j1 + 	
 	! to fix small inconsistency in Vbound(:,j1,:) made in jet, jet2 and rudder
 	call shiftf(Vbound,vbf) 
@@ -1653,7 +1688,7 @@ c
 	   include 'mpif.h'
       integer ierr
 c
-      integer jtmp,botstress,n,t,jp,inout,im,jm,kplus,kplus2,tel,mpstress,itrgt,jtrgt
+      integer jtmp,botstress,n,t,jp,inout,im,jm,kplus,kplus2,tel,mpstress,itrgt,jtrgt,km
 	real xTSHD(1:4),yTSHD(1:4)
 c
       real  Ubound(0:i1,0:j1,0:k1),Vbound(0:i1,0:j1,0:k1),rho(0:i1,0:j1,0:k1),
@@ -1687,7 +1722,7 @@ c
 	  real dpdz1,dpdy2,tauw1,tauv1,tauw2,tauv2,ust1,ust2,tauu1,tauu2,dpdx11,dpdy22,tau,u0,v0,rr1a,rr2a,rr0
 	  real uu1a,uu2a,vv1a,vv2a,dist_vel,uu0,vv0 
 	  integer i_inflowU,i_inflowVW,i_outflowU,i_outflowVW,i_shift,n2
-	  real outflow_factor,dudx,dudy,dvdx,dvdy
+	  real outflow_factor,dudx,dudy,dvdx,dvdy,visc
 	  real absUU,bedslope_angle,distance_to_bed,bwal,dbed,dpdx_temp,dpdy_temp,dL,cmax_rks(nfrac)
 	  real Rp2(-1:i1),Ru2(-1:i1),pR1,pR2,pL1,pL2,Fix_ref,ppp_avg(0:i1,0:j1),ppp_avg2(0:i1,0:j1)
 	  
@@ -2833,15 +2868,23 @@ c 	influence of waves on lateral boundaries:
 			 dpdy_temp=0.25*(TBLEdpdyo(i,j)+TBLEdpdyo(i,j-1)+TBLEdpdyo(i+1,j)+TBLEdpdyo(i+1,j-1))  !use old dpdy because new of neighbours is not available
 			 dpdx_temp=0.25*(TBLEdpdxo(i,j)+TBLEdpdxo(i,j+1)+TBLEdpdxo(i-1,j)+TBLEdpdxo(i-1,j+1))  !use old dpdx because new of neighbours is not available
 			 call wall_fun_rho_GWF(uu1a,vv1a,uu1,vv1,TBLEdpdx(i,j),dpdy_temp,rr1,dz,dist_vel,dt,kn_flow(i,j),kappa,nu_mol,tau_fl_Unew(i,j)) 			 
-			 call wall_fun_rho_GWF(vv2a,uu2a,vv2,uu2,TBLEdpdy(i,j),dpdx_temp,rr1,dz,dist_vel,dt,kn_flow(i,j),kappa,nu_mol,tau_fl_Vnew(i,j))
+			 call wall_fun_rho_GWF(vv2a,uu2a,vv2,uu2,TBLEdpdy(i,j),dpdx_temp,rr2,dz,dist_vel,dt,kn_flow(i,j),kappa,nu_mol,tau_fl_Vnew(i,j))
 			ELSEIF (slip_bot.eq.9) THEN 
 			 dpdy_temp=0.25*(TBLEdpdyo(i,j)+TBLEdpdyo(i,j-1)+TBLEdpdyo(i+1,j)+TBLEdpdyo(i+1,j-1))  !use old dpdy because new of neighbours is not available
 			 dpdx_temp=0.25*(TBLEdpdxo(i,j)+TBLEdpdxo(i,j+1)+TBLEdpdxo(i-1,j)+TBLEdpdxo(i-1,j+1))  !use old dpdx because new of neighbours is not available
 			 call wall_fun_rho_GWF_dpdlfavo(uu1a,vv1a,uu1,vv1,TBLEdpdx(i,j),dpdy_temp,rr1,dz,dist_vel,dt,kn_flow(i,j),kappa,nu_mol,
      &			 tau_fl_Unew(i,j))		 
-			 call wall_fun_rho_GWF_dpdlfavo(vv2a,uu2a,vv2,uu2,TBLEdpdy(i,j),dpdx_temp,rr1,dz,dist_vel,dt,kn_flow(i,j),kappa,nu_mol,
+			 call wall_fun_rho_GWF_dpdlfavo(vv2a,uu2a,vv2,uu2,TBLEdpdy(i,j),dpdx_temp,rr2,dz,dist_vel,dt,kn_flow(i,j),kappa,nu_mol,
      &			 tau_fl_Vnew(i,j))	 
 			ENDIF 
+			IF (slip_bot.ge.1.and.Non_Newtonian.ge.1) THEN !when rheology is active apply extra bed shear stress for muA scaled with (1-CNdiff_factor):
+			  visc=0.5*(muA(i,j,kbedt(i,j)+k_ust_tau_flow)+muA(i+1,j,kbedt(i+1,j)+k_ust_tau_flow))/rr1
+			  call wall_fun_rho_rheo(uu1a,vv1a,uu1,vv1,dz,dist_vel,(1.-CNdiff_factor)*dt,visc,tau)
+			  tau_fl_Unew(i,j) = tau_fl_Unew(i,j) + tau !add rheological tau to turbulent wall-model tau
+			  visc=0.5*(muA(i,j,kbedt(i,j)+k_ust_tau_flow)+muA(i,j+1,kbedt(i,j+1)+k_ust_tau_flow))/rr2
+			  call wall_fun_rho_rheo(vv2a,uu2a,vv2,uu2,dz,dist_vel,(1.-CNdiff_factor)*dt,visc,tau)
+			  tau_fl_Vnew(i,j) = tau_fl_Vnew(i,j) + tau !add rheological tau to turbulent wall-model tau
+			ENDIF 			
 			Ubound(i,j,kbedt(i,j)+1)=uu1a+Ubot_TSHD(j)*rr1a !Ubound adjusted 1:imax,1:jmax; but later bc 0,i1,0,0,j1 applied
 			Vbound(i,j,kbedt(i,j)+1)=vv2a+Vbot_TSHD(j)*rr2a !Vbound adjusted 1:imax,1:jmax; but later bc 0,i1,0,0,j1 applied
 			if ((botstress.eq.1.or.botstress.eq.2).and.kjet>0.and.LOA<0.) then ! with flat plate shear stress must be applied:
@@ -2877,7 +2920,7 @@ c 	influence of waves on lateral boundaries:
 				call wall_fun_rho(vv2a,uu2a,vv2,uu2,rr2,dz,dist_vel,dt,kn,kappa,nu_mol,tau)
 				Ubound(i,j,kmax)=uu1a+Ubot_TSHD(j)*rr1a
 				Vbound(i,j,kmax)=vv2a+Vbot_TSHD(j)*rr2a
-			endif 			
+			endif 
 		  enddo
 		 enddo 
 		do j=0,j1 ! boundaries in k-direction
@@ -3414,6 +3457,12 @@ c 	influence of waves on lateral boundaries:
 				    tau_fl_Unew(i,j) = rho_b*ust_sl_new(i,j)*ust_sl_new(i,j)*ABS(uu0)/SQRT(MAX(uu0**2+vv0**2,1.e-8))
 					uu0 = uu0 / (1. + tau_fl_Unew(i,j)*dt/dz/MAX(ABS(uu0),1.e-9))
 				  ENDIF
+				  IF (slip_bot.ge.1.and.Non_Newtonian.ge.1) THEN !when rheology is active apply extra bed shear stress for muA (scaled with (1.-CNdiff_factor)):
+				      visc=0.5*(muA(i,j,kpp)+muA(i+1,j,kpp))/rr1
+					  call wall_fun_rho_rheo(uu0,vv0,uu1,vv1,dz,distance_to_bed_kpp,(1.-CNdiff_factor)*dt,visc,tau)	
+					  tau_fl_Unew(i,j) = tau_fl_Unew(i,j) + tau !add rheological tau to turbulent wall-model tau
+				  ENDIF 				  
+				  
 				  DO k=1,kb
 					Ubound(i,j,k)=Ubot_TSHD(j)*rr0
 				  ENDDO				  
@@ -3496,6 +3545,11 @@ c 	influence of waves on lateral boundaries:
 				    tau_fl_Vnew(i,j) = rho_b*ust_sl_new(i,j)*ust_sl_new(i,j)*ABS(vv0)/SQRT(MAX(uu0**2+vv0**2,1.e-8))
 					vv0 = vv0 / (1. + tau_fl_Vnew(i,j)*dt/dz/MAX(ABS(vv0),1.e-9))				   
 				  ENDIF 
+				  IF (slip_bot.ge.1.and.Non_Newtonian.ge.1) THEN !when rheology is active apply extra bed shear stress for muA (scaled with (1.-CNdiff_factor)):
+					  visc=0.5*(muA(i,j,kpp)+muA(i,j+1,kpp))/rr2
+					  call wall_fun_rho_rheo(vv0,uu0,vv2,uu2,dz,distance_to_bed_kpp,(1.-CNdiff_factor)*dt,visc,tau)		
+					  tau_fl_Vnew(i,j) = tau_fl_Vnew(i,j) + tau !add rheological tau to turbulent wall-model tau
+				  ENDIF 				  
 				  DO k=1,kb
 					Vbound(i,j,k)=Vbot_TSHD(j)*rr0
 				  ENDDO				  
@@ -3571,6 +3625,41 @@ c 	influence of waves on lateral boundaries:
 			ENDDO
 		ENDDO	
 	ENDIF 
+	IF (Apvisc_force_eq.eq.3) THEN ! for unyielded zone force flow to zero 
+		DO i=1,imax 
+			DO j=1,jmax !not 0 j1 as below Ubound,Vbound,Wbound are exchanged at boundaries
+				DO k=1,kmax 
+					IF (uyz(i,j,k).eq.1) THEN !check for unyielded zone uyz 
+						Ubound(i,j,k)=Ubot_TSHD(j)*rhU(i,j,k) 
+						Vbound(i,j,k)=Vbot_TSHD(j)*rhV(i,j,k) 
+						Wbound(i,j,k)=0.
+						im=MAX(i-1,0)
+						jm=MAX(j-1,0)
+						km=MAX(k-1,0)
+						Ubound(im,j,k)=Ubot_TSHD(j)*rhU(im,j,k) 
+						Vbound(i,jm,k)=Vbot_TSHD(jm)*rhV(i,jm,k) 					
+						Wbound(i,j,km)=0.
+					ENDIF 
+				ENDDO 
+			ENDDO
+		ENDDO
+	ENDIF 
+	IF (Apvisc_force_eq.eq.13) THEN ! for unyielded zone force flow to zero, U,V only  
+		DO i=1,imax
+			DO j=1,jmax !not 0 j1 as below Ubound,Vbound,Wbound are exchanged at boundaries
+				DO k=1,kmax 
+					IF (uyz(i,j,k).eq.1) THEN !check for unyielded zone uyz 
+						Ubound(i,j,k)=Ubot_TSHD(j)*rhU(i,j,k) 
+						Vbound(i,j,k)=Vbot_TSHD(j)*rhV(i,j,k) 
+						im=MAX(i-1,0)
+						jm=MAX(j-1,0)
+						Ubound(im,j,k)=Ubot_TSHD(j)*rhU(im,j,k) 
+						Vbound(i,jm,k)=Vbot_TSHD(jm)*rhV(i,jm,k) 					
+					ENDIF 
+				ENDDO 
+			ENDDO
+		ENDDO
+	ENDIF 	
 	DO n2=1,nbedplume
 	  IF (bp(n2)%kn_flow_wall_normaldir>0.and.bp(n2)%forever.eq.1.and.time_np.gt.bp(n2)%t0.and.time_np.lt.bp(n2)%t_end) THEN
 	   do tel=1,bp(n2)%tmax 
@@ -3612,7 +3701,6 @@ c 	influence of waves on lateral boundaries:
 	    enddo !tel-loop
 	  ENDIF 
 	ENDDO !n2=1,nbedplume	
-	
 
 	! apply j-boundary conditions for U,V,W again for application tau and ibm2 on j=1:jmax and not 0:j1 + 	
 	! to fix small inconsistency in Vbound(:,j1,:) made in jet, jet2 and rudder
@@ -4653,6 +4741,100 @@ c*************************************************************
 !	 ENDDO
 	 
       end
+	  
+
+      subroutine bound_3Di2(Cbound)
+      
+      USE nlist
+
+      implicit none
+
+      integer*2 Cbound(0:i1,0:j1,0:k1)
+      integer*2 cbf(0:i1,0:k1)
+      integer*2 cbb(0:i1,0:k1)
+c
+c
+c*************************************************************
+c
+c     Subroutine bound sets the boundary conditions for Cbound
+c     except for the diffusion coefficients. These are set in submod.
+c     The common boundary conditions for the pressure are set in mkgrid.
+c
+c     Set boundary conditions for j=0 and j=j1. Because of the
+c     fact that the index j denotes the tangential direction,
+c     we have to set the values at j=0 equal to the values at
+c     j=jmax and the values at j=j1 equal to the values at j=1.
+c
+c*************************************************************
+c
+c*************************************************************
+
+	!c get stuff from other CPU's
+	  call shiftfi2(Cbound,cbf) 
+	  call shiftbi2(Cbound,cbb) 
+
+	  if (periodicy.eq.0.or.periodicy.eq.2) then
+		if (rank.eq.0) then ! boundaries in j-direction
+			do k=1,kmax
+			   do i=1,imax
+			   Cbound(i,0,k) = Cbound(i,1,k) !cbf(i,k)
+			   Cbound(i,j1,k) =cbb(i,k) 
+			   enddo
+			enddo
+		elseif (rank.eq.px-1) then
+			do k=1,kmax
+			   do i=1,imax
+			   Cbound(i,0,k) = cbf(i,k)
+			   Cbound(i,j1,k) = Cbound(i,jmax,k) !cbb(i,k) 
+			   enddo
+			enddo	
+		else
+			do k=1,kmax
+			   do i=1,imax
+			   Cbound(i,0,k) = cbf(i,k)
+			   Cbound(i,j1,k) =cbb(i,k) 
+			   enddo
+			enddo
+		endif
+	  elseif (periodicy.eq.1) then ! periodic in y:
+		do k=1,kmax
+		   do i=1,imax
+			   Cbound(i,0,k) = cbf(i,k)
+			   Cbound(i,j1,k) =cbb(i,k) 
+		   enddo
+		enddo
+	  endif
+
+	  if (periodicx.eq.0.or.periodicx.eq.2) then
+	      do k=1,kmax ! boundaries in i-direction
+		 do j=0,j1
+			   Cbound(0,j,k)    =    Cbound(1,j,k)
+			   Cbound(i1,j,k)   =    Cbound(imax,j,k)
+		 enddo   
+	      enddo
+	  else ! periodic x boundaries
+	      do k=1,kmax ! boundaries in i-direction
+		 do j=0,j1
+			   Cbound(0,j,k)    =    Cbound(imax,j,k)
+			   Cbound(i1,j,k)   =    Cbound(1,j,k)
+		 enddo   
+	      enddo
+	  endif
+	
+      do j=0,j1 ! boundaries in k-direction
+         do i=0,i1
+         Cbound(i,j,k1)   = Cbound(i,j,kmax)
+         Cbound(i,j,0)    = Cbound(i,j,1)
+         enddo
+       enddo
+		
+!	 DO i=0,i1
+!	  DO j=0,j1
+!		Cbound(i,j,kbed(i,j))=Cbound(i,j,MIN(kbed(i,j)+1,k1)) ! make dpdn=0 at bed
+!	  ENDDO
+!	 ENDDO
+	 
+      end	  
 
       subroutine bound_intern_and_periodic(Cbound)
       
@@ -4758,7 +4940,8 @@ c*************************************************************
 	if (kn>0.) then !walls with rougness (log-law used which can be hydr smooth or hydr rough):
 		do tel=1,10 ! 10 iter is more than enough
 			z0=kn/30.+0.11*nu_mol/MAX(ust,1.e-9)
-			ust=absU/MAX(1./kappa*log(0.5*dz/z0),2.) !ust maximal 0.5*absU
+			!ust=absU/MAX(1./kappa*log(0.5*dz/z0),2.) !ust maximal 0.5*absU
+			ust=absU/(1./kappa*log(MAX(0.5*dz/z0,1.001))) !ust maximal 417*absU
 		enddo
 !		yplus=0.5*dz*ust/nu_mol
 !	   	if (yplus<30.) then
@@ -4776,12 +4959,14 @@ c*************************************************************
 	else
 		do tel=1,10 ! 10 iter is more than enough
 			yplus=MAX(0.5*dz*ust/nu_mol,1e-12)
-			ust=absU/MAX((2.5*log(yplus)+5.5),2.) !ust maximal 0.5*absU			
+			!ust=absU/MAX((2.5*log(yplus)+5.5),2.) !ust maximal 0.5*absU			
+			ust=absU/MAX((2.5*log(yplus)+5.5),0.0024) !ust maximal 417*absU
 		enddo
 	   	if (yplus<30.) then
 		  do tel=1,10 ! 10 iter is more than enough
 			yplus=MAX(0.5*dz*ust/nu_mol,1e-12)
-			ust=absU/MAX((5.*log(yplus)-3.05),2.) !ust maximal 0.5*absU			
+			!ust=absU/MAX((5.*log(yplus)-3.05),2.) !ust maximal 0.5*absU			
+			ust=absU/MAX((5.*log(yplus)-3.05),0.0024) !ust maximal 417*absU	
 		  enddo	
 		endif
 		if (yplus<5.) then !viscous sublayer uplus=yplus
@@ -4796,7 +4981,7 @@ c*************************************************************
 	uu = uu / (1. + tau*dt/dz/MAX(absU,1.e-12)) 	!! only uu is adjusted !! implicit = more stable
 	end
 
-	subroutine wall_fun_rho(uu0,vv0,uu,vv,rr,dz,dist_velpoint,dt,kn,kappa,nu_mol,tau)
+	subroutine wall_fun_rho(uu0,vv0,uu,vv,rr,dz,dist_velpoint,dt,kn,kappa,nu_mol,tau_x)
 		
 	implicit none
 
@@ -4805,7 +4990,7 @@ c	Wall function
 c	Determine tau-wall with sqrt(uu**2,vv**2) and adapt uu0	
 c	Substract tau_wall*dt*dx*dy/(dx*dy*dz) from uu0 (kg/m3*m/s)
 c*************************************************************
-	real uu,vv,rr,dz,dt,absU,ust,z0,kn,kappa,yplus,tau,nu_mol,dist_velpoint,uu0,vv0,rrabsU0
+	real uu,vv,rr,dz,dt,absU,ust,z0,kn,kappa,yplus,tau,nu_mol,dist_velpoint,uu0,vv0,rrabsU0,tau_x
 	integer tel
 
 	absU=sqrt((uu/rr)**2+(vv/rr)**2)
@@ -4813,7 +4998,9 @@ c*************************************************************
 	if (kn>0.) then !walls with rougness (log-law used which can be hydr smooth or hydr rough):
 		do tel=1,10 ! 10 iter is more than enough
 			z0=kn/30.+0.11*nu_mol/MAX(ust,1.e-9)
-			ust=absU/MAX(1./kappa*log(dist_velpoint/z0),2.) !ust maximal 0.5*absU
+!			ust=absU/MAX(1./kappa*log(dist_velpoint/z0),2.) !ust maximal 0.5*absU
+			ust=absU/(1./kappa*log(MAX(dist_velpoint/z0,1.001))) !ust maximal 417*absU
+			!ust=absU/(1./kappa*log(1.+dist_velpoint/z0)) !no max on ust, shift profile of 1*dz
 		enddo
 !		yplus=0.5*dz*ust/nu_mol
 !	   	if (yplus<30.) then
@@ -4831,12 +5018,14 @@ c*************************************************************
 	else
 		do tel=1,10 ! 10 iter is more than enough
 			yplus=MAX(dist_velpoint*ust/nu_mol,1e-12)
-			ust=absU/MAX((2.5*log(yplus)+5.5),2.) !ust maximal 0.5*absU			
+!			ust=absU/MAX((2.5*log(yplus)+5.5),2.) !ust maximal 0.5*absU			
+			ust=absU/MAX((2.5*log(yplus)+5.5),0.0024) !ust maximal 417*absU		
 		enddo
 	   	if (yplus<30.) then
 		  do tel=1,10 ! 10 iter is more than enough
 			yplus=MAX(dist_velpoint*ust/nu_mol,1e-12)
-			ust=absU/MAX((5.*log(yplus)-3.05),2.) !ust maximal 0.5*absU			
+!			ust=absU/MAX((5.*log(yplus)-3.05),2.) !ust maximal 0.5*absU			
+			ust=absU/MAX((5.*log(yplus)-3.05),0.0024) !ust maximal 417*absU	
 		  enddo	
 		endif
 		if (yplus<5.) then !viscous sublayer uplus=yplus
@@ -4850,8 +5039,9 @@ c*************************************************************
 	!uu0^n+1[1+tau/(rr0*absU0)*dt/dz] = uu^n       !! implicit
 	!uu0^n+1=uu^n/[1+tau/(rr0*absU0)*dt/dz]        !! implicit
 	rrabsU0 = sqrt(uu0**2+vv0**2)
+	tau_x = tau * uu0/MAX(rrabsU0,1.e-9) ! tau_x now is decomposed as tau_u0 as it is used as output from this subroutine
 	uu0 = uu0 / (1. + tau*dt/dz/MAX(rrabsU0,1.e-9)) 	!! only uu is adjusted ! implicit = more stable
-	tau = tau * uu0/MAX(rrabsU0,1.e-9) ! tau now is decomposed as tau_u0 as it is used as output from this subroutine
+	
 	end
 
 	subroutine wall_fun_rho_TBL(uu0,vv0,uu,vv,Fi,rr,dz,dist_velpoint,dt,kn,kappa,nu_mol,ust,tau,nlayer)
@@ -5148,7 +5338,7 @@ c*************************************************************
 		enddo
 	endif
 	!tau_x is needed to adjust uu0, tau_y is just a help variable to arrive at the correct ust and u_c 
-	tau_x = MIN((rr*(0.25*ABS(uu)/rr)**2)/(ABS(tau_x)+1.e-9),1.)*tau_x !ust limited at maximum 0.25*u 
+!	tau_x = MIN((rr*(0.25*ABS(uu)/rr)**2)/(ABS(tau_x)+1.e-9),1.)*tau_x !ust limited at maximum 0.25*u 
 	!tau_x=ABS(tau_x)
 	!uu0 = uu0 / (1. + tau_x*dt/dz/MAX(ABS(uu0),1.e-9)) 	!! only uu is adjusted ! implicit = more stable
 	
@@ -5275,11 +5465,35 @@ c*************************************************************
 		enddo
 	endif
 	!tau_x is needed to adjust uu0, tau_y is just a help variable to arrive at the correct ust and u_c 
-	tau_x = MIN((rr*(0.25*ABS(uu)/rr)**2)/(ABS(tau_x)+1.e-9),1.)*tau_x !ust limited at maximum 0.25*u 
+	!tau_x = MIN((rr*(0.25*ABS(uu)/rr)**2)/(ABS(tau_x)+1.e-9),1.)*tau_x !ust limited at maximum 0.25*u 
 	uu0 = uu0 / (1. + ABS(tau_x)*dt/dz/MAX(ABS(uu0),1.e-9)) 	!! only uu is adjusted ! implicit = more stable
 	
 	end	
 	
+	subroutine wall_fun_rho_rheo(uu0,vv0,uu,vv,dz,dist_velpoint,dt,nu,tau_x)
+		
+	implicit none
+
+c*************************************************************
+c	Wall function for rheological fluid 
+c   At locations without rheological fluid viscosity nu is zero and no extra tau is applied
+c	Determine tau-wall with sqrt(uu**2,vv**2) and adapt uu0	
+c	Substract tau_wall*dt*dx*dy/(dx*dy*dz) from uu0 (kg/m3*m/s)
+c*************************************************************
+	real uu,vv,rr,dz,dt,rrabsU,tau,tau_x,dist_velpoint,uu0,vv0,rrabsU0,nu
+
+	rrabsU=sqrt((uu)**2+(vv)**2) !uu and vv are including rho 
+	tau=nu*rrabsU/dist_velpoint !tau = rho * nu * dUdz; dUdz = absU/dist_velpoint because U at wall is zero 
+	!! tau here is tau_total = pyth(tau_u0,tau_v0)
+	!uu0 = uu0 - tau*dt/dz*uu0/rr0/MAX(absU0,1.e-6) 	!! only uu is adjusted
+	!uu0^n+1 = uu^n-tau*uu^n+1/(rr0*absU0)*dt/dz   !! implicit
+	!uu0^n+1[1+tau/(rr0*absU0)*dt/dz] = uu^n       !! implicit
+	!uu0^n+1=uu^n/[1+tau/(rr0*absU0)*dt/dz]        !! implicit
+	rrabsU0 = sqrt(uu0**2+vv0**2)
+	tau_x = tau * uu0/MAX(rrabsU0,1.e-9) ! tau_x now is decomposed as tau_u0 as it is used as output from this subroutine
+	uu0 = uu0 / (1. + tau*dt/dz/MAX(rrabsU0,1.e-9)) 	!! only uu is adjusted ! implicit = more stable
+	
+	end	
 	
 	subroutine wall_fun_rho_VD(uu0,vv0,uu,vv,rr,dz,dist_velpoint,dt,kn,kappa,nu_mol,ust,tau,nlayer)
 		
@@ -5544,7 +5758,7 @@ c*************************************************************
 	taux1 = MIN(ABS(rr/int1*(uu-Fix*int2)),4.*ABS(rr/int1*(uu)))
 	tauy1 = MIN(ABS(rr/int1*(vv-Fiy*int2)),4.*ABS(rr/int1*(vv)))	
 	ustnew=((taux1/rr)**2+(tauy1/rr)**2)**0.25
-	ustnew = MIN(ustnew,0.25*sqrt(uu*uu+vv*vv)) !ust limited at maximum 0.25*u 
+	ustnew = MIN(ustnew,0.5*sqrt(uu*uu+vv*vv)) !ust limited at maximum 0.5*u 
 	
 	end
 	
@@ -5621,7 +5835,7 @@ c*************************************************************
 	IF (tauy2*vv<0.) tauy1=0.
 
 	ustnew=((taux1/rr)**2+(tauy1/rr)**2)**0.25
-	ustnew = MIN(ustnew,0.25*sqrt(uu*uu+vv*vv)) !ust limited at maximum 0.25*u 
+	ustnew = MIN(ustnew,0.5*sqrt(uu*uu+vv*vv)) !ust limited at maximum 0.5*u 
 	
 	end
 	
@@ -5702,7 +5916,7 @@ c*************************************************************
 !		if (tauy*vv<0) tauy=0. ! they have different signs which complicates bedload transport direction, for stability reasons made 0
 		ust = ((taux1/rr)**2+(tauy1/rr)**2)**0.25 !next iteration
 	enddo
-	ustnew = MIN(ust,0.25*sqrt(uu*uu+vv*vv)) !ust limited at maximum 0.25*u 
+	ustnew = MIN(ust,0.5*sqrt(uu*uu+vv*vv)) !ust limited at maximum 0.5*u 
 	
 	end
 	
@@ -5785,7 +5999,7 @@ c*************************************************************
 !		if (tauy*vv<0) tauy=0. ! they have different signs which complicates bedload transport direction, for stability reasons made 0
 		ust = ((taux1/rr)**2+(tauy1/rr)**2)**0.25 !next iteration
 	enddo
-	ustnew = MIN(ust,0.25*sqrt(uu*uu+vv*vv)) !ust limited at maximum 0.25*u 
+	ustnew = MIN(ust,0.5*sqrt(uu*uu+vv*vv)) !ust limited at maximum 0.5*u 
 	
 	end	
 	
@@ -5850,7 +6064,7 @@ c*************************************************************
 		int1=int1+(1./(1.+sqrt(1.+4.*kappa**2*zplus**2*(1.-exp(-zplus/AA))**2)))*ddzz(tel)*ust/nu_mol
 	enddo
 	ustnew=sqrt((uu/(2.*int1+1.e-9))**2+(vv/(2.*int1+1.e-9))**2)
-	ustnew = MIN(ustnew,0.25*sqrt(uu*uu+vv*vv)) !ust limited at maximum 0.25*u
+	ustnew = MIN(ustnew,0.5*sqrt(uu*uu+vv*vv)) !ust limited at maximum 0.5*u
 	
 	end
 	
@@ -6185,7 +6399,8 @@ c*************************************************************
 			  phi=atan2(V_b,(U_TSHD-U_b))
 			endif
 		endif 
-		IF (bp(n)%move_zbed_type(MAX(bp(n)%nmove_present,1)).eq.2) THEN !check for avg bed level:
+		DO ! keep bedplume moving untill bedlevel meets move_zbed criterium 
+		  IF (bp(n)%move_zbed_type(MAX(bp(n)%nmove_present,1)).eq.2) THEN !check for avg bed level:
 			zbed_mean=0.
 			Abed_bedplume=0.
 			do i=1,imax !0,i1  
@@ -6215,7 +6430,7 @@ c*************************************************************
 			call mpi_allreduce(zbed_mean,zbed_tot,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
 			call mpi_allreduce(Abed_bedplume,Abed_bedplume_tot,1,mpi_real8,mpi_sum,mpi_comm_world,ierr)
 			zbed_tot=zbed_tot/Abed_bedplume_tot
-		ELSE !check for maximum bed level:
+		  ELSE !check for maximum bed level:
 			zbed_max=0.
 			do i=1,imax !0,i1  
 			 do j=jmax,1,-1 !j1,0,-1       
@@ -6243,8 +6458,8 @@ c*************************************************************
 			 enddo
 			enddo
 			call mpi_allreduce(zbed_max,zbed_tot,1,mpi_real8,mpi_max,mpi_comm_world,ierr)
-		ENDIF 
-		IF(zbed_tot>bp(n)%move_zbed_criterium(MAX(bp(n)%nmove_present,1))) THEN
+		  ENDIF 
+		  IF(zbed_tot>bp(n)%move_zbed_criterium(MAX(bp(n)%nmove_present,1))) THEN
 			bp(n)%nmove_present=bp(n)%nmove_present+1
 			istep_output_bpmove = istep_output_bpmove +1
 			IF ((bp(n)%nmove_present-bp(n)%nmove).eq.1) THEN
@@ -6290,7 +6505,10 @@ c*************************************************************
 					call output_nc('mvbp3D_',istep_output_bpmove,time_np)
 				ENDIF
 			ENDIF
-		ENDIF
+		  ELSE 
+		    EXIT ! exit DO loop of moving bedplume  
+		  ENDIF
+		ENDDO 
 	  ENDIF
 	ENDDO
 	
@@ -6566,6 +6784,80 @@ c       call MPI_RECV(UP ,ileng,MPI_REAL8,px-1,itag,MPI_COMM_WORLD,status,ierr)
 c       endif
 c      endif
       end
+	  
+	  
+	subroutine shiftfi2(UT,UP)
+      USE nlist
+
+      implicit none
+!       include 'param.txt'
+!       include 'common.txt'
+      integer ileng,rankb,rankf
+!       parameter (ileng= (k1+1)*(i1+1))
+      include 'mpif.h'
+      !real*8 UT(0:i1,0:j1,0:k1),UP(0:i1,0:k1),UTMP(0:i1,0:k1)
+	  integer*2 UT(0:i1,0:j1,0:k1),UP(0:i1,0:k1),UTMP(0:i1,0:k1)
+      integer  itag,status(MPI_STATUS_SIZE),l,ierr
+      itag = 11
+      ileng = (k1+1)*(i1+1)
+      do k=0,k1
+        do i=0,i1
+	  UTMP(i,k) =UT(i,jmax,k)
+          enddo
+      enddo
+      rankf=rank+1
+      rankb=rank-1
+	if (periodicy.eq.0.or.periodicy.eq.2) then
+           if(rank.eq.px-1)rankf=MPI_PROC_NULL
+           if(rank.eq.   0)rankb=MPI_PROC_NULL
+	else 
+      	   if(rank.eq.px-1)rankf=0 ! MPI_PROC_NULL
+	   if(rank.eq.   0)rankb=px-1 !MPI_PROC_NULL
+	endif
+!      call mpi_sendrecv(utmp ,ileng,MPI_REAL8,rankf,itag,
+!     $                  up   ,ileng,MPI_REAL8,rankb,itag, MPI_COMM_WORLD,status,ierr)
+      call mpi_sendrecv(utmp ,ileng,MPI_INTEGER2,rankf,itag,
+     $                  up   ,ileng,MPI_INTEGER2,rankb,itag, MPI_COMM_WORLD,status,ierr)
+      end	  
+
+	subroutine shiftbi2(UT,UP)
+
+      USE nlist
+
+
+      implicit none
+!       include 'param.txt'
+!       include 'common.txt'
+      integer ileng,rankb,rankf,ierr
+!       parameter (ileng= (k1+1)*(i1+1) )
+      include 'mpif.h'
+      integer itag,status(MPI_STATUS_SIZE),l
+!      real*8 ut(0:i1,0:j1,0:k1)
+!      real*8 up(0:i1,0:k1),UTMP(0:I1,0:K1)
+      integer*2 ut(0:i1,0:j1,0:k1)
+      integer*2 up(0:i1,0:k1),UTMP(0:I1,0:K1)	  
+      do i=0,i1
+	 do k=0,k1
+	  utmp(i,k) =UT(i,1,k)
+          enddo
+      enddo
+      itag = 10
+      ileng = (k1+1)*(i1+1)
+      rankf=rank+1
+      rankb=rank-1
+	if (periodicy.eq.0.or.periodicy.eq.2) then
+           if(rank.eq.px-1)rankf=MPI_PROC_NULL
+           if(rank.eq.   0)rankb=MPI_PROC_NULL
+	else 
+      	   if(rank.eq.px-1)rankf=0 ! MPI_PROC_NULL
+	   if(rank.eq.   0)rankb=px-1 !MPI_PROC_NULL
+	endif
+!      call mpi_sendrecv(utmp ,ileng,MPI_REAL8,rankb,itag,
+!     $                  up ,ileng,MPI_REAL8,rankf,itag, MPI_COMM_WORLD,status,ierr)
+      call mpi_sendrecv(utmp ,ileng,MPI_INTEGER2,rankb,itag,
+     $                  up ,ileng,MPI_INTEGER2,rankf,itag, MPI_COMM_WORLD,status,ierr)	 
+      end
+	  
 
 	subroutine shiftb_l(UT1,UP1)
 
