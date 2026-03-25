@@ -669,7 +669,7 @@
 	  REAL dzbed_dl2,dzbed_dl3,vwal_x,vwal_y,dzB,bwal,fluxA,fluxB,fluxC,fluxD,absUU,fcor_pres
 	  REAL zb_avg(0:i1,0:j1),dbedL,dbedR,Shields_cr_den,Shields_cr_num,Shields_cr_den_bl,Shields_cr_num_bl,i_curved
 	  REAL ppp_avg(0:i1,0:j1),ppp_avg2(0:i1,0:j1),absU_rks(1:kmax),pR1,pR2,pL1,pL2,qbx,qby,dz3
-	  REAL absU_ij(0:i1,0:j1),absUbl_ij(0:i1,0:j1),krange,krange1,krange2,krange3,dz_botlayer_silt
+	  REAL absU_ij(0:i1,0:j1),absUbl_ij(0:i1,0:j1),krange,krange1,krange2,krange3,dz_botlayer_silt,ww1
 	  INTEGER*8 k_ust_tau_2D(0:i1,0:j1)
 	
 	erosion=0.
@@ -702,7 +702,7 @@
 !				kpp=MIN(kpp+1,k1)		!kpp is in principle between 1*dz-2*dz distance from bed, but due to this if-statement only 1-1.5 from bed
 !				distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W
 !			ENDIF 
-			kpp=MIN(CEILING(zb_W/dz+k_ust_tau),k1) !between 0.5-1.5dz from bed for k_ust_tau=1 
+			kpp=MIN(CEILING(zb_W/dz+k_ust_tau),k1) !between 0.5-1.5dz from bed for k_ust_tau=1 for UV velocity point and 1-2dz for W  
 			!kpp=MIN(CEILING(zb_W/dz+0.5),k1)		!kpp is between 0-dz distance from bed 	
 			distance_to_bed=(REAL(kpp)-0.5)*dz-zb_W 
 			kbedp(i,j)=kpp
@@ -884,7 +884,7 @@
 			  k_ust_tau_temp = k_ust_tau 
 			ENDIF		  
 			IF (IBMorder.eq.2) THEN
-				kppE=MIN(CEILING(0.5*(zbed(i,j)+zbed(i+1,j))/dz+k_ust_tau_temp),k1) !between 0.5-1.5dz from bed 
+				kppE=MIN(CEILING(0.5*(zbed(i,j)+zbed(i+1,j))/dz+k_ust_tau_temp),k1) !between 0.5-1.5dz from bed for UV point for k_ust_tau_temp=1 
 				kppW=MIN(CEILING(0.5*(zbed(i,j)+zbed(i-1,j))/dz+k_ust_tau_temp),k1)
 				kppN=MIN(CEILING(0.5*(zbed(i,j)+zbed(i,j+1))/dz+k_ust_tau_temp),k1)
 				kppS=MIN(CEILING(0.5*(zbed(i,j)+zbed(i,j-1))/dz+k_ust_tau_temp),k1)
@@ -892,13 +892,15 @@
 				ddzzW=(REAL(kppW)-0.5)*dz-0.5*(zbed(i,j)+zbed(i-1,j))
 				ddzzN=(REAL(kppN)-0.5)*dz-0.5*(zbed(i,j)+zbed(i,j+1))
 				ddzzS=(REAL(kppS)-0.5)*dz-0.5*(zbed(i,j)+zbed(i,j-1))
-				distance_to_bed=0.25*(ddzzE+ddzzW+ddzzN+ddzzS)
+				distance_to_bed=0.25*(ddzzE+ddzzW+ddzzN+ddzzS) 
+				kpp=MIN(CEILING(zbed(i,j)/dz+k_ust_tau_temp),k1) !between 0.5-1.5dz from bed for UV point and 1-2dz for W point for k_ust_tau_temp=1
 			ELSE
 				kppE = MIN(MAX(kbed(i,j),kbed(i+1,j))+k_ust_tau_temp,k1)
 				kppW = MIN(MAX(kbed(i,j),kbed(i-1,j))+k_ust_tau_temp,k1)
 				kppS = MIN(MAX(kbed(i,j),kbed(i,j+1))+k_ust_tau_temp,k1)
 				kppN = MIN(MAX(kbed(i,j),kbed(i,j-1))+k_ust_tau_temp,k1)
 				distance_to_bed=(REAL(k_ust_tau_temp)-0.5)*dz
+				kpp = MIN(kbed(i,j)+k_ust_tau_temp,k1)
 			ENDIF		  
 			!! First Ubot_TSHD and Vbot_TSHD is subtracted to determine tau 
 			!! only over ambient velocities not over U_TSHD
@@ -909,20 +911,24 @@
 				uuRrel = ucfd(i  ,j,kppE)-Ubot_TSHD(j)  
 				bed_slope = atan((zbed(i+1,j)-zbed(i,j))/(Rp(i+1)-Rp(i)))
      &  *MIN(bednotfixed(i+1,j,kbed(i+1,j)),bednotfixed(i,j,kbed(i,j)))				
-				uuRrel = uuRrel*cos(bed_slope)+0.5*(wcfd(i,j,kbedp(i,j))+wcfd(i+1,j,kbedp(i+1,j)))*sin(bed_slope)
+				ww1 = 0.25*(wcfd(i,j,kppE)+wcfd(i+1,j,kppE)+wcfd(i,j,MAX(kppE-1,0))+wcfd(i+1,j,MAX(kppE-1,0)))
+				uuRrel = uuRrel*cos(bed_slope)+ww1*sin(bed_slope)
 				!no correction for pit because uuR from cell i always needs to be same as uuL from i+1 in bedload otherwise interuption and pit may never fill up
 				uuLrel = ucfd(i-1,j,kppW)-Ubot_TSHD(j)	
 				bed_slope = atan((zbed(i,j)-zbed(i-1,j))/(Rp(i)-Rp(i-1)))
-     &  *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed(i-1,j,kbed(i-1,j)))				
-				uuLrel = uuLrel*cos(bed_slope)+0.5*(wcfd(i,j,kbedp(i,j))+wcfd(i-1,j,kbedp(i-1,j)))*sin(bed_slope)				
+     &  *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed(i-1,j,kbed(i-1,j)))		
+				ww1 = 0.25*(wcfd(i,j,kppW)+wcfd(i-1,j,kppW)+wcfd(i,j,MAX(kppW-1,0))+wcfd(i-1,j,MAX(kppW-1,0)))
+				uuLrel = uuLrel*cos(bed_slope)+ww1*sin(bed_slope)				
 				vvRrel = vcfd(i,j  ,kppN)-Vbot_TSHD(j)
 				bed_slope = atan((zbed(i,j+1)-zbed(i,j))/(Rp(i)*(phip(j+1)-phip(j))))
-     &  *MIN(bednotfixed(i,j+1,kbed(i,j+1)),bednotfixed(i,j,kbed(i,j)))				
-				vvRrel = vvRrel*cos(bed_slope)+0.5*(wcfd(i,j,kbedp(i,j))+wcfd(i,j+1,kbedp(i,j+1)))*sin(bed_slope)
+     &  *MIN(bednotfixed(i,j+1,kbed(i,j+1)),bednotfixed(i,j,kbed(i,j)))	
+				ww1 = 0.25*(wcfd(i,j,kppN)+wcfd(i,j+1,kppN)+wcfd(i,j,MAX(kppN-1,0))+wcfd(i,j+1,MAX(kppN-1,0)))
+				vvRrel = vvRrel*cos(bed_slope)+ww1*sin(bed_slope)
 				vvLrel = vcfd(i,j-1,kppS)-Vbot_TSHD(j)
 				bed_slope = atan((zbed(i,j)-zbed(i,j-1))/(Rp(i)*(phip(j)-phip(j-1))))
-     &  *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed(i,j-1,kbed(i,j-1)))				
-				vvLrel = vvLrel*cos(bed_slope)+0.5*(wcfd(i,j,kbedp(i,j))+wcfd(i,j-1,kbedp(i,j-1)))*sin(bed_slope)				
+     &  *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed(i,j-1,kbed(i,j-1)))	
+				ww1 = 0.25*(wcfd(i,j,kppS)+wcfd(i,j-1,kppS)+wcfd(i,j,MAX(kppS-1,0))+wcfd(i,j-1,MAX(kppS-1,0)))
+				vvLrel = vvLrel*cos(bed_slope)+ww1*sin(bed_slope)				
 				uuR_relax2(i,j)  = bl_relax*uuRrel+(1.-bl_relax)*uuR_relax2(i,j)  	!needed for bedload-fluxes
 				uuL_relax2(i,j)  = bl_relax*uuLrel+(1.-bl_relax)*uuL_relax2(i,j)
 				vvR_relax2(i,j)  = bl_relax*vvRrel+(1.-bl_relax)*vvR_relax2(i,j)
@@ -934,12 +940,13 @@
 !!!				vvLrel = vvL_relax(i,j)/absUbl			
 				!suspension load near bed velocity:
 				bed_slope = atan((zbed(i+1,j)-zbed(i-1,j))/(Rp(i+1)-Rp(i-1)))
-     &  *MIN(bednotfixed(i+1,j,kbed(i+1,j)),bednotfixed(i-1,j,kbed(i-1,j)))				
-				uu2 = uu*cos(bed_slope)+wcfd(i,j,kbedp(i,j))*sin(bed_slope)
+     &  *MIN(bednotfixed(i+1,j,kbed(i+1,j)),bednotfixed(i-1,j,kbed(i-1,j)))	
+				ww1 = 0.5*(wcfd(i,j,kpp)+wcfd(i,j,MAX(kpp-1,0)))
+				uu2 = uu*cos(bed_slope)+ww1*sin(bed_slope)
 				facx = 1./cos(bed_slope)
 				bed_slope = atan((zbed(i,j+1)-zbed(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1))))
      &  *MIN(bednotfixed(i,j+1,kbed(i,j+1)),bednotfixed(i,j-1,kbed(i,j-1)))				
-				vv2 = vv*cos(bed_slope)+wcfd(i,j,kbedp(i,j))*sin(bed_slope)
+				vv2 = vv*cos(bed_slope)+ww1*sin(bed_slope)
 				facy = 1./cos(bed_slope)
 				bs_geo = facx*facy ! increase in dx and dy (area) over which pickup and deposition take place
 				absU = sqrt((uu2)**2+(vv2)**2)	
@@ -1076,6 +1083,7 @@
 				ddzzS=(REAL(kppS)-0.5)*dz-0.5*(zbed(i,j)+zbed(i,j-1))
 				!distance_to_bed=MAX(0.5*dz,0.25*(ddzzE+ddzzW+ddzzN+ddzzS))
 				distance_to_bed=0.25*(ddzzE+ddzzW+ddzzN+ddzzS)
+				kpp=MIN(CEILING(zbed(i,j)/dz+k_ust_tau_temp),k1) !between 0.5-1.5dz from bed for UV point and 1-2dz for W point for k_ust_tau_temp=1
 !				zb_W=zbed(i,j)
 !				kpp=MIN(CEILING(zb_W/dz+0.5)-1+k_ust_tau_temp,k1)		!for k_ust_tau_temp=2 kpp is between 1*dz-2*dz distance from bed 	
 !				!kpp=MIN(CEILING(zb_W/dz+0.5),k1)		!kpp is between 0-dz distance from bed 	
@@ -1091,6 +1099,7 @@
 				kppS = MIN(MAX(kbed(i,j),kbed(i,j+1))+k_ust_tau_temp,k1)
 				kppN = MIN(MAX(kbed(i,j),kbed(i,j-1))+k_ust_tau_temp,k1)
 				distance_to_bed=(REAL(k_ust_tau_temp)-0.5)*dz
+				kpp = MIN(kbed(i,j)+k_ust_tau_temp,k1)
 !				
 !				kpp = MIN(kbedp(i,j),k1)                !for k_ust_tau=2 kpp is 1.5*dz from 0-order ibm bed
 !				distance_to_bed=(REAL(k_ust_tau)-0.5)*dz				
@@ -1099,13 +1108,14 @@
 			vv=0.5*(vcfd(i,j,kppN)+vcfd(i,j-1,kppS))-Vbot_TSHD(j)
 			
 			IF (pickup_bedslope_geo.eq.1) THEN
+				ww1 = 0.5*(wcfd(i,j,kpp)+wcfd(i,j,MAX(kpp-1,0)))
 				bed_slope = atan((zbed(i+1,j)-zbed(i-1,j))/(Rp(i+1)-Rp(i-1)))
      &  *MIN(bednotfixed(i+1,j,kbed(i+1,j)),bednotfixed(i-1,j,kbed(i-1,j)))
-				uu2 = uu*cos(bed_slope)+wcfd(i,j,kbedp(i,j))*sin(bed_slope)
+				uu2 = uu*cos(bed_slope)+ww1*sin(bed_slope)
 				facx = 1./cos(bed_slope)
 				bed_slope = atan((zbed(i,j+1)-zbed(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1))))
      &  *MIN(bednotfixed(i,j+1,kbed(i,j+1)),bednotfixed(i,j-1,kbed(i,j-1)))				
-				vv2 = vv*cos(bed_slope)+wcfd(i,j,kbedp(i,j))*sin(bed_slope)
+				vv2 = vv*cos(bed_slope)+ww1*sin(bed_slope)
 				facy = 1./cos(bed_slope)
 				bs_geo = facx*facy ! increase in dx and dy (area) over which pickup and deposition take place
 				absU = sqrt((uu2)**2+(vv2)**2)	
@@ -1277,6 +1287,7 @@
 				ddzzS=(REAL(kppS)-0.5)*dz-0.5*(zbed(i,j)+zbed(i,j-1))
 				!distance_to_bed=MAX(0.5*dz,0.25*(ddzzE+ddzzW+ddzzN+ddzzS))
 				distance_to_bed=0.25*(ddzzE+ddzzW+ddzzN+ddzzS)
+				kpp=MIN(CEILING(zbed(i,j)/dz+k_ust_tau_temp),k1) !between 0.5-1.5dz from bed for UV point and 1-2dz for W point for k_ust_tau_temp=1
 !				zb_W=zbed(i,j)
 !				kpp=MIN(CEILING(zb_W/dz+0.5)-1+k_ust_tau_temp,k1)		!for k_ust_tau_temp=2 kpp is between 1*dz-2*dz distance from bed 	
 !				!kpp=MIN(CEILING(zb_W/dz+0.5),k1)		!kpp is between 0-dz distance from bed 	
@@ -1292,6 +1303,7 @@
 				kppS = MIN(MAX(kbed(i,j),kbed(i,j+1))+k_ust_tau_temp,k1)
 				kppN = MIN(MAX(kbed(i,j),kbed(i,j-1))+k_ust_tau_temp,k1)
 				distance_to_bed=(REAL(k_ust_tau_temp)-0.5)*dz
+				kpp = MIN(kbed(i,j)+k_ust_tau_temp,k1)
 !				
 !				kpp = MIN(kbedp(i,j),k1)                !for k_ust_tau=2 kpp is 1.5*dz from 0-order ibm bed
 !				distance_to_bed=(REAL(k_ust_tau)-0.5)*dz				
@@ -1346,21 +1358,25 @@
 				!bedload near bed velocity:
 				uuRrel = ucfd(i  ,j,kppE)-Ubot_TSHD(j)  
 				bed_slope = atan((zbed(i+1,j)-zbed(i,j))/(Rp(i+1)-Rp(i)))
-     &  *MIN(bednotfixed(i+1,j,kbed(i+1,j)),bednotfixed(i,j,kbed(i,j)))				
-				uuRrel = uuRrel*cos(bed_slope)+0.5*(wcfd(i,j,kbedp(i,j))+wcfd(i+1,j,kbedp(i+1,j)))*sin(bed_slope)
+     &  *MIN(bednotfixed(i+1,j,kbed(i+1,j)),bednotfixed(i,j,kbed(i,j)))	
+				ww1 = 0.25*(wcfd(i,j,kppE)+wcfd(i+1,j,kppE)+wcfd(i,j,MAX(kppE-1,0))+wcfd(i+1,j,MAX(kppE-1,0)))
+				uuRrel = uuRrel*cos(bed_slope)+ww1*sin(bed_slope)
 				!no correction for pit because uuR from cell i always needs to be same as uuL from i+1 in bedload otherwise interuption and pit may never fill up
 				uuLrel = ucfd(i-1,j,kppW)-Ubot_TSHD(j)	
 				bed_slope = atan((zbed(i,j)-zbed(i-1,j))/(Rp(i)-Rp(i-1)))
-     &  *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed(i-1,j,kbed(i-1,j)))				
-				uuLrel = uuLrel*cos(bed_slope)+0.5*(wcfd(i,j,kbedp(i,j))+wcfd(i-1,j,kbedp(i-1,j)))*sin(bed_slope)				
+     &  *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed(i-1,j,kbed(i-1,j)))
+				ww1 = 0.25*(wcfd(i,j,kppW)+wcfd(i-1,j,kppW)+wcfd(i,j,MAX(kppW-1,0))+wcfd(i-1,j,MAX(kppW-1,0)))
+				uuLrel = uuLrel*cos(bed_slope)+ww1*sin(bed_slope)				
 				vvRrel = vcfd(i,j  ,kppN)-Vbot_TSHD(j)
 				bed_slope = atan((zbed(i,j+1)-zbed(i,j))/(Rp(i)*(phip(j+1)-phip(j))))
-     &  *MIN(bednotfixed(i,j+1,kbed(i,j+1)),bednotfixed(i,j,kbed(i,j)))				
-				vvRrel = vvRrel*cos(bed_slope)+0.5*(wcfd(i,j,kbedp(i,j))+wcfd(i,j+1,kbedp(i,j+1)))*sin(bed_slope)
+     &  *MIN(bednotfixed(i,j+1,kbed(i,j+1)),bednotfixed(i,j,kbed(i,j)))		
+				ww1 = 0.25*(wcfd(i,j,kppN)+wcfd(i,j+1,kppN)+wcfd(i,j,MAX(kppN-1,0))+wcfd(i,j+1,MAX(kppN-1,0)))	 
+				vvRrel = vvRrel*cos(bed_slope)+ww1*sin(bed_slope)
 				vvLrel = vcfd(i,j-1,kppS)-Vbot_TSHD(j)
 				bed_slope = atan((zbed(i,j)-zbed(i,j-1))/(Rp(i)*(phip(j)-phip(j-1))))
-     &  *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed(i,j-1,kbed(i,j-1)))				
-				vvLrel = vvLrel*cos(bed_slope)+0.5*(wcfd(i,j,kbedp(i,j))+wcfd(i,j-1,kbedp(i,j-1)))*sin(bed_slope)				
+     &  *MIN(bednotfixed(i,j,kbed(i,j)),bednotfixed(i,j-1,kbed(i,j-1)))	
+				ww1 = 0.25*(wcfd(i,j,kppS)+wcfd(i,j-1,kppS)+wcfd(i,j,MAX(kppS-1,0))+wcfd(i,j-1,MAX(kppS-1,0)))
+				vvLrel = vvLrel*cos(bed_slope)+ww1*sin(bed_slope)				
 				uuR_relax(i,j)  = bl_relax*uuRrel+(1.-bl_relax)*uuR_relax(i,j)  	!needed for bedload-fluxes
 				uuL_relax(i,j)  = bl_relax*uuLrel+(1.-bl_relax)*uuL_relax(i,j)
 				vvR_relax(i,j)  = bl_relax*vvRrel+(1.-bl_relax)*vvR_relax(i,j)
@@ -1371,13 +1387,14 @@
 				vvRrel = vvR_relax(i,j)/absUbl
 				vvLrel = vvL_relax(i,j)/absUbl			
 				!suspension load near bed velocity:
+				ww1 = 0.5*(wcfd(i,j,kpp)+wcfd(i,j,MAX(kpp-1,0)))
 				bed_slope = atan((zbed(i+1,j)-zbed(i-1,j))/(Rp(i+1)-Rp(i-1)))
      &  *MIN(bednotfixed(i+1,j,kbed(i+1,j)),bednotfixed(i-1,j,kbed(i-1,j)))				
-				uu2 = uu*cos(bed_slope)+wcfd(i,j,kbedp(i,j))*sin(bed_slope)
+				uu2 = uu*cos(bed_slope)+ww1*sin(bed_slope)
 				facx = 1./cos(bed_slope)
 				bed_slope = atan((zbed(i,j+1)-zbed(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1))))
      &  *MIN(bednotfixed(i,j+1,kbed(i,j+1)),bednotfixed(i,j-1,kbed(i,j-1)))				
-				vv2 = vv*cos(bed_slope)+wcfd(i,j,kbedp(i,j))*sin(bed_slope)
+				vv2 = vv*cos(bed_slope)+ww1*sin(bed_slope)
 				facy = 1./cos(bed_slope)
 				bs_geo = facx*facy ! increase in dx and dy (area) over which pickup and deposition take place
 				absU = sqrt((uu2)**2+(vv2)**2)	

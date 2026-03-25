@@ -1725,6 +1725,7 @@ c
 	  real outflow_factor,dudx,dudy,dvdx,dvdy,visc
 	  real absUU,bedslope_angle,distance_to_bed,bwal,dbed,dpdx_temp,dpdy_temp,dL,cmax_rks(nfrac)
 	  real Rp2(-1:i1),Ru2(-1:i1),pR1,pR2,pL1,pL2,Fix_ref,ppp_avg(0:i1,0:j1),ppp_avg2(0:i1,0:j1)
+	  real bed_slope_x,bed_slope_y
 	  
 c
 c
@@ -2867,8 +2868,8 @@ c 	influence of waves on lateral boundaries:
 			ELSEIF (slip_bot.eq.8) THEN 
 			 dpdy_temp=0.25*(TBLEdpdyo(i,j)+TBLEdpdyo(i,j-1)+TBLEdpdyo(i+1,j)+TBLEdpdyo(i+1,j-1))  !use old dpdy because new of neighbours is not available
 			 dpdx_temp=0.25*(TBLEdpdxo(i,j)+TBLEdpdxo(i,j+1)+TBLEdpdxo(i-1,j)+TBLEdpdxo(i-1,j+1))  !use old dpdx because new of neighbours is not available
-			 call wall_fun_rho_GWF(uu1a,vv1a,uu1,vv1,TBLEdpdx(i,j),dpdy_temp,rr1,dz,dist_vel,dt,kn_flow(i,j),kappa,nu_mol,tau_fl_Unew(i,j)) 			 
-			 call wall_fun_rho_GWF(vv2a,uu2a,vv2,uu2,TBLEdpdy(i,j),dpdx_temp,rr2,dz,dist_vel,dt,kn_flow(i,j),kappa,nu_mol,tau_fl_Vnew(i,j))
+		 call wall_fun_rho_GWF(uu1a,vv1a,uu1,vv1,TBLEdpdx(i,j),dpdy_temp,rr1,dz,dist_vel,dt,kn_flow(i,j),kappa,nu_mol,tau_fl_Unew(i,j),0.) 			 
+		 call wall_fun_rho_GWF(vv2a,uu2a,vv2,uu2,TBLEdpdy(i,j),dpdx_temp,rr2,dz,dist_vel,dt,kn_flow(i,j),kappa,nu_mol,tau_fl_Vnew(i,j),0.)
 			ELSEIF (slip_bot.eq.9) THEN 
 			 dpdy_temp=0.25*(TBLEdpdyo(i,j)+TBLEdpdyo(i,j-1)+TBLEdpdyo(i+1,j)+TBLEdpdyo(i+1,j-1))  !use old dpdy because new of neighbours is not available
 			 dpdx_temp=0.25*(TBLEdpdxo(i,j)+TBLEdpdxo(i,j+1)+TBLEdpdxo(i-1,j)+TBLEdpdxo(i-1,j+1))  !use old dpdx because new of neighbours is not available
@@ -3446,9 +3447,18 @@ c 	influence of waves on lateral boundaries:
 				   call wall_fun_rho_TBLE1D(uu0,uu1,vv1,ww1,TBLEdpdx(i,j),TBLEdudx(i,j),TBLEdudy(i,j),rr1,dz,distance_to_bed_kpp
      &				   ,dt,kn_flow(i,j),kappa,nu_mol,ust1,tau_fl_Unew(i,j),tau_fl_Utop(i,j),taulayerTBLE,nWM)
 				  ELSEIF (slip_bot.eq.8) THEN 
+				   bed_slope_x = atan( (zbed(i+1,j)-zbed(i,j)) / (Rp(i+1)-Rp(i)) )
+     &					*MIN(bednotfixed(i+1,j,kbed(i+1,j)),bednotfixed(i,j,kbed(i,j))) !positive when bed rises in positive x-direction
+				   bed_slope_y = atan( (zbed(i,j+1)-zbed(i,j)) / (Rp(i)*(phip(j+1)-phip(j))) )
+     &					*MIN(bednotfixed(i,j+1,kbed(i,j+1)),bednotfixed(i,j,kbed(i,j))) !positive when bed rises in positive y-direction				  
+				   uu1 = uu1*cos(bed_slope_x) + ww1*sin(bed_slope_x)
+				   vv1 = vv1*cos(bed_slope_y) + ww1*sin(bed_slope_y)
+				   !uu0 is not adjusted because inside wall_fun_rho tau is reconstructed for horizontal plane and applied to uu0 which is horizontal velocity
+				   TBLEdpdx(i,j)=TBLE_grad_relax*((ppp_avg(i+1,j)-ppp_avg(i,j))
+     &            /sqrt((Rp(i+1)-Rp(i))**2+(zbed(i+1,j)-zbed(i,j))**2)/rr1-Fix_ref)+(1.-TBLE_grad_relax)*TBLEdpdx(i,j)			!at U-gridpoint					   
 				   dpdy_temp=0.25*(TBLEdpdyo(i,j)+TBLEdpdyo(i,j-1)+TBLEdpdyo(i+1,j)+TBLEdpdyo(i+1,j-1))  !use old dpdy because new of neighbours is not available
 				   call wall_fun_rho_GWF(uu0,vv0,uu1,vv1,TBLEdpdx(i,j),dpdy_temp,rr1,dz,distance_to_bed_kpp
-     &             ,dt,kn_flow(i,j),kappa,nu_mol,tau_fl_Unew(i,j)) 
+     &             ,dt,kn_flow(i,j),kappa,nu_mol,tau_fl_Unew(i,j),bed_slope_x) 
 				  ELSEIF (slip_bot.eq.9) THEN 
 				   dpdy_temp=0.25*(TBLEdpdyo(i,j)+TBLEdpdyo(i,j-1)+TBLEdpdyo(i+1,j)+TBLEdpdyo(i+1,j-1))  !use old dpdy because new of neighbours is not available
 				   call wall_fun_rho_GWF_dpdlfavo(uu0,vv0,uu1,vv1,TBLEdpdx(i,j),dpdy_temp,rr1,dz,distance_to_bed_kpp
@@ -3534,9 +3544,14 @@ c 	influence of waves on lateral boundaries:
 				   call wall_fun_rho_TBLE1D(vv0,vv2,uu2,ww2,TBLEdpdy(i,j),TBLEdvdy(i,j),TBLEdvdx(i,j),rr2,dz,distance_to_bed_kpp
      &				   ,dt,kn_flow(i,j),kappa,nu_mol,ust2,tau_fl_Vnew(i,j),tau_fl_Vtop(i,j),taulayerTBLE,nWM)
 				  ELSEIF (slip_bot.eq.8) THEN 
+				   uu2 = uu2*cos(bed_slope_x) + ww2*sin(bed_slope_x)
+				   vv2 = vv2*cos(bed_slope_y) + ww2*sin(bed_slope_y)	
+				   !vv0 is not adjusted because inside wall_fun_rho tau is reconstructed for horizontal plane and applied to vv0 which is horizontal velocity 
+				   TBLEdpdy(i,j)=TBLE_grad_relax*((ppp_avg(i,j+1)-ppp_avg(i,j))
+     &            /sqrt((Rp(i)*(phip(j+1)-phip(j)))**2+(zbed(i,j+1)-zbed(i,j))**2)/rr2)+(1.-TBLE_grad_relax)*TBLEdpdy(i,j)			!at V-gridpoint	 				  
 				   dpdx_temp=0.25*(TBLEdpdxo(i,j)+TBLEdpdxo(i,j+1)+TBLEdpdxo(MAX(0,i-1),j)+TBLEdpdxo(MAX(0,i-1),j+1)) !use old dpdx because new of neighbours is not available
 				   call wall_fun_rho_GWF(vv0,uu0,vv2,uu2,TBLEdpdy(i,j),dpdx_temp,rr1,dz,distance_to_bed_kpp
-     &             ,dt,kn_flow(i,j),kappa,nu_mol,tau_fl_Vnew(i,j)) 
+     &             ,dt,kn_flow(i,j),kappa,nu_mol,tau_fl_Vnew(i,j),bed_slope_y) 
 				  ELSEIF (slip_bot.eq.9) THEN 
 				   dpdx_temp=0.25*(TBLEdpdxo(i,j)+TBLEdpdxo(i,j+1)+TBLEdpdxo(MAX(0,i-1),j)+TBLEdpdxo(MAX(0,i-1),j+1)) !use old dpdx because new of neighbours is not available
 				   call wall_fun_rho_GWF_dpdlfavo(vv0,uu0,vv2,uu2,TBLEdpdy(i,j),dpdx_temp,rr1,dz,distance_to_bed_kpp
@@ -5228,7 +5243,7 @@ c*************************************************************
 	
 	end
 
-	subroutine wall_fun_rho_GWF(uu0,vv0,uu,vv,Fix,Fiy,rr,dz,dist_velpoint,dt,kn,kappa,nu_mol,tau_x)
+	subroutine wall_fun_rho_GWF(uu0,vv0,uu,vv,Fix,Fiy,rr,dz,dist_velpoint,dt,kn,kappa,nu_mol,tau_x,bedslope)
 		
 	implicit none
 
@@ -5247,7 +5262,7 @@ c	Determine tau-wall based on uu,vv and adapt uu0
 c	Substract tau_wall*dt*dx*dy/(dx*dy*dz) from uu0 (kg/m3*m/s)
 c   Locally in this subroutine an independent x,y coordinate system is used which dependent on the specific call may be swapped from the outside coordinate system of TUDflow3D 
 c*************************************************************
-	real vv0,uu,vv,Fix,Fiy,rr,dz,dist_velpoint,dt,kn,kappa,nu_mol  !input variable
+	real vv0,uu,vv,Fix,Fiy,rr,dz,dist_velpoint,dt,kn,kappa,nu_mol,bedslope  !input variable
 	real uu0 ! input/output var, uu0 gets adapted in this subroutine
 	real tau_x !output var 
 	integer tel !local var 
@@ -5347,7 +5362,10 @@ c*************************************************************
 		tau_x = 0. 
 		!uu0 = uu0 - tau_x*dt/dz 	!! only uu is adjusted
 	ELSE 
-		uu0 = uu0 / (1. + ABS(tau_x)*dt/dz/MAX(ABS(uu0),1.e-9)) 	!! only uu is adjusted ! implicit = more stable
+	!output tau_x is defined along bedslope and not horizontal component of tau
+	!for application to horizontal velocity uu0 tau_x is corrected with cos(bedslope) to only take into account horizontal component of tau  
+	!vertical component of tau is neglected as the vertical velocity is adjusted in IBM with linear interpolation based on distance to wall 
+		uu0 = uu0 / (1. + ABS(tau_x)*cos(bedslope)*dt/dz/MAX(ABS(uu0),1.e-9)) 	!! only uu is adjusted ! implicit = more stable
 	ENDIF 
 
 	

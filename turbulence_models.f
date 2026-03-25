@@ -4557,10 +4557,10 @@ c*************************************************************
 					IF (pickup_bedslope_geo.eq.1) THEN
 						bed_slope = atan((zbed(i+1,j)-zbed(i-1,j))/(Rp(i+1)-Rp(i-1)))
      &  *MIN(bednotfixed(i+1,j,kbed(i+1,j)),bednotfixed(i-1,j,kbed(i-1,j)))						
-						uu2 = uu*cos(bed_slope)+Wvel(i,j,kbedp(i,j))*sin(bed_slope)
+						uu2 = uu*cos(bed_slope)+0.5*(Wvel(i,j,kbedp(i,j)+Wvel(i,j,MAX(0,kbedp(i,j)-1))))*sin(bed_slope)
 						bed_slope = atan((zbed(i,j+1)-zbed(i,j-1))/(Rp(i)*(phip(j+1)-phip(j-1))))
      &  *MIN(bednotfixed(i,j+1,kbed(i,j+1)),bednotfixed(i,j-1,kbed(i,j-1)))						
-						vv2 = vv*cos(bed_slope)+Wvel(i,j,kbedp(i,j))*sin(bed_slope)
+						vv2 = vv*cos(bed_slope)+0.5*(Wvel(i,j,kbedp(i,j)+Wvel(i,j,MAX(0,kbedp(i,j)-1))))*sin(bed_slope)
 						absU = sqrt((uu2)**2+(vv2)**2)					
 					ELSE 
 						absU=sqrt((uu)**2+(vv)**2)	
