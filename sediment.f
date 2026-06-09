@@ -671,6 +671,7 @@
 	  REAL ppp_avg(0:i1,0:j1),ppp_avg2(0:i1,0:j1),absU_rks(1:kmax),pR1,pR2,pL1,pL2,qbx,qby,dz3
 	  REAL absU_ij(0:i1,0:j1),absUbl_ij(0:i1,0:j1),krange,krange1,krange2,krange3,dz_botlayer_silt,ww1
 	  INTEGER*8 k_ust_tau_2D(0:i1,0:j1)
+	  REAL corr_nbc_depo,ZZ,za
 	
 	erosion=0.
 	deposition=0.
@@ -685,7 +686,7 @@
 	!call slipvelocity_bed(ccfd,wcfd,wsed,rcfd,sumWkm,ddt,dz) 
 	call slipvelocity_bed(ccfd,0.*wcfd,wsed,rcfd,sumWkm,ddt,dz) 
 
-	IF (interaction_bed.ge.4) THEN
+	IF (interaction_bed.eq.4.or.interaction_bed.eq.6) THEN
 	 DO i=1,imax
 	  DO j=1,jmax
 		zbed(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(cbotcfd(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
@@ -1865,15 +1866,13 @@
 					TT = MAX(TT,0.) !TT must be positive
 					phipp = calibfac_sand_pickup*0.00033*Dstar**0.3*TT**1.5   ! general pickup function	
 					!Shields_eff = ust**2/(delta*gvector*d50) !there is a typo in VR2019 memo/paper missing rho_b; this line in the code is correct 
-					! correction: reduced pickup is done implicitly with using c^n+1 in bedupdate lines further down, for very high pickup this is more stable 
-					phipp = phipp/(MAX(Shields_eff,1.))**power_VR2019 !*(cfixedbed-cbed)/(cfixedbed) ! correction: reduced pickup for high speed erosion and reduction for cbed according to VanRhee and Talmon 2010
+					phipp = phipp/(MAX(Shields_eff,1.))**power_VR2019*(cfixedbed-cbed)/(cfixedbed) ! correction: reduced pickup for high speed erosion and reduction for cbed according to VanRhee and Talmon 2010
 				ELSEIF (pickup_formula.eq.'VR1984_Cbed') THEN
 					Shields_eff = ust**2/(delta*gvector*d50)
 					TT = (Shields_eff - Shields_cr_num)/Shields_cr_den
 					TT = MAX(TT,0.) !TT must be positive
 					phipp = calibfac_sand_pickup*0.00033*Dstar**0.3*TT**1.5   ! general pickup function	
-					! correction: reduced pickup is done implicitly with using c^n+1 in bedupdate lines further down, for very high pickup this is more stable 
-					!phipp = phipp*(cfixedbed-cbed)/(cfixedbed) ! correction: reduced pickup for for cbed according to VanRhee and Talmon 2010					
+					phipp = phipp*(cfixedbed-cbed)/(cfixedbed) ! correction: reduced pickup for for cbed according to VanRhee and Talmon 2010					
 				ELSE
 					TT=0.
 					phipp = 0.  ! general pickup function					
@@ -1955,7 +1954,24 @@
 				ELSE
 					reduced_sed  = 1.
 				ENDIF
-
+				IF (correction_nbc_depo.eq.1) THEN ! near bed concentration correction for deposition based on dcdz from Rouse profile 
+					! c(z) = cref [(h-z)/z * zref/(h-zref)]^ZZ  !Rousse profile
+					! c(z) = cref [zref/z]^ZZ ! use fact that (h-z)/(h-zref) is nearly 1 near the bed 
+					! dcdz(z) = ZZ*cref*[zref/z]^(ZZ-1)* -zref/z^2
+					! dcdz(zref) = ZZ*cref*-1/zref  --> dcdz(kplus)=-ZZ*c(kplus)/distance_to_bed
+					! at za vertical position where erosion and depo take place: c(za) = c(kplus)+(distance_to_bed-za)*dcdz(kplus) and use c(za) for depo flux 
+					! c(za) = c(kplus) + (distance_to_bed-za)*ZZ*c(kplus)/distance_to_bed
+					! c(za) = c(kplus)*[1 + (distance_to_bed-za)*ZZ/distance_to_bed]
+					! ZZ = ws/(kappa*ust)
+					ZZ = -MIN(0.,Wsed(n,i,j,kbed(i,j)))/MAX(kappa*ust,1.e-9) !wsed is negative for sediment settling downward towards bed and positive for air bubbles rising upward 
+					za = kn_d50_multiplier*d50 !reference heigth (top of bedload layer) where c(za) is determined based on dcdz(kplus), linked to chosen bed roughness for sediment pickup 
+					corr_nbc_depo = 1. + (distance_to_bed-za)*ZZ/distance_to_bed
+					corr_nbc_depo = MIN(10.,corr_nbc_depo) ! limit <=10 
+					corr_nbc_depo = MAX(1.,corr_nbc_depo) ! limit >1 
+				ELSE
+					corr_nbc_depo=1. 
+				ENDIF
+				
 				ccfdtot_firstcel=0.
 				wsedbed=0.
 				DO n1=1,nfr_sand
@@ -2122,21 +2138,9 @@
 
 					IF (depo_implicit.eq.0) THEN 
 					!determine deposition as sink explicit					
-					depositionf(n) = ccnew(n,i,j,kplus)*(MIN(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))-wsedbed)*ddt !ccfd
+					depositionf(n) = ccnew(n,i,j,kplus)*(MIN(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))-wsedbed)*corr_nbc_depo*ddt !ccfd
      &     *MIN(bednotfixed_depo(i,j,kbed(i,j)),bednotfixed_depo(i,j,kplus))*morfac ! m --> dep is negative due to negative wsed
 					ccnew(n,i,j,kplus)=ccnew(n,i,j,kplus)+(erosionf(n)*ero_factor+depositionf(n))/(dz) ! vol conc. [-]
-					cbotnew(n,i,j)=cbotnew(n,i,j)-b_update(i,j)*morfac2*(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-] !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
-					cbotnewtot=cbotnewtot+cbotnew(n,i,j)
-					cbotnewtot_pos=cbotnewtot_pos+MAX(cbotnew(n,i,j),0.)
-					ctot_firstcel=ccnew(n,i,j,kplus)+ctot_firstcel					
-					ELSEIF (depo_implicit.eq.1.and.(pickup_formula.eq.'VR1984_Cbed'.or.pickup_formula.eq.'VR2019_Cbed')) THEN
-					!determine deposition as sink implicit and erosionf implicit with c^n+1
-					ccnew(n,i,j,kplus)=(ccnew(n,i,j,kplus)+erosionf(n)*ero_factor/dz)/ ! vol conc. [-]
-     &      		(1.-(MIN(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))-wsedbed)*ddt/dz 
-     &	   *MIN(bednotfixed_depo(i,j,kbed(i,j)),bednotfixed_depo(i,j,kplus))*morfac 	!no deposition in case of present cell is non-depo or when above cell is non-depo	
-     &      +erosionf(n)*ero_factor/(cfixedbed*dz))	 !also ero is made implicit with C^n+1; erosionf(n) already included ddt
-					depositionf(n) = ccnew(n,i,j,kplus)*(MIN(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))-wsedbed)*ddt !ccfd
-     &     *MIN(bednotfixed_depo(i,j,kbed(i,j)),bednotfixed_depo(i,j,kplus))*morfac! m --> dep is negative due to negative wsed, !no deposition in case of present cell is non-depo or when above cell is non-depo									
 					cbotnew(n,i,j)=cbotnew(n,i,j)-b_update(i,j)*morfac2*(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-] !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
 					cbotnewtot=cbotnewtot+cbotnew(n,i,j)
 					cbotnewtot_pos=cbotnewtot_pos+MAX(cbotnew(n,i,j),0.)
@@ -2144,9 +2148,9 @@
 					ELSE
 					!determine deposition as sink implicit
 					ccnew(n,i,j,kplus)=(ccnew(n,i,j,kplus)+erosionf(n)*ero_factor/dz)/ ! vol conc. [-]
-     &      		(1.-(MIN(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))-wsedbed)*ddt/dz
+     &      		(1.-(MIN(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))-wsedbed)*corr_nbc_depo*ddt/dz
      &	   *MIN(bednotfixed_depo(i,j,kbed(i,j)),bednotfixed_depo(i,j,kplus))*morfac)	!no deposition in case of present cell is non-depo or when above cell is non-depo				
-					depositionf(n) = ccnew(n,i,j,kplus)*(MIN(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))-wsedbed)*ddt !ccfd
+					depositionf(n) = ccnew(n,i,j,kplus)*(MIN(0.,reduced_sed*Wsed(n,i,j,kbed(i,j)))-wsedbed)*corr_nbc_depo*ddt !ccfd
      &     *MIN(bednotfixed_depo(i,j,kbed(i,j)),bednotfixed_depo(i,j,kplus))*morfac! m --> dep is negative due to negative wsed, !no deposition in case of present cell is non-depo or when above cell is non-depo									
 					cbotnew(n,i,j)=cbotnew(n,i,j)-b_update(i,j)*morfac2*(erosionf(n)+depositionf(n))/(dz) ! vol conc. [-] !morfac2 makes bed changes faster but leaves c-fluid same: every m3 sediment in fluid corresponds to morfac2 m3 in bed! 
 					cbotnewtot=cbotnewtot+cbotnew(n,i,j)
@@ -2713,10 +2717,33 @@
 			n_av=MAX(NINT(morfac2),NINT(morfac))
 			n_av=MIN(n_av,avalanche_max_x)
 		ENDIF		
+		IF (avalanche_slope_per_fraction.eq.1) THEN 
+			av_slope = 0. 
+			DO i=1,imax 
+			  DO j=1,jmax 
+				DO k=0,k1 
+					DO n=1,nfrac 
+						av_slope(i,j,k) = av_slope(i,j,k) + Clivebed(n,i,j,k)/MAX(1e-9,SUM(Clivebed(1:nfrac,i,j,k)))*frac(n)%as 
+					ENDDO 
+				ENDDO 
+			  ENDDO 
+			ENDDO 
+			DO i=1,imax 
+			  DO j=1,jmax 
+			    IF (SUM(cbotnew(1:nfrac,i,j))>1.e-9) THEN 
+				  av_slope(i,j,kbed(i,j)) = 0.
+				  DO n=1,nfrac 
+					av_slope(i,j,kbed(i,j)) = av_slope(i,j,kbed(i,j)) + cbotnew(n,i,j)/SUM(cbotnew(1:nfrac,i,j))*frac(n)%as 
+				  ENDDO 
+				ENDIF 
+			  ENDDO 
+			ENDDO
+		ENDIF 
 		IF (MAXVAL(av_slope).gt.0.) THEN
 		IF (avalanche_fines.eq.2) THEN !don't avalanche fines but leave them in bed of original i,j loc; otherwise every time a cell avalanches the silt remains in the bed of this cell and the end silt content in the bed under the avalanche slope gets too high
 			nfr_silt_org = nfr_silt 
 		ENDIF 
+		
 						
 		 DO tel=1,n_av ! normally avalanche 1 time every timestep; with morfac more times avalanche every timestep
 		  IF (have_avalanched>0.1) then !.true.) then !have_avalanched>0.1) THEN
@@ -4576,7 +4603,7 @@
 					dz_botlayer =MAX(0.,SUM(cbotnew(1:nfrac,i,j))/cfixedbed*dz) !m bed-layer incl pores 
 					dbed_adjust = MIN(dz_botlayer,dbedL+dbedR,dbed)  !*vol_Vp(i,j)/dz !m*m3/m=m3 sediment including pores 
 					DO n=1,nfrac 
-						c_adjust = dbed_adjust/MAX(dz_botlayer,1.e-18)*cbotnew(n,i,j)
+						c_adjust = dbed_adjust/MAX(dz_botlayer,1.e-18)*MAX(0.,cbotnew(n,i,j))
 						d_cbotnew(n,i,j)=d_cbotnew(n,i,j) - c_adjust
 						d_cbotnew(n,i-1,j)=d_cbotnew(n,i-1,j) + c_adjust*vol_Vp(i,j)/vol_Vp(i-1,j)*dbedL/(dbedR+dbedL+1e-18)
 						d_cbotnew(n,i+1,j)=d_cbotnew(n,i+1,j) + c_adjust*vol_Vp(i,j)/vol_Vp(i+1,j)*dbedR/(dbedR+dbedL+1e-18)						
@@ -4599,7 +4626,7 @@
 					dz_botlayer =MAX(0.,SUM(cbotnew(1:nfrac,i,j))/cfixedbed*dz)
 					dbed_adjust = MIN(dz_botlayer,dbedL+dbedR,dbed)  !*vol_Vp(i,j)/dz !m*m3/m=m3 sediment including pores 
 					DO n=1,nfrac 
-						c_adjust = dbed_adjust/MAX(dz_botlayer,1.e-18)*cbotnew(n,i,j)
+						c_adjust = dbed_adjust/MAX(dz_botlayer,1.e-18)*MAX(0.,cbotnew(n,i,j))
 						d_cbotnew(n,i,j)=d_cbotnew(n,i,j) - c_adjust
 						d_cbotnew(n,i,j-1)=d_cbotnew(n,i,j-1) + c_adjust*vol_Vp(i,j)/vol_Vp(i,j-1)*dbedL/(dbedR+dbedL+1e-18)
 						d_cbotnew(n,i,j+1)=d_cbotnew(n,i,j+1) + c_adjust*vol_Vp(i,j)/vol_Vp(i,j+1)*dbedR/(dbedR+dbedL+1e-18)						

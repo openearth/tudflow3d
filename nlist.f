@@ -25,7 +25,7 @@
       
       INTEGER i,j,k,imax,jmax,kmax,i1,j1,k1,px,rank,kjet,nmax1,nmax2,nmax3,istep,CNdiffz,npresIBM,counter,npresPRHO,oPRHO,k_pzero
       INTEGER Lmix_type,slip_bot,SEM,azi_n,outflow_overflow_down,azi_n2,wiggle_detector,wd,applyVOF,Poutflow,k_ust_tau,Uoutflow
-	  INTEGER k_ust_tau_flow,dpdx_smoother,uv_sed_smoother,istep_output,istep_output_movie,output_times_morphology
+	  INTEGER k_ust_tau_flow,dpdx_smoother,uv_sed_smoother,istep_output,istep_output_movie,output_times_morphology,CNdiff_conc
       REAL ekm_mol,nu_mol,pi,kappa,gx,gy,gz,Cs,Sc,calibfac_sand_pickup,calibfac_Shields_cr,morfac,morfac2,calibfac_sand_bedload
       REAL dt,time_nm,time_n,time_np,t_end,t0_output,dt_output,te_output,dt_max,tstart_rms,CFL,dt_ini,tstart_morf,trestart,dt_old
       REAL dt_output_movie,t0_output_movie,te_output_movie,te_rms,time_nm2,tstart_morf2,fcor,calibfac_Shields_cr_bl
@@ -66,8 +66,8 @@
 	  REAL dpdx1,dpdy1,Uavold,Vavold,U3avold,V3avold,dpdx3,dpdy3
       INTEGER periodicx,periodicy,wallup,dUVdn_IBMbed
       REAL U_b3,V_b3,surf_layer,reduction_sedimentation_shields,kn_mp,kn_sidewalls
-      INTEGER ksurf_bc,kmaxTSHD_ind,nair,flowzero_gt_cfixedbed
-      INTEGER poissolver,nm1,istep_output_bpmove,avalanche_until_done,IBMorder,avalanche_max_x
+      INTEGER ksurf_bc,kmaxTSHD_ind,nair,flowzero_gt_cfixedbed,correction_nbc_depo,rough_bed_flow_corr
+      INTEGER poissolver,nm1,istep_output_bpmove,avalanche_until_done,IBMorder,avalanche_max_x,avalanche_slope_per_fraction
       INTEGER iparm(64)
       CHARACTER*256 plumeQtseriesfile,plumectseriesfile,avfile,obstfile,kn_flow_file      
       REAL Q_j,plumeQseries(1:10000),plumeQtseries(1:10000),plumectseries(1:10000),plumecseries(30,1:10000) !c(30) matches with size frac_init
@@ -214,7 +214,7 @@
 	REAL stat_time_count	
 
 	type fractions
-	    REAL ::	ws,rho,c,dpart,dfloc,n,tau_d,tau_e,M,kn_sed,ws_dep,zair_ref_belowsurf,CD,cmax,ero
+	    REAL ::	ws,rho,c,dpart,dfloc,n,tau_d,tau_e,M,kn_sed,ws_dep,zair_ref_belowsurf,CD,cmax,ero,as
 	    INTEGER :: type
 	end type fractions
 	type bed_obstacles
@@ -273,7 +273,7 @@
 
 	integer ios,n,n1,n2,n3,n4
 	type frac_init
-	  real :: ws,c,rho,dpart,dfloc,tau_d,tau_e,M,kn_sed,ws_dep,zair_ref_belowsurf,CD,cmax,ero
+	  real :: ws,c,rho,dpart,dfloc,tau_d,tau_e,M,kn_sed,ws_dep,zair_ref_belowsurf,CD,cmax,ero,as 
 	  integer :: type
 	end type frac_init
 	TYPE(frac_init), DIMENSION(30) :: fract
@@ -291,12 +291,13 @@
      & continuity_solver,transporteq_fracs,split_rho_cont,driftfluxforce_calfac,depo_implicit,IBMorder,npresPRHO,
      & pres_in_predictor_step,Poutflow,oPRHO,applyVOF,k_ust_tau,Uoutflow,dUVdn_IBMbed,k_pzero,numdiff2,CNdiff_factor,CNdiff_ho,
      & CNdiff_dtfactor,CNdiff_pc,CNdiff_maxi,CNdiff_tol,CNdiff_ini,initPhydrostatic,npresIBM_viscupdate,momentum_exchange_obstacles
-     & ,k_ust_tau_flow,nsmooth_bed,k_ust_tau_sed_range,fft_routines,k_dpdx_sed_range,flowzero_gt_cfixedbed
+     & ,k_ust_tau_flow,nsmooth_bed,k_ust_tau_sed_range,fft_routines,k_dpdx_sed_range,flowzero_gt_cfixedbed,CNdiff_conc
 	NAMELIST /ambient/U_b,V_b,W_b,bcfile,rho_b,SEM,nmax2,nmax1,nmax3,lm_min,lm_min3,slip_bot,taulayerTBLE,kn,interaction_bed,
      & periodicx,periodicy,dpdx,dpdy,W_ox,Hs,Tp,nx_w,ny_w,obst,bc_obst_h,U_b3,V_b3,surf_layer,wallup,bedlevelfile,rhomax,
      & U_bSEM,V_bSEM,U_w,V_w,c_bed,cfixedbed,U_init,V_init,initconditionsfile,rho_b2,monopile,kn_mp,kn_sidewalls,obstfile,
      & istart_morf1,istart_morf2,i_periodicx,kn_flow_file,kn_flow_d50_multiplier,U_b_tseriesfile,V_b_tseriesfile,W_b_tseriesfile
-     & ,cbc_perx_j,cbc_relax,obstfile_erodepo,TBLE_grad_relax,bedupdatefile,dpdx_ref_j,cbc_inflow_correction,dpdx_smoother
+     & ,cbc_perx_j,cbc_relax,obstfile_erodepo,TBLE_grad_relax,bedupdatefile,dpdx_ref_j,cbc_inflow_correction,dpdx_smoother,
+     & rough_bed_flow_corr
 	NAMELIST /plume/W_j,plumetseriesfile,Awjet,Aujet,Avjet,Strouhal,azi_n,kjet,radius_j,Sc,slipvel,outflow_overflow_down,
      & U_j2,plumetseriesfile2,Awjet2,Aujet2,Avjet2,Strouhal2,azi_n2,radius_j2,zjet2,bedplume,radius_inner_j,xj,yj,W_j_powerlaw,
      & plume_z_outflow_belowsurf,hindered_settling,hindered_settling_c,Q_j,plumeQtseriesfile,plumectseriesfile
@@ -309,7 +310,8 @@
      & ,fcor,wbed_correction,bedslope_effect,bedslope_mu_s,alfabs_bl,alfabn_bl,phi_sediment,wallmodel_tau_sed,nrmsbed,ndtbed,
      & erosion_cbed_start,movebed_absorb_cfluid,power_VR2019,ekm_sediment_pickup,dz_sidewall,pickup_formula_swe
      & ,vel_start_after_ero,dpbed_zone,sl_relax,TBLEsl_grad_relax,TBLEbl_grad_relax,TBLEsed_grad_relax,correction_sl_with_bl
-     & ,uv_sed_smoother,morfac_tseriesfile,morfac2_tseriesfile,avalanche_max_x,avalanche_fines,avalanche_limit_buf
+     & ,uv_sed_smoother,morfac_tseriesfile,morfac2_tseriesfile,avalanche_max_x,avalanche_fines,avalanche_limit_buf,
+     & correction_nbc_depo,avalanche_slope_per_fraction
 	NAMELIST /fractions_in_plume/fract
 	NAMELIST /ship/U_TSHD,LOA,Lfront,Breadth,Draught,Lback,Hback,xfront,yfront,kn_TSHD,nprop,Dprop,xprop,yprop,zprop,
      &   Pprop,rudder,rot_prop,draghead,Dsp,xdh,perc_dh_suction,softnose,Hfront,cutter
@@ -382,6 +384,7 @@
 	comp_filter_a = 0.5
 	comp_filter_n = 0
 	CNdiffz = 0
+	CNdiff_conc = 0
 	CNdiff_factor = 0.5
 	CNdiff_dtfactor = 100.
 	CNdiff_ho = 0.
@@ -448,6 +451,7 @@
 	kn = -999.
 	kn_flow_file=''
 	kn_flow_d50_multiplier = -2.
+	rough_bed_flow_corr = 0
 	interaction_bed=-999
 	periodicx=0
 	periodicy=0
@@ -627,6 +631,7 @@
 	fract(:)%CD=0.
 	fract(:)%cmax=100.
 	fract(:)%ero=1. !default erosion of specific fraction is possible
+	fract(:)%as=1.6
 	nfrac=0
 	nfr_silt=0
 	nfr_sand=0
@@ -678,11 +683,13 @@
 	av_slope_z= -1.
 	avfile = ''
 	reduction_sedimentation_shields = 0. ! default no reduction in sedimentation by shear stresss (shields) ! PhD thesis vRhee p146 eq 7.74
+	correction_nbc_depo = 0 !default no correction for near bed concentration used to calculate deposition flux 
 	morfac = 1.
 	morfac2 = 1.
 	avalanche_until_done=0
 	avalanche_max_x=1000000000
 	avalanche_fines = 1
+	avalanche_slope_per_fraction = 0
 	avalanche_limit_buf = 0
 	pickup_correction='nonenonenonenonenone'
 	vwal=-999.
@@ -902,6 +909,7 @@
 	  numdiff=numdiff*2.  !needed to get correct value (in advec is a 'hidden' factor 2/4)
 	endif
 	IF (CNdiffz.ne.0.and.CNdiffz.ne.1.and.CNdiffz.ne.2.and.CNdiffz.ne.11.and.CNdiffz.ne.12.and.CNdiffz.ne.31) CALL writeerror(406)
+	IF (CNdiff_conc.ne.0.and.CNdiff_conc.ne.1.and.CNdiff_conc.ne.3) CALL writeerror(414)	
 	IF (npresIBM<0) CALL writeerror(407)
 	pres_in_predictor_step_internal = pres_in_predictor_step
 	IF (pres_in_predictor_step_internal.eq.3.or.pres_in_predictor_step_internal.eq.4.or.pres_in_predictor_step_internal.eq.5
@@ -1080,6 +1088,7 @@
 	  frac(n)%CD=fract(n)%CD
 	  frac(n)%cmax=fract(n)%cmax	  
 	  frac(n)%ero=fract(n)%ero
+	  frac(n)%as=fract(n)%as
 	!! check input fractions_in_plume
 	  IF (frac(n)%ws.eq.-999.) THEN
 		write(*,*)'Fraction:',n

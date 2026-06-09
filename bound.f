@@ -1456,7 +1456,7 @@ c 	influence of waves on lateral boundaries:
 	  Wjetbc=pi*MAX(radius_j**2,1.e-12)*W_j*perc_dh_suction/(dr(i)*3.*Dsp) !(m3/s)/m2=m/s per suction cell (perc_dh_suction is corrected for number of dragheads)
 	  Wbound(i,j,k)=Wjetbc
        enddo
-	IF (interaction_bed.ge.4) THEN !	IF (interaction_bed.ge.4) THEN !for interaction_bed.ge.4 zbed is determined in sediment.f so not needed here 
+	IF (interaction_bed.eq.4.or.interaction_bed.eq.6) THEN !	IF (interaction_bed.ge.4) THEN !for interaction_bed.ge.4 zbed is determined in sediment.f so not needed here 
 	 DO i=1,imax
 	  DO j=1,jmax
 		zbed(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(dcdtbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
@@ -1688,7 +1688,7 @@ c
 	   include 'mpif.h'
       integer ierr
 c
-      integer jtmp,botstress,n,t,jp,inout,im,jm,kplus,kplus2,tel,mpstress,itrgt,jtrgt,km
+      integer jtmp,botstress,n,t,jp,inout,im,jm,kplus,kplus2,tel,mpstress,itrgt,jtrgt,km,klayer
 	real xTSHD(1:4),yTSHD(1:4)
 c
       real  Ubound(0:i1,0:j1,0:k1),Vbound(0:i1,0:j1,0:k1),rho(0:i1,0:j1,0:k1),
@@ -2818,6 +2818,10 @@ c 	influence of waves on lateral boundaries:
 	  elseif (botstress.ge.1.and.IBMorder.ne.2) then 
 		do j=1,jmax ! boundaries in k-direction
 		  do i=1,imax 
+			IF(rough_bed_flow_corr.eq.1) THEN 
+				tauu1 = sqrt((0.5*(tau_fl_Uold(i,j)+tau_fl_Uold(i-1,j)))**2+(0.5*(tau_fl_Vold(i,j)+tau_fl_Vold(i,j-1)))**2)
+				Wbound(i,j,MIN(k1,kbedt(i,j)+1)) = Wbound(i,j,MIN(k1,kbedt(i,j)+1)) + tauu1*dt/dz  !apply at W velocity 1*dz from bed 
+			ENDIF 		  
 			rr1=rhU(i,j,kbedt(i,j)+k_ust_tau_flow) 					 												!at U-gridpoint
 			rr2=rhV(i,j,kbedt(i,j)+k_ust_tau_flow) 																	!at V-gridpoint
 
@@ -2885,6 +2889,17 @@ c 	influence of waves on lateral boundaries:
 			  visc=0.5*(muA(i,j,kbedt(i,j)+k_ust_tau_flow)+muA(i,j+1,kbedt(i,j+1)+k_ust_tau_flow))/rr2
 			  call wall_fun_rho_rheo(vv2a,uu2a,vv2,uu2,dz,dist_vel,(1.-CNdiff_factor)*dt,visc,tau)
 			  tau_fl_Vnew(i,j) = tau_fl_Vnew(i,j) + tau !add rheological tau to turbulent wall-model tau
+			ENDIF 
+			IF(rough_bed_flow_corr.eq.2) THEN 
+				klayer = NINT(kn_flow(i,j)/dz) !divide shear stress over multiple layers within kn_flow from bed 
+				IF (klayer>1) THEN
+					uu1a=uu1a + (1.-1./DBLE(klayer))*tau_fl_Unew(i,j)*dt/dz !subtract from first layer
+					vv1a=uu2a + (1.-1./DBLE(klayer))*tau_fl_Vnew(i,j)*dt/dz 
+					DO k=kbedt(i,j)+2,kbedt(i,j)+klayer 
+						Ubound(i,j,k)=Ubound(i,j,k) - 1./DBLE(klayer)*tau_fl_Unew(i,j)*dt/dz !add to layers above 
+						Vbound(i,j,k)=Vbound(i,j,k) - 1./DBLE(klayer)*tau_fl_Vnew(i,j)*dt/dz
+					ENDDO
+				ENDIF 
 			ENDIF 			
 			Ubound(i,j,kbedt(i,j)+1)=uu1a+Ubot_TSHD(j)*rr1a !Ubound adjusted 1:imax,1:jmax; but later bc 0,i1,0,0,j1 applied
 			Vbound(i,j,kbedt(i,j)+1)=vv2a+Vbot_TSHD(j)*rr2a !Vbound adjusted 1:imax,1:jmax; but later bc 0,i1,0,0,j1 applied
@@ -3362,7 +3377,7 @@ c 	influence of waves on lateral boundaries:
 !!!		ENDIF !(pickup_correction.eq.'xtra_sidewall_pickup') 
 
 	
-	IF (interaction_bed.ge.4) THEN !for interaction_bed.ge.4 zbed is determined in sediment.f so not needed here 
+	IF (interaction_bed.eq.4.or.interaction_bed.eq.6) THEN !for interaction_bed.ge.4 zbed is determined in sediment.f so not needed here 
 	 DO i=1,imax
 	  DO j=1,jmax
 		zbed(i,j)=REAL(MAX(kbed(i,j)-1,0))*dz+(SUM(dcdtbot(1:nfrac,i,j))+SUM(Clivebed(1:nfrac,i,j,kbed(i,j))))/cfixedbed*dz
@@ -3385,6 +3400,16 @@ c 	influence of waves on lateral boundaries:
 				  Wbound(i,j,k)=0.
 				ENDDO					
 				Wbound(i,j,kp)=vel_ibm2 
+				IF((botstress.eq.3.or.botstress.eq.1.or.botstress.eq.2).and.rough_bed_flow_corr.eq.1) THEN 
+					tauu1 = sqrt((0.5*(tau_fl_Uold(i,j)+tau_fl_Uold(MAX(0,i-1),j)))**2+(0.5*(tau_fl_Vold(i,j)+tau_fl_Vold(i,j-1)))**2)
+					Wbound(i,j,kpp) = Wbound(i,j,kpp) + tauu1*dt/dz   ! apply at W velocity at least 1 dz from wall (1-2 dz) to prevent that flow out of IBM bed is assigned
+				ENDIF 
+				
+				  IF (slip_bot.ge.1.and.Non_Newtonian.ge.1) THEN !when rheology is active apply extra bed shear stress for muA (scaled with (1.-CNdiff_factor)):
+				      visc=0.5*(muA(i,j,kpp)+muA(i+1,j,kpp))/rr1
+					  call wall_fun_rho_rheo(uu0,vv0,uu1,vv1,dz,distance_to_bed_kpp,(1.-CNdiff_factor)*dt,visc,tau)	
+					  tau_fl_Unew(i,j) = tau_fl_Unew(i,j) + tau !add rheological tau to turbulent wall-model tau
+				  ENDIF 					
 				
 			    zb_U=0.5*(zbed(i,j)+zbed(i+1,j))
 				kb=FLOOR(zb_U/dz+0.5)						!location vel=0 for 2nd order IBM because below 2nd-order zbed
@@ -3471,6 +3496,15 @@ c 	influence of waves on lateral boundaries:
 				      visc=0.5*(muA(i,j,kpp)+muA(i+1,j,kpp))/rr1
 					  call wall_fun_rho_rheo(uu0,vv0,uu1,vv1,dz,distance_to_bed_kpp,(1.-CNdiff_factor)*dt,visc,tau)	
 					  tau_fl_Unew(i,j) = tau_fl_Unew(i,j) + tau !add rheological tau to turbulent wall-model tau
+				  ENDIF 	
+				  IF(rough_bed_flow_corr.eq.2) THEN 
+					klayer = NINT(kn_flow(i,j)/dz) !divide shear stress over multiple layers within kn_flow from bed 
+					IF (klayer>1) THEN
+						uu0=uu0 + (1.-1./DBLE(klayer))*tau_fl_Unew(i,j)*dt/dz !subtract from first layer
+						DO k=kp+1,kp+klayer-1 
+							Ubound(i,j,k)=Ubound(i,j,k) - 1./DBLE(klayer)*tau_fl_Unew(i,j)*dt/dz !add to layers above 
+						ENDDO
+					ENDIF 
 				  ENDIF 				  
 				  
 				  DO k=1,kb
@@ -3564,6 +3598,15 @@ c 	influence of waves on lateral boundaries:
 					  visc=0.5*(muA(i,j,kpp)+muA(i,j+1,kpp))/rr2
 					  call wall_fun_rho_rheo(vv0,uu0,vv2,uu2,dz,distance_to_bed_kpp,(1.-CNdiff_factor)*dt,visc,tau)		
 					  tau_fl_Vnew(i,j) = tau_fl_Vnew(i,j) + tau !add rheological tau to turbulent wall-model tau
+				  ENDIF 		
+				  IF(rough_bed_flow_corr.eq.2) THEN 
+					klayer = NINT(kn_flow(i,j)/dz) !divide shear stress over multiple layers within kn_flow from bed 
+					IF (klayer>1) THEN
+						vv0=vv0 + (1.-1./DBLE(klayer))*tau_fl_Vnew(i,j)*dt/dz !subtract from first layer
+						DO k=kp+1,kp+klayer-1 
+							Vbound(i,j,k)=Vbound(i,j,k) - 1./DBLE(klayer)*tau_fl_Vnew(i,j)*dt/dz !add to layers above 
+						ENDDO
+					ENDIF 
 				  ENDIF 				  
 				  DO k=1,kb
 					Vbound(i,j,k)=Vbot_TSHD(j)*rr0
@@ -4093,8 +4136,8 @@ c*************************************************************
 			Cbcoarse1(n,1:imax,1:kmax)=0. !Cbound(1:imax,jmax,1:kmax)
 		endif
 		Cbcoarse2(n,0:j1,1:kmax)=0. !Cbound(1,0:j1,1:kmax)
-	  endif 
-	endif
+	  endif !cbc_perc
+	endif !bcfile
 		
 	if (periodicy.eq.0) then
 		if (rank.eq.0) then ! boundaries in j-direction

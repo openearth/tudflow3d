@@ -4047,25 +4047,21 @@ c*****************************************************************
      +         ekh(0:i1,0:j1,0:k1),putin2(0:i1,0:j1,0:k1)
       real	dzdz_i,Rpdr_i,Rpdphi2_i,CNz,CNx,CNy
 
-
-	IF (CNdiffz.eq.1) THEN !CN diff in z-dir is half old, half new timestep (this is half old timestep)
+	
+	CNx=1.
+	CNy=1.
+	CNz=1.
+	IF (CNdiff_conc.eq.1) THEN !CN diff in z-dir is half old, half new timestep (this is half old timestep)
 	  CNz=0.5
-	ELSEIF (CNdiffz.eq.2.or.CNdiffz.eq.12) THEN !CN diff in z-dir is 100% new timestep (Euler backward)
+	ELSEIF (CNdiff_conc.eq.2) THEN !CN diff in z-dir is 100% new timestep (Euler backward)
 	  CNz=0. 
-	ELSE
-	  CNz=1.
 	ENDIF
-	IF (CNdiffz.eq.11) THEN !CNdiffz 11 is 0.5*DIFF(C^n+1-C^n) + 1*DIFF(C^n) --> this is explicit last step
-	  CNx=0.5 !0.5*2. !0.45 !0.5
-	  CNy=0.5 !0.5*2. !0.45 !0.5
-	  CNz=0.5 !0.5*2.	  
-	ELSEIF (CNdiffz.eq.12) THEN !CN diff in z-dir is 100% new timestep (Euler backward)
-	  CNx=0. 
-	  CNy=0. 
-	ELSE
-	  CNx=1.
-	  CNy=1. 
-	ENDIF	
+	IF (CNdiff_conc.eq.3) THEN !CNdiffz 11 is 0.5*DIFF(C^n+1-C^n) + 1*DIFF(C^n) --> this is explicit last step
+	  CNx=(1.-CNdiff_factor) 
+	  CNy=(1.-CNdiff_factor) 
+	  CNz=(1.-CNdiff_factor)
+	ENDIF 
+	
       putin2=putin
       do k=k1,k1 !-kjet,k1
 	do t=1,tmax_inPpunt

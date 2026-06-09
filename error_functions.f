@@ -620,7 +620,13 @@
 	CASE(413)
 		write(*,*) '# namelist &num_scheme                           #'		
 		write(*,*) '# k_dpdx_sed_range(1) and k_dpdx_sed_range(2) should be >1 #'	
-		write(*,*) '# and k_dpdx_sed_range(1)<k_dpdx_sed_range(2)              #'			
+		write(*,*) '# and k_dpdx_sed_range(1)<k_dpdx_sed_range(2)              #'		
+	CASE(414)
+		write(*,*) '# namelist &num_scheme                                        #'		
+		write(*,*) '# CNdiff_conc must be 0 (explicit diffusion in z dir)         #'
+		write(*,*) '# or 1 (Crank Nicolson semi-implicit diffusion in z dir)      #'
+		write(*,*) '# or 2 (Euler backward implicit diffusion in z dir)           #'
+		write(*,*) '# or 3 (Crank Nicolson semi-implicit diffusion in all dirs)  #'
 	CASE(501)
 		write(*,*) '# namelist &simulation                           #'			
 		write(*,*) '# imax_grid or jmax_grid is not increasing monotonously       #'	
